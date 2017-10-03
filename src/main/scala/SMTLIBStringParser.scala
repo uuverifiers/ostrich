@@ -503,7 +503,8 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
       throw new Parser2InputAbsy.TranslationException(
         "Inconsistent arities in transducer")
 
-    println("Need to translate transducer (" + funs.head._1.arity + " tracks):")
+    Console.withOut(Console.err) {
+    println("Parsing transducer (" + funs.head._1.arity + " tracks):")
     println
 
     for ((f, transitions) <- funs) {
@@ -656,6 +657,7 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
       }
 
       println
+    }
     }
 
     var aFinalStates: AFormula =
