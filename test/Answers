@@ -1,0 +1,798 @@
+
+simple-cvc-smtlib.smt2
+Reading file simple-cvc-smtlib.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 3 AFAs
+After treeification: 2 trees
+Final AFA has 10 states  ... is non-empty!
+sat
+
+(error "Internal exception: java.lang.AssertionError: assertion failed")
+
+simple-cycle.smt2
+Reading file simple-cycle.smt2 ...
+Assuming bit-vectors of width 8
+
+unsat
+
+simple-cycle2.smt2
+Reading file simple-cycle2.smt2 ...
+Assuming bit-vectors of width 8
+
+unsat
+
+nonlinear.smt2
+Reading file nonlinear.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 2 AFAs
+After treeification: 1 trees
+Final AFA has 6 states  ... is empty!
+unsat
+
+nonlinear-2.smt2
+Reading file nonlinear-2.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 2 AFAs
+After treeification: 1 trees
+Final AFA has 4 states  ... is non-empty!
+sat
+
+(define-fun a () String "))")
+(define-fun b () String ")")
+
+norn-benchmark-9.smt2
+Reading file norn-benchmark-9.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P0)
+   Right(member(P0, P2))
+   Right(!member(P0, P5))
+
+Resulting AFA over variables P0 has 4 states  ... is empty!
+unsat
+
+norn-benchmark-9b.smt2
+Reading file norn-benchmark-9b.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P1))
+   Right(!member(var_0, P4))
+
+Resulting AFA over variables var_0 has 3 states  ... is non-empty!
+sat
+
+(define-fun var_0 () String "a")
+
+norn-benchmark-9c.smt2
+Reading file norn-benchmark-9c.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P4))
+   Right(member(var_0, P1))
+
+Resulting AFA over variables var_0 has 2 states  ... is non-empty!
+sat
+
+(define-fun var_0 () String "")
+
+norn-benchmark-9d.smt2
+Reading file norn-benchmark-9d.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P5))
+   Right(member(var_0, P2))
+
+Resulting AFA over variables var_0 has 3 states  ... is empty!
+unsat
+
+norn-benchmark-9e.smt2
+Reading file norn-benchmark-9e.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P4))
+   Right(member(var_0, P1))
+
+Resulting AFA over variables var_0 has 3 states  ... is empty!
+unsat
+
+norn-benchmark-9f.smt2
+Reading file norn-benchmark-9f.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(wordDiff(var_0, P5))
+      Left(P5)
+   Right(member(var_0, P4))
+   Right(member(var_0, P1))
+
+Resulting AFA over variables var_0, P5 has 8 states  ... is empty!
+unsat
+
+norn-benchmark-9g.smt2
+Reading file norn-benchmark-9g.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+sat
+
+
+norn-benchmark-9h.smt2
+Reading file norn-benchmark-9h.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_1)
+   Right(wordDiff(var_1, var_0))
+      Left(var_0)
+         Right(member(var_0, P2))
+   Right(member(var_1, P2))
+
+Resulting AFA over variables var_1, var_0 has 12 states  ... is empty!
+unsat
+
+norn-benchmark-9i.smt2
+Reading file norn-benchmark-9i.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_1)
+   Right(wordDiff(var_1, var_0))
+      Left(var_0)
+         Right(member(var_0, P2))
+   Right(member(var_1, P13))
+
+Resulting AFA over variables var_1, var_0 has 13 states  ... is non-empty!
+sat
+
+(define-fun var_0 () String "abc")
+(define-fun var_1 () String "abcd")
+
+norn-benchmark-9j.smt2
+Reading file norn-benchmark-9j.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P13))
+   Right(member(var_0, P2))
+
+Resulting AFA over variables var_0 has 9 states  ... is empty!
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P6))
+   Right(member(var_0, P2))
+
+Resulting AFA over variables var_0 has 8 states  ... is empty!
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(var_0)
+   Right(member(var_0, P9))
+   Right(member(var_0, P2))
+
+Resulting AFA over variables var_0 has 7 states  ... is empty!
+unsat
+
+norn-benchmark-9k.smt2
+Reading file norn-benchmark-9k.smt2 ...
+Assuming bit-vectors of width 8
+
+unsat
+
+simple-concat.smt2
+Reading file simple-concat.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 8 states  ... is non-empty!
+sat
+
+(define-fun x0 () String "h")
+(define-fun x1 () String "")
+(define-fun x2 () String "h")
+(define-fun x3 () String "H")
+
+simple-concat-2.smt2
+Reading file simple-concat-2.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 8 states  ... is empty!
+unsat
+
+simple-concat-3.smt2
+Reading file simple-concat-3.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 7 states  ... is empty!
+unsat
+
+simple-concat-4.smt2
+Reading file simple-concat-4.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 3 AFAs
+After treeification: 2 trees
+Final AFA has 6 states  ... is non-empty!
+sat
+
+(define-fun x1 () String "b")
+(define-fun x2 () String "")
+(define-fun x3 () String "b")
+
+simple-concat-4b.smt2
+Reading file simple-concat-4b.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 3 AFAs
+After treeification: 2 trees
+Final AFA has 6 states  ... is empty!
+unsat
+
+simple-concat-5.smt2
+Reading file simple-concat-5.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 19 states  ... is empty!
+unsat
+
+simple-concat-5b.smt2
+Reading file simple-concat-5b.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 18 states  ... is non-empty!
+sat
+
+(define-fun x0 () String "p")
+(define-fun x2 () String "pHelloWorld")
+(define-fun x3 () String "PHELLOWORLD")
+
+concat.smt2
+Reading file concat.smt2 ...
+Need to translate transducer (2 tracks):
+
+State toUpper:
+  (accepting)
+  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+
+Need to translate transducer (2 tracks):
+
+State simple:
+  -> state1: (((seq_head(_1) + -1 * mod_cast(256, 104)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 119)) = 0))
+
+State state1:
+  -> state2: (((seq_head(_1) + -1 * mod_cast(256, 101)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 111)) = 0))
+
+State state2:
+  -> state3: (((seq_head(_1) + -1 * mod_cast(256, 108)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 114)) = 0))
+
+State state3:
+  -> state4: (((seq_head(_1) + -1 * mod_cast(256, 108)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 108)) = 0))
+
+State state4:
+  -> state5: (((seq_head(_1) + -1 * mod_cast(256, 111)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 100)) = 0))
+
+State state5:
+  (accepting)
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 22 AFAs
+After treeification: 8 trees
+Final AFA has 106 states  ... is empty!
+unsat
+
+simple-replace.smt2
+Reading file simple-replace.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replaceall(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P9P12_0, P12 has 21 states  ... is non-empty!
+sat
+
+(define-fun x_7 () String "HalloWorld")
+
+simple-replace-1b.smt2
+Reading file simple-replace-1b.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replaceall(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P9P12_0, P12 has 32 states  ... is empty!
+unsat
+
+simple-replace-1c.smt2
+Reading file simple-replace-1c.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replaceall(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P9P12_0, P12 has 32 states  ... is non-empty!
+sat
+
+(define-fun x_7 () String "HalloWorld")
+
+simple-replace-1d.smt2
+Reading file simple-replace-1d.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replace(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P12 has 27 states  ... is empty!
+unsat
+
+simple-replace-1e.smt2
+Reading file simple-replace-1e.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replace(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P12 has 18 states  ... is non-empty!
+sat
+
+(define-fun x_7 () String "HalloWorld")
+
+simple-replace-1f.smt2
+Reading file simple-replace-1f.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replace(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P12 has 29 states  ... is empty!
+unsat
+
+simple-replace-1g.smt2
+Reading file simple-replace-1g.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P9)
+   Right(replace(P9, c7, P11, P12))
+      Left(P12)
+
+Resulting AFA over variables P9, P12 has 29 states  ... is non-empty!
+sat
+
+(define-fun x_7 () String "HalloWorld")
+
+simple-replace-2.smt2
+Reading file simple-replace-2.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 22 states  ... is non-empty!
+sat
+
+(define-fun a () String "")
+(define-fun b () String "")
+(define-fun x_10 () String "")
+(define-fun x_7 () String "")
+
+simple-replace-2b.smt2
+Reading file simple-replace-2b.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 8 AFAs
+After treeification: 2 trees
+Final AFA has 42 states  ... is empty!
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 6 AFAs
+After treeification: 2 trees
+Final AFA has 36 states  ... is empty!
+unsat
+
+simple-replace-2c.smt2
+Reading file simple-replace-2c.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 8 AFAs
+After treeification: 2 trees
+Final AFA has 42 states  ... is non-empty!
+sat
+
+(define-fun a () String "He")
+(define-fun b () String "llo")
+(define-fun x_10 () String "Hello")
+(define-fun x_7 () String "Hallo")
+
+simple-replace-2d.smt2
+Reading file simple-replace-2d.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 2 AFAs
+After treeification: 2 trees
+Final AFA has 14 states  ... is non-empty!
+sat
+
+(define-fun a () String "")
+(define-fun b () String "")
+(define-fun x_10 () String "")
+(define-fun x_7 () String "")
+
+simple-replace-3.smt2
+Reading file simple-replace-3.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(x_10)
+   Right(replaceall(x_10, P0, P1, P2))
+      Left(P2)
+         Right(member(P2, P6))
+
+Resulting AFA over variables x_10, x_10P2_0, P2 has 11 states  ... is empty!
+unsat
+
+simple-replace-3b.smt2
+Reading file simple-replace-3b.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(x_10)
+   Right(replace(x_10, P0, P1, P2))
+      Left(P2)
+         Right(member(P2, P6))
+
+Resulting AFA over variables x_10, P2 has 8 states  ... is non-empty!
+sat
+
+(define-fun x_10 () String "ee")
+(define-fun x_7 () String "Xe")
+
+simple-replace-4.smt2
+Reading file simple-replace-4.smt2 ...
+Warning: ignoring option :strings-exp
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 26 states  ... is non-empty!
+sat
+
+(define-fun x_10 () String "hallo")
+(define-fun x_11 () String "ha")
+(define-fun x_12 () String "llo")
+(define-fun x_7 () String "hallo")
+
+simple-replace-4b.smt2
+Reading file simple-replace-4b.smt2 ...
+Warning: ignoring option :strings-exp
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 26 states  ... is empty!
+unsat
+
+simple-replace-4c.smt2
+Reading file simple-replace-4c.smt2 ...
+Warning: ignoring option :strings-exp
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 2 AFAs
+After treeification: 2 trees
+Final AFA has 14 states  ... is non-empty!
+sat
+
+(define-fun x_10 () String "")
+(define-fun x_11 () String "")
+(define-fun x_12 () String "")
+(define-fun x_7 () String "")
+
+extract-1.smt2
+Reading file extract-1.smt2 ...
+Need to translate transducer (2 tracks):
+
+State extract1st:
+  (accepting)
+  -> extract1st: !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+  -> extract1st_2: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+
+State extract1st_2:
+  (accepting)
+  -> extract1st_2: (((seq_head(_1) + -1 * seq_head(_0)) = 0) & !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0))
+  -> extract1st_3: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+
+State extract1st_3:
+  (accepting)
+  -> extract1st_3: true
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 4 AFAs
+After treeification: 2 trees
+Final AFA has 22 states  ... is empty!
+unsat
+
+extract-1b.smt2
+Reading file extract-1b.smt2 ...
+Need to translate transducer (2 tracks):
+
+State extract1st:
+  (accepting)
+  -> extract1st: !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+  -> extract1st_2: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+
+State extract1st_2:
+  (accepting)
+  -> extract1st_2: (((seq_head(_1) + -1 * seq_head(_0)) = 0) & !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0))
+  -> extract1st_3: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+
+State extract1st_3:
+  (accepting)
+  -> extract1st_3: true
+
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 5 AFAs
+After treeification: 2 trees
+Final AFA has 9 states  ... is empty!
+unsat
+
+empty-concat.smt2
+Reading file empty-concat.smt2 ...
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 0 AFAs
+After treeification: 0 trees
+sat
+
+(define-fun literal_1 () String "")
+(define-fun sigmaStar_0 () String "")
+(define-fun x_2 () String "")
+
+escapeSequences-1a.smt2
+Reading file escapeSequences-1a.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P4)
+   Right(member(P4, P6))
+
+Resulting AFA over variables P4 has 7 states  ... is empty!
+unsat
+
+escapeSequences-1b.smt2
+Reading file escapeSequences-1b.smt2 ...
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P4)
+   Right(member(P4, P6))
+
+Resulting AFA over variables P4 has 7 states  ... is non-empty!
+sat
+
+(define-fun x () String "hello")
+
+epsilon-1.smt2
+Reading file epsilon-1.smt2 ...
+Warning: ignoring option :strings-exp
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 1 AFAs
+After treeification: 1 trees
+Final AFA has 7 states  ... is empty!
+Running AFA-based consistency check
+Using straight-line solver
+After splitting and topological sorting: 3 AFAs
+After treeification: 3 trees
+Final AFA has 26 states  ... is non-empty!
+sat
+
+(define-fun epsilon () String "")
+(define-fun literal_13 () String ".gif")
+(define-fun literal_16 () String "//")
+(define-fun literal_9 () String "Large ")
+(define-fun sigmaStar_12 () String "evil")
+(define-fun sigmaStar_7 () String "")
+(define-fun x_10 () String "Large ")
+(define-fun x_14 () String "evil.gif")
+(define-fun x_17 () String "//evil.gif")
+(define-fun x_18 () String "//evil.gif")
+(define-fun x_8 () String "")
+
+epsilon-2.smt2
+Reading file epsilon-2.smt2 ...
+Warning: ignoring option :strings-exp
+Warning: get-model detected, producing model
+Assuming bit-vectors of width 8
+
+Running AFA-based consistency check
+Using tree-based solver
+Solving constraints:
+Left(P0)
+   Right(replace(P0, P7, P12, P13))
+      Left(P13)
+         Right(member(P13, P23))
+
+Resulting AFA over variables P0, P13 has 32 states  ... is empty!
+unsat

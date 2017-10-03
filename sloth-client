@@ -1,0 +1,124 @@
+#!/bin/sh
+
+dotfilebase="/tmp/.norn"
+
+JAVA=java
+
+me=`whoami`
+portfile="$dotfilebase"_"$me"
+errfile="$dotfilebase"_debug_"$me"
+
+if [ $(uname) = "Linux" ]; then
+    pathCmd="readlink -f"
+elif [ $(uname) = "Darwin" ]; then
+    pathCmd="stat -f %N"
+else
+    pathCmd="realpath"
+fi
+
+################################################################################
+
+startDaemon() {
+    lockfile="$dotfilebase"_lock_"$me"
+
+    while [ -f "$lockfile" ] && \
+          [ $(( `date +%s` - `date -r "$lockfile" +%s` )) -le 10 ]; do
+        # apparently a concurrent script is starting up the daemon
+        # already
+        echo "waiting ..."
+        sleep 1
+    done
+        
+    if [ ! -f "$portfile" ]; then
+        touch "$lockfile"
+
+        BASEDIR=`dirname $($pathCmd $0)`
+        TARGET=`echo $BASEDIR/target/scala-*/sloth-assembly*.jar`
+
+        tempportfile=`mktemp`
+        touch "$tempportfile"
+        chmod go-rwx "$tempportfile"
+
+        export JAVA_OPTS="-Xss20000k -Xmx1500m"
+	$JAVA -cp $TARGET strsolver.ServerMain >"$tempportfile" &
+
+        nornId=$!
+
+        sleep 1
+        while [ `wc -l "$tempportfile" | awk '{ printf $1 }'` -lt 2 ]; do
+	    if ps -p $nornId >/dev/null; then
+		sleep 1
+	    else
+		echo "Could not start server"
+		exit 1
+	    fi
+        done
+
+        mv "$tempportfile" "$portfile"
+        rm "$lockfile"
+    fi
+}
+
+################################################################################
+
+stdintoexitstatus() {
+  read exitstatus
+  return $exitstatus
+}
+
+if [ ! -f "$portfile" ]; then
+    startDaemon
+fi
+
+ mainProcess=$$
+
+ outputlogfile=`mktemp`
+
+success=1
+until [ $success -eq 0 ]; do
+
+    port=`head -n1 "$portfile"`
+
+    (
+        # send the ticket
+        tail -n1 "$portfile"
+
+        # command line arguments
+        for var; do
+	    case "$var" in
+		-*|+*)
+		    echo "$var"
+		    ;;
+		*)
+		    echo `$pathCmd "$var"`
+		    ;;
+	    esac
+        done
+
+        echo "PROVE_AND_EXIT"
+
+        # ping the daemon every second, to show that we are still
+        # alive
+        {
+            sleep 1
+            while ps -p $mainProcess >/dev/null; do
+                echo "PING"
+                sleep 1
+            done
+        } &
+    ) | (((( nc localhost $port; echo $? >&3 ) | \
+      tee $outputlogfile >&4) 3>&1) | stdintoexitstatus) 4>&1
+
+    success=$?
+
+    if [ $success -ne 0 ]; then
+        rm "$portfile"
+        startDaemon
+    else if grep -q '^ERROR:' $outputlogfile; then
+	rm $outputlogfile
+	exit 1
+    fi; fi
+
+done
+
+rm $outputlogfile
