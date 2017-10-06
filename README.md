@@ -1,10 +1,10 @@
 # Sloth
-An SMT Solver for String Constraints
+## An SMT Solver for String Constraints
 
-Sloth is an implementation of decision procedure for several relevant
+Sloth is a decision procedure for several relevant
 fragments of string constraints, including the straight-line fragment,
-which is sufficiently expressive in practice for many
-applications. The tool uses succinct alternating finite-state automata
+which is sufficiently expressive for many applications from verification or
+security. Sloth uses succinct alternating finite-state automata
 (AFAs) as concise symbolic representations of string constraints, and
 uses model checking algorithms like IC3 for solving emptiness of
 the AFA.
