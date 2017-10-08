@@ -49,7 +49,12 @@ object SMTLIBMain {
         Flags.splitOptimization = value
       case CmdlParser.ValueOpt("modelChecker", mc) =>
         try {
-          Flags.modelChecker = Flags.ModelChecker withName mc
+          val modelChecker = Flags.ModelChecker withName mc
+
+          if(Flags.isABC && modelChecker == Flags.ModelChecker.nuxmv)
+            Flags.modelChecker -= Flags.ModelChecker.abc
+
+          Flags.modelChecker += modelChecker
         } catch {
           case _ : NoSuchElementException =>
             throw new Exception("unknown model checker")

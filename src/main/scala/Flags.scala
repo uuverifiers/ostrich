@@ -25,13 +25,13 @@ object Flags {
 
   var splitOptimization = false
   var minimalSuccessors = false
-  var modelChecker : ModelChecker.Value = ModelChecker.nuxmv
+  var modelChecker= Set.empty[ModelChecker.Value]
 
   def isSplitOptimization: Boolean = splitOptimization
   def isMinimalSuccessors: Boolean = minimalSuccessors
 
   def isABC: Boolean =
-    modelChecker == ModelChecker.abc
+    modelChecker(ModelChecker.abc)
   def isSimpleModelChecker: Boolean =
-    modelChecker == ModelChecker.simple
+    modelChecker(ModelChecker.simple)
 }
