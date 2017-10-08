@@ -221,7 +221,7 @@ unsat
 
 simple-concat.smt2
 Reading file simple-concat.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -243,7 +243,7 @@ sat
 
 simple-concat-2.smt2
 Reading file simple-concat-2.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -260,7 +260,7 @@ unsat
 
 simple-concat-3.smt2
 Reading file simple-concat-3.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -277,7 +277,7 @@ unsat
 
 simple-concat-4.smt2
 Reading file simple-concat-4.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -298,7 +298,7 @@ sat
 
 simple-concat-4b.smt2
 Reading file simple-concat-4b.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -315,7 +315,7 @@ unsat
 
 simple-concat-5.smt2
 Reading file simple-concat-5.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -332,7 +332,7 @@ unsat
 
 simple-concat-5b.smt2
 Reading file simple-concat-5b.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
@@ -353,13 +353,13 @@ sat
 
 concat.smt2
 Reading file concat.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
   -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
 
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State simple:
   -> state1: (((seq_head(_1) + -1 * mod_cast(256, 104)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 119)) = 0))
@@ -655,7 +655,7 @@ sat
 
 extract-1.smt2
 Reading file extract-1.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State extract1st:
   (accepting)
@@ -682,7 +682,7 @@ unsat
 
 extract-1b.smt2
 Reading file extract-1b.smt2 ...
-Need to translate transducer (2 tracks):
+Parsing transducer (2 tracks):
 
 State extract1st:
   (accepting)
