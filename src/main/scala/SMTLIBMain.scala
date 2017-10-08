@@ -47,14 +47,16 @@ object SMTLIBMain {
         assertions = value
       case CmdlParser.Opt("splitOpt", value) =>
         Flags.splitOptimization = value
-      case CmdlParser.ValueOpt("modelChecker", mc) =>
+      case CmdlParser.ValueOpt("modelChecker", mcs) =>
         try {
-          val modelChecker = Flags.ModelChecker withName mc
+          mcs.split(",").foreach { mc =>
+            val modelChecker = Flags.ModelChecker withName mc
 
-          if(Flags.isABC && modelChecker == Flags.ModelChecker.nuxmv)
-            Flags.modelChecker -= Flags.ModelChecker.abc
+            if (Flags.isABC && modelChecker == Flags.ModelChecker.nuxmv)
+              Flags.modelChecker -= Flags.ModelChecker.abc
 
-          Flags.modelChecker += modelChecker
+            Flags.modelChecker += modelChecker
+          }
         } catch {
           case _ : NoSuchElementException =>
             throw new Exception("unknown model checker")
