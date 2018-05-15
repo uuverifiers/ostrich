@@ -485,6 +485,32 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
   //////////////////////////////////////////////////////////////////////////////
   // Translation of transducers in SMT-LIB syntax to AFAs
 
+  private object BitWidth {
+    def unapply(t : ITerm) : Boolean = t match {
+      case IIntLit(IdealInt(w)) => {
+        setBitwidth(w)
+        true
+      }
+      case _ =>
+        false
+    }
+  }
+
+  private object BVLit {
+    def unapply(t : ITerm) : scala.Option[Int] = t match {
+      case IFunApp(ModuloArithmetic.mod_cast,
+                   Seq(IIntLit(lower), IIntLit(upper),
+                       IIntLit(IdealInt(v)))) => {
+        val ModuloArithmetic.UnsignedBVSort(w) =
+          ModuloArithmetic.ModSort(lower, upper)
+        setBitwidth(w)
+        Some(v)
+      }
+      case _ =>
+        None
+    }
+  }
+
   override protected def registerRecFunctions(
                                                funs : Seq[(IFunction, (IExpression, SMTType))]) : Unit = {
     import IExpression._
@@ -553,49 +579,51 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
                 false
             } => {
             // XXX
+            // TODO: this code ignores the actual bit-widths!
+
             def buildVars(track: Int): Seq[AFormula] =
               for (i <- 0 until AFormula.widthOfChar) yield
                 AFCharVar(i + track * AFormula.widthOfChar)
 
             def functionToAFormula(ie: IExpression): Seq[AFormula] = ie match {
-              case IFunApp(ModuloArithmetic.mod_cast,
-              Seq(_, IIntLit(v))) =>
-                AFormula.nat2bv(v.intValueSafe)
 
-              case IFunApp(ModuloArithmetic.mod_sub,
-              Seq(_,
-              IFunApp(SMTLIBStringTheory.seq_head,
-              Seq(IVariable(t))),
-              IFunApp(ModuloArithmetic.mod_cast,
-              Seq(_, IIntLit(v))))) =>
-                AFormula.bvSub(buildVars(t.intValue),
-                  AFormula.nat2bv(v.intValue))
+              case BVLit(v) =>
+                AFormula.nat2bv(v)
 
-              case IFunApp(ModuloArithmetic.mod_add,
-              Seq(_,
-              IFunApp(SMTLIBStringTheory.seq_head,
-              Seq(IVariable(t))),
-              IFunApp(ModuloArithmetic.mod_cast,
-              Seq(_, IIntLit(v))))) =>
-                AFormula.bvAdd(buildVars(t.intValue),
-                  AFormula.nat2bv(v.intValue))
+              case IFunApp(ModuloArithmetic.bv_sub,
+                           Seq(BitWidth(),
+                               IFunApp(SMTLIBStringTheory.seq_head,
+                                       Seq(IVariable(t))),
+                               BVLit(v))) =>
+                AFormula.bvSub(buildVars(t), AFormula.nat2bv(v))
 
-              case IFunApp(SMTLIBStringTheory.seq_head,
-              Seq(IVariable(t))) =>
+              case IFunApp(ModuloArithmetic.bv_add,
+                           Seq(BitWidth(),
+                               IFunApp(SMTLIBStringTheory.seq_head,
+                                       Seq(IVariable(t))),
+                               BVLit(v))) =>
+                AFormula.bvAdd(buildVars(t), AFormula.nat2bv(v))
+
+              case IFunApp(SMTLIBStringTheory.seq_head, Seq(IVariable(t))) =>
                 buildVars(t)
 
               case mf =>
-                throw new Exception("Unexpected function " + mf + " in functionToAFormula")
+                throw new Exception(
+                  "Unexpected function " + mf + " in functionToAFormula")
             }
 
             def expressionToAFormula(ie: IExpression,
                                      track: Int = -1): AFormula = ie match {
-              case EqZ(IPlus(t1: IFunApp,
-              ITimes(_, t2: IFunApp))) =>
+              case Eq(t1: IFunApp, t2: IFunApp) =>
                 AFormula.bvEq(functionToAFormula(t1), functionToAFormula(t2))
 
-              case EqZ(IPlus(IFunApp(_, Seq(IVariable(v))),
-              ITimes(_, subterm))) =>
+              case Eq(IFunApp(SMTLIBStringTheory.seq_head, Seq(IVariable(v))),
+                      subterm) =>
+                expressionToAFormula(subterm, v)
+
+              case Eq(subterm,
+                      IFunApp(SMTLIBStringTheory.seq_head,
+                              Seq(IVariable(v)))) =>
                 expressionToAFormula(subterm, v)
 
               case INot(subformula) =>
@@ -609,22 +637,24 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
                 expressionToAFormula(f1) |
                   expressionToAFormula(f2)
 
-              case IAtom(ModuloArithmetic.mod_ule, Seq(_, f1, f2)) =>
+              case IAtom(ModuloArithmetic.bv_ule, Seq(BitWidth(), f1, f2)) =>
                 AFormula.bvLeq(functionToAFormula(f1), functionToAFormula(f2))
 
-              case IAtom(ModuloArithmetic.mod_ult, Seq(_, f1, f2)) =>
+              case IAtom(ModuloArithmetic.bv_ult, Seq(BitWidth(), f1, f2)) =>
                 AFormula.bvLt(functionToAFormula(f1), functionToAFormula(f2))
 
-              case ITermITE(cond, left, right) =>
-                val i  = expressionToAFormula(cond)
-                val t  = functionToAFormula(left)
-                val e  = functionToAFormula(right)
+              case ITermITE(cond, left, right) => {
+                val i = expressionToAFormula(cond)
+                val t = functionToAFormula(left)
+                val e = functionToAFormula(right)
 
                 (i & AFormula.bvEq(buildVars(track), t)) |
                   (~i & AFormula.bvEq(buildVars(track), e))
+              }
 
               case term =>
-                throw new Exception("Unexpected term " + term + " " + term.getClass)
+                throw new Exception(
+                  "Unexpected term " + term + " " + term.getClass)
             }
 
             val s = funsToState(f)
@@ -647,7 +677,9 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
 
             aStates(s) = aStates(s) | (AFStateVar(t) & ss & sym)
             // XXX
-            println("  -> " + target.name + ": " + and(otherConds))
+            print("  -> " + target.name + ": ")
+            PrincessLineariser printExpression and(otherConds)
+            println
           }
 
           case _ =>

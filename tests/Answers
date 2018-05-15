@@ -225,7 +225,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -247,7 +247,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -264,7 +264,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -281,7 +281,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -302,7 +302,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -319,7 +319,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -336,7 +336,7 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Assuming bit-vectors of width 8
 
@@ -357,24 +357,24 @@ Parsing transducer (2 tracks):
 
 State toUpper:
   (accepting)
-  -> toUpper: ((seq_head(_0) + -1 * \if ((mod_ule(256, mod_cast(256, 97), seq_head(_1)) & mod_ule(256, seq_head(_1), mod_cast(256, 122)))) \then (mod_sub(256, seq_head(_1), mod_cast(256, 32))) \else (seq_head(_1))) = 0)
+  -> toUpper: seq_head(_0) = \if ((bv_ule(8, 97.\as[bv[8]], seq_head(_1)) & bv_ule(8, seq_head(_1), 122.\as[bv[8]]))) \ then (bv_sub(8, seq_head(_1), 32.\as[bv[8]])) \ else (seq_head(_1))
 
 Parsing transducer (2 tracks):
 
 State simple:
-  -> state1: (((seq_head(_1) + -1 * mod_cast(256, 104)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 119)) = 0))
+  -> state1: seq_head(_1) = 104.\as[bv[8]] & seq_head(_0) = 119.\as[bv[8]]
 
 State state1:
-  -> state2: (((seq_head(_1) + -1 * mod_cast(256, 101)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 111)) = 0))
+  -> state2: seq_head(_1) = 101.\as[bv[8]] & seq_head(_0) = 111.\as[bv[8]]
 
 State state2:
-  -> state3: (((seq_head(_1) + -1 * mod_cast(256, 108)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 114)) = 0))
+  -> state3: seq_head(_1) = 108.\as[bv[8]] & seq_head(_0) = 114.\as[bv[8]]
 
 State state3:
-  -> state4: (((seq_head(_1) + -1 * mod_cast(256, 108)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 108)) = 0))
+  -> state4: seq_head(_1) = 108.\as[bv[8]] & seq_head(_0) = 108.\as[bv[8]]
 
 State state4:
-  -> state5: (((seq_head(_1) + -1 * mod_cast(256, 111)) = 0) & ((seq_head(_0) + -1 * mod_cast(256, 100)) = 0))
+  -> state5: seq_head(_1) = 111.\as[bv[8]] & seq_head(_0) = 100.\as[bv[8]]
 
 State state5:
   (accepting)
@@ -659,13 +659,13 @@ Parsing transducer (2 tracks):
 
 State extract1st:
   (accepting)
-  -> extract1st: !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
-  -> extract1st_2: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+  -> extract1st: seq_head(_1) != 61.\as[bv[8]]
+  -> extract1st_2: seq_head(_1) = 61.\as[bv[8]]
 
 State extract1st_2:
   (accepting)
-  -> extract1st_2: (((seq_head(_1) + -1 * seq_head(_0)) = 0) & !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0))
-  -> extract1st_3: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+  -> extract1st_2: seq_head(_1) = seq_head(_0) & seq_head(_1) != 61.\as[bv[8]]
+  -> extract1st_3: seq_head(_1) = 61.\as[bv[8]]
 
 State extract1st_3:
   (accepting)
@@ -686,13 +686,13 @@ Parsing transducer (2 tracks):
 
 State extract1st:
   (accepting)
-  -> extract1st: !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
-  -> extract1st_2: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+  -> extract1st: seq_head(_1) != 61.\as[bv[8]]
+  -> extract1st_2: seq_head(_1) = 61.\as[bv[8]]
 
 State extract1st_2:
   (accepting)
-  -> extract1st_2: (((seq_head(_1) + -1 * seq_head(_0)) = 0) & !((seq_head(_1) + -1 * mod_cast(256, 61)) = 0))
-  -> extract1st_3: ((seq_head(_1) + -1 * mod_cast(256, 61)) = 0)
+  -> extract1st_2: seq_head(_1) = seq_head(_0) & seq_head(_1) != 61.\as[bv[8]]
+  -> extract1st_3: seq_head(_1) = 61.\as[bv[8]]
 
 State extract1st_3:
   (accepting)
