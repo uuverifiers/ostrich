@@ -1,6 +1,6 @@
 /*
  * This file is part of Sloth, an SMT solver for strings.
- * Copyright (C) 2017  Philipp Ruemmer, Petr Janku
+ * Copyright (C) 2017-2018  Philipp Ruemmer, Petr Janku
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +55,8 @@ object SMTLIBStringTheory extends Theory {
   val seq_replace     = new IFunction("seq_replace", 3, true, false)
   val seq_replace_all = new IFunction("seq_replace_all", 3, true, false)
 
+  val seq_reverse     = new IFunction("seq_reverse",   1, true, false)
+
   // Regexes
 
   val re_empty_set    = new IFunction("re_empty_set",  0, true, false)
@@ -88,7 +90,7 @@ object SMTLIBStringTheory extends Theory {
     re_of_seq, re_empty_seq,
     re_star, re_loop, re_plus, re_option, re_range,
     re_union, re_difference, re_intersect, re_complement,
-    re_of_pred, seq_replace, seq_replace_all)
+    re_of_pred, seq_replace, seq_replace_all, seq_reverse)
 
   val (predicates, functionPredicateMapping, functionalPredicates) = {
     val functionEnc = new FunctionEncoder (true, false)

@@ -1,6 +1,6 @@
 /*
  * This file is part of Sloth, an SMT solver for strings.
- * Copyright (C) 2017  Philipp Ruemmer, Petr Janku
+ * Copyright (C) 2017-2018  Philipp Ruemmer, Petr Janku
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -359,6 +359,9 @@ class StringTheoryTranslator private (constraint : IFormula,
     case IAtom(SMTLIBPred(`seq_replace_all`), _) =>
       IAtom(toPred(StringTheory.replaceall), toTermSeq(subres))
 
+    case IAtom(SMTLIBPred(`seq_reverse`), _) =>
+      IAtom(toPred(StringTheory.reverse), toTermSeq(subres))
+
     ////////////////////////////////////////////////////////////////////////////
 
     case t =>
@@ -393,7 +396,8 @@ class StringTheoryTranslator private (constraint : IFormula,
       case IAtom(SMTLIBPred(`re_of_seq`),
       Seq(c : IConstant, _)) =>
         regexVariables += c
-      case IAtom(StringPred(StringTheory.replace | StringTheory.replaceall),
+      case IAtom(StringPred(StringTheory.replace | StringTheory.replaceall 
+                            | StringTheory.reverse),
       args) =>
         for (c <- args) c match {
           case c : IConstant => wordVariables += c

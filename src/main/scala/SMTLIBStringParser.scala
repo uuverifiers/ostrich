@@ -1,6 +1,6 @@
 /*
  * This file is part of Sloth, an SMT solver for strings.
- * Copyright (C) 2017  Philipp Ruemmer, Petr Janku
+ * Copyright (C) 2017-2018  Philipp Ruemmer, Petr Janku
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -353,6 +353,9 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
 
     case PlainSymbol(n@("seq-replace" | "str.replace")) =>
       translateFun(n, SMTLIBStringTheory.seq_replace, args, (_.head))
+
+    case PlainSymbol(n@("seq-reverse" | "str.reverse")) =>
+      translateFun(n, SMTLIBStringTheory.seq_reverse, args, (_.head))
 
     case _ =>
       super.symApp(sym, args, polarity)
