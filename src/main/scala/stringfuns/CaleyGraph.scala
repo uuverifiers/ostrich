@@ -20,23 +20,72 @@ package stringfuns
 
 import dk.brics.automaton.{Automaton, State}
 import scala.collection.mutable.{HashMap, Set, MultiMap}
+import scala.collection.immutable.HashSet
 
 /**
-* Box in a Caley graph [w] = { (q,q') | q -- w --> q' }
-*/
-class Box(val arrows : MultiMap[State, State]) {
+ * Box in a Caley graph [w] = { (q,q') | q -- w --> q' }
+ */
+class Box() {
+    val arrows = new HashMap[State, Set[State]] with MultiMap[State, State]
 
-    def ++(that: Box) : Box = {
-        val newMap = new HashMap[State, Set[State]] with MultiMap[State, State] 
-        
-        for ((q1, qs) <- arrows; q2 <- qs )
-            if (that.arrows.isDefinedAt(q2))
-                for (q3 <- that.arrows(q2))
-                    newMap.addBinding(q1, q3)
-
-        return new Box(newMap)
+    /**
+     * Add a new edge (q1, q2) to the box
+     *
+     * @param q1
+     * @param q2
+     * @return same box object (this)
+     */
+    def addEdge(q1 : State, q2 : State) : Box.this.type = {
+        arrows.addBinding(q1, q2)
+        this
     }
 
+    def hasEdge(q1 : State, q2 : State) : Boolean = 
+        arrows.isDefinedAt(q1) && arrows(q1).contains(q2)
+
+    /**
+     * Iterate over all edges (q1, q2) in the box
+     *
+     * @return an iterator over all edges in the box
+     */
+    def edges : Iterator[Pair[State, State]] = 
+        for ((q1, qs) <- arrows.iterator; q2 <- qs )
+            yield (q1, q2)
+
+    /**
+     * Iterator over all states q2 such that (q1, q2) is an edge
+     *
+     * @param q1 
+     * @return iterator over states q2 reachable by an edge (q1, q2)
+     */
+    def targetStates(q1 : State) : Iterator[State] =
+        if (arrows.isDefinedAt(q1))
+            for (q2 <- arrows(q1).iterator)
+                yield q2
+        else
+            return Iterator()
+
+    /**
+     * Compose this box with that box
+     *
+     * @param that
+     * @return a new Box that is the composition of this and that
+     */
+    def ++(that: Box) : Box = {
+        val comp = new Box()
+
+        for ((q1, q2) <- edges; q3 <- that.targetStates(q2))
+            comp.addEdge(q1, q3)
+
+        return comp
+    }
+
+    /**
+     * returns the set of states q2 with and edge (q, q2)
+     *
+     * @param q
+     * @return a Set of all states that are the target of an edge from q
+     */
     def apply(q : State) : Set[State] = arrows(q)
 
     override def toString : String = arrows.toString
