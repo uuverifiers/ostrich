@@ -40,6 +40,13 @@ class Box() {
         this
     }
 
+    /**
+     * Checks if an edge is contained in the box
+     *
+     * @param q1
+     * @param q2
+     * @return true iff (q1, q2) is an edge in the box
+     */
     def hasEdge(q1 : State, q2 : State) : Boolean = 
         arrows.isDefinedAt(q1) && arrows(q1).contains(q2)
 
@@ -63,7 +70,7 @@ class Box() {
             for (q2 <- arrows(q1).iterator)
                 yield q2
         else
-            return Iterator()
+            Iterator()
 
     /**
      * Compose this box with that box
@@ -71,14 +78,12 @@ class Box() {
      * @param that
      * @return a new Box that is the composition of this and that
      */
-    def ++(that: Box) : Box = {
-        val comp = new Box()
-
-        for ((q1, q2) <- edges; q3 <- that.targetStates(q2))
-            comp.addEdge(q1, q3)
-
-        return comp
-    }
+    def ++(that: Box) : Box =
+        edges.foldLeft(new Box) { case (box, (q1, q2)) =>
+            that.targetStates(q2).foldLeft(box)((box, q3) =>
+                box.addEdge(q1, q3)
+            )
+        }
 
     /**
      * returns the set of states q2 with and edge (q, q2)
