@@ -41,7 +41,7 @@ object Box {
  * Box in a Caley graph [w] = { (q,q') | q -- w --> q' }
  */
 class Box {
-    val arrows = new HashMap[State, Set[State]] with MultiMap[State, State] {
+    private val arrows = new HashMap[State, Set[State]] with MultiMap[State, State] {
         override def default(q : State) : Set[State] = Set.empty[State]
     }
 
@@ -175,7 +175,7 @@ object CaleyGraph {
  * @param aut the automaton this graph represents.
  * @param nodes the nodes of the graph
  */
-class CaleyGraph (val aut : Automaton, val nodes : Set[Box]) {
+class CaleyGraph (private val aut : Automaton, private val nodes : Set[Box]) {
     /**
      * The number of boxes/nodes in the graph
      * @return as above

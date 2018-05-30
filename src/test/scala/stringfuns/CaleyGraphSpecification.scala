@@ -58,12 +58,7 @@ object CaleyGraphSpecification
     property("Caley graph nodes for empty aut") = {
         val aut = new Automaton
         val q = aut.getInitialState
-        val cg = CaleyGraph(aut)
-
-        val box = new Box
-        box.addEdge(q, q)
-
-        cg.nodes == Set(box)
+        CaleyGraph(aut) == new CaleyGraph(aut, Set(Box((q, q))))
     }
 
     property("Caley graph nodes for q0 -a-> q1 -b-> q2") = {
@@ -81,9 +76,7 @@ object CaleyGraphSpecification
                         Box((q0, q2)),
                         Box((q0, q0), (q1, q1), (q2, q2)))
 
-        val cg = CaleyGraph(aut)
-
-        cg == new CaleyGraph(aut, nodes)
+        CaleyGraph(aut) == new CaleyGraph(aut, nodes)
     }
 
     property("Caley graph for q0 -a-> q1 -b-> q2 -a-> q0") = {
