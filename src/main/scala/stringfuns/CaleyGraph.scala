@@ -19,14 +19,31 @@
 package stringfuns
 
 import dk.brics.automaton.{Automaton, State}
-import scala.collection.mutable.{HashMap, Set, MultiMap}
-import scala.collection.immutable.HashSet
+import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
+import scala.collection.JavaConversions._
+
+
+object Box {
+    /**
+     * Create a box from a number of edges.  E.g.
+     *
+     *   Box((q1, q2), (q2, q3))
+     *
+     * @param edges
+     * @return a Box with the given edges
+     */
+    def apply(edges : (State, State)*) : Box = {
+        edges.foldLeft(new Box) { case (box, (q1, q2)) => box.addEdge(q1, q2) }
+    }
+}
 
 /**
  * Box in a Caley graph [w] = { (q,q') | q -- w --> q' }
  */
-class Box() {
-    val arrows = new HashMap[State, Set[State]] with MultiMap[State, State]
+class Box {
+    val arrows = new HashMap[State, Set[State]] with MultiMap[State, State] {
+        override def default(q : State) : Set[State] = Set.empty[State]
+    }
 
     /**
      * Add a new edge (q1, q2) to the box
@@ -47,7 +64,7 @@ class Box() {
      * @param q2
      * @return true iff (q1, q2) is an edge in the box
      */
-    def hasEdge(q1 : State, q2 : State) : Boolean = 
+    def hasEdge(q1 : State, q2 : State) : Boolean =
         arrows.isDefinedAt(q1) && arrows(q1).contains(q2)
 
     /**
@@ -55,22 +72,9 @@ class Box() {
      *
      * @return an iterator over all edges in the box
      */
-    def edges : Iterator[Pair[State, State]] = 
+    def edges : Iterator[Pair[State, State]] =
         for ((q1, qs) <- arrows.iterator; q2 <- qs )
             yield (q1, q2)
-
-    /**
-     * Iterator over all states q2 such that (q1, q2) is an edge
-     *
-     * @param q1 
-     * @return iterator over states q2 reachable by an edge (q1, q2)
-     */
-    def targetStates(q1 : State) : Iterator[State] =
-        if (arrows.isDefinedAt(q1))
-            for (q2 <- arrows(q1).iterator)
-                yield q2
-        else
-            Iterator()
 
     /**
      * Compose this box with that box
@@ -80,7 +84,7 @@ class Box() {
      */
     def ++(that: Box) : Box =
         edges.foldLeft(new Box) { case (box, (q1, q2)) =>
-            that.targetStates(q2).foldLeft(box)((box, q3) =>
+            that(q2).foldLeft(box)((box, q3) =>
                 box.addEdge(q1, q3)
             )
         }
@@ -93,9 +97,100 @@ class Box() {
      */
     def apply(q : State) : Set[State] = arrows(q)
 
-    override def toString : String = arrows.toString
+    override def toString : String = edges.mkString("[", ", ", "]")
+
+    def canEqual(a : Any) : Boolean = a.isInstanceOf[Box]
+
+    override def equals(that : Any) : Boolean =
+        that match {
+            case that : Box => that.canEqual(this) && arrows == that.arrows
+            case _ => false
+        }
+
+    override def hashCode : Int = arrows.hashCode
 }
 
-class CaleyGraph {
-    def getOne() : Integer = 1
+/**
+ * Constructs the Caley graph of the given automaton
+ *
+ * @param aut
+ */
+object CaleyGraph {
+    def apply(aut : Automaton) = {
+        val boxes = new HashSet[Box]
+        val characterBoxes = getCharacterBoxes(aut)
+        val eBox = getEpsilonBox(aut)
+
+        val worklist = Stack(eBox)
+        while (!worklist.isEmpty) {
+            val w = worklist.pop()
+            boxes += w
+            for (a <- characterBoxes) {
+                val wa = w ++ a
+                if (!boxes.contains(wa))
+                    worklist.push(wa)
+            }
+        }
+
+        new CaleyGraph(aut, boxes)
+    }
+
+    /**
+     * Gets boxes for single characters [a] of the automaton
+     *
+     * @param aut
+     * @return an iterable of boxes [a] for each character of the automaton
+     */
+    private def getCharacterBoxes(aut : Automaton) : Iterable[Box] = {
+        val boxes = HashMap[Char,Box]()
+
+        for (q <- aut.getStates();
+                t <- q.getTransitions();
+                    a <- t.getMin to t.getMax) {
+            if (!boxes.isDefinedAt(a))
+                boxes += (a -> new Box)
+            boxes(a).addEdge(q, t.getDest())
+        }
+
+        boxes.values
+    }
+
+    /**
+     * Make [] box for empty word (i.e. all edges (q,q))
+     *
+     * @return the box
+     */
+    private def getEpsilonBox(aut : Automaton) : Box = {
+        val qs = aut.getStates
+        Box(qs.zip(qs)(collection.breakOut):_*)
+    }
+}
+
+
+/**
+ * Representation of CaleyGraph, can be constructed by companion object
+ *
+ * Graphs are considered equal by nodes, regardless of aut
+ *
+ * @param aut the automaton this graph represents.
+ * @param nodes the nodes of the graph
+ */
+class CaleyGraph (val aut : Automaton, val nodes : Set[Box]) {
+    /**
+     * The number of boxes/nodes in the graph
+     * @return as above
+     */
+    def numNodes : Int = nodes.size
+
+    override def toString : String = nodes.mkString("\n")
+
+    def canEqual(a : Any) : Boolean = a.isInstanceOf[CaleyGraph]
+
+    override def equals(that : Any) : Boolean =
+        that match {
+            case that : CaleyGraph => that.canEqual(this) && nodes == that.nodes
+            case _ => false
+        }
+
+    override def hashCode : Int = nodes.hashCode
 }
