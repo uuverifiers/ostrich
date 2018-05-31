@@ -40,6 +40,11 @@ trait Automaton {
   def &(that : Automaton) : Automaton
 
   /**
+   * Check whether this automaton accepts any word.
+   */
+  def isEmpty : Boolean
+
+  /**
    * Check whether the automaton accepts a given word.
    */
   def apply(word : Seq[Int]) : Boolean

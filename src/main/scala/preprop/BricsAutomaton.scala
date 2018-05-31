@@ -24,7 +24,10 @@ import ap.terfor.Term
 import ap.terfor.preds.PredConj
 
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
-                           Automaton => BAutomaton}
+                           Automaton => BAutomaton, State, Transition}
+
+import scala.collection.JavaConversions.iterableAsScalaIterable
+import scala.collection.mutable.{HashMap => MHashMap}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -43,7 +46,7 @@ object BricsAutomaton {
 /**
  * Wrapper for the BRICS automaton class
  */
-class BricsAutomaton(private val underlying : BAutomaton) extends Automaton {
+class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
 
   import BricsAutomaton.toBAutomaton
 
@@ -68,11 +71,41 @@ class BricsAutomaton(private val underlying : BAutomaton) extends Automaton {
                                                     toBAutomaton(that)))
 
   /**
+   * Check whether this automaton describes the empty language.
+   */
+  def isEmpty : Boolean =
+    underlying.isEmpty
+
+  /**
    * Check whether the automaton accepts a given word.
    */
   def apply(word : Seq[Int]) : Boolean =
     BasicOperations.run(
       this.underlying,
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString)
+
+  /**
+   * Clone automaton, and also return a map telling how the
+   * states are related
+   */
+  def cloneWithStateMap : (BricsAutomaton, Map[State, State]) = {
+    val newAut = new BAutomaton
+    val smap = new MHashMap[State, State]
+
+    val initial = underlying.getInitialState
+    val states = underlying.getStates
+
+    for (s <- states)
+      smap.put(s, new State)
+    for ((s, p) <- smap) {
+      p.setAccept(s.isAccept)
+      if (s == initial)
+        newAut setInitialState p
+      for (t <- s.getTransitions)
+        p.addTransition(new Transition(t.getMin, t.getMax, smap(t.getDest)))
+    }
+
+    (new BricsAutomaton(newAut), smap.toMap)
+  }
 
 }
