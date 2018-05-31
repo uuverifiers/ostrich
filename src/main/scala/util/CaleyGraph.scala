@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package stringfuns
+package util
 
 import dk.brics.automaton.{Automaton, State}
 import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
 import scala.collection.JavaConversions._
+import scala.collection.IterableView
 
 
 object Box {
@@ -181,6 +182,13 @@ class CaleyGraph (private val aut : Automaton, private val nodes : Set[Box]) {
      * @return as above
      */
     def numNodes : Int = nodes.size
+
+    /**
+     * Get a view on the nodes in the Caley graph
+     *
+     * @return as above
+     */
+    def getNodes : IterableView[Box, Set[Box]] = nodes.view
 
     override def toString : String = nodes.mkString("\n")
 

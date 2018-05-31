@@ -1,4 +1,4 @@
-package stringfuns
+package util
 
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
