@@ -38,7 +38,7 @@ trait PreOp {
    *     is also accepted by one of the returned constraints</li>
    * </ul>
    */
-  def apply(argumentConstraints : Seq[Automaton],
+  def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
           : Iterator[Seq[Automaton]]
 

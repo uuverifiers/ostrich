@@ -39,7 +39,7 @@ import scala.collection.mutable.{ArrayBuffer, LinkedHashMap, LinkedHashSet, Hash
  */
 class AFASolver {
 
-  import StringTheory.{member, p, replaceall, replace,
+  import StringTheory.{member, replaceall, replace,
                        wordEps, wordCat, wordChar, wordDiff}
 
   private val p = StringTheory.functionPredicateMap

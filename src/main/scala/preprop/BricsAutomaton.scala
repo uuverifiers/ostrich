@@ -52,6 +52,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
 
   import BricsAutomaton.toBAutomaton
 
+  override def toString : String = underlying.toString
+
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
    * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
@@ -87,6 +89,16 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString)
 
   /**
+   * Get any word accepted by this automaton, or <code>None</code>
+   * if the language is empty
+   */
+  def getAcceptedWord : Option[Seq[Int]] =
+    (this.underlying getShortestExample true) match {
+      case null => None
+      case str  => Some(for (c <- str) yield c.toInt)
+    }
+
+  /**
    * Clone automaton, and also return a map telling how the
    * states are related
    */
@@ -114,8 +126,11 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
     val states = underlying.getStates
     val s0 = underlying.getInitialState
 
-    for (s <- states)
-      smap += s -> new State
+    for (s <- states) {
+      val p = new State
+      p.setAccept(s.isAccept)
+      smap += s -> p
+    }
     for ((s, p) <- smap; t <- s.getTransitions)
       transformTran(t.getMin, t.getMax, (min, max) =>
         p.addTransition(new Transition(min, max, smap(t.getDest)))
