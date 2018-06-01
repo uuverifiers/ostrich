@@ -1,8 +1,6 @@
 
 package strsolver.preprop
 
-import ap.terfor.linearcombination.LinearCombination
-
 object ReplaceAllPreOp extends PreOp {
 
   override def toString = "replaceall"
