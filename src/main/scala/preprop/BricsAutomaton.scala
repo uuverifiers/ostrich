@@ -37,10 +37,12 @@ object BricsAutomaton {
       throw new IllegalArgumentException
   }
 
-  def fromRegex(c : Term, context : PredConj) : BricsAutomaton = {
+  def apply(c : Term, context : PredConj) : BricsAutomaton = {
     val converter = new Regex2AFA(context)
     new BricsAutomaton(converter.buildBricsAut(c))
   }
+
+  def apply() : BricsAutomaton = new BricsAutomaton(new BAutomaton)
 }
 
 /**
@@ -88,24 +90,46 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
    * Clone automaton, and also return a map telling how the
    * states are related
    */
-  def cloneWithStateMap : (BricsAutomaton, Map[State, State]) = {
+  def cloneWithStateMap : (BricsAutomaton, Map[State, State]) =
+    substWithStateMap((min, max, addTran) => addTran(min, max))
+
+  /**
+   * Subst aut and provides a mapping between equivalent states.
+   *
+   * Allows the transitions to be transformed via a function
+   * transformTran(min, max, addTran), which can use addTran(newMin,
+   * newMax) to replace transitions q --min, max--> q' with q --newMin,
+   * newMax -> q' (can use addTran multiple times)
+   *
+   * @param transformTran a function processing transitions
+   * @return (aut', map) where aut' is a clone of aut and map takes a
+   * state of aut into its equivalent state in aut'
+   */
+  def substWithStateMap(
+    transformTran: (Char, Char, (Char, Char) => Unit) => Unit
+  ) : (BricsAutomaton, Map[State, State]) = {
     val newAut = new BAutomaton
     val smap = new MHashMap[State, State]
 
-    val initial = underlying.getInitialState
     val states = underlying.getStates
+    val s0 = underlying.getInitialState
 
     for (s <- states)
-      smap.put(s, new State)
-    for ((s, p) <- smap) {
-      p.setAccept(s.isAccept)
-      if (s == initial)
-        newAut setInitialState p
-      for (t <- s.getTransitions)
-        p.addTransition(new Transition(t.getMin, t.getMax, smap(t.getDest)))
-    }
-
+      smap += s -> new State
+    for ((s, p) <- smap; t <- s.getTransitions)
+      transformTran(t.getMin, t.getMax, (min, max) =>
+        p.addTransition(new Transition(min, max, smap(t.getDest)))
+      )
+    newAut.setInitialState(smap(s0))
+    newAut.restoreInvariant
     (new BricsAutomaton(newAut), smap.toMap)
   }
 
+  def getStates : Iterable[State] = underlying.getStates
+
+  def getAcceptStates : Iterable[State] = underlying.getAcceptStates
+
+  def getInitialState : State = underlying.getInitialState
+
+  def setInitialState(s : State) = underlying.setInitialState(s)
 }

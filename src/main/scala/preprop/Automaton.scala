@@ -18,6 +18,8 @@
 
 package strsolver.preprop
 
+import dk.brics.automaton.State
+
 /**
  * Interface for different implementations of finite-state automata.
  */
@@ -49,4 +51,23 @@ trait Automaton {
    */
   def apply(word : Seq[Int]) : Boolean
 
+  /**
+   * Get states in the automaton
+   */
+  def getStates : Iterable[State]
+
+  /**
+   * Get accepting states in the automaton
+   */
+  def getAcceptStates : Iterable[State]
+
+  /**
+   * Get initial state of the automaton
+   */
+  def getInitialState : State
+
+  /**
+   * Set the initial state
+   */
+  def setInitialState(s : State) : Unit
 }
