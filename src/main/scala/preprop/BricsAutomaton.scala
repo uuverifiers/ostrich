@@ -24,9 +24,10 @@ import ap.terfor.Term
 import ap.terfor.preds.PredConj
 
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
-                           Automaton => BAutomaton, State, Transition}
+                           Automaton => BAutomaton, State => BState, Transition}
 
-import scala.collection.JavaConversions.iterableAsScalaIterable
+import scala.collection.JavaConversions.{asScalaIterator,
+                                         iterableAsScalaIterable}
 import scala.collection.mutable.{HashMap => MHashMap}
 
 object BricsAutomaton {
@@ -51,6 +52,8 @@ object BricsAutomaton {
 class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
 
   import BricsAutomaton.toBAutomaton
+
+  type State = BState
 
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
@@ -87,6 +90,54 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString)
 
   /**
+   * Replace a-transitions with new a-transitions between pairs of states
+   */
+  def replaceTransitions(a : Char,
+                         states : Iterator[(State, State)]) : Automaton = {
+    // A \ a-transitions
+    val (newAut, map) = substWithStateMap((min, max, addTran) => {
+      if (min <= a && a <= max)
+        if (min < a) addTran(min, (a-1).toChar)
+        if (a < max) addTran((a+1).toChar, max)
+      else
+        addTran(min, max)
+    })
+    // (A \ a-transition) + {q1 -a-> q2 | (q1,q2) in box}
+    for ((q1, q2) <- states)
+      map(q1).addTransition(new Transition(a, a, map(q2)))
+
+    newAut.underlying.restoreInvariant
+
+    newAut
+  }
+
+  /**
+   * Change initial and final states to s0 and sf respectively.  Returns
+   * a new automaton.
+   */
+  def setInitAccept(s0 : State, sf : State) : Automaton = {
+      // TODO: painful to copy, can we improve?
+      val (newAut, map) = cloneWithStateMap
+      newAut.underlying.setInitialState(map(s0))
+      newAut.underlying.getAcceptStates.foreach(_.setAccept(false))
+      map(sf).setAccept(true)
+      newAut.underlying.restoreInvariant
+      newAut
+  }
+
+  /**
+   * Iterate over automaton states
+   */
+  def getStates : Iterator[State] = underlying.getStates.iterator
+
+  /**
+  * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
+  */
+  def foreachTransition(f : (State, Char, Char, State) => Any) =
+    for (q <- underlying.getStates; t <- q.getTransitions)
+      f(q, t.getMin, t.getMax, t.getDest)
+
+  /**
    * Clone automaton, and also return a map telling how the
    * states are related
    */
@@ -105,7 +156,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
    * @return (aut', map) where aut' is a clone of aut and map takes a
    * state of aut into its equivalent state in aut'
    */
-  def substWithStateMap(
+  private def substWithStateMap(
     transformTran: (Char, Char, (Char, Char) => Unit) => Unit
   ) : (BricsAutomaton, Map[State, State]) = {
     val newAut = new BAutomaton
@@ -124,12 +175,4 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
     newAut.restoreInvariant
     (new BricsAutomaton(newAut), smap.toMap)
   }
-
-  def getStates : Iterable[State] = underlying.getStates
-
-  def getAcceptStates : Iterable[State] = underlying.getAcceptStates
-
-  def getInitialState : State = underlying.getInitialState
-
-  def setInitialState(s : State) = underlying.setInitialState(s)
 }

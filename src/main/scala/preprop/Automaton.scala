@@ -18,12 +18,11 @@
 
 package strsolver.preprop
 
-import dk.brics.automaton.State
-
 /**
  * Interface for different implementations of finite-state automata.
  */
 trait Automaton {
+  type State
 
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
@@ -52,22 +51,25 @@ trait Automaton {
   def apply(word : Seq[Int]) : Boolean
 
   /**
-   * Get states in the automaton
+   * Replace a-transitions with new a-transitions between pairs of
+   * states.  Returns a new automaton.
    */
-  def getStates : Iterable[State]
+  def replaceTransitions(a : Char,
+                         states : Iterator[(State, State)]) : Automaton
 
   /**
-   * Get accepting states in the automaton
+   * Change initial and final states to s0 and sf respectively.  Returns a new
+   * automaton.
    */
-  def getAcceptStates : Iterable[State]
+  def setInitAccept(s0 : State, sf : State) : Automaton
 
   /**
-   * Get initial state of the automaton
+   * Iterate over automaton states
    */
-  def getInitialState : State
+  def getStates : Iterator[State]
 
   /**
-   * Set the initial state
-   */
-  def setInitialState(s : State) : Unit
+  * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
+  */
+  def foreachTransition(f : (State, Char, Char, State) => Any)
 }
