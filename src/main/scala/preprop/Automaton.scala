@@ -51,6 +51,12 @@ trait Automaton {
   def apply(word : Seq[Int]) : Boolean
 
   /**
+   * Get any word accepted by this automaton, or <code>None</code>
+   * if the language is empty
+   */
+  def getAcceptedWord : Option[Seq[Int]]
+
+  /*
    * Replace a-transitions with new a-transitions between pairs of
    * states.  Returns a new automaton.
    */

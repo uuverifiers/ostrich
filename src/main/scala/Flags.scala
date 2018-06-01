@@ -19,6 +19,18 @@
 package strsolver
 
 object Flags {
+
+  // General options
+
+  object Solver extends Enumeration {
+    val afa_mc, preprop = Value
+  }
+
+  // order in which solvers should be tried
+  val enabledSolvers : Seq[Solver.Value] = List(Solver.preprop)
+
+  // AFA-Sloth specific options
+
   object ModelChecker extends Enumeration {
     val nuxmv, abc, simple = Value
   }
