@@ -41,6 +41,7 @@ class PrepropSolver {
 
   def findStringModel(goal : Goal) : Option[Map[Term, List[Int]]] = {
     val atoms = goal.facts.predConj
+    val regex2AFA = new Regex2AFA(atoms)
 
     println(atoms)
 
@@ -56,6 +57,7 @@ class PrepropSolver {
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
       case FunPred(`replaceall`) =>
         println(a)
+        println("replaced string: " + (regex2AFA buildStrings a(1)).next)
         funApps += ((ReplaceAllPreOp, List(a(0), a(1), a(2)), a(3)))
       case FunPred(f) if rexOps contains f =>
         // nothing
