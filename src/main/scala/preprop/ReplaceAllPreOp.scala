@@ -40,8 +40,8 @@ class ReplaceAllPreOp(val a : Char) extends PreOp {
     // A \ a-transitions
     val (aut2, map) = aut.substWithStateMap((min, max, addTran) => {
       if (min <= a && a <= max)
-        if (min < a) addTran(min, (a+1).toChar)
-        if (a < max) addTran((a-1).toChar, max)
+        if (min < a) addTran(min, (a-1).toChar)
+        if (a < max) addTran((a+1).toChar, max)
       else
         addTran(min, max)
     })
