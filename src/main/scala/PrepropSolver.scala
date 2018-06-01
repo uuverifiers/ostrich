@@ -19,7 +19,7 @@
 package strsolver
 
 import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
-                          ConcatPreOp}
+                          ConcatPreOp, ReplaceAllPreOp}
 
 import ap.terfor.Term
 import ap.proof.goal.Goal
@@ -54,6 +54,9 @@ class PrepropSolver {
         regexes += ((a.head, BricsAutomaton(a.last, atoms)))
       case FunPred(`wordCat`) =>
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
+      case FunPred(`replaceall`) =>
+        println(a)
+        funApps += ((ReplaceAllPreOp, List(a(0), a(1), a(2)), a(3)))
       case FunPred(f) if rexOps contains f =>
         // nothing
       case _ =>
