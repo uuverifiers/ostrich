@@ -10,7 +10,7 @@ object ReplaceAllPreOp {
 
 class ReplaceAllPreOp(val a : Char) extends PreOp {
 
-  def apply(argumentConstraints : Seq[Automaton],
+  def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
     val rc = resultConstraint
     for (box <- CaleyGraph[rc.type](rc).getNodes.iterator) yield {
