@@ -186,7 +186,7 @@ object SMTLIBMain {
       println("unknown")
     case t : Throwable => {
       println("(error \"" + t.getMessage + "\")")
-//        t.printStackTrace
+        t.printStackTrace
     }
   }
 

@@ -13,7 +13,9 @@ object ReplaceAllPreOp {
   def apply(w : List[Either[Int,Term]]) =
     if (w.length == 1) {
       w(0) match {
-        case Left(c) => new ReplaceAllPreOp(c.toChar)
+        case Left(c) => {
+          new ReplaceAllPreOp(c.toChar)
+        }
         case _ =>
           throw new IllegalArgumentException("ReplaceAllPreOp only supports single character replacement.")
       }
