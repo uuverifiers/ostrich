@@ -7,4 +7,3 @@
 (assert (= x_7 "HolloWorld"))
 
 (check-sat)
-(get-model)

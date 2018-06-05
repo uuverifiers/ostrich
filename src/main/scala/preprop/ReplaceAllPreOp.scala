@@ -1,18 +1,37 @@
 
 package strsolver.preprop
 
-object ReplaceAllPreOp extends PreOp {
+import ap.terfor.Term
+
+object ReplaceAllPreOp {
+  def apply(a : Char) = new ReplaceAllPreOp(a)
+
+  /**
+   * preop for a replaceall(_, w, _) for whatever we get out of
+   * PrepropSolver.
+   */
+  def apply(w : List[Either[Int,Term]]) =
+    if (w.length == 1) {
+      w(0) match {
+        case Left(c) => new ReplaceAllPreOp(c.toChar)
+        case _ =>
+          throw new IllegalArgumentException("ReplaceAllPreOp only supports single character replacement.")
+      }
+    } else {
+      throw new IllegalArgumentException("ReplaceAllPreOp only supports single character replacement")
+    }
+}
+
+/**
+* Representation of x = replaceall(y, a, z) where a is a single
+* character.
+*/
+class ReplaceAllPreOp(a : Char) extends PreOp {
 
   override def toString = "replaceall"
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
-    // TODO: assumes argumentConstraints(1)(0) is the single character to
-    // replace -- how to do this properly?
-    val a = argumentConstraints(1)(0).getAcceptedWord match {
-      case Some(w) => w(0).toChar
-      case _ => throw new IllegalArgumentException("Second argument in replaceall must be a single character")
-    }
     val rc = resultConstraint
     for (box <- CaleyGraph[rc.type](rc).getNodes.iterator) yield {
       val ycons = Seq(rc.replaceTransitions(a, box.getEdges))
@@ -21,5 +40,4 @@ object ReplaceAllPreOp extends PreOp {
       ycons ++ zcons
     }
   }
-
 }

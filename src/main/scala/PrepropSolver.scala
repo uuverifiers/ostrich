@@ -56,9 +56,8 @@ class PrepropSolver {
       case FunPred(`wordCat`) =>
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
       case FunPred(`replaceall`) =>
-        println(a)
-        println("replaced string: " + (regex2AFA buildStrings a(1)).next)
-        funApps += ((ReplaceAllPreOp, List(a(0), a(1), a(2)), a(3)))
+        val b = (regex2AFA buildStrings a(1)).next
+        funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
       case FunPred(f) if rexOps contains f =>
         // nothing
       case _ =>
