@@ -80,6 +80,11 @@ trait Automaton {
   def foreachTransition(f : (State, Char, Char, State) => Any)
 
   /**
+   * Apply f(min, max, q2) to each transition q1 -[min,max]-> q2 from q1
+   */
+  def foreachTransition(q1 : State, f : (Char, Char, State) => Any)
+
+  /**
    * Add a transition q1 -- [min,max] --> q2
    */
   def addTransition(q1 : State, min : Char, max : Char, q2 : State) : Unit
@@ -90,4 +95,14 @@ trait Automaton {
    * Create a fresh state.  For use with addTransition.
    */
   def getNewState : State
+
+  /**
+   * Product this automaton with a number of given automaton.  Returns
+   * new automaton.  Returns map from new states of result to (q0, [q1,
+   * ..., qn]) giving states of this and auts respectively
+   */
+  def productWithMap(auts : Seq[Automaton]) :
+    (Automaton, Map[State, (State, Seq[State])])
+
+  def getAcceptStates : Iterable[State]
 }

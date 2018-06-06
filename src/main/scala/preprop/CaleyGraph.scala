@@ -111,6 +111,7 @@ object CaleyGraph {
 
     val eBox = getEpsilonBox(aut)
     val es = graph.getInitialState
+    es.setAccept(true)
     boxMap += (es -> eBox)
     stateMap += (eBox -> es)
 
@@ -126,6 +127,7 @@ object CaleyGraph {
         val wa = w ++ a
         if (!donelist.contains(wa)) {
           val sa = graph.getNewState
+          sa.setAccept(true)
           boxMap += (sa -> wa)
           stateMap += (wa -> sa)
           worklist.push((sa, wa))
@@ -231,4 +233,12 @@ class CaleyGraph[A <: Automaton](
       }
 
     override def hashCode : Int = Objects.hash(boxMap, stateMap, graph)
+
+    /**
+     * Returns boxes representing words accepted by the product of auts
+     */
+    def getAcceptNodes(auts : Seq[Automaton]) : Iterable[Box[A]] = {
+      val (prodAut, sMap) = graph.productWithMap(auts)
+      prodAut.getAcceptStates.map(ps => boxMap(sMap(ps)._1))
+    }
 }
