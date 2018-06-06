@@ -97,6 +97,22 @@ trait AtomicStateAutomaton extends Automaton {
   def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)]
 
   /**
+   * Check whether the given label accepts any letter
+   */
+  def isNonEmptyLabel(label : TransitionLabel) : Boolean
+
+  /**
+   * Label accepting all letters
+   */
+  val sigmaLabel : TransitionLabel
+
+  /**
+   * Intersection of two labels
+   */
+  def intersectLabels(l1 : TransitionLabel,
+                      l2 : TransitionLabel) : TransitionLabel
+
+  /**
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int]

@@ -154,6 +154,25 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     (for (s <- getStates; if s.isAccept) yield s).toSet
 
   /**
+   * Check whether the given label accepts any letter
+   */
+  def isNonEmptyLabel(label : TransitionLabel) : Boolean =
+    label._1 <= label._2
+
+  /**
+   * Label accepting all letters
+   */
+  val sigmaLabel : TransitionLabel =
+    (Char.MinValue, Char.MaxValue)
+
+  /**
+   * Intersection of two labels
+   */
+  def intersectLabels(l1 : TransitionLabel,
+                      l2 : TransitionLabel) : TransitionLabel =
+    (l1._1 max l2._1, l1._2 min l2._2)
+
+  /**
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int] =
