@@ -87,11 +87,18 @@ class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             (op, args) <- apps)
        yield (op, args, res)).toList
 
-    if (constraints.values exists (!isConsistent(_)))
-      None
-    else
-      dfExplore(funAppList, constraints)
+    val res =
+      if (constraints.values exists (!isConsistent(_)))
+        None
+      else
+        dfExplore(funAppList, constraints)
+
+    println("nr of pre-op applications: " + preopCnt)
+
+    res
   }
+
+  private var preopCnt = 0
 
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)],
                         constraints : ConstraintMap)
@@ -114,6 +121,7 @@ class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     case List() =>
       dfExplore(nextApps, constraints)
     case resAut :: otherAuts =>
+      preopCnt = preopCnt + 1
       Seqs.some(for (argCS <- op(args map constraints, resAut)) yield {
         for (newConstraints <- extend(constraints, args zip argCS);
              res <- dfExploreOp(op, args, otherAuts, nextApps, newConstraints))

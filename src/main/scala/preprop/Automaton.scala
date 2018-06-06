@@ -22,7 +22,6 @@ package strsolver.preprop
  * Interface for different implementations of finite-state automata.
  */
 trait Automaton {
-  type State
 
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
@@ -56,6 +55,52 @@ trait Automaton {
    */
   def getAcceptedWord : Option[Seq[Int]]
 
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Trait for automata with atomic/nominal states; i.e., states
+ * don't have any structure and are not composite, there is a unique
+ * initial state, and a set of accepting states.
+ */
+trait AtomicStateAutomaton extends Automaton {
+  /**
+   * Type of states
+   */
+  type State
+
+  /**
+   * Type of labels on transitions
+   * (e.g., concrete letters, intervals, bit-vector formulas)
+   */
+  type TransitionLabel
+
+  /**
+   * Iterate over automaton states
+   */
+  def getStates : Iterator[State]
+
+  /**
+   * The unique initial state
+   */
+  val initialState : State
+
+  /**
+   * The set of accepting states
+   */
+  val acceptingStates : Set[State]
+
+  /**
+   * Given a state, iterate over all outgoing transitions
+   */
+  def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)]
+
+  /**
+   * Enumerate all letters accepted by a transition label
+   */
+  def enumLetters(label : TransitionLabel) : Iterator[Int]
+
   /*
    * Replace a-transitions with new a-transitions between pairs of
    * states.  Returns a new automaton.
@@ -70,12 +115,7 @@ trait Automaton {
   def setInitAccept(s0 : State, sf : State) : Automaton
 
   /**
-   * Iterate over automaton states
+   * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
    */
-  def getStates : Iterator[State]
-
-  /**
-  * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
-  */
-  def foreachTransition(f : (State, Char, Char, State) => Any)
+  def foreachTransition(f : (State, TransitionLabel, State) => Any)
 }

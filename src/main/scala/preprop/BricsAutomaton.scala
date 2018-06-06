@@ -49,11 +49,13 @@ object BricsAutomaton {
 /**
  * Wrapper for the BRICS automaton class
  */
-class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
+class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
 
   type State = BState
+
+  type TransitionLabel = (Char, Char)
 
   override def toString : String = underlying.toString
 
@@ -97,12 +99,13 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
   def replaceTransitions(a : Char,
                          states : Iterator[(State, State)]) : Automaton = {
     // A \ a-transitions
-    val (newAut, map) = substWithStateMap((min, max, addTran) => {
+    val (newAut, map) = substWithStateMap((label, addTran) => {
+      val (min, max) = label
       if (min <= a && a <= max)
-        if (min < a) addTran(min, (a-1).toChar)
-        if (a < max) addTran((a+1).toChar, max)
+        if (min < a) addTran((min, (a-1).toChar))
+        if (a < max) addTran(((a+1).toChar, max))
       else
-        addTran(min, max)
+        addTran(label)
     })
     // (A \ a-transition) + {q1 -a-> q2 | (q1,q2) in box}
     for ((q1, q2) <- states)
@@ -133,11 +136,35 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
   def getStates : Iterator[State] = underlying.getStates.iterator
 
   /**
-  * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
-  */
-  def foreachTransition(f : (State, Char, Char, State) => Any) =
+   * The unique initial state
+   */
+  lazy val initialState : State = underlying.getInitialState
+
+  /**
+   * Given a state, iterate over all outgoing transitions
+   */
+  def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)] =
+    for (t <- from.getTransitions.iterator)
+    yield (t.getDest, (t.getMin, t.getMax))
+
+  /**
+   * The set of accepting states
+   */
+  lazy val acceptingStates : Set[State] =
+    (for (s <- getStates; if s.isAccept) yield s).toSet
+
+  /**
+   * Enumerate all letters accepted by a transition label
+   */
+  def enumLetters(label : TransitionLabel) : Iterator[Int] =
+    for (c <- (label._1 to label._2).iterator) yield c.toInt
+
+  /**
+   * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
+   */
+  def foreachTransition(f : (State, TransitionLabel, State) => Any) =
     for (q <- underlying.getStates; t <- q.getTransitions)
-      f(q, t.getMin, t.getMax, t.getDest)
+      f(q, (t.getMin, t.getMax), t.getDest)
 
   /*
    * Get any word accepted by this automaton, or <code>None</code>
@@ -154,7 +181,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
    * states are related
    */
   def cloneWithStateMap : (BricsAutomaton, Map[State, State]) =
-    substWithStateMap((min, max, addTran) => addTran(min, max))
+    substWithStateMap((label, addTran) => addTran(label._1, label._2))
 
   /**
    * Subst aut and provides a mapping between equivalent states.
@@ -169,7 +196,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
    * state of aut into its equivalent state in aut'
    */
   private def substWithStateMap(
-    transformTran: (Char, Char, (Char, Char) => Unit) => Unit
+    transformTran: (TransitionLabel, TransitionLabel => Unit) => Unit
   ) : (BricsAutomaton, Map[State, State]) = {
     val newAut = new BAutomaton
     val smap = new MHashMap[State, State]
@@ -183,9 +210,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
       smap += s -> p
     }
     for ((s, p) <- smap; t <- s.getTransitions)
-      transformTran(t.getMin, t.getMax, (min, max) =>
-        p.addTransition(new Transition(min, max, smap(t.getDest)))
-      )
+      transformTran((t.getMin, t.getMax), {
+        case (min, max) =>
+          p.addTransition(new Transition(min, max, smap(t.getDest)))
+      })
     newAut.setInitialState(smap(s0))
     newAut.restoreInvariant
     (new BricsAutomaton(newAut), smap.toMap)

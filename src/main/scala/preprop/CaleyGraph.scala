@@ -27,7 +27,7 @@ object Box {
    * Create a box from a number of edges.  E.g.
    * Box((q1, q2), (q2, q3))
    */
-  def apply[A <: Automaton](edges : (A#State, A#State)*) : Box[A] = {
+  def apply[A <: AtomicStateAutomaton](edges : (A#State, A#State)*) : Box[A] = {
     edges.foldLeft(new Box[A]) {
       case (box, (q1, q2)) => box.addEdge(q1, q2)
     }
@@ -37,7 +37,7 @@ object Box {
 /**
  * Box in a Caley graph [w] = { (q,q') | q -- w --> q' }
  */
-class Box[A <: Automaton] {
+class Box[A <: AtomicStateAutomaton] {
   private val arrows =
     new HashMap[A#State, Set[A#State]] with MultiMap[A#State, A#State] {
       override def default(q : A#State) : Set[A#State] = Set.empty[A#State]
@@ -98,7 +98,7 @@ class Box[A <: Automaton] {
  * @param aut
  */
 object CaleyGraph {
-  def apply[A <: Automaton](aut : A) : CaleyGraph[A] = {
+  def apply[A <: AtomicStateAutomaton](aut : A) : CaleyGraph[A] = {
     val boxes = new HashSet[Box[A]]
     val characterBoxes = getCharacterBoxes(aut)
     val eBox = getEpsilonBox(aut)
@@ -120,15 +120,16 @@ object CaleyGraph {
   /**
    * Gets boxes for single characters [a] of the automaton
    */
-  private def getCharacterBoxes[A <: Automaton](aut : A)
+  private def getCharacterBoxes[A <: AtomicStateAutomaton](aut : A)
       : Iterable[Box[A]] = {
     val boxes = HashMap[Char,Box[A]]()
 
-    aut.foreachTransition((q1, min, max, q2) =>
-      for (a <- min to max) {
-        if (!boxes.isDefinedAt(a))
-          boxes += (a -> new Box[A])
-        boxes(a).addEdge(q1, q2)
+    aut.foreachTransition((q1, label, q2) => {
+        for (_a <- aut.enumLetters(label); a = _a.toChar) {
+          if (!boxes.isDefinedAt(a))
+            boxes += (a -> new Box[A])
+          boxes(a).addEdge(q1, q2)
+        }
       }
     )
 
@@ -140,7 +141,7 @@ object CaleyGraph {
    *
    * @return the box
    */
-  private def getEpsilonBox[A <: Automaton](aut : A) : Box[A] = {
+  private def getEpsilonBox[A <: AtomicStateAutomaton](aut : A) : Box[A] = {
     Box[A](aut.getStates.zip(aut.getStates).toSeq:_*)
   }
 }
@@ -151,8 +152,8 @@ object CaleyGraph {
  * Can be constructed by companion object
  * Graphs are considered equal by nodes, regardless of aut
  */
-class CaleyGraph[A <: Automaton](private val aut : A,
-                                 private val nodes : Set[Box[A]]) {
+class CaleyGraph[A <: AtomicStateAutomaton](private val aut : A,
+                                            private val nodes : Set[Box[A]]) {
     /**
      * The number of boxes/nodes in the graph
      */
