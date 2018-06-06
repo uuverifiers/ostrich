@@ -18,9 +18,15 @@
 
 package strsolver.preprop
 
+import java.util.Objects
+
 import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
 import scala.collection.JavaConversions._
 import scala.collection.IterableView
+
+import spire.math.Interval
+import spire.math.interval.Closed
+import spire.math.extras.interval.IntervalTrie._
 
 object Box {
   /**
@@ -99,40 +105,67 @@ class Box[A <: Automaton] {
  */
 object CaleyGraph {
   def apply[A <: Automaton](aut : A) : CaleyGraph[A] = {
-    val boxes = new HashSet[Box[A]]
-    val characterBoxes = getCharacterBoxes(aut)
-    val eBox = getEpsilonBox(aut)
+    val graph = BricsAutomaton()
+    val boxMap = new HashMap[BricsAutomaton#State, Box[A]]
+    val stateMap = new HashMap[Box[A], BricsAutomaton#State]
 
-    val worklist = Stack(eBox)
+    val eBox = getEpsilonBox(aut)
+    val es = graph.getInitialState
+    boxMap += (es -> eBox)
+    stateMap += (eBox -> es)
+
+    val characterBoxes = getCharacterBoxes(aut)
+
+    val worklist = Stack((es, eBox))
+    val donelist = new HashSet[Box[A]]
+
     while (!worklist.isEmpty) {
-      val w = worklist.pop()
-      boxes += w
-      for (a <- characterBoxes) {
+      val (s, w) = worklist.pop()
+      donelist += w
+      for ((a, intervals) <- characterBoxes) {
         val wa = w ++ a
-        if (!boxes.contains(wa))
-          worklist.push(wa)
+        if (!donelist.contains(wa)) {
+          val sa = graph.getNewState
+          boxMap += (sa -> wa)
+          stateMap += (wa -> sa)
+          worklist.push((sa, wa))
+        }
+
+        val sa = stateMap(wa)
+        for ((min, max) <- intervals) {
+          graph.addTransition(s, min, max, sa)
+        }
       }
     }
 
-    new CaleyGraph[A](aut, boxes)
+    new CaleyGraph[A](aut, graph, boxMap.toMap, stateMap.toMap)
   }
 
   /**
-   * Gets boxes for single characters [a] of the automaton
+   * Gets boxes for characters [a] of the automaton.
+   *
+   * @return map from each box to the intervals that have that box
    */
   private def getCharacterBoxes[A <: Automaton](aut : A)
-      : Iterable[Box[A]] = {
-    val boxes = HashMap[Char,Box[A]]()
-
+      : Map[Box[A], Iterable[(Char, Char)]] = {
+    // i know, we need foldTransition
+    var intervals = empty[Char]
     aut.foreachTransition((q1, min, max, q2) =>
-      for (a <- min to max) {
-        if (!boxes.isDefinedAt(a))
-          boxes += (a -> new Box[A])
-        boxes(a).addEdge(q1, q2)
-      }
+      intervals = intervals | (atOrAbove(min) & atOrBelow(max))
     )
 
-    boxes.values
+    val boxes : Map[(Char,Char),Box[A]] =
+      intervals.intervals.map(i =>
+        intervalPair(i) -> new Box[A]
+      )(collection.breakOut)
+
+    aut.foreachTransition((q1, min, max, q2) =>
+      for (i <- (intervals & atOrAbove(min) & atOrBelow(max)).intervals)
+        boxes(intervalPair(i)).addEdge(q1, q2)
+    )
+
+    // reverse map
+    boxes.groupBy(_._2).mapValues(_.keys)
   }
 
   /**
@@ -143,6 +176,22 @@ object CaleyGraph {
   private def getEpsilonBox[A <: Automaton](aut : A) : Box[A] = {
     Box[A](aut.getStates.zip(aut.getStates).toSeq:_*)
   }
+
+  /**
+   * extract upper and lower bound from interval object, assuming only
+   * closed intervals
+   */
+  private def intervalPair(i : Interval[Char]) : (Char, Char) = {
+    val lower : Char = i.lowerBound match {
+      case c : Closed[Char] => c.a
+      case _ => '\0' /* never occurs */
+    }
+    val upper : Char = i.upperBound match {
+      case c : Closed[Char] => c.a
+      case _ => '\0' /* never occurs */
+    }
+    (lower, upper)
+  }
 }
 
 
@@ -151,28 +200,35 @@ object CaleyGraph {
  * Can be constructed by companion object
  * Graphs are considered equal by nodes, regardless of aut
  */
-class CaleyGraph[A <: Automaton](private val aut : A,
-                                 private val nodes : Set[Box[A]]) {
+class CaleyGraph[A <: Automaton](
+  private val aut : A,
+  private val graph : BricsAutomaton,
+  private val boxMap : Map[BricsAutomaton#State, Box[A]],
+  private val stateMap : Map[Box[A], BricsAutomaton#State]
+) {
     /**
      * The number of boxes/nodes in the graph
      */
-    def numNodes : Int = nodes.size
+    def numNodes : Int = stateMap.size
 
     /**
      * Get a view on the nodes in the Caley graph
      */
-    def getNodes : IterableView[Box[A], Set[Box[A]]] = nodes.view
+    def getNodes : Iterable[Box[A]] = stateMap.keys
 
-    override def toString : String = nodes.mkString("\n")
+    override def toString : String = stateMap.mkString("\n")
 
     def canEqual(a : Any) : Boolean = a.isInstanceOf[CaleyGraph[A]]
 
     override def equals(that : Any) : Boolean =
       that match {
         case that : CaleyGraph[A] =>
-          that.canEqual(this) && nodes == that.nodes
+          that.canEqual(this) &&
+          stateMap == that.stateMap &&
+          boxMap == that.boxMap &&
+          graph == that.graph
         case _ => false
       }
 
-    override def hashCode : Int = nodes.hashCode
+    override def hashCode : Int = Objects.hash(boxMap, stateMap, graph)
 }

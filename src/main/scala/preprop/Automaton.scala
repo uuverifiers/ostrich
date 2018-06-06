@@ -75,7 +75,19 @@ trait Automaton {
   def getStates : Iterator[State]
 
   /**
-  * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
-  */
+   * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
+   */
   def foreachTransition(f : (State, Char, Char, State) => Any)
+
+  /**
+   * Add a transition q1 -- [min,max] --> q2
+   */
+  def addTransition(q1 : State, min : Char, max : Char, q2 : State) : Unit
+
+  def getInitialState : State
+
+  /**
+   * Create a fresh state.  For use with addTransition.
+   */
+  def getNewState : State
 }

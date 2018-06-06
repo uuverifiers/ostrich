@@ -190,4 +190,17 @@ class BricsAutomaton(val underlying : BAutomaton) extends Automaton {
     newAut.restoreInvariant
     (new BricsAutomaton(newAut), smap.toMap)
   }
+
+  def getInitialState = underlying.getInitialState
+
+  def getNewState = new BState
+
+  /**
+   * Assumes q1 already appears in the automaton
+   */
+  def addTransition(q1 : State, min : Char, max : Char, q2 : State) : Unit = {
+    val t = new Transition(min, max, q2)
+    q1.addTransition(t)
+    underlying.restoreInvariant
+  }
 }
