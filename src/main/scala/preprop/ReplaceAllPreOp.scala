@@ -33,17 +33,19 @@ class ReplaceAllPreOp(a : Char) extends PreOp {
   override def toString = "replaceall"
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton) : Iterator[Seq[Automaton]] =
-    resultConstraint match {
-      case resultConstraint : AtomicStateAutomaton => {
-        val rc = resultConstraint
-        for (box <- CaleyGraph[rc.type](rc).getNodes.iterator) yield {
-          val ycons = Seq(rc.replaceTransitions(a, box.getEdges))
-          val zcons =
-            box.getEdges.map({ case (q1, q2) =>
-                                 rc.setInitAccept(q1, q2) }).toSeq
-          ycons ++ zcons
-        }
-      }
+            resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
+    val rc : AtomicStateAutomaton = resultConstraint match {
+      case resCon : AtomicStateAutomaton => resCon
+      case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
     }
+    val zcons = argumentConstraints(1)
+    val cg = CaleyGraph[rc.type](rc)
+
+    for (box <- cg.getAcceptNodes(zcons).iterator) yield {
+      val newYCons = Seq(rc.replaceTransitions(a, box.getEdges))
+      val newZCons =
+        box.getEdges.map({ case (q1, q2) => rc.setInitAccept(q1, q2) }).toSeq
+      newYCons ++ newZCons
+    }
+  }
 }

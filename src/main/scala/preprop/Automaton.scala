@@ -131,7 +131,34 @@ trait AtomicStateAutomaton extends Automaton {
   def setInitAccept(s0 : State, sf : State) : Automaton
 
   /**
-   * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
+   * Apply f(q1, label, q2) to each transition q1 -[min,max]-> q2
    */
   def foreachTransition(f : (State, TransitionLabel, State) => Any)
+
+  /**
+   * Apply f(label, max, q2) to each transition q1 -[min,max]-> q2 from q1
+   */
+  def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any)
+
+  /**
+   * Add a transition q1 -- label --> q2
+   */
+  def addTransition(q1 : State, label : TransitionLabel, q2 : State) : Unit
+
+  def getInitialState : State
+
+  /**
+   * Create a fresh state.  For use with addTransition.
+   */
+  def getNewState : State
+
+  /**
+   * Product this automaton with a number of given automaton.  Returns
+   * new automaton.  Returns map from new states of result to (q0, [q1,
+   * ..., qn]) giving states of this and auts respectively
+   */
+  def productWithMap(auts : Seq[Automaton]) :
+    (Automaton, Map[State, (State, Seq[State])])
+
+  def getAcceptStates : Iterable[State]
 }
