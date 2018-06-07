@@ -30,7 +30,12 @@ import scala.collection.JavaConversions.{asScalaIterator,
                                          iterableAsScalaIterable}
 import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
-                                 Stack => MStack}
+                                 Stack => MStack,
+                                 TreeSet => MTreeSet}
+
+import spire.math.extras.interval.IntervalTrie._
+import spire.math.Interval
+import spire.math.interval.Closed
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -187,6 +192,63 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     for (c <- (label._1 to label._2).iterator) yield c.toInt
 
   /**
+   * Enumerate all labels with overlaps removed.
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [5,8] [8,10] [10,15]
+   */
+  def enumDisjointLabels : Iterable[TransitionLabel] = {
+    var disjoint = List[TransitionLabel]()
+
+    val mins = new MTreeSet[Char]
+    val maxes = new MTreeSet[Char]
+    foreachTransition({ case (_, (min, max), _) =>
+      mins += min
+      maxes += max
+    })
+
+    val imin = mins.iterator
+    val imax = maxes.iterator
+
+    if (!imin.hasNext)
+      return disjoint
+
+    var curMin = imin.next
+    var nextMax = imax.next
+    while (imin.hasNext) {
+      val nextMin = imin.next
+      if (nextMin <= nextMax) {
+        disjoint = (curMin, (nextMin-1).toChar)::disjoint
+        curMin = nextMin
+      } else {
+        disjoint = (curMin, nextMax)::disjoint
+        curMin = nextMin
+        nextMax = imax.next
+      }
+    }
+
+    disjoint = (curMin, nextMax)::disjoint
+    curMin = (nextMax + 1).toChar
+
+    while (imax.hasNext) {
+      val nextMax = imax.next
+      disjoint = (curMin, nextMax)::disjoint
+      curMin = (nextMax + 1).toChar
+    }
+
+    disjoint
+  }
+
+  /**
+   * iterate over the instances of lbls that overlap with lbl
+   */
+  def enumLabelOverlap(lbl : TransitionLabel,
+                       lbls : Iterable[TransitionLabel]) : Iterable[TransitionLabel] = {
+    val (lMin, lMax) = lbl
+    lbls.filter({ case (min, max) => !(max < lMin || min > lMax)})
+  }
+
+
+  /**
    * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
    */
   def foreachTransition(f : (State, TransitionLabel, State) => Any) =
@@ -270,8 +332,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Product this automaton with a number of given automaton.  Returns
    * new automaton.
    */
-  def productWithMap(auts : Seq[Automaton]) :
-    (BricsAutomaton, Map[State, (State, Seq[State])]) = {
+  def productWithMap(auts : Seq[AtomicStateAutomaton]) :
+    (AtomicStateAutomaton, Map[State, (State, Seq[State])]) = {
     val bauts = auts.map(aut => aut match {
       case baut : BricsAutomaton => baut.underlying
       case _ => throw new IllegalArgumentException("BricsAutomaton can only product with BricsAutomata")
@@ -288,10 +350,9 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     sMapRev += (initState, initStates) -> initBState
 
     val worklist = MStack((initBState, (initState, initStates)))
-    val donelist = MHashSet[(BState, Seq[BState])]()
+    val seenlist = MHashSet[(BState, Seq[BState])]()
     while (!worklist.isEmpty) {
       val (bs, (s, ss)) = worklist.pop()
-      donelist += ((s, ss))
 
       // collects transitions from (s, ss)
       // min, max is current range
@@ -303,12 +364,13 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
                          ss : Seq[BState]) : Unit = {
         if (ss.size == 0) {
             val nextState = (sp, ssp.reverse)
-            if (!donelist.contains(nextState)) {
+            if (!seenlist.contains(nextState)) {
                 val nextBState = new State
                 nextBState.setAccept(sp.isAccept && ssp.forall(_.isAccept))
                 sMap += nextBState -> nextState
                 sMapRev += nextState -> nextBState
                 worklist.push((nextBState, nextState))
+                seenlist += nextState
             }
             val nextBState = sMapRev(nextState)
             bs.addTransition(new Transition(min, max, nextBState))
@@ -333,4 +395,30 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   }
 
   def getAcceptStates : Iterable[State] = underlying.getAcceptStates
+
+  def getEmpty : BricsAutomaton = BricsAutomaton()
+
+  /**
+   * Set state accepting
+   */
+  def setAccept(q : State, isAccepting : Boolean) : Unit =
+    q.setAccept(isAccepting)
+
+
+  /**
+   * extract upper and lower bound from interval object, assuming only
+   * closed intervals
+   */
+  private def intervalPair(i : Interval[Char]) : (Char, Char) = {
+    val lower : Char = i.lowerBound match {
+      case c : Closed[Char] => c.a
+      case _ => '\0' /* never occurs */
+    }
+    val upper : Char = i.upperBound match {
+      case c : Closed[Char] => c.a
+      case _ => '\0' /* never occurs */
+    }
+    (lower, upper)
+  }
 }
+

@@ -45,7 +45,8 @@ object CaleyGraphSpecification
 
   def caleyGraphHasBoxes(baut : BricsAutomaton,
                boxes : Set[Box[BricsAutomaton]]) = {
-    CaleyGraph(baut).getNodes == boxes
+    val cg = CaleyGraph(baut)
+    cg.getNodes == boxes
   }
 
   property("Serious test compose") =
@@ -115,5 +116,33 @@ object CaleyGraphSpecification
 
     caleyGraphHasBoxes(baut, nodes)
   }
+
+  property("Caley graph for q0 -[a,c]-> q1 -[f,j]-> q2 -[h,z]-> q0") = {
+    val q0 = new IDState(0)
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    q0.addTransition(new Transition('a', 'c', q1))
+    q1.addTransition(new Transition('f', 'j', q2))
+    q2.addTransition(new Transition('h', 'z', q0))
+    val aut = new BAutomaton
+    aut.setInitialState(q0)
+    val baut = new BricsAutomaton(aut)
+
+    val nodes = Set(Box[BricsAutomaton]((q0, q0), (q1, q1), (q2, q2)),
+                    Box[BricsAutomaton]((q2, q0)),
+                    Box[BricsAutomaton]((q0, q1)),
+                    Box[BricsAutomaton]((q1, q2)),
+                    Box[BricsAutomaton]((q1, q2), (q2, q0)),
+                    Box[BricsAutomaton](),
+                    Box[BricsAutomaton]((q0, q2)),
+                    Box[BricsAutomaton]((q2, q1)),
+                    Box[BricsAutomaton]((q1, q0)),
+                    Box[BricsAutomaton]((q1, q1)),
+                    Box[BricsAutomaton]((q2, q2)),
+                    Box[BricsAutomaton]((q0, q0)))
+
+    caleyGraphHasBoxes(baut, nodes)
+  }
+
 
 }

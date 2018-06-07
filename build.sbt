@@ -6,8 +6,6 @@ lazy val commonSettings = Seq(
   libraryDependencies += "uuverifiers" %% "princess" % "2018-05-25",
   libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
   libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-  libraryDependencies += "org.typelevel" %% "spire" % "0.14.1",
-  libraryDependencies += "org.typelevel" %% "spire-extras" % "0.14.1"
 )
 
 lazy val root = (project in file(".")).

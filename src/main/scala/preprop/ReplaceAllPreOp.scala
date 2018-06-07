@@ -38,7 +38,10 @@ class ReplaceAllPreOp(a : Char) extends PreOp {
       case resCon : AtomicStateAutomaton => resCon
       case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
     }
-    val zcons = argumentConstraints(1)
+    val zcons = argumentConstraints(1).map(_ match {
+      case zcon : AtomicStateAutomaton => zcon
+      case _ => throw new IllegalArgumentException("ReplaceAllPreOp can only use AtomicStateAutomaton constraints.")
+    })
     val cg = CaleyGraph[rc.type](rc)
 
     for (box <- cg.getAcceptNodes(zcons).iterator) yield {

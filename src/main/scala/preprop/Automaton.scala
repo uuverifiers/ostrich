@@ -117,6 +117,19 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int]
 
+  /**
+   * Enumerate all labels with overlaps removed.
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [5,8] [8,10] [10,15]
+   */
+  def enumDisjointLabels : Iterable[TransitionLabel]
+
+  /**
+   * iterate over the instances of lbls that overlap with lbl
+   */
+  def enumLabelOverlap(lbl : TransitionLabel,
+                       lbls : Iterable[TransitionLabel]) : Iterable[TransitionLabel]
+
   /*
    * Replace a-transitions with new a-transitions between pairs of
    * states.  Returns a new automaton.
@@ -153,12 +166,23 @@ trait AtomicStateAutomaton extends Automaton {
   def getNewState : State
 
   /**
+   * Set state accepting
+   */
+  def setAccept(q : State, isAccepting : Boolean) : Unit
+
+  /**
    * Product this automaton with a number of given automaton.  Returns
    * new automaton.  Returns map from new states of result to (q0, [q1,
    * ..., qn]) giving states of this and auts respectively
    */
-  def productWithMap(auts : Seq[Automaton]) :
-    (Automaton, Map[State, (State, Seq[State])])
+  def productWithMap(auts : Seq[AtomicStateAutomaton]) :
+    (AtomicStateAutomaton, Map[State, (State, Seq[State])])
 
   def getAcceptStates : Iterable[State]
+
+  /**
+   * Return new emtpy automaton (single initial state, not accepting) of
+   * same type
+   */
+  def getEmpty : AtomicStateAutomaton
 }

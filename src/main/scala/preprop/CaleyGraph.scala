@@ -105,84 +105,58 @@ class Box[A <: AtomicStateAutomaton] {
  */
 object CaleyGraph {
   def apply[A <: AtomicStateAutomaton](aut : A) : CaleyGraph[A] = {
-    val graph = BricsAutomaton()
-    val boxMap = new HashMap[BricsAutomaton#State, Box[A]]
-    val stateMap = new HashMap[Box[A], BricsAutomaton#State]
+    val graph : aut.type = aut.getEmpty.asInstanceOf[aut.type]
+    val boxMap = new HashMap[graph.State, Box[A]]
+    val stateMap = new HashMap[Box[A], graph.State]
 
     val eBox = getEpsilonBox(aut)
     val es = graph.getInitialState
-    es.setAccept(true)
+    graph.setAccept(es, true)
     boxMap += (es -> eBox)
     stateMap += (eBox -> es)
 
     val characterBoxes = getCharacterBoxes(aut)
 
     val worklist = Stack((es, eBox))
-    val donelist = new HashSet[Box[A]]
+    val seenlist = new HashSet[Box[A]]
 
     while (!worklist.isEmpty) {
       val (s, w) = worklist.pop()
-      donelist += w
       for ((box, as) <- characterBoxes) {
         val wa = w ++ box
-        if (!donelist.contains(wa)) {
+        if (!seenlist.contains(wa)) {
           val sa = graph.getNewState
-          sa.setAccept(true)
+          graph.setAccept(sa, true)
           boxMap += (sa -> wa)
           stateMap += (wa -> sa)
           worklist.push((sa, wa))
+          seenlist += wa
         }
 
         val sa = stateMap(wa)
         for (a <- as)
-          graph.addTransition(s, (a, a), sa)
+          graph.addTransition(s, a.asInstanceOf[graph.TransitionLabel], sa)
       }
     }
 
     new CaleyGraph[A](aut, graph, boxMap.toMap, stateMap.toMap)
   }
 
-  /**
-   * Gets boxes for characters [a] of the automaton.
-   *
-   * @return map from each box to the intervals that have that box
-   */
   private def getCharacterBoxes[A <: AtomicStateAutomaton](aut : A)
-      : Map[Box[A],Iterable[Char]] = {
-    val boxes = HashMap[Char,Box[A]]()
+      : Map[Box[A], Iterable[A#TransitionLabel]] = {
+    val intervals = aut.enumDisjointLabels
 
-    aut.foreachTransition((q1, label, q2) => {
-      for (_a <- aut.enumLetters(label); a = _a.toChar) {
-        if (!boxes.isDefinedAt(a))
-          boxes += (a -> new Box[A])
-        boxes(a).addEdge(q1, q2)
-      }
+    val boxes : Map[A#TransitionLabel,Box[A]] =
+      intervals.map(i => i -> new Box[A])(collection.breakOut)
+
+    aut.foreachTransition({ case (q1, i, q2) =>
+      for (i2 <- aut.enumLabelOverlap(i, intervals))
+        boxes(i2).addEdge(q1, q2)
     })
 
     // reverse map
     boxes.groupBy(_._2).mapValues(_.keys)
   }
-
-//  private def getCharacterBoxes[A <: Automaton](aut : A)
-//      : Map[Box[A], Iterable[(Char, Char)]] = {
-//    // i know, we need foldTransition
-//    var intervals = empty[Char]
-//    aut.foreachTransition((q1, min, max, q2) =>
-//      intervals = intervals | (atOrAbove(min) & atOrBelow(max))
-//    )
-//
-//    val boxes : Map[(Char,Char),Box[A]] =
-//      intervals.intervals.map(i =>
-//        intervalPair(i) -> new Box[A]
-//      )(collection.breakOut)
-//
-//    aut.foreachTransition((q1, min, max, q2) =>
-//      for (i <- (intervals & atOrAbove(min) & atOrBelow(max)).intervals)
-//        boxes(intervalPair(i)).addEdge(q1, q2)
-//>>>>>>> 9124d58c0220fd206bbe8f6abc84cd620136c895
-//    )
-
-
 
   /**
    * Make [] box for empty word (i.e. all edges (q,q))
@@ -192,22 +166,6 @@ object CaleyGraph {
   private def getEpsilonBox[A <: AtomicStateAutomaton](aut : A) : Box[A] = {
     Box[A](aut.getStates.zip(aut.getStates).toSeq:_*)
   }
-
-//  /**
-//   * extract upper and lower bound from interval object, assuming only
-//   * closed intervals
-//   */
-//  private def intervalPair(i : Interval[Char]) : (Char, Char) = {
-//    val lower : Char = i.lowerBound match {
-//      case c : Closed[Char] => c.a
-//      case _ => '\0' /* never occurs */
-//    }
-//    val upper : Char = i.upperBound match {
-//      case c : Closed[Char] => c.a
-//      case _ => '\0' /* never occurs */
-//    }
-//    (lower, upper)
-//  }
 }
 
 
@@ -218,9 +176,9 @@ object CaleyGraph {
  */
 class CaleyGraph[A <: AtomicStateAutomaton](
   private val aut : A,
-  private val graph : BricsAutomaton,
-  private val boxMap : Map[BricsAutomaton#State, Box[A]],
-  private val stateMap : Map[Box[A], BricsAutomaton#State]
+  private val graph : A,
+  private val boxMap : Map[A#State, Box[A]],
+  private val stateMap : Map[Box[A], A#State]
 ) {
     /**
      * The number of boxes/nodes in the graph
@@ -251,8 +209,8 @@ class CaleyGraph[A <: AtomicStateAutomaton](
     /**
      * Returns boxes representing words accepted by the product of auts
      */
-    def getAcceptNodes(auts : Seq[Automaton]) : Iterable[Box[A]] = {
+    def getAcceptNodes(auts : Seq[AtomicStateAutomaton]) : Iterable[Box[A]] = {
       val (prodAut, sMap) = graph.productWithMap(auts)
-      prodAut.getAcceptStates.map(ps => boxMap(sMap(ps)._1))
+      prodAut.getAcceptStates.map(ps => boxMap(sMap(ps.asInstanceOf[graph.State])._1))
     }
 }
