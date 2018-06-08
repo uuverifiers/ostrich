@@ -24,10 +24,6 @@ import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
 import scala.collection.JavaConversions._
 import scala.collection.IterableView
 
-import spire.math.Interval
-import spire.math.interval.Closed
-import spire.math.extras.interval.IntervalTrie._
-
 object Box {
   /**
    * Create a box from a number of edges.  E.g.

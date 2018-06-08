@@ -33,10 +33,6 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  Stack => MStack,
                                  TreeSet => MTreeSet}
 
-import spire.math.extras.interval.IntervalTrie._
-import spire.math.Interval
-import spire.math.interval.Closed
-
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
@@ -403,22 +399,5 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    */
   def setAccept(q : State, isAccepting : Boolean) : Unit =
     q.setAccept(isAccepting)
-
-
-  /**
-   * extract upper and lower bound from interval object, assuming only
-   * closed intervals
-   */
-  private def intervalPair(i : Interval[Char]) : (Char, Char) = {
-    val lower : Char = i.lowerBound match {
-      case c : Closed[Char] => c.a
-      case _ => '\0' /* never occurs */
-    }
-    val upper : Char = i.upperBound match {
-      case c : Closed[Char] => c.a
-      case _ => '\0' /* never occurs */
-    }
-    (lower, upper)
-  }
 }
 
