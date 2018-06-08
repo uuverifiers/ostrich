@@ -120,12 +120,12 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Enumerate all labels with overlaps removed.
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
-   * [5,8] [8,10] [10,15]
+   * [5,7] [8,10] [11,15]
    */
   def enumDisjointLabels : Iterable[TransitionLabel]
 
   /**
-   * iterate over the instances of lbls that overlap with lbl
+   * iterate over disjoint labels of the automaton that overlap with lbl
    */
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel]
 
