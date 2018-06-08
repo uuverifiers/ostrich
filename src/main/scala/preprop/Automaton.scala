@@ -113,6 +113,12 @@ trait AtomicStateAutomaton extends Automaton {
                       l2 : TransitionLabel) : TransitionLabel
 
   /**
+   * True if labels overlap
+   */
+  def labelsOverlap(l1 : TransitionLabel,
+                    l2 : TransitionLabel) : Boolean
+
+  /**
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int]
@@ -165,6 +171,11 @@ trait AtomicStateAutomaton extends Automaton {
   def getAcceptStates : Iterable[State]
 
   /**
+   * Test if state is accepting
+   */
+  def isAccept(s : State) : Boolean
+
+  /**
    * Return new emtpy automaton (single initial state, not accepting) of
    * same type
    */
@@ -184,12 +195,12 @@ trait AtomicStateAutomaton extends Automaton {
     /**
      * Add a new transition q1 --label--> q2
      */
-    def addTransition(q1 : State, label : TransitionLabel, q2 : State) : Unit
+    def addTransition(s1 : State, label : TransitionLabel, s2 : State) : Unit
 
     /**
      * Set state accepting
      */
-    def setAccept(q : State, isAccepting : Boolean) : Unit
+    def setAccept(s : State, isAccepting : Boolean) : Unit
 
     /**
      * Returns built automaton.  Can only be used once after which the

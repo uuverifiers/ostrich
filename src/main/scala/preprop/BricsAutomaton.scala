@@ -191,6 +191,16 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     (l1._1 max l2._1, l1._2 min l2._2)
 
   /**
+   * True if labels overlap
+   */
+  def labelsOverlap(l1 : TransitionLabel,
+                    l2 : TransitionLabel) : Boolean = {
+    val (min1, max1) = l1
+    val (min2, max2) = l2
+    (min2 <= max1 && max2 >= min1)
+  }
+
+  /**
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int] =
@@ -364,7 +374,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   def getAcceptStates : Iterable[State] = underlying.getAcceptStates
 
-  def getEmpty : BricsAutomaton = BricsAutomaton()
+  def isAccept(s : State) : Boolean = s.isAccept
 
   /**
    * Set state accepting
