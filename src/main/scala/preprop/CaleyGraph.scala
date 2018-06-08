@@ -140,13 +140,11 @@ object CaleyGraph {
 
   private def getCharacterBoxes[A <: AtomicStateAutomaton](aut : A)
       : Map[Box[A], Iterable[A#TransitionLabel]] = {
-    val intervals = aut.enumDisjointLabels
-
     val boxes : Map[A#TransitionLabel,Box[A]] =
-      intervals.map(i => i -> new Box[A])(collection.breakOut)
+      aut.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
 
     aut.foreachTransition({ case (q1, i, q2) =>
-      for (i2 <- aut.enumLabelOverlap(i, intervals))
+      for (i2 <- aut.enumLabelOverlap(i))
         boxes(i2).addEdge(q1, q2)
     })
 

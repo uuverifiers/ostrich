@@ -69,6 +69,15 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   override def toString : String = underlying.toString
 
   /**
+   * Keep track of disjoint labels for fast range lookups in
+   * enumLabelOverlap.  Access with getDisjointLabels.
+   *
+   * Make sure to call resetDisjointLabels when updating transition
+   * structure.
+   */
+  private var disjointLabels : Option[MTreeSet[TransitionLabel]] = None
+
+  /**
    * Nr. of bits of letters in the vocabulary. Letters are
    * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
    */
@@ -192,55 +201,18 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
    * [5,8] [8,10] [10,15]
    */
-  def enumDisjointLabels : Iterable[TransitionLabel] = {
-    var disjoint = List[TransitionLabel]()
-
-    val mins = new MTreeSet[Char]
-    val maxes = new MTreeSet[Char]
-    foreachTransition({ case (_, (min, max), _) =>
-      mins += min
-      maxes += max
-    })
-
-    val imin = mins.iterator
-    val imax = maxes.iterator
-
-    if (!imin.hasNext)
-      return disjoint
-
-    var curMin = imin.next
-    var nextMax = imax.next
-    while (imin.hasNext) {
-      val nextMin = imin.next
-      if (nextMin <= nextMax) {
-        disjoint = (curMin, (nextMin-1).toChar)::disjoint
-        curMin = nextMin
-      } else {
-        disjoint = (curMin, nextMax)::disjoint
-        curMin = nextMin
-        nextMax = imax.next
-      }
-    }
-
-    disjoint = (curMin, nextMax)::disjoint
-    curMin = (nextMax + 1).toChar
-
-    while (imax.hasNext) {
-      val nextMax = imax.next
-      disjoint = (curMin, nextMax)::disjoint
-      curMin = (nextMax + 1).toChar
-    }
-
-    disjoint
-  }
+  def enumDisjointLabels : Iterable[TransitionLabel] =
+    getDisjointLabels.toIterable
 
   /**
    * iterate over the instances of lbls that overlap with lbl
    */
-  def enumLabelOverlap(lbl : TransitionLabel,
-                       lbls : Iterable[TransitionLabel]) : Iterable[TransitionLabel] = {
+  def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel] = {
     val (lMin, lMax) = lbl
-    lbls.filter({ case (min, max) => !(max < lMin || min > lMax)})
+    getDisjointLabels.
+      from((lMin, Char.MinValue)).
+      to((lMax, Char.MaxValue)).
+      toIterable
   }
 
 
@@ -399,5 +371,63 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    */
   def setAccept(q : State, isAccepting : Boolean) : Unit =
     q.setAccept(isAccepting)
+
+  private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
+    var disjoint = new MTreeSet[TransitionLabel]()
+
+    val mins = new MTreeSet[Char]
+    val maxes = new MTreeSet[Char]
+    foreachTransition({ case (_, (min, max), _) =>
+      mins += min
+      maxes += max
+    })
+
+    val imin = mins.iterator
+    val imax = maxes.iterator
+
+    if (!imin.hasNext)
+      return disjoint
+
+    var curMin = imin.next
+    var nextMax = imax.next
+    while (imin.hasNext) {
+      val nextMin = imin.next
+      if (nextMin <= nextMax) {
+        disjoint += ((curMin, (nextMin-1).toChar))
+        curMin = nextMin
+      } else {
+        disjoint += ((curMin, nextMax))
+        curMin = nextMin
+        nextMax = imax.next
+      }
+    }
+
+    disjoint += ((curMin, nextMax))
+    curMin = (nextMax + 1).toChar
+
+    while (imax.hasNext) {
+      val nextMax = imax.next
+      disjoint += ((curMin, nextMax))
+      curMin = (nextMax + 1).toChar
+    }
+
+    disjoint
+  }
+
+  /**
+   * To be called whenever the transition structure changes as cached
+   * disjoint labels will be outdated
+   */
+  private def resetDisjointLabels : Unit = disjointLabels = None
+
+  private def getDisjointLabels : MTreeSet[TransitionLabel] =
+    disjointLabels match {
+      case Some(labels) => labels
+      case None => {
+        val labels = calculateDisjointLabels()
+        disjointLabels = Some(labels)
+        labels
+      }
+    }
 }
 

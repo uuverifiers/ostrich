@@ -127,8 +127,7 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * iterate over the instances of lbls that overlap with lbl
    */
-  def enumLabelOverlap(lbl : TransitionLabel,
-                       lbls : Iterable[TransitionLabel]) : Iterable[TransitionLabel]
+  def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel]
 
   /*
    * Replace a-transitions with new a-transitions between pairs of
@@ -154,6 +153,7 @@ trait AtomicStateAutomaton extends Automaton {
   def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any)
 
   /**
+   * TODO: remove as not immutable!
    * Add a transition q1 -- label --> q2
    */
   def addTransition(q1 : State, label : TransitionLabel, q2 : State) : Unit
