@@ -152,23 +152,7 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any)
 
-  /**
-   * TODO: remove as not immutable!
-   * Add a transition q1 -- label --> q2
-   */
-  def addTransition(q1 : State, label : TransitionLabel, q2 : State) : Unit
-
   def getInitialState : State
-
-  /**
-   * Create a fresh state.  For use with addTransition.
-   */
-  def getNewState : State
-
-  /**
-   * Set state accepting
-   */
-  def setAccept(q : State, isAccepting : Boolean) : Unit
 
   /**
    * Product this automaton with a number of given automaton.  Returns
@@ -184,5 +168,33 @@ trait AtomicStateAutomaton extends Automaton {
    * Return new emtpy automaton (single initial state, not accepting) of
    * same type
    */
-  def getEmpty : AtomicStateAutomaton
+  def getBuilder : AtomicStateAutomatonBuilder
+
+  trait AtomicStateAutomatonBuilder {
+    /**
+     * Create a fresh state that can be used in the automaton
+     */
+    def getNewState : State
+
+    /**
+     * Initial state of the automaton being built
+     */
+    def getInitialState : State
+
+    /**
+     * Add a new transition q1 --label--> q2
+     */
+    def addTransition(q1 : State, label : TransitionLabel, q2 : State) : Unit
+
+    /**
+     * Set state accepting
+     */
+    def setAccept(q : State, isAccepting : Boolean) : Unit
+
+    /**
+     * Returns built automaton.  Can only be used once after which the
+     * automaton cannot change
+     */
+    def getAutomaton : AtomicStateAutomaton
+  }
 }

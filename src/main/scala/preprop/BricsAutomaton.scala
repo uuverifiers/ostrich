@@ -414,6 +414,56 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     disjoint
   }
 
+  def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
+
+  /**
+   * For constructing manually (immutable) BricsAutomaton objects
+   */
+  class BricsAutomatonBuilder extends AtomicStateAutomatonBuilder {
+
+    var underlying : Option[BAutomaton] = Some(new BAutomaton)
+
+    /**
+     * Create a fresh state that can be used in the automaton
+     */
+    def getNewState : BricsAutomaton#State = new BState()
+
+    /**
+     * Initial state of the automaton being built
+     */
+    def getInitialState : BricsAutomaton#State =
+      underlying match {
+        case Some(aut) => aut.getInitialState
+        case None => throw new RuntimeException("Automaton already returned")
+      }
+
+    /**
+     * Add a new transition q1 --label--> q2
+     */
+    def addTransition(q1 : BricsAutomaton#State,
+                      label : BricsAutomaton#TransitionLabel,
+                      q2 : BricsAutomaton#State) : Unit = {
+      val (min, max) = label
+      q1.addTransition(new Transition(min, max, q2))
+    }
+
+    /**
+     * Set state accepting
+     */
+    def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
+      q.setAccept(isAccepting)
+
+    /**
+     * Returns built automaton.  Can only be used once after which the
+     * automaton cannot change
+     */
+    def getAutomaton : BricsAutomaton =
+      underlying match {
+        case Some(aut) => new BricsAutomaton(aut)
+        case None => throw new RuntimeException("Automaton already returned")
+      }
+  }
+
   /**
    * To be called whenever the transition structure changes as cached
    * disjoint labels will be outdated

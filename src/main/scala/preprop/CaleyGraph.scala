@@ -101,13 +101,13 @@ class Box[A <: AtomicStateAutomaton] {
  */
 object CaleyGraph {
   def apply[A <: AtomicStateAutomaton](aut : A) : CaleyGraph[A] = {
-    val graph : aut.type = aut.getEmpty.asInstanceOf[aut.type]
-    val boxMap = new HashMap[graph.State, Box[A]]
-    val stateMap = new HashMap[Box[A], graph.State]
+    val graphBuilder = aut.getBuilder
+    val boxMap = new HashMap[aut.State, Box[A]]
+    val stateMap = new HashMap[Box[A], aut.State]
 
     val eBox = getEpsilonBox(aut)
-    val es = graph.getInitialState
-    graph.setAccept(es, true)
+    val es = graphBuilder.getInitialState
+    graphBuilder.setAccept(es, true)
     boxMap += (es -> eBox)
     stateMap += (eBox -> es)
 
@@ -121,8 +121,8 @@ object CaleyGraph {
       for ((box, as) <- characterBoxes) {
         val wa = w ++ box
         if (!seenlist.contains(wa)) {
-          val sa = graph.getNewState
-          graph.setAccept(sa, true)
+          val sa = graphBuilder.getNewState
+          graphBuilder.setAccept(sa, true)
           boxMap += (sa -> wa)
           stateMap += (wa -> sa)
           worklist.push((sa, wa))
@@ -131,10 +131,11 @@ object CaleyGraph {
 
         val sa = stateMap(wa)
         for (a <- as)
-          graph.addTransition(s, a.asInstanceOf[graph.TransitionLabel], sa)
+          graphBuilder.addTransition(s, a.asInstanceOf[aut.TransitionLabel], sa)
       }
     }
 
+    val graph = graphBuilder.getAutomaton.asInstanceOf[aut.type]
     new CaleyGraph[A](aut, graph, boxMap.toMap, stateMap.toMap)
   }
 
