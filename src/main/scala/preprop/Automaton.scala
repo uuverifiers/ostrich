@@ -191,7 +191,7 @@ trait AtomicStateAutomaton extends Automaton {
     /**
      * Initial state of the automaton being built
      */
-    def getInitialState : State
+    def initialState : State
 
     /**
      * Add a new transition q1 --label--> q2

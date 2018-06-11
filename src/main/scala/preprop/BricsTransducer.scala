@@ -88,8 +88,8 @@ class BricsTransducer(override val underlying : BAutomaton,
     val sMapRev = new MHashMap[(State, State), State]
 
     val initState = underlying.getInitialState
-    val initAutState = baut.getInitialState
-    val newInitState = preBuilder.getInitialState
+    val initAutState = baut.initialState
+    val newInitState = preBuilder.initialState
 
     sMap += (newInitState -> ((initState, initAutState)))
     sMapRev += (initState, initAutState) -> newInitState
@@ -147,7 +147,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       }
     }
 
-    reachStates(getInitialState, baut.getInitialState)
+    reachStates(initialState, baut.initialState)
 
     while (!worklist.isEmpty) {
       // pre aut state, transducer state, automaton state

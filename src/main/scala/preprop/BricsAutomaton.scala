@@ -301,8 +301,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     (new BricsAutomaton(newAut), smap.toMap)
   }
 
-  def getInitialState = underlying.getInitialState
-
   def getNewState = new BState
 
   /**
@@ -449,7 +447,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     /**
      * Initial state of the automaton being built
      */
-    def getInitialState : BricsAutomaton#State =
+    def initialState : BricsAutomaton#State =
       underlying match {
         case Some(aut) => aut.getInitialState
         case None => throw new RuntimeException("Automaton already returned")
