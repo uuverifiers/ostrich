@@ -54,7 +54,7 @@ object BricsTransducerSpecification
     tran.setInitialState(q0)
     val btran = new BricsTransducer(tran, operations.toMap)
 
-        // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4
+    // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4
     val q1 = new IDState(1)
     val q2 = new IDState(2)
     val q3 = new IDState(3)
@@ -87,7 +87,7 @@ object BricsTransducerSpecification
     tran.setInitialState(q0)
     val btran = new BricsTransducer(tran, operations.toMap)
 
-        // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
+    // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
     val q1 = new IDState(1)
     val q2 = new IDState(2)
     val q3 = new IDState(3)
