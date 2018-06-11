@@ -179,10 +179,13 @@ class BricsTransducer(override val underlying : BAutomaton,
             }
             case Plus(n) => {
               baut.foreachTransition(as, { case ((amin, amax), asNext) => {
-                // TODO: bounds check here?
-                val preLbl = intersectLabels(((amin - n).toChar, (amax - n).toChar),
-                                             (t.getMin, t.getMax))
-                addWork(ps, ts, t, asNext, Post(tOp.postW, preLbl))
+                val apreMin = Math.max(Char.MinValue, amin - n).toChar
+                val apreMax = Math.min(Char.MaxValue, amax - n).toChar
+                if (apreMin <= apreMax) {
+                    val preLbl = intersectLabels((apreMin, apreMax),
+                                                 (t.getMin, t.getMax))
+                    addWork(ps, ts, t, asNext, Post(tOp.postW, preLbl))
+                }
               }})
             }
           }
