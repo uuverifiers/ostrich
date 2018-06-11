@@ -80,7 +80,7 @@ object BricsTransducerSpecification
 
     val operations = new HashMap[(State, Transition), BricsOutputOp]
     val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new BricsOutputOp("zz", Plus(0), ""))
+    operations += ((q0, t) -> new BricsOutputOp("zz", Plus(0), "adb"))
     q0.addTransition(t)
 
     val tran = new BAutomaton
@@ -106,4 +106,71 @@ object BricsTransducerSpecification
     pre(List('b')) && !pre(List('a')) && !pre(List('d'))
   }
 
+  property("Simple Pre With Pre and Post Should fail") = {
+    // Transducer q0 -- [a-c], ("zz", +0, "adb") --> qf
+    val q0 = new IDState(0)
+    val qf = new IDState(1)
+    qf.setAccept(true)
+
+    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val t = new Transition('a', 'c', qf)
+    operations += ((q0, t) -> new BricsOutputOp("zz", Plus(0), "ad"))
+    q0.addTransition(t)
+
+    val tran = new BAutomaton
+    tran.setInitialState(q0)
+    val btran = new BricsTransducer(tran, operations.toMap)
+
+    // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    val q3 = new IDState(3)
+    val q4 = new IDState(4)
+    q4.setAccept(true)
+    q1.addTransition(new Transition('z', 'z', q2))
+    q2.addTransition(new Transition('a', 'z', q3))
+    q3.addTransition(new Transition('b', 'b', q4))
+    q4.addTransition(new Transition('a', 'a', q2))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = btran.preImage(baut)
+
+    !pre(List('b')) && !pre(List('a')) && !pre(List('d'))
+  }
+
+  property("Simple Pre With Pre and Post and Delete") = {
+    // Transducer q0 -- [a-c], ("zz", delete, "adb") --> qf
+    val q0 = new IDState(0)
+    val qf = new IDState(1)
+    qf.setAccept(true)
+
+    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val t = new Transition('a', 'c', qf)
+    operations += ((q0, t) -> new BricsOutputOp("zz", Delete, "badb"))
+    q0.addTransition(t)
+
+    val tran = new BAutomaton
+    tran.setInitialState(q0)
+    val btran = new BricsTransducer(tran, operations.toMap)
+
+    // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    val q3 = new IDState(3)
+    val q4 = new IDState(4)
+    q4.setAccept(true)
+    q1.addTransition(new Transition('z', 'z', q2))
+    q2.addTransition(new Transition('a', 'z', q3))
+    q3.addTransition(new Transition('b', 'b', q4))
+    q4.addTransition(new Transition('a', 'a', q2))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = btran.preImage(baut)
+
+    pre(List('b')) && pre(List('a')) && !pre(List('d', 'e'))
+  }
 }
