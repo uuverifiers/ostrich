@@ -163,8 +163,6 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any)
 
-  def getInitialState : State
-
   /**
    * Product this automaton with a number of given automaton.  Returns
    * new automaton.  Returns map from new states of result to (q0, [q1,
@@ -172,8 +170,6 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def productWithMap(auts : Seq[AtomicStateAutomaton]) :
     (AtomicStateAutomaton, Map[State, (State, Seq[State])])
-
-  def getAcceptStates : Iterable[State]
 
   /**
    * Test if state is accepting
