@@ -30,12 +30,14 @@ object AutomataUtils {
    * The automata are required to all have the same label type (though this is
    * not checked statically)
    */
-  def areConsistentAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean = {
+  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean = {
     val autsList = auts.toList
     val visitedStates = new MHashSet[List[Any]]
     val todo = new ArrayStack[List[Any]]
 
-    todo push (autsList map (_.initialState))
+    val initial = (autsList map (_.initialState))
+    visitedStates += initial
+    todo push initial
 
     def enumNext(auts : List[AtomicStateAutomaton],
                  states : List[Any],
@@ -71,5 +73,18 @@ object AutomataUtils {
 
     false
   }
+
+  /**
+   * Check whether there is some word accepted by all of the given automata.
+   */
+  def areConsistentAutomata(auts : Seq[Automaton]) : Boolean =
+    if (auts.isEmpty) {
+      true
+    } else if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
+      areConsistentAtomicAutomata(auts map (_.asInstanceOf[AtomicStateAutomaton]))
+    } else {
+      !(auts reduceLeft (_ & _)).isEmpty
+    }
+      
 
 }

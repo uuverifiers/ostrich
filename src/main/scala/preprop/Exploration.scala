@@ -40,9 +40,13 @@ object Exploration {
     def getContents : List[Automaton]
   }
 
-  def eager(funApps : Seq[(PreOp, Seq[Term], Term)],
-            initialConstraints : Seq[(Term, Automaton)]) : Exploration =
+  def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
+               initialConstraints : Seq[(Term, Automaton)]) : Exploration =
     new EagerExploration(funApps, initialConstraints)
+
+  def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
+              initialConstraints : Seq[(Term, Automaton)]) : Exploration =
+    new LazyExploration(funApps, initialConstraints)
 }
 
 /**
@@ -223,6 +227,43 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def getContents : List[Automaton] =
       currentConstraint.toList
+  }
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Version of exploration that keeps automata separate and avoids computation
+ * of products. No caching yet
+ */
+class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
+                      _initialConstraints : Seq[(Term, Automaton)])
+      extends Exploration(_funApps, _initialConstraints) {
+
+  import Exploration._
+
+  protected def newStore(t : Term) : ConstraintStore = new ConstraintStore {
+    private val constraints = new ArrayBuffer[Automaton]
+    private val constraintStack = new ArrayStack[Int]
+
+    def push : Unit = constraintStack push constraints.size
+    
+    def pop : Unit = constraints reduceToSize constraintStack.pop
+
+    def addConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
+      if (aut.isEmpty) {
+        Some(List(TermConstraint(t, aut)))
+      } else {
+        constraints += aut
+        if (AutomataUtils.areConsistentAutomata(constraints))
+          None
+        else
+          Some(for (a <- constraints.toList) yield TermConstraint(t, a))
+      }
+
+    def getContents : List[Automaton] =
+      constraints.toList
   }
 
 }
