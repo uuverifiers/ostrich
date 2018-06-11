@@ -206,6 +206,6 @@ class CaleyGraph[A <: AtomicStateAutomaton](
      */
     def getAcceptNodes(auts : Seq[AtomicStateAutomaton]) : Iterable[Box[A]] = {
       val (prodAut, sMap) = graph.productWithMap(auts)
-      prodAut.getAcceptStates.map(ps => boxMap(sMap(ps.asInstanceOf[graph.State])._1))
+      prodAut.acceptingStates.map(ps => boxMap(sMap(ps.asInstanceOf[graph.State])._1))
     }
 }
