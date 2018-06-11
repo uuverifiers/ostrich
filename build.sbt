@@ -5,7 +5,7 @@ lazy val commonSettings = Seq(
   resolvers += "uuverifiers" at "http://logicrunch.it.uu.se:4096/~wv/maven/",
   libraryDependencies += "uuverifiers" %% "princess" % "2018-05-25",
   libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
-  libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
+  libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
 )
 
 lazy val root = (project in file(".")).
