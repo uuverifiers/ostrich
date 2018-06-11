@@ -81,7 +81,13 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Nr. of bits of letters in the vocabulary. Letters are
    * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
    */
-  val vocabularyWidth : Int = 8  // really?
+  val vocabularyWidth : Int = 16  // really?
+
+  val minChar : Int = 0
+
+  val maxChar : Int = Char.MaxValue - 1
+
+  val internalChar : Int = Char.MaxValue
 
   /**
    * Union
@@ -181,7 +187,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Label accepting all letters
    */
   val sigmaLabel : TransitionLabel =
-    (Char.MinValue, Char.MaxValue)
+    (minChar.toChar, maxChar.toChar)
 
   /**
    * Intersection of two labels
@@ -305,6 +311,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   /**
    * Assumes q1 already appears in the automaton
+   * Make sure minMax is inside minChar, maxChar unless you have a
+   * reason
    */
   def addTransition(q1 : State, minMax : (Char, Char), q2 : State) : Unit = {
     val t = new Transition(minMax._1, minMax._2, q2)
@@ -377,8 +385,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
     (new BricsAutomaton(newBAut), sMap.toMap)
   }
-
-  def getAcceptStates : Iterable[State] = underlying.getAcceptStates
 
   def isAccept(s : State) : Boolean = s.isAccept
 
