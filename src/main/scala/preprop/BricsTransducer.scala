@@ -60,8 +60,8 @@ object BricsTransducer {
   def apply() : BricsTransducer =
     new BricsTransducer(new BAutomaton, Map[(BState, BTransition), BricsOutputOp]())
 
-  def getBuilder : BricsTransducer#BricsAutomatonBuilder =
-    dummyTransducer.getBuilder
+  def getBuilder : BricsTransducer#BricsTransducerBuilder =
+    dummyTransducer.getTransducerBuilder
 }
 
 /**
@@ -80,7 +80,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       case _ => throw new IllegalArgumentException("BricsTransducers can only compute pre of a BricsAutomaton")
     }
 
-    val preBuilder = this.getBuilder
+    val preBuilder = baut.getBuilder
 
     // map states of pre-image aut to state of transducer and state of
     // aut
@@ -216,15 +216,31 @@ class BricsTransducer(override val underlying : BAutomaton,
     super.toString + '\n' + operations.mkString("\n")
   }
 
-  override def getBuilder : BricsTransducerBuilder = new BricsTransducerBuilder
+  def getTransducerBuilder : BricsTransducerBuilder = new BricsTransducerBuilder
 
-  class BricsTransducerBuilder extends BricsAutomatonBuilder {
-    val inputStates = new MHashSet[BState]
+  class BricsTransducerBuilder {
+    val aut = new BAutomaton
+    val operations = new MHashMap[(BState, BTransition), BricsOutputOp]
 
-    def setInputState(q : State) =
-      inputStates += q
+    val minChar : Int = BricsTransducer.this.minChar
+    val maxChar : Int = BricsTransducer.this.maxChar
+    val internalChar : Int = BricsTransducer.this.internalChar
 
-    def setOutputState(q : State) =
-      inputStates -= q
+    def initialState = aut.getInitialState
+
+    def getNewState = new BState
+
+    def setAccept(s : State, isAccept : Boolean) = s.setAccept(isAccept)
+
+    def addTransition(s1 : BState,
+                      min : Char, max : Char,
+                      op : BricsOutputOp,
+                      s2 : BState) = {
+      val t = new BTransition(min, max, s2)
+      s1.addTransition(t)
+      operations += ((s1, t) -> op)
+    }
+
+    def getTransducer = new BricsTransducer(aut, operations.toMap)
   }
 }
