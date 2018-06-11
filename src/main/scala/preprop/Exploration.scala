@@ -21,14 +21,38 @@ package strsolver.preprop
 import ap.terfor.Term
 import ap.util.Seqs
 
-import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer}
+import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack}
+
+object Exploration {
+  case class TermConstraint(t : Term, aut : Automaton)
+
+  abstract class ConstraintStore {
+    def push : Unit
+    
+    def pop : Unit
+
+    /**
+     * Add new automata to the store, return a sequence of term constraints
+     * in case the asserted constraints have become inconsistent
+     */
+    def addConstraint(aut : Automaton) : Option[Seq[TermConstraint]]
+
+    def getContents : List[Automaton]
+  }
+
+  def eager(funApps : Seq[(PreOp, Seq[Term], Term)],
+            initialConstraints : Seq[(Term, Automaton)]) : Exploration =
+    new EagerExploration(funApps, initialConstraints)
+}
 
 /**
  * A naive recursive implementation of depth-first exploration of a conjunction
  * of function applications
  */
-class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
-                  val initialConstraints : Seq[(Term, Automaton)]) {
+abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
+                           val initialConstraints : Seq[(Term, Automaton)]) {
+
+  import Exploration._
 
   println
   println("Running preprop solver")
@@ -75,23 +99,24 @@ class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  private val constraintStores = new MHashMap[Term, ConstraintStore]
+
   def findModel : Option[Map[Term, Seq[Int]]] = {
-    val constraints =
-      (for (t <- allTerms.iterator) yield (t, List())).toMap ++
-      (initialConstraints groupBy (_._1) mapValues {
-        case auts => canonise(auts map (_._2))
-       })
+    for (t <- allTerms)
+      constraintStores.put(t, newStore(t))
+
+    for ((t, aut) <- initialConstraints)
+      constraintStores(t).addConstraint(aut) match {
+        case Some(_) => return None
+        case None    => // nothing
+      }
 
     val funAppList =
       (for ((apps, res) <- sortedFunApps;
             (op, args) <- apps)
        yield (op, args, res)).toList
 
-    val res =
-      if (constraints.values exists (!isConsistent(_)))
-        None
-      else
-        dfExplore(funAppList, constraints)
+    val res = dfExplore(funAppList)
 
     println("nr of pre-op applications: " + preopCnt)
 
@@ -100,76 +125,104 @@ class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   private var preopCnt = 0
 
-  private def dfExplore(apps : List[(PreOp, Seq[Term], Term)],
-                        constraints : ConstraintMap)
+  private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
                       : Option[Map[Term, Seq[Int]]] = apps match {
 
     case List() =>
       // we are finished and just have to construct a model
       Some(Map()) // ...
     case (op, args, res) :: otherApps =>
-      dfExploreOp(op, args, constraints(res).toList,
-                  otherApps, constraints)
+      dfExploreOp(op, args, constraintStores(res).getContents,
+                  otherApps)
   }
 
   private def dfExploreOp(op : PreOp,
                           args : Seq[Term],
                           resConstraints : List[Automaton],
-                          nextApps : List[(PreOp, Seq[Term], Term)],
-                          constraints : ConstraintMap)
+                          nextApps : List[(PreOp, Seq[Term], Term)])
                         : Option[Map[Term, Seq[Int]]] = resConstraints match {
     case List() =>
-      dfExplore(nextApps, constraints)
-    case resAut :: otherAuts =>
+      dfExplore(nextApps)
+      
+    case resAut :: otherAuts => {
       preopCnt = preopCnt + 1
-      Seqs.some(for (argCS <- op(args map constraints, resAut)) yield {
-        for (newConstraints <- extend(constraints, args zip argCS);
-             res <- dfExploreOp(op, args, otherAuts, nextApps, newConstraints))
-        yield res
+      
+      val argConstraints = for (a <- args) yield constraintStores(a).getContents
+      
+      Seqs.some(for (argCS <- op(argConstraints, resAut)) yield {
+        for (a <- args)
+          constraintStores(a).push
+
+        var consistent = true
+        for ((a, aut) <- args zip argCS)
+          if (consistent)
+            constraintStores(a).addConstraint(aut) match {
+              case Some(_) => consistent = false
+              case None    => // nothing
+            }
+
+        val res =
+          if (consistent)
+            dfExploreOp(op, args, otherAuts, nextApps)
+          else
+            None
+
+        for (a <- args)
+          constraintStores(a).pop
+
+        res
       })
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
 
-  type TermConstraints = Seq[Automaton]
-  type ConstraintMap = Map[Term, TermConstraints]
+  protected def newStore(t : Term) : ConstraintStore
 
-  private def extend(constraints : ConstraintMap,
-                     newC : Seq[(Term, Automaton)]) : Option[ConstraintMap] = {
-    var res : Option[ConstraintMap] = Some(constraints)
-    val newCIt = newC.iterator
-    while (res.isDefined && newCIt.hasNext) {
-      val (t, aut) = newCIt.next
-      res = extend(res.get, t, aut)
-    }
-    res
-  }
+}
 
-  private def extend(constraints : ConstraintMap,
-                     t : Term, aut : Automaton) : Option[ConstraintMap] = {
-    val oldC = constraints(t)
-    val newC = canonise(oldC ++ List(aut))
-    if (isConsistent(newC))
-      Some(constraints + (t -> newC))
-    else
-      None
-  }
+////////////////////////////////////////////////////////////////////////////////
 
-  private def canonise(cs : TermConstraints) : TermConstraints = cs match {
-    case Seq() | Seq(_) => cs
-    case cs             => List(cs reduceLeft (_ & _))
-  }
+/**
+ * Version of exploration that eagerly computes products of regex constraints.
+ */
+class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
+                       _initialConstraints : Seq[(Term, Automaton)])
+      extends Exploration(_funApps, _initialConstraints) {
 
-  private def isConsistent(cs : TermConstraints) : Boolean = cs match {
-    case Seq()    => true
-    case Seq(aut) => !aut.isEmpty
-    case cs       => isConsistent(canonise(cs))
-  }
+  import Exploration._
 
-  private def findElement(cs : TermConstraints) : Seq[Int] = cs match {
-    case Seq()    => List()
-    case Seq(aut) => aut.getAcceptedWord.get
-    case cs       => findElement(canonise(cs))
+  protected def newStore(t : Term) : ConstraintStore = new ConstraintStore {
+    private var currentConstraint : Option[Automaton] = None
+    private val constraintStack = new ArrayStack[Option[Automaton]]
+
+    def push : Unit = constraintStack push currentConstraint
+    
+    def pop : Unit = currentConstraint = constraintStack.pop
+
+    def addConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
+      if (aut.isEmpty) {
+        Some(List(TermConstraint(t, aut)))
+      } else {
+        currentConstraint match {
+          case Some(oldAut) => {
+            val newAut = oldAut & aut
+            if (newAut.isEmpty) {
+              Some(List(TermConstraint(t, oldAut), TermConstraint(t, aut)))
+            } else {
+              currentConstraint = Some(newAut)
+              None
+            }
+          }
+          case None => {
+            currentConstraint = Some(aut)
+            None
+          }
+        }
+      }
+
+    def getContents : List[Automaton] =
+      currentConstraint.toList
   }
 
 }
