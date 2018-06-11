@@ -119,6 +119,11 @@ trait AtomicStateAutomaton extends Automaton {
                     l2 : TransitionLabel) : Boolean
 
   /**
+   * Can l represent a?
+   */
+  def labelContains(a : Char, l : TransitionLabel) : Boolean
+
+  /**
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int]

@@ -201,6 +201,14 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   }
 
   /**
+   * Can l represent a?
+   */
+  def labelContains(a : Char, l : TransitionLabel) : Boolean = {
+    val (min, max) = l
+    (min <= a && a <= max)
+  }
+
+  /**
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TransitionLabel) : Iterator[Int] =

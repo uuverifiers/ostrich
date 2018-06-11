@@ -4,13 +4,21 @@ import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 import scala.collection.mutable.Set
+import scala.collection.JavaConversions.iterableAsScalaIterable
 
 class PrintableState extends State {
   override def toString = "q" + hashCode
 }
 
 class IDState(val ident : Int) extends State {
-  override def toString = "q" + ident
+  override def toString =
+    getTransitions.foldLeft("q" + ident) { (s, t) =>
+      val dest = t.getDest match {
+        case d : IDState => "q" + d.ident
+        case q => q.toString
+      }
+      s + "\n  --[" + t.getMin + ", " + t.getMax + "]--> " + dest
+    }
 }
 
 object CaleyGraphSpecification
