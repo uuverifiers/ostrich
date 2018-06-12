@@ -86,5 +86,17 @@ object AutomataUtils {
       !(auts reduceLeft (_ & _)).isEmpty
     }
       
-
+  /**
+   * Check whether there is some word accepted by all of the given automata.
+   * If the intersection is empty, return an unsatisfiable core. The method
+   * makes the assumption that <code>oldAuts</code> are consistent, but the
+   * status of the combination with <code>newAut</code> is unknown.
+   */
+  def findUnsatCore(oldAuts : Seq[Automaton],
+                    newAut : Automaton) : Option[Seq[Automaton]] =
+    if (areConsistentAutomata(List(newAut) ++ oldAuts))
+      None
+    else
+      // naive core
+      Some(List(newAut) ++ oldAuts)
 }

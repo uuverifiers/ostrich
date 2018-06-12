@@ -35,7 +35,7 @@ object Exploration {
      * Add new automata to the store, return a sequence of term constraints
      * in case the asserted constraints have become inconsistent
      */
-    def addConstraint(aut : Automaton) : Option[Seq[TermConstraint]]
+    def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]]
 
     def getContents : List[Automaton]
   }
@@ -110,7 +110,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       constraintStores.put(t, newStore(t))
 
     for ((t, aut) <- initialConstraints)
-      constraintStores(t).addConstraint(aut) match {
+      constraintStores(t).assertConstraint(aut) match {
         case Some(_) => return None
         case None    => // nothing
       }
@@ -160,7 +160,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         var consistent = true
         for ((a, aut) <- args zip argCS)
           if (consistent)
-            constraintStores(a).addConstraint(aut) match {
+            constraintStores(a).assertConstraint(aut) match {
               case Some(_) => consistent = false
               case None    => // nothing
             }
@@ -204,7 +204,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     
     def pop : Unit = currentConstraint = constraintStack.pop
 
-    def addConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
+    def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
       if (aut.isEmpty) {
         Some(List(TermConstraint(t, aut)))
       } else {
@@ -243,24 +243,92 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
   import Exploration._
 
-  protected def newStore(t : Term) : ConstraintStore = new ConstraintStore {
+  private val stores = new ArrayBuffer[Store]
+
+  // Combinations of automata that are known to have empty intersection
+  private val inconsistentAutomata = new ArrayBuffer[Seq[Automaton]]
+
+  private def addIncAutomata(auts : Seq[Automaton]) : Unit = {
+    inconsistentAutomata += auts
+//    println("Watching " + inconsistentAutomata.size + " automata")
+    val ind = inconsistentAutomata.size - 1
+    for (s <- stores) {
+      val r = s.watchAutomata(auts, ind)
+      assert(r)
+    }
+  }
+
+  protected def newStore(t : Term) : ConstraintStore = new Store(t)
+
+  private class Store(t : Term) extends ConstraintStore {
     private val constraints = new ArrayBuffer[Automaton]
     private val constraintStack = new ArrayStack[Int]
+
+    // Map from watched automata to the indexes of
+    // <code>inconsistentAutomata</code> that is watched
+    private val watchedAutomata = new MHashMap[Automaton, List[Int]]
+
+    // Add a new entry to <code>watchedAutomata</code>; return
+    // <code>false</code> in case the set of new automata is a subset of the
+    // asserted constraints
+    def watchAutomata(auts : Seq[Automaton], ind : Int) : Boolean =
+      // should this be handled using a hashset?
+      (auts find { a => !(constraints contains a) }) match {
+        case Some(aut) => {
+          watchedAutomata.put(aut,
+                              ind :: watchedAutomata.getOrElse(aut, List()))
+          true
+        }
+        case None =>
+          false
+      }
 
     def push : Unit = constraintStack push constraints.size
     
     def pop : Unit = constraints reduceToSize constraintStack.pop
 
-    def addConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
+    def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]] = {
+      var potentialConflicts =
+        (watchedAutomata get aut) match {
+          case Some(incAuts) => {
+            // need to find new watched automata for the found conflicts
+            watchedAutomata -= aut
+            incAuts
+          }
+          case None =>
+            List()
+        }
+
+      while (!potentialConflicts.isEmpty) {
+        val autInd = potentialConflicts.head
+
+        if (!watchAutomata(inconsistentAutomata(autInd), autInd)) {
+          // constraints have become inconsistent!
+          watchedAutomata.put(aut, potentialConflicts)
+          println("Stored conflict applies!")
+          return Some(for (a <- inconsistentAutomata(autInd).toList)
+                      yield TermConstraint(t, a))
+        }
+            
+        potentialConflicts = potentialConflicts.tail
+      }
+
       if (aut.isEmpty) {
+        addIncAutomata(List(aut))
         Some(List(TermConstraint(t, aut)))
       } else {
-        constraints += aut
-        if (AutomataUtils.areConsistentAutomata(constraints))
-          None
-        else
-          Some(for (a <- constraints.toList) yield TermConstraint(t, a))
+        AutomataUtils.findUnsatCore(constraints, aut) match {
+          case Some(core) => {
+            addIncAutomata(core)
+            Some(for (a <- core.toList) yield TermConstraint(t, a))
+          }
+          case None => {
+            constraints += aut
+            None
+          }
+        }
       }
+    }
 
     def getContents : List[Automaton] =
       constraints.toList
