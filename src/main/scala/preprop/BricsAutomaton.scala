@@ -53,6 +53,8 @@ object BricsAutomaton {
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
+
+
 }
 
 /**
@@ -121,7 +123,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Replace a-transitions with new a-transitions between pairs of states
    */
   def replaceTransitions(a : Char,
-                         states : Iterator[(State, State)]) : Automaton = {
+                         states : Iterator[(State, State)]) : AtomicStateAutomaton = {
     // A \ a-transitions
     val (newAut, map) = substWithStateMap((label, addTran) => {
       val (min, max) = label
@@ -144,7 +146,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Change initial and final states to s0 and sf respectively.  Returns
    * a new automaton.
    */
-  def setInitAccept(s0 : State, sf : State) : Automaton = {
+  def setInitAccept(s0 : State, sf : State) : AtomicStateAutomaton = {
       // TODO: painful to copy, can we improve?
       val (newAut, map) = cloneWithStateMap
       newAut.underlying.setInitialState(map(s0))
@@ -193,8 +195,9 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Intersection of two labels
    */
   def intersectLabels(l1 : TransitionLabel,
-                      l2 : TransitionLabel) : TransitionLabel =
-    (l1._1 max l2._1, l1._2 min l2._2)
+                      l2 : TransitionLabel) : Option[TransitionLabel] = {
+    Option(l1._1 max l2._1, l1._2 min l2._2).filter(isNonEmptyLabel(_))
+  }
 
   /**
    * True if labels overlap
@@ -308,17 +311,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   }
 
   def getNewState = new BState
-
-  /**
-   * Assumes q1 already appears in the automaton
-   * Make sure minMax is inside minChar, maxChar unless you have a
-   * reason
-   */
-  def addTransition(q1 : State, minMax : (Char, Char), q2 : State) : Unit = {
-    val t = new Transition(minMax._1, minMax._2, q2)
-    q1.addTransition(t)
-    underlying.restoreInvariant
-  }
 
   /**
    * Product this automaton with a number of given automaton.  Returns
@@ -465,8 +457,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     def addTransition(q1 : BricsAutomaton#State,
                       label : BricsAutomaton#TransitionLabel,
                       q2 : BricsAutomaton#State) : Unit = {
-      val (min, max) = label
-      q1.addTransition(new Transition(min, max, q2))
+      if (isNonEmptyLabel(label)) {
+        val (min, max) = label
+        q1.addTransition(new Transition(min, max, q2))
+      }
     }
 
     /**
@@ -481,7 +475,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
      */
     def getAutomaton : BricsAutomaton =
       underlying match {
-        case Some(aut) => new BricsAutomaton(aut)
+        case Some(aut) => {
+          aut.restoreInvariant
+          new BricsAutomaton(aut)
+        }
         case None => throw new RuntimeException("Automaton already returned")
       }
   }

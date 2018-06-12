@@ -48,10 +48,9 @@ object AutomataUtils {
         val state :: otherStates = states
         for ((to, label) <- aut.outgoingTransitions(
                               state.asInstanceOf[aut.State]);
-             newILabel = aut.intersectLabels(
+             newILabel <- aut.intersectLabels(
                            intersectedLabels.asInstanceOf[aut.TransitionLabel],
-                           label);
-             if aut.isNonEmptyLabel(newILabel);
+                           label).toSeq;
              tailNext <- enumNext(otherAuts, otherStates, newILabel))
         yield (to :: tailNext)
       }
@@ -85,6 +84,16 @@ object AutomataUtils {
     } else {
       !(auts reduceLeft (_ & _)).isEmpty
     }
-      
 
+
+  /**
+   * Form the product of a sequence of automata
+   */
+  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton = {
+    auts.size match {
+      case 0 => BricsAutomaton.makeAnyString
+      case 1 => auts.head
+      case _ => auts.head.product(auts.tail)
+    }
+  }
 }

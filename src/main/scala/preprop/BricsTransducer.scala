@@ -161,13 +161,13 @@ class BricsTransducer(override val underlying : BAutomaton,
           val a = u.head
           val rest = u.tail
           baut.foreachTransition(as, (albl, asNext) => {
-              if (labelContains(a, albl)) {
-                if (!rest.isEmpty) {
-                  addWork(ps, ts, t, asNext, Pre(rest))
-                } else {
-                  addWork(ps, ts, t, asNext, Op)
-                }
+            if (labelContains(a, albl)) {
+              if (!rest.isEmpty) {
+                addWork(ps, ts, t, asNext, Pre(rest))
+              } else {
+                addWork(ps, ts, t, asNext, Op)
               }
+            }
           })
         }
         case Op => {
@@ -181,10 +181,11 @@ class BricsTransducer(override val underlying : BAutomaton,
               baut.foreachTransition(as, { case ((amin, amax), asNext) => {
                 val apreMin = Math.max(minChar, amin - n).toChar
                 val apreMax = Math.min(maxChar, amax - n).toChar
-                if (apreMin <= apreMax) {
-                    val preLbl = intersectLabels((apreMin, apreMax),
-                                                 (t.getMin, t.getMax))
+                if (isNonEmptyLabel((apreMin, apreMax))) {
+                  for (preLbl <- intersectLabels((apreMin, apreMax),
+                                                 (t.getMin, t.getMax))) {
                     addWork(ps, ts, t, asNext, Post(tOp.postW, preLbl))
+                  }
                 }
               }})
             }
@@ -236,11 +237,16 @@ class BricsTransducer(override val underlying : BAutomaton,
                       min : Char, max : Char,
                       op : BricsOutputOp,
                       s2 : BState) = {
-      val t = new BTransition(min, max, s2)
-      s1.addTransition(t)
-      operations += ((s1, t) -> op)
+      if (BricsTransducer.this.isNonEmptyLabel((min, max))) {
+        val t = new BTransition(min, max, s2)
+        s1.addTransition(t)
+        operations += ((s1, t) -> op)
+      }
     }
 
-    def getTransducer = new BricsTransducer(aut, operations.toMap)
+    def getTransducer = {
+      // do not restore invariant since will break operations map
+      new BricsTransducer(aut, operations.toMap)
+    }
   }
 }

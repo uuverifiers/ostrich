@@ -113,7 +113,7 @@ trait AtomicStateAutomaton extends Automaton {
   def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)]
 
   /**
-   * Check whether the given label accepts any letter
+   * Check whether the given label accepts some letter
    */
   def isNonEmptyLabel(label : TransitionLabel) : Boolean
 
@@ -123,10 +123,10 @@ trait AtomicStateAutomaton extends Automaton {
   val sigmaLabel : TransitionLabel
 
   /**
-   * Intersection of two labels
+   * Intersection of two labels, None if not overlapping
    */
   def intersectLabels(l1 : TransitionLabel,
-                      l2 : TransitionLabel) : TransitionLabel
+                      l2 : TransitionLabel) : Option[TransitionLabel]
 
   /**
    * True if labels overlap
@@ -161,13 +161,13 @@ trait AtomicStateAutomaton extends Automaton {
    * states.  Returns a new automaton.
    */
   def replaceTransitions(a : Char,
-                         states : Iterator[(State, State)]) : Automaton
+                         states : Iterator[(State, State)]) : AtomicStateAutomaton
 
   /**
    * Change initial and final states to s0 and sf respectively.  Returns a new
    * automaton.
    */
-  def setInitAccept(s0 : State, sf : State) : Automaton
+  def setInitAccept(s0 : State, sf : State) : AtomicStateAutomaton
 
   /**
    * Apply f(q1, label, q2) to each transition q1 -[min,max]-> q2
@@ -186,6 +186,13 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def productWithMap(auts : Seq[AtomicStateAutomaton]) :
     (AtomicStateAutomaton, Map[State, (State, Seq[State])])
+
+  /**
+   * Form product of this automaton with given auts, returns a new
+   * automaton
+   */
+  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
+    productWithMap(auts)._1
 
   /**
    * Test if state is accepting
