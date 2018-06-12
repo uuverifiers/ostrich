@@ -96,15 +96,12 @@ class BricsTransducer(override val underlying : BAutomaton,
 
     // transducer state, automaton state
     def getState(ts : State, as : State) = {
-      sMapRev.get((ts, as)) match {
-        case Some(ps) => ps
-        case None => {
-          val ps = preBuilder.getNewState
-          sMapRev += ((ts, as) -> ps)
-          sMap += (ps -> (ts, as))
-          ps
-        }
-      }
+      sMapRev.getOrElse((ts, as), {
+        val ps = preBuilder.getNewState
+        sMapRev += ((ts, as) -> ps)
+        sMap += (ps -> (ts, as))
+        ps
+      })
     }
 
     // when working through a transition ..

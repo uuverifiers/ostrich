@@ -19,6 +19,9 @@
 package strsolver.preprop
 
 import ap.terfor.Term
+import ap.terfor.preds.PredConj
+
+import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
 
 object ReplaceAllPreOp {
   def apply(a : Char) : PreOp = new ReplaceAllPreOpChar(a)
@@ -45,6 +48,13 @@ object ReplaceAllPreOp {
   }
 
   def apply(s : String) : PreOp = ReplaceAllPreOp(s.toSeq)
+
+
+  /**
+   * PreOp for x = replaceall(y, e, z) for regex e
+   */
+  def apply(c : Term, context : PredConj) : PreOp =
+    ReplaceAllPreOpRegEx(c, context)
 }
 
 /**
@@ -85,10 +95,10 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 object ReplaceAllPreOpWord {
   def apply(w : Seq[Char]) = {
     val wtran = buildWordTransducer(w)
-    new ReplaceAllPreOpWord(wtran)
+    new ReplaceAllPreOpTran(wtran)
   }
 
-  def buildWordTransducer(w : Seq[Char]) : AtomicStateTransducer = {
+  private def buildWordTransducer(w : Seq[Char]) : AtomicStateTransducer = {
     val builder = BricsTransducer.getBuilder
 
     val initState = builder.initialState
@@ -136,11 +146,114 @@ object ReplaceAllPreOpWord {
 }
 
 /**
- * Representation of x = replaceall(y, w, z) where w is a fixed word.
- * wtran is the transducer that identifies w and replaces it with
- * internalChar.  Build with companion object that takes a plain word
+ * Companion class for building representation of x = replaceall(y, e,
+ * z) for a regular expression e.
  */
-class ReplaceAllPreOpWord(wtran : AtomicStateTransducer) extends PreOp {
+object ReplaceAllPreOpRegEx {
+  def apply(c : Term, context : PredConj) : PreOp = {
+    val tran = buildTransducer(c, context)
+    new ReplaceAllPreOpTran(tran)
+  }
+
+  /**
+   * Builds transducer that identifies leftmost and longest match of
+   * regex by rewriting matches to internalChar
+   */
+  private def buildTransducer(c : Term, context : PredConj) : AtomicStateTransducer = {
+    abstract class Mode
+    // not matching
+    case object NotMatching extends Mode
+    // matching, word read so far could reach any state in frontier
+    case class Matching(val frontier : Set[BricsTransducer#State]) extends Mode
+
+    val aut = BricsAutomaton(c, context)
+    val labels = aut.enumDisjointLabels
+    val builder = BricsTransducer.getBuilder
+    val delete = BricsOutputOp("", Delete, "")
+    val copy = BricsOutputOp("", Plus(0), "")
+    val internal = BricsOutputOp(Seq(builder.internalChar.toChar), Delete, "")
+
+    // TODO: encapsulate this worklist automaton construction
+
+    // states of transducer have current mode and a set of states that
+    // should never reach a final state (if they do, a match has been
+    // missed)
+    val sMap = new MHashMap[BricsTransducer#State, (Mode, Set[aut.State])]
+    val sMapRev = new MHashMap[(Mode, Set[aut.State]), BricsTransducer#State]
+
+    val worklist = new MStack[BricsTransducer#State]
+
+    def mapState(s : BricsTransducer#State, q : (Mode, Set[aut.State])) = {
+      sMap += (s -> q)
+      sMapRev += (q -> s)
+    }
+
+    // creates and adds to worklist any new states if needed
+    def getState(m : Mode, noreach : Set[aut.State]) : BricsTransducer#State = {
+      sMapRev.getOrElse((m, noreach), {
+        val s = builder.getNewState
+        mapState(s, (m, noreach))
+        val goodNoreach = !noreach.exists(aut.isAccept(_))
+        s.setAccept(m match {
+          case NotMatching => goodNoreach
+          case Matching(_) => false
+        })
+        if (goodNoreach)
+          worklist.push(s)
+        s
+      })
+    }
+
+    val autInit = aut.initialState
+    val tranInit = builder.initialState
+
+    mapState(tranInit, (NotMatching, Set.empty[aut.State]))
+    worklist.push(tranInit)
+
+    while (!worklist.isEmpty) {
+      val ts = worklist.pop()
+      val (mode, noreach) = sMap(ts)
+
+      // TODO: take care of final states
+      mode match {
+        case NotMatching => {
+          for (lbl <- labels) {
+            val initImg = aut.getImage(autInit, lbl)
+            val noreachImg = aut.getImage(noreach, lbl)
+
+            val newMatch = getState(Matching(initImg), noreachImg)
+            val dontMatch = getState(NotMatching, noreachImg ++ initImg)
+
+            builder.addTransition(ts, lbl._1, lbl._2, delete, newMatch)
+            builder.addTransition(ts, lbl._1, lbl._2, copy, dontMatch)
+          }
+        }
+        case Matching(frontier) => {
+          for (lbl <- labels) {
+            val frontImg = aut.getImage(frontier, lbl)
+            val noreachImg = aut.getImage(noreach, lbl)
+
+            val contMatch = getState(Matching(frontImg), noreachImg)
+            val stopMatch = getState(NotMatching, noreachImg ++ frontImg)
+
+            builder.addTransition(ts, lbl._1, lbl._2, delete, contMatch)
+            builder.addTransition(ts, lbl._1, lbl._2, internal, stopMatch)
+          }
+        }
+      }
+    }
+
+    builder.getTransducer
+  }
+}
+
+/**
+ * Representation of x = replaceall(y, tran, z) where tran is a
+ * transducer that replaces parts of the word to be replaced with
+ * internalChar.  Build with companion object ReplaceAllPreOpWord or
+ * ReplaceAllPreOpTran
+ */
+class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
 
   override def toString = "replaceall"
 
@@ -156,12 +269,12 @@ class ReplaceAllPreOpWord(wtran : AtomicStateTransducer) extends PreOp {
     })
 
     // x = replaceall(y, w, z) internally translated to
-    // y' = wtran(y); x = replaceall(y', w, z)
+    // y' = tran(y); x = replaceall(y', w, z)
     //
     val cg = CaleyGraph[rc.type](rc)
     for (box <- cg.getAcceptNodes(zcons).iterator) yield {
       val yprimeCons = rc.replaceTransitions(rc.internalChar.toChar, box.getEdges)
-      val newYCon = wtran.preImage(yprimeCons)
+      val newYCon = tran.preImage(yprimeCons)
       val newZCons =
         box.getEdges.map({ case (q1, q2) => rc.setInitAccept(q1, q2) }).toSeq
       val newZCon = AutomataUtils.product(newZCons)
@@ -169,3 +282,5 @@ class ReplaceAllPreOpWord(wtran : AtomicStateTransducer) extends PreOp {
     }
   }
 }
+
+

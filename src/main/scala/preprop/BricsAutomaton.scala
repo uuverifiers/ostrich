@@ -242,6 +242,24 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       toIterable
   }
 
+  /**
+   * Get image of a set of states under a given label
+   */
+  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State] = {
+    for (s1 <- states;
+         (s2, lbl2) <- outgoingTransitions(s1);
+         if labelsOverlap(lbl, lbl2))
+      yield s2
+  }
+
+  /**
+   * Get image of a state under a given label
+   */
+  def getImage(s1 : State, lbl : TransitionLabel) : Set[State] = {
+    outgoingTransitions(s1).collect({
+      case (s2, lbl2) if (labelsOverlap(lbl, lbl2)) => s2
+    }).toSet
+  }
 
   /**
    * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2

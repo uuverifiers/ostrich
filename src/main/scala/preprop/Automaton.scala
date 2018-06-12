@@ -156,6 +156,16 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel]
 
+  /**
+   * Get image of a set of states under a given label
+   */
+  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State]
+
+  /**
+   * Get image of state under a given label
+   */
+  def getImage(state : State, lbl : TransitionLabel) : Set[State]
+
   /*
    * Replace a-transitions with new a-transitions between pairs of
    * states.  Returns a new automaton.
