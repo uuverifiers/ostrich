@@ -250,7 +250,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
   private def addIncAutomata(auts : Seq[Automaton]) : Unit = {
     inconsistentAutomata += auts
-//    println("Watching " + inconsistentAutomata.size + " automata")
+//    println("Watching " + inconsistentAutomata.size + " sets of inconsistent automata")
     val ind = inconsistentAutomata.size - 1
     for (s <- stores) {
       val r = s.watchAutomata(auts, ind)
@@ -272,7 +272,8 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     // <code>false</code> in case the set of new automata is a subset of the
     // asserted constraints
     def watchAutomata(auts : Seq[Automaton], ind : Int) : Boolean =
-      // should this be handled using a hashset?
+      // TODO: should this be handled using a hashset?
+      // TODO: we should randomise at this point!
       (auts find { a => !(constraints contains a) }) match {
         case Some(aut) => {
           watchedAutomata.put(aut,
