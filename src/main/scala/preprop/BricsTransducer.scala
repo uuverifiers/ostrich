@@ -89,7 +89,8 @@ class BricsTransducer(override val underlying : BAutomaton,
 
     val initState = underlying.getInitialState
     val initAutState = baut.initialState
-    val newInitState = preBuilder.initialState
+    val newInitState = preBuilder.getNewState
+    preBuilder setInitialState newInitState
 
     sMap += (newInitState -> ((initState, initAutState)))
     sMapRev += (initState, initAutState) -> newInitState

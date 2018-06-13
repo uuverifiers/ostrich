@@ -461,15 +461,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     def getNewState : BricsAutomaton#State = new BState()
 
     /**
-     * Initial state of the automaton being built
-     */
-    def initialState : BricsAutomaton#State =
-      underlying match {
-        case Some(aut) => aut.getInitialState
-        case None => throw new RuntimeException("Automaton already returned")
-      }
-
-    /**
      * Add a new transition q1 --label--> q2
      */
     def addTransition(q1 : BricsAutomaton#State,
@@ -486,6 +477,12 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
      */
     def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
       q.setAccept(isAccepting)
+
+    /**
+     * Set the initial state
+     */
+    def setInitialState(q : BricsAutomaton#State) : Unit =
+      underlying.get.setInitialState(q)
 
     /**
      * Returns built automaton.  Can only be used once after which the

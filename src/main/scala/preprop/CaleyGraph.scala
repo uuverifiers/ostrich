@@ -106,7 +106,8 @@ object CaleyGraph {
     val stateMap = new HashMap[Box[A], aut.State]
 
     val eBox = getEpsilonBox(aut)
-    val es = graphBuilder.initialState
+    val es = graphBuilder.getNewState
+    graphBuilder setInitialState es
     graphBuilder.setAccept(es, true)
     boxMap += (es -> eBox)
     stateMap += (eBox -> es)
