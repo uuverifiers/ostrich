@@ -21,6 +21,8 @@ package strsolver.preprop
 import ap.terfor.Term
 import ap.terfor.preds.PredConj
 
+import dk.brics.automaton.RegExp
+
 import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
 
 object ReplaceAllPreOp {
@@ -180,7 +182,9 @@ object ReplaceAllPreOpRegEx {
 
   /**
    * Builds transducer that identifies leftmost and longest match of
-   * regex by rewriting matches to internalChar
+   * regex by rewriting matches to internalChar.
+   *
+   * TODO: currently does not handle empty matches
    */
   private def buildTransducer(aut : AtomicStateAutomaton) : AtomicStateTransducer = {
     abstract class Mode
@@ -188,8 +192,10 @@ object ReplaceAllPreOpRegEx {
     case object NotMatching extends Mode
     // matching, word read so far could reach any state in frontier
     case class Matching(val frontier : Set[aut.State]) extends Mode
+    // last transition finished a match and reached frontier
+    case class EndMatch(val frontier : Set[aut.State]) extends Mode
 
-    val labels = aut.enumDisjointLabels
+    val labels = aut.enumDisjointLabelsComplete
     val builder = aut.getTransducerBuilder
     val delete = OutputOp("", Delete, "")
     val copy = OutputOp("", Plus(0), "")
@@ -219,6 +225,7 @@ object ReplaceAllPreOpRegEx {
         val goodNoreach = !noreach.exists(aut.isAccept(_))
         builder.setAccept(s, m match {
           case NotMatching => goodNoreach
+          case EndMatch(_) => goodNoreach
           case Matching(_) => false
         })
         if (goodNoreach)
@@ -231,6 +238,7 @@ object ReplaceAllPreOpRegEx {
     val tranInit = builder.initialState
 
     mapState(tranInit, (NotMatching, Set.empty[aut.State]))
+    builder.setAccept(tranInit, true)
     worklist.push(tranInit)
 
     while (!worklist.isEmpty) {
@@ -244,11 +252,18 @@ object ReplaceAllPreOpRegEx {
             val initImg = aut.getImage(autInit, lbl)
             val noreachImg = aut.getImage(noreach, lbl)
 
-            val newMatch = getState(Matching(initImg), noreachImg)
             val dontMatch = getState(NotMatching, noreachImg ++ initImg)
-
-            builder.addTransition(ts, lbl, delete, newMatch)
             builder.addTransition(ts, lbl, copy, dontMatch)
+
+            if (!initImg.isEmpty) {
+              val newMatch = getState(Matching(initImg), noreachImg)
+              builder.addTransition(ts, lbl, delete, newMatch)
+            }
+
+            if (initImg.exists(aut.isAccept(_))) {
+              val oneCharMatch = getState(EndMatch(initImg), noreachImg)
+              builder.addTransition(ts, lbl, internal, oneCharMatch)
+            }
           }
         }
         case Matching(frontier) => {
@@ -256,17 +271,42 @@ object ReplaceAllPreOpRegEx {
             val frontImg = aut.getImage(frontier, lbl)
             val noreachImg = aut.getImage(noreach, lbl)
 
-            val contMatch = getState(Matching(frontImg), noreachImg)
-            val stopMatch = getState(NotMatching, noreachImg ++ frontImg)
+            if (!frontImg.isEmpty) {
+              val contMatch = getState(Matching(frontImg), noreachImg)
+              builder.addTransition(ts, lbl, delete, contMatch)
+            }
 
-            builder.addTransition(ts, lbl, delete, contMatch)
-            builder.addTransition(ts, lbl, internal, stopMatch)
+            if (frontImg.exists(aut.isAccept(_))) {
+                val stopMatch = getState(EndMatch(frontImg), noreachImg)
+                builder.addTransition(ts, lbl, internal, stopMatch)
+            }
+          }
+        }
+        case EndMatch(frontier) => {
+          for (lbl <- labels) {
+            val initImg = aut.getImage(autInit, lbl)
+            val frontImg = aut.getImage(frontier, lbl)
+            val noreachImg = aut.getImage(noreach, lbl)
+
+            val noMatch = getState(NotMatching, initImg ++ frontImg ++ noreachImg)
+            builder.addTransition(ts, lbl, copy, noMatch)
+
+            if (!initImg.isEmpty) {
+              val newMatch = getState(Matching(initImg), frontImg ++ noreachImg)
+              builder.addTransition(ts, lbl, delete, newMatch)
+            }
+
+            if (initImg.exists(aut.isAccept(_))) {
+              val oneCharMatch = getState(EndMatch(initImg), frontImg ++ noreachImg)
+              builder.addTransition(ts, lbl, internal, oneCharMatch)
+            }
           }
         }
       }
     }
 
-    builder.getTransducer
+    val tran = builder.getTransducer
+    tran
   }
 }
 

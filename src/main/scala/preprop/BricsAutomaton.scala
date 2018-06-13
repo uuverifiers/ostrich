@@ -60,7 +60,7 @@ object BricsAutomaton {
   /**
    * Build brics automaton from a regular expression in brics format
    */
-  def apply(pattern: String): Automaton =
+  def apply(pattern: String): BricsAutomaton =
     new BricsAutomaton(new RegExp(pattern).toAutomaton(true))
 
   /**
@@ -86,11 +86,15 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   /**
    * Keep track of disjoint labels for fast range lookups in
    * enumLabelOverlap.  Access with getDisjointLabels.
-   *
-   * Make sure to call resetDisjointLabels when updating transition
-   * structure.
    */
-  private var disjointLabels : Option[MTreeSet[TransitionLabel]] = None
+  private lazy val disjointLabels : MTreeSet[TransitionLabel] =
+    calculateDisjointLabels
+  /**
+   * Like disjoint labels but covers whole alphabet including internal
+   * char.
+   */
+  private lazy val disjointLabelsComplete : List[TransitionLabel] =
+    calculateDisjointLabelsComplete
 
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
@@ -239,14 +243,23 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * [5,8] [8,10] [10,15]
    */
   def enumDisjointLabels : Iterable[TransitionLabel] =
-    getDisjointLabels.toIterable
+    disjointLabels.toIterable
+
+  /**
+   * Enumerate all labels with overlaps removed such that the whole
+   * alphabet is covered (including internal characters)
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [4,4] [5,7] [8,10] [11,15] [15,..]
+   */
+  def enumDisjointLabelsComplete : Iterable[TransitionLabel] =
+    disjointLabelsComplete
 
   /**
    * iterate over the instances of lbls that overlap with lbl
    */
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel] = {
     val (lMin, lMax) = lbl
-    getDisjointLabels.
+    disjointLabels.
       from((lMin, Char.MinValue)).
       to((lMax, Char.MaxValue)).
       toIterable
@@ -318,6 +331,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     transformTran: (TransitionLabel, TransitionLabel => Unit) => Unit
   ) : (BricsAutomaton, Map[State, State]) = {
     val newAut = new BAutomaton
+    newAut.setDeterministic(false)
     val smap = new MHashMap[State, State]
 
     val states = underlying.getStates
@@ -352,6 +366,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     })
 
     val newBAut = new BAutomaton
+    // TODO: be more precise if it helps performance
+    newBAut.setDeterministic(false)
     val initBState = newBAut.getInitialState
     val sMap = new MHashMap[BState, (BState, Seq[BState])]
     val sMapRev = new MHashMap[(BState, Seq[BState]), BState]
@@ -414,6 +430,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def setAccept(q : State, isAccepting : Boolean) : Unit =
     q.setAccept(isAccepting)
 
+  def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
+
+  def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
+
   private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
     var disjoint = new MTreeSet[TransitionLabel]()
 
@@ -456,25 +476,34 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     disjoint
   }
 
-  def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
-
-  def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
-
-  /**
-   * To be called whenever the transition structure changes as cached
-   * disjoint labels will be outdated
-   */
-  private def resetDisjointLabels : Unit = disjointLabels = None
-
-  private def getDisjointLabels : MTreeSet[TransitionLabel] =
-    disjointLabels match {
-      case Some(labels) => labels
-      case None => {
-        val labels = calculateDisjointLabels()
-        disjointLabels = Some(labels)
-        labels
+  private def calculateDisjointLabelsComplete() : List[TransitionLabel] = {
+    val labels = disjointLabels.foldRight(List[TransitionLabel]()) {
+      case ((min, max), Nil) => {
+        // using Char.MaxValue since we include internal chars
+        if (max < Char.MaxValue)
+          List((min,max), ((max + 1).toChar, Char.MaxValue))
+        else
+          List((min, max))
+      }
+      case ((min, max), (minLast, maxLast)::lbls) => {
+        val minLastPrev = (minLast - 1).toChar
+        if (max < minLastPrev)
+          (min, max)::((max + 1).toChar, minLastPrev)::(minLast, maxLast)::lbls
+        else
+          (min, max)::(minLast, maxLast)::lbls
       }
     }
+    if (Char.MinValue < labels.head._1) {
+      val nextMin = (labels.head._1 - 1).toChar
+      (Char.MinValue, nextMin)::labels
+    } else {
+      labels
+    }
+  }
+
+
+
+
 }
 
 
@@ -489,7 +518,11 @@ class BricsAutomatonBuilder
   val maxChar : Int = BricsAutomaton.maxChar
   val internalChar : Int = BricsAutomaton.internalChar
 
-  var aut = new BricsAutomaton(new BAutomaton)
+  var aut = {
+    val baut = new BAutomaton
+    baut.setDeterministic(false)
+    new BricsAutomaton(baut)
+  }
 
   /**
    * Create a fresh state that can be used in the automaton

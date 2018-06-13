@@ -152,6 +152,14 @@ trait AtomicStateAutomaton extends Automaton {
   def enumDisjointLabels : Iterable[TransitionLabel]
 
   /**
+   * Enumerate all labels with overlaps removed such that the whole
+   * alphabet is covered (including internal characters)
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [4,4] [5,7] [8,10] [11,15] [15,..]
+   */
+  def enumDisjointLabelsComplete : Iterable[TransitionLabel]
+
+  /**
    * iterate over disjoint labels of the automaton that overlap with lbl
    */
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel]

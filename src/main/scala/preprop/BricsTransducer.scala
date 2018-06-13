@@ -196,7 +196,11 @@ class BricsTransducerBuilder
   val maxChar : Int = BricsAutomaton.maxChar
   val internalChar : Int = BricsAutomaton.internalChar
 
-  val aut = new BricsAutomaton(new BAutomaton)
+  val aut = {
+    val baut = new BAutomaton
+    baut.setDeterministic(false)
+    new BricsAutomaton(baut)
+  }
   val operations = new MHashMap[(BState, BTransition), OutputOp]
 
   def initialState : BricsAutomaton#State = aut.initialState
