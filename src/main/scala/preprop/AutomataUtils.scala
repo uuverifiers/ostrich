@@ -188,11 +188,8 @@ object AutomataUtils {
     }
 
     newBAut.restoreInvariant
-    val res = new BricsAutomaton(newBAut)
 
-    assert(res.isEmpty == !areConsistentAutomata(auts))
-    
-    (res, sMap.toMap)
+    (new BricsAutomaton(newBAut), sMap.toMap)
   }
 
   /**

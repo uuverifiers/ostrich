@@ -46,6 +46,8 @@ object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
       that.underlying
+    case that : InitFinalAutomaton[_] =>
+      toBAutomaton(that.internalise)
     case _ =>
       throw new IllegalArgumentException
   }

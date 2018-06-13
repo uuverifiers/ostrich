@@ -28,6 +28,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex2.smt2", "unsat")
   property("concat-regex3.smt2") =
     checkFile("tests/concat-regex3.smt2", "sat")
+  property("concat-regex4.smt2") =
+    checkFile("tests/concat-regex4.smt2", "sat")
 /*
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
