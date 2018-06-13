@@ -106,6 +106,12 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   def enumDisjointLabels : Iterable[TransitionLabel] =
     underlying.enumDisjointLabels
 
+  def enumDisjointLabelsComplete : Iterable[TransitionLabel] =
+    underlying.enumDisjointLabelsComplete
+
+  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TransitionLabel] =
+    throw new UnsupportedOperationException
+
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel] =
     underlying.enumLabelOverlap(lbl)
 
@@ -137,9 +143,13 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   def isAccept(s : State) : Boolean =
     acceptingStates contains s
 
-  def getBuilder : AtomicStateAutomatonBuilder =
-    new AtomicStateAutomatonBuilder {
+  def getBuilder : AtomicStateAutomatonBuilder[State, TransitionLabel] =
+    new AtomicStateAutomatonBuilder[State, TransitionLabel] {
       val underlyingBuilder = underlying.getBuilder
+      val vocabularyWidth : Int = underlyingBuilder.vocabularyWidth
+      val minChar : Int = underlyingBuilder.minChar
+      val maxChar : Int = underlyingBuilder.maxChar
+      val internalChar : Int = underlyingBuilder.internalChar
       def getNewState : State =
         underlyingBuilder.getNewState
       def setInitialState(q : State) : Unit =

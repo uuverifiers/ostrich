@@ -21,6 +21,8 @@ package strsolver.preprop
 import ap.terfor.Term
 import ap.terfor.preds.PredConj
 
+import dk.brics.automaton.RegExp
+
 import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
 
 object ReplaceAllPreOp {
@@ -49,12 +51,18 @@ object ReplaceAllPreOp {
 
   def apply(s : String) : PreOp = ReplaceAllPreOp(s.toSeq)
 
-
   /**
    * PreOp for x = replaceall(y, e, z) for regex e
    */
   def apply(c : Term, context : PredConj) : PreOp =
     ReplaceAllPreOpRegEx(c, context)
+
+  /**
+   * PreOp for x = replaceall(y, e, z) for regex e represented as
+   * automaton aut
+   */
+  def apply(aut : AtomicStateAutomaton) : PreOp =
+    ReplaceAllPreOpRegEx(aut)
 }
 
 /**
@@ -87,7 +95,6 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
   }
 }
 
-
 /**
  * Companion object for ReplaceAllPreOpWord, does precomputation of
  * transducer representation of word
@@ -104,8 +111,8 @@ object ReplaceAllPreOpWord {
     val initState = builder.initialState
     val states = initState::(List.fill(w.size - 1)(builder.getNewState))
     val finstates = List.fill(w.size)(builder.getNewState)
-    val delete = BricsOutputOp("", Delete, "")
-    val internal = BricsOutputOp(Seq(builder.internalChar.toChar), Delete, "")
+    val delete = OutputOp("", Delete, "")
+    val internal = OutputOp(Seq(builder.internalChar.toChar), Delete, "")
     val end = w.size - 1
 
     builder.setAccept(initState, true)
@@ -114,31 +121,31 @@ object ReplaceAllPreOpWord {
     // recognise word
     // deliberately miss last element
     for (i <- 0 until w.size - 1) {
-      builder.addTransition(states(i), w(i), w(i), delete, states(i+1))
+      builder.addTransition(states(i), (w(i), w(i)), delete, states(i+1))
     }
-    builder.addTransition(states(end), w(end), w(end), internal, states(0))
+    builder.addTransition(states(end), (w(end), w(end)), internal, states(0))
 
     for (i <- 0 until w.size) {
-      val output = BricsOutputOp(w.slice(0, i), Plus(0), "")
+      val output = OutputOp(w.slice(0, i), Plus(0), "")
 
       // begin again if mismatch
       if (w(i) > builder.minChar) {
         val below = (w(i) - 1).toChar
         builder.addTransition(states(i),
-                              builder.minChar.toChar, below,
+                              (builder.minChar.toChar, below),
                               output,
                               states(0))
       }
       if (w(i) < builder.maxChar) {
         val above = (w(i) + 1).toChar
         builder.addTransition(states(i),
-                              above, builder.maxChar.toChar,
+                              (above, builder.maxChar.toChar),
                               output,
                               states(0))
       }
 
       // handle word ending in middle of match
-      builder.addTransition(states(i), w(i), w(i), output, finstates(i))
+      builder.addTransition(states(i), (w(i), w(i)), output, finstates(i))
     }
 
     builder.getTransducer
@@ -150,8 +157,19 @@ object ReplaceAllPreOpWord {
  * z) for a regular expression e.
  */
 object ReplaceAllPreOpRegEx {
+  /**
+   * Build preop from c and context giving regex to be replaced
+   */
   def apply(c : Term, context : PredConj) : PreOp = {
     val tran = buildTransducer(c, context)
+    new ReplaceAllPreOpTran(tran)
+  }
+
+  /**
+   * Build preop from aut giving regex to be replaced
+   */
+  def apply(aut : AtomicStateAutomaton) : PreOp = {
+    val tran = buildTransducer(aut)
     new ReplaceAllPreOpTran(tran)
   }
 
@@ -159,43 +177,55 @@ object ReplaceAllPreOpRegEx {
    * Builds transducer that identifies leftmost and longest match of
    * regex by rewriting matches to internalChar
    */
-  private def buildTransducer(c : Term, context : PredConj) : AtomicStateTransducer = {
+  private def buildTransducer(c : Term, context : PredConj) : AtomicStateTransducer =
+    buildTransducer(BricsAutomaton(c, context))
+
+  /**
+   * Builds transducer that identifies leftmost and longest match of
+   * regex by rewriting matches to internalChar.
+   *
+   * TODO: currently does not handle empty matches
+   */
+  private def buildTransducer(aut : AtomicStateAutomaton) : AtomicStateTransducer = {
     abstract class Mode
     // not matching
     case object NotMatching extends Mode
     // matching, word read so far could reach any state in frontier
-    case class Matching(val frontier : Set[BricsTransducer#State]) extends Mode
+    case class Matching(val frontier : Set[aut.State]) extends Mode
+    // last transition finished a match and reached frontier
+    case class EndMatch(val frontier : Set[aut.State]) extends Mode
 
-    val aut = BricsAutomaton(c, context)
-    val labels = aut.enumDisjointLabels
-    val builder = BricsTransducer.getBuilder
-    val delete = BricsOutputOp("", Delete, "")
-    val copy = BricsOutputOp("", Plus(0), "")
-    val internal = BricsOutputOp(Seq(builder.internalChar.toChar), Delete, "")
+    val labels = aut.enumDisjointLabelsComplete
+    val builder = aut.getTransducerBuilder
+    val delete = OutputOp("", Delete, "")
+    val copy = OutputOp("", Plus(0), "")
+    val internal = OutputOp(Seq(builder.internalChar.toChar), Delete, "")
 
     // TODO: encapsulate this worklist automaton construction
 
     // states of transducer have current mode and a set of states that
     // should never reach a final state (if they do, a match has been
     // missed)
-    val sMap = new MHashMap[BricsTransducer#State, (Mode, Set[aut.State])]
-    val sMapRev = new MHashMap[(Mode, Set[aut.State]), BricsTransducer#State]
+    val sMap = new MHashMap[aut.State, (Mode, Set[aut.State])]
+    val sMapRev = new MHashMap[(Mode, Set[aut.State]), aut.State]
 
-    val worklist = new MStack[BricsTransducer#State]
+    // states of new transducer to be constructed
+    val worklist = new MStack[aut.State]
 
-    def mapState(s : BricsTransducer#State, q : (Mode, Set[aut.State])) = {
+    def mapState(s : aut.State, q : (Mode, Set[aut.State])) = {
       sMap += (s -> q)
       sMapRev += (q -> s)
     }
 
     // creates and adds to worklist any new states if needed
-    def getState(m : Mode, noreach : Set[aut.State]) : BricsTransducer#State = {
+    def getState(m : Mode, noreach : Set[aut.State]) : aut.State = {
       sMapRev.getOrElse((m, noreach), {
         val s = builder.getNewState
         mapState(s, (m, noreach))
         val goodNoreach = !noreach.exists(aut.isAccept(_))
-        s.setAccept(m match {
+        builder.setAccept(s, m match {
           case NotMatching => goodNoreach
+          case EndMatch(_) => goodNoreach
           case Matching(_) => false
         })
         if (goodNoreach)
@@ -208,6 +238,7 @@ object ReplaceAllPreOpRegEx {
     val tranInit = builder.initialState
 
     mapState(tranInit, (NotMatching, Set.empty[aut.State]))
+    builder.setAccept(tranInit, true)
     worklist.push(tranInit)
 
     while (!worklist.isEmpty) {
@@ -221,11 +252,18 @@ object ReplaceAllPreOpRegEx {
             val initImg = aut.getImage(autInit, lbl)
             val noreachImg = aut.getImage(noreach, lbl)
 
-            val newMatch = getState(Matching(initImg), noreachImg)
             val dontMatch = getState(NotMatching, noreachImg ++ initImg)
+            builder.addTransition(ts, lbl, copy, dontMatch)
 
-            builder.addTransition(ts, lbl._1, lbl._2, delete, newMatch)
-            builder.addTransition(ts, lbl._1, lbl._2, copy, dontMatch)
+            if (!initImg.isEmpty) {
+              val newMatch = getState(Matching(initImg), noreachImg)
+              builder.addTransition(ts, lbl, delete, newMatch)
+            }
+
+            if (initImg.exists(aut.isAccept(_))) {
+              val oneCharMatch = getState(EndMatch(initImg), noreachImg)
+              builder.addTransition(ts, lbl, internal, oneCharMatch)
+            }
           }
         }
         case Matching(frontier) => {
@@ -233,17 +271,42 @@ object ReplaceAllPreOpRegEx {
             val frontImg = aut.getImage(frontier, lbl)
             val noreachImg = aut.getImage(noreach, lbl)
 
-            val contMatch = getState(Matching(frontImg), noreachImg)
-            val stopMatch = getState(NotMatching, noreachImg ++ frontImg)
+            if (!frontImg.isEmpty) {
+              val contMatch = getState(Matching(frontImg), noreachImg)
+              builder.addTransition(ts, lbl, delete, contMatch)
+            }
 
-            builder.addTransition(ts, lbl._1, lbl._2, delete, contMatch)
-            builder.addTransition(ts, lbl._1, lbl._2, internal, stopMatch)
+            if (frontImg.exists(aut.isAccept(_))) {
+                val stopMatch = getState(EndMatch(frontImg), noreachImg)
+                builder.addTransition(ts, lbl, internal, stopMatch)
+            }
+          }
+        }
+        case EndMatch(frontier) => {
+          for (lbl <- labels) {
+            val initImg = aut.getImage(autInit, lbl)
+            val frontImg = aut.getImage(frontier, lbl)
+            val noreachImg = aut.getImage(noreach, lbl)
+
+            val noMatch = getState(NotMatching, initImg ++ frontImg ++ noreachImg)
+            builder.addTransition(ts, lbl, copy, noMatch)
+
+            if (!initImg.isEmpty) {
+              val newMatch = getState(Matching(initImg), frontImg ++ noreachImg)
+              builder.addTransition(ts, lbl, delete, newMatch)
+            }
+
+            if (initImg.exists(aut.isAccept(_))) {
+              val oneCharMatch = getState(EndMatch(initImg), frontImg ++ noreachImg)
+              builder.addTransition(ts, lbl, internal, oneCharMatch)
+            }
           }
         }
       }
     }
 
-    builder.getTransducer
+    val tran = builder.getTransducer
+    tran
   }
 }
 

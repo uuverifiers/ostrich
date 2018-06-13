@@ -28,40 +28,12 @@ import dk.brics.automaton.{Automaton => BAutomaton,
 
 import scala.collection.JavaConversions.iterableAsScalaIterable
 
-/**
- * Symbolic operations on input
- */
-abstract class InputOp
-/**
- * Delete input character
- */
-case object Delete extends InputOp
-/**
- * Change input character by shifting (+0 to copy)
- */
-case class Plus(val n : Int) extends InputOp
-
-/**
- * Output operations for Brics Transducers: (u, o, v) where u is a
- * string to output first, o is an operation to translate the character
- * being read, and v is a string to output after.
- *
- * o can be +n or del
- */
-case class BricsOutputOp(val preW : Seq[Char],
-                         val op : InputOp,
-                         val postW : Seq[Char])
-
 object BricsTransducer {
-  // TODO: dummy value because i can't think of a better way of getting a
-  // builder that knows the value of State and TransitionLabel...
-  val dummyTransducer = BricsTransducer()
-
   def apply() : BricsTransducer =
-    new BricsTransducer(new BAutomaton, Map[(BState, BTransition), BricsOutputOp]())
+    new BricsTransducer(new BAutomaton, Map[(BState, BTransition), OutputOp]())
 
-  def getBuilder : BricsTransducer#BricsTransducerBuilder =
-    dummyTransducer.getTransducerBuilder
+  def getBuilder : BricsTransducerBuilder =
+    new BricsTransducerBuilder
 }
 
 /**
@@ -71,7 +43,7 @@ object BricsTransducer {
  * a character of output
  */
 class BricsTransducer(override val underlying : BAutomaton,
-                      val operations : Map[(BState, BTransition), BricsOutputOp])
+                      val operations : Map[(BState, BTransition), OutputOp])
   extends BricsAutomaton(underlying) with AtomicStateTransducer {
 
   def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
@@ -214,37 +186,44 @@ class BricsTransducer(override val underlying : BAutomaton,
   override def toString = {
     super.toString + '\n' + operations.mkString("\n")
   }
+}
 
-  def getTransducerBuilder : BricsTransducerBuilder = new BricsTransducerBuilder
 
-  class BricsTransducerBuilder {
-    val aut = new BAutomaton
-    val operations = new MHashMap[(BState, BTransition), BricsOutputOp]
+class BricsTransducerBuilder
+    extends AtomicStateTransducerBuilder[BricsAutomaton#State,
+                                         BricsAutomaton#TransitionLabel] {
+  val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
+  val minChar : Int = BricsAutomaton.minChar
+  val maxChar : Int = BricsAutomaton.maxChar
+  val internalChar : Int = BricsAutomaton.internalChar
 
-    val minChar : Int = BricsTransducer.this.minChar
-    val maxChar : Int = BricsTransducer.this.maxChar
-    val internalChar : Int = BricsTransducer.this.internalChar
+  val aut = {
+    val baut = new BAutomaton
+    baut.setDeterministic(false)
+    new BricsAutomaton(baut)
+  }
+  val operations = new MHashMap[(BState, BTransition), OutputOp]
 
-    def initialState = aut.getInitialState
+  def initialState : BricsAutomaton#State = aut.initialState
 
-    def getNewState = new BState
+  def getNewState : BricsAutomaton#State = new BState
 
-    def setAccept(s : State, isAccept : Boolean) = s.setAccept(isAccept)
+  def setAccept(s : BricsAutomaton#State, isAccept : Boolean) = s.setAccept(isAccept)
 
-    def addTransition(s1 : BState,
-                      min : Char, max : Char,
-                      op : BricsOutputOp,
-                      s2 : BState) = {
-      if (BricsTransducer.this.isNonEmptyLabel((min, max))) {
-        val t = new BTransition(min, max, s2)
-        s1.addTransition(t)
-        operations += ((s1, t) -> op)
-      }
-    }
-
-    def getTransducer = {
-      // do not restore invariant since will break operations map
-      new BricsTransducer(aut, operations.toMap)
+  def addTransition(s1 : BricsAutomaton#State,
+                    lbl : BricsAutomaton#TransitionLabel,
+                    op : OutputOp,
+                    s2 : BricsAutomaton#State) = {
+    if (aut.isNonEmptyLabel(lbl)) {
+      val t = new BTransition(lbl._1, lbl._2, s2)
+      s1.addTransition(t)
+      operations += ((s1, t) -> op)
     }
   }
+
+  def getTransducer = {
+    // do not restore invariant since will break operations map
+    new BricsTransducer(aut.underlying, operations.toMap)
+  }
 }
+
