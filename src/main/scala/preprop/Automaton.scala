@@ -210,36 +210,62 @@ trait AtomicStateAutomaton extends Automaton {
   def isAccept(s : State) : Boolean
 
   /**
-   * Return new emtpy automaton (single initial state, not accepting) of
-   * same type
+   * Return new automaton builder of compatible type
    */
-  def getBuilder : AtomicStateAutomatonBuilder
+  def getBuilder : AtomicStateAutomatonBuilder[State, TransitionLabel]
 
-  trait AtomicStateAutomatonBuilder {
-    /**
-     * Create a fresh state that can be used in the automaton
-     */
-    def getNewState : State
+  /**
+   * Return new automaton builder of compatible type
+   */
+  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TransitionLabel]
+}
 
-    /**
-     * Initial state of the automaton being built
-     */
-    def initialState : State
+trait AtomicStateAutomatonBuilder[State, TransitionLabel] {
+  /**
+   * Nr. of bits of letters in the vocabulary. Letters are
+   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
+   * See max/minChar and internalChar
+   */
+  val vocabularyWidth : Int
 
-    /**
-     * Add a new transition q1 --label--> q2
-     */
-    def addTransition(s1 : State, label : TransitionLabel, s2 : State) : Unit
+  /**
+   * A minimum character value in the range given by vocabularyWidth
+   */
+  val minChar : Int
 
-    /**
-     * Set state accepting
-     */
-    def setAccept(s : State, isAccepting : Boolean) : Unit
+  /**
+   * A minimum character value in the range given by vocabularyWidth
+   */
+  val maxChar : Int
 
-    /**
-     * Returns built automaton.  Can only be used once after which the
-     * automaton cannot change
-     */
-    def getAutomaton : AtomicStateAutomaton
-  }
+  /**
+   * A special character outside of [minChar, maxChar] for internal use
+   */
+  val internalChar : Int
+
+  /**
+   * Create a fresh state that can be used in the automaton
+   */
+  def getNewState : State
+
+  /**
+   * Initial state of the automaton being built
+   */
+  def initialState : State
+
+  /**
+   * Add a new transition q1 --label--> q2
+   */
+  def addTransition(s1 : State, label : TransitionLabel, s2 : State) : Unit
+
+  /**
+   * Set state accepting
+   */
+  def setAccept(s : State, isAccepting : Boolean) : Unit
+
+  /**
+   * Returns built automaton.  Can only be used once after which the
+   * automaton cannot change
+   */
+  def getAutomaton : AtomicStateAutomaton
 }

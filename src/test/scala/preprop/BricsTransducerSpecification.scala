@@ -16,9 +16,9 @@ object BricsTransducerSpecification
     val qf = new IDState(1)
     qf.setAccept(true)
 
-    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val operations = new HashMap[(State, Transition), OutputOp]
     val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new BricsOutputOp("", Plus(3), ""))
+    operations += ((q0, t) -> new OutputOp("", Plus(3), ""))
     q0.addTransition(t)
 
     val tran = new BAutomaton
@@ -45,9 +45,9 @@ object BricsTransducerSpecification
     val qf = new IDState(1)
     qf.setAccept(true)
 
-    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val operations = new HashMap[(State, Transition), OutputOp]
     val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new BricsOutputOp("zz", Plus(0), ""))
+    operations += ((q0, t) -> new OutputOp("zz", Plus(0), ""))
     q0.addTransition(t)
 
     val tran = new BAutomaton
@@ -78,9 +78,9 @@ object BricsTransducerSpecification
     val qf = new IDState(1)
     qf.setAccept(true)
 
-    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val operations = new HashMap[(State, Transition), OutputOp]
     val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new BricsOutputOp("zz", Plus(0), "adb"))
+    operations += ((q0, t) -> new OutputOp("zz", Plus(0), "adb"))
     q0.addTransition(t)
 
     val tran = new BAutomaton
@@ -112,9 +112,9 @@ object BricsTransducerSpecification
     val qf = new IDState(1)
     qf.setAccept(true)
 
-    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val operations = new HashMap[(State, Transition), OutputOp]
     val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new BricsOutputOp("zz", Plus(0), "ad"))
+    operations += ((q0, t) -> new OutputOp("zz", Plus(0), "ad"))
     q0.addTransition(t)
 
     val tran = new BAutomaton
@@ -146,9 +146,9 @@ object BricsTransducerSpecification
     val qf = new IDState(1)
     qf.setAccept(true)
 
-    val operations = new HashMap[(State, Transition), BricsOutputOp]
+    val operations = new HashMap[(State, Transition), OutputOp]
     val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new BricsOutputOp("zz", Delete, "badb"))
+    operations += ((q0, t) -> new OutputOp("zz", Delete, "badb"))
     q0.addTransition(t)
 
     val tran = new BAutomaton

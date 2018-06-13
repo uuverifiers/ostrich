@@ -23,8 +23,8 @@ import strsolver.Regex2AFA
 import ap.terfor.Term
 import ap.terfor.preds.PredConj
 
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
-                           Automaton => BAutomaton, State => BState, Transition}
+import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
+                           Automaton => BAutomaton, State => BState}
 
 import scala.collection.JavaConversions.{asScalaIterator,
                                          iterableAsScalaIterable}
@@ -34,6 +34,15 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  TreeSet => MTreeSet}
 
 object BricsAutomaton {
+  val vocabularyWidth : Int = 16  // really?
+
+  val minChar : Int = 0
+
+  val maxChar : Int = Char.MaxValue - 1
+
+  val internalChar : Int = Char.MaxValue
+
+
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
       that.underlying
@@ -49,12 +58,16 @@ object BricsAutomaton {
   def apply() : BricsAutomaton = new BricsAutomaton(new BAutomaton)
 
   /**
+   * Build brics automaton from a regular expression in brics format
+   */
+  def apply(pattern: String): Automaton =
+    new BricsAutomaton(new RegExp(pattern).toAutomaton(true))
+
+  /**
    * A new automaton that accepts any string
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
-
-
 }
 
 /**
@@ -83,13 +96,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Nr. of bits of letters in the vocabulary. Letters are
    * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
    */
-  val vocabularyWidth : Int = 16  // really?
-
-  val minChar : Int = 0
-
-  val maxChar : Int = Char.MaxValue - 1
-
-  val internalChar : Int = Char.MaxValue
+  val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
+  val minChar : Int = BricsAutomaton.minChar
+  val maxChar : Int = BricsAutomaton.maxChar
+  val internalChar : Int = BricsAutomaton.internalChar
 
   /**
    * Union
@@ -448,58 +458,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
-  /**
-   * For constructing manually (immutable) BricsAutomaton objects
-   */
-  class BricsAutomatonBuilder extends AtomicStateAutomatonBuilder {
-
-    var underlying : Option[BAutomaton] = Some(new BAutomaton)
-
-    /**
-     * Create a fresh state that can be used in the automaton
-     */
-    def getNewState : BricsAutomaton#State = new BState()
-
-    /**
-     * Initial state of the automaton being built
-     */
-    def initialState : BricsAutomaton#State =
-      underlying match {
-        case Some(aut) => aut.getInitialState
-        case None => throw new RuntimeException("Automaton already returned")
-      }
-
-    /**
-     * Add a new transition q1 --label--> q2
-     */
-    def addTransition(q1 : BricsAutomaton#State,
-                      label : BricsAutomaton#TransitionLabel,
-                      q2 : BricsAutomaton#State) : Unit = {
-      if (isNonEmptyLabel(label)) {
-        val (min, max) = label
-        q1.addTransition(new Transition(min, max, q2))
-      }
-    }
-
-    /**
-     * Set state accepting
-     */
-    def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
-      q.setAccept(isAccepting)
-
-    /**
-     * Returns built automaton.  Can only be used once after which the
-     * automaton cannot change
-     */
-    def getAutomaton : BricsAutomaton =
-      underlying match {
-        case Some(aut) => {
-          aut.restoreInvariant
-          new BricsAutomaton(aut)
-        }
-        case None => throw new RuntimeException("Automaton already returned")
-      }
-  }
+  def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
 
   /**
    * To be called whenever the transition structure changes as cached
@@ -517,4 +476,58 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       }
     }
 }
+
+
+/**
+ * For constructing manually (immutable) BricsAutomaton objects
+ */
+class BricsAutomatonBuilder
+    extends AtomicStateAutomatonBuilder[BricsAutomaton#State,
+                                        BricsAutomaton#TransitionLabel] {
+  val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
+  val minChar : Int = BricsAutomaton.minChar
+  val maxChar : Int = BricsAutomaton.maxChar
+  val internalChar : Int = BricsAutomaton.internalChar
+
+  var aut = new BricsAutomaton(new BAutomaton)
+
+  /**
+   * Create a fresh state that can be used in the automaton
+   */
+  def getNewState : BricsAutomaton#State = new BState()
+
+  /**
+   * Initial state of the automaton being built
+   */
+  def initialState : BricsAutomaton#State =
+      aut.initialState
+
+  /**
+   * Add a new transition q1 --label--> q2
+   */
+  def addTransition(q1 : BricsAutomaton#State,
+                    label : BricsAutomaton#TransitionLabel,
+                    q2 : BricsAutomaton#State) : Unit = {
+    if (aut.isNonEmptyLabel(label)) {
+      val (min, max) = label
+      q1.addTransition(new Transition(min, max, q2))
+    }
+  }
+
+  /**
+   * Set state accepting
+   */
+  def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
+    q.setAccept(isAccepting)
+
+  /**
+   * Returns built automaton.  Can only be used once after which the
+   * automaton cannot change
+   */
+  def getAutomaton : BricsAutomaton = {
+    aut.underlying.restoreInvariant
+    aut
+  }
+}
+
 
