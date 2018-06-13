@@ -20,11 +20,40 @@ package strsolver.preprop
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
+object InitFinalAutomaton {
+  def setInitial[A <: AtomicStateAutomaton](aut : A,
+                                            initialState : A#State) =
+    aut match {
+      case InitFinalAutomaton(a, oldInit, oldFinal) =>
+        InitFinalAutomaton(a, initialState, oldFinal)
+      case _ =>
+        InitFinalAutomaton(aut, initialState,
+                           aut.acceptingStates.asInstanceOf[Set[A#State]])
+    }
+
+  def setFinal[A <: AtomicStateAutomaton](
+        aut : A,
+        acceptingStates : Set[AtomicStateAutomaton#State]) =
+    aut match {
+      case InitFinalAutomaton(a, oldInit, oldFinal) =>
+        InitFinalAutomaton(a, oldInit, acceptingStates)
+      case _ =>
+        InitFinalAutomaton(aut, aut.initialState, acceptingStates)
+    }
+
+  def intern(a : Automaton) : Automaton = a match {
+    case a : InitFinalAutomaton[_] => a.internalise
+    case a => a
+  }
+}
+
 case class InitFinalAutomaton[A <: AtomicStateAutomaton]
                              (underlying : A,
                               val _initialState : A#State,
                               val _acceptingStates : Set[A#State])
      extends AtomicStateAutomaton {
+  import InitFinalAutomaton.intern
+
   type State = underlying.State
   type TransitionLabel = underlying.TransitionLabel
 
@@ -34,9 +63,9 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   val internalChar = underlying.internalChar
 
   def |(that : Automaton) : Automaton =
-    this.internalise | that
+    intern(this) | intern(that)
   def &(that : Automaton) : Automaton =
-    this.internalise & that
+    intern(this) & intern(that)
 
   def isEmpty : Boolean =
     !AutomataUtils.areConsistentAtomicAutomata(List(this))
@@ -105,15 +134,24 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     InitFinalAutomaton(underlying, s0,
                        Set(sf).asInstanceOf[Set[AtomicStateAutomaton#State]])
 
-  def productWithMap(auts : Seq[AtomicStateAutomaton]) :
-    (AtomicStateAutomaton, Map[State, (State, Seq[State])]) =
-    throw new UnsupportedOperationException
-
   def isAccept(s : State) : Boolean =
     acceptingStates contains s
 
   def getBuilder : AtomicStateAutomatonBuilder =
-    throw new UnsupportedOperationException
+    new AtomicStateAutomatonBuilder {
+      val underlyingBuilder = underlying.getBuilder
+      def getNewState : State =
+        underlyingBuilder.getNewState
+      def setInitialState(q : State) : Unit =
+        underlyingBuilder.setInitialState(q)
+      def addTransition(s1 : State, label : TransitionLabel,
+                        s2 : State) : Unit =
+        underlyingBuilder.addTransition(s1, label, s2)
+      def setAccept(s : State, isAccepting : Boolean) : Unit =
+        underlyingBuilder.setAccept(s, isAccepting)
+      def getAutomaton : AtomicStateAutomaton =
+        underlyingBuilder.getAutomaton
+    }
 
   def internalise : AtomicStateAutomaton = {
     val builder = underlying.getBuilder

@@ -18,7 +18,12 @@
 
 package strsolver.preprop
 
-import scala.collection.mutable.{HashSet => MHashSet, ArrayStack}
+import dk.brics.automaton.{BasicAutomata, BasicOperations,
+                           Automaton => BAutomaton, State => BState, Transition}
+
+import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
+                                 Stack => MStack,
+                                 HashMap => MHashMap}
 
 /**
  * Collection of useful functions for automata
@@ -93,17 +98,6 @@ object AutomataUtils {
     }
 
   /**
-   * Form the product of a sequence of automata
-   */
-  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton = {
-    auts.size match {
-      case 0 => BricsAutomaton.makeAnyString
-      case 1 => auts.head
-      case _ => auts.head.product(auts.tail)
-    }
-  }
-
-  /**
    * Check whether there is some word accepted by all of the given automata.
    * If the intersection is empty, return an unsatisfiable core. The method
    * makes the assumption that <code>oldAuts</code> are consistent, but the
@@ -116,4 +110,97 @@ object AutomataUtils {
     else
       // naive core
       Some(List(newAut) ++ oldAuts)
+
+  /**
+   * Product of a number of given automata.  Returns
+   * new automaton.  Returns map from new states of result to (q0, [q1,
+   * ..., qn]) giving states of this and auts respectively
+   */
+  def productWithMap(auts : Seq[AtomicStateAutomaton]) :
+    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+
+    if (auts.size == 1)
+      return (auts.head,
+              (for (s <- auts.head.getStates) yield (s -> List(s))).toMap)
+
+    val autsList = auts.toList
+
+    val newBAut = new BAutomaton
+    val initBState = newBAut.getInitialState
+    val sMap = new MHashMap[BState, List[Any]]
+    val sMapRev = new MHashMap[List[Any], BState]
+
+    val initStates = (auts.map(_.initialState)).toList
+    sMap += initBState -> initStates
+    sMapRev += initStates -> initBState
+
+    val worklist = new MStack[(BState, List[Any])]
+    worklist push ((initBState, initStates))
+    
+    val seenlist = MHashSet[List[Any]]()
+    seenlist += initStates
+
+    initBState.setAccept(auts forall { aut => aut.isAccept(aut.initialState) })
+
+    while (!worklist.isEmpty) {
+      val (bs, ss) = worklist.pop()
+
+      // collects transitions from (s, ss)
+      // min, max is current range
+      // sp and ssp are s' and ss' (ss' is reversed for efficiency)
+      // ss are elements of ss from which a transition is yet to be
+      // searched
+      def addTransitions(curMin : Char, curMax : Char,
+                         ssp : List[Any],
+                         remAuts : List[AtomicStateAutomaton],
+                         ss : List[Any]) : Unit = ss match {
+        case List() =>  {
+            val nextState = ssp.reverse
+            if (!seenlist.contains(nextState)) {
+                val nextBState = new BState
+                nextBState.setAccept(
+                  (auts.iterator zip nextState.iterator) forall {
+                    case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
+                  })
+                sMap += nextBState -> nextState
+                sMapRev += nextState -> nextBState
+                worklist.push((nextBState, nextState))
+                seenlist += nextState
+            }
+            val nextBState = sMapRev(nextState)
+            bs.addTransition(new Transition(curMin, curMax, nextBState))
+        }
+        case _state :: ssTail => {
+            val aut :: autsTail = remAuts
+            val state = _state.asInstanceOf[aut.State]
+            aut.outgoingTransitions(state) foreach {
+              case (s, (lblMin : Char, lblMax : Char)) => {
+                val newMin = (curMin max lblMin).toChar
+                val newMax = (curMax min lblMax).toChar
+                if (newMin <= newMax)
+                    addTransitions(newMin, newMax, s::ssp, autsTail, ssTail)
+              }
+            }
+        }
+      }
+ 
+      addTransitions(Char.MinValue, Char.MaxValue, List(), autsList, ss)
+    }
+
+    newBAut.restoreInvariant
+    val res = new BricsAutomaton(newBAut)
+
+    assert(res.isEmpty == !areConsistentAutomata(auts))
+    
+    (res, sMap.toMap)
+  }
+
+  /**
+   * Form product of this automaton with given auts, returns a new
+   * automaton
+   */
+  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
+    productWithMap(auts)._1
+
+
 }
