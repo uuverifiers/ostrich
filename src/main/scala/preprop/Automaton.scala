@@ -164,38 +164,12 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel]
 
-  /**
-   * Get image of a set of states under a given label
-   */
-  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State]
-
-  /**
-   * Get image of state under a given label
-   */
-  def getImage(state : State, lbl : TransitionLabel) : Set[State]
-
   /*
    * Replace a-transitions with new a-transitions between pairs of
    * states.  Returns a new automaton.
    */
   def replaceTransitions(a : Char,
                          states : Iterator[(State, State)]) : AtomicStateAutomaton
-
-  /**
-   * Change initial and final states to s0 and sf respectively.  Returns a new
-   * automaton.
-   */
-  def setInitAccept(s0 : State, sf : State) : AtomicStateAutomaton
-
-  /**
-   * Apply f(q1, label, q2) to each transition q1 -[min,max]-> q2
-   */
-  def foreachTransition(f : (State, TransitionLabel, State) => Any)
-
-  /**
-   * Apply f(label, max, q2) to each transition q1 -[min,max]-> q2 from q1
-   */
-  def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any)
 
   /**
    * Test if state is accepting
@@ -211,6 +185,35 @@ trait AtomicStateAutomaton extends Automaton {
    * Return new automaton builder of compatible type
    */
   def getTransducerBuilder : AtomicStateTransducerBuilder[State, TransitionLabel]
+
+  //////////////////////////////////////////////////////////////////////////
+  // Derived methods
+
+  /**
+   * Iterate over all transitions
+   */
+  def transitions : Iterator[(State, TransitionLabel, State)] =
+    for (s1 <- getStates; (s2, lbl) <- outgoingTransitions(s1))
+      yield (s1, lbl, s2)
+
+  /**
+   * Get image of a set of states under a given label
+   */
+  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State] = {
+    for (s1 <- states;
+         (s2, lbl2) <- outgoingTransitions(s1);
+         if labelsOverlap(lbl, lbl2))
+      yield s2
+  }
+
+  /**
+   * Get image of a state under a given label
+   */
+  def getImage(s1 : State, lbl : TransitionLabel) : Set[State] = {
+    outgoingTransitions(s1).collect({
+      case (s2, lbl2) if (labelsOverlap(lbl, lbl2)) => s2
+    }).toSet
+  }
 }
 
 trait AtomicStateAutomatonBuilder[State, TransitionLabel] {

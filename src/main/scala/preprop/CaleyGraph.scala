@@ -145,10 +145,9 @@ object CaleyGraph {
     val boxes : Map[A#TransitionLabel,Box[A]] =
       aut.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
 
-    aut.foreachTransition({ case (q1, i, q2) =>
-      for (i2 <- aut.enumLabelOverlap(i))
-        boxes(i2).addEdge(q1, q2)
-    })
+    for ((q1, i, q2) <- aut.transitions;
+         i2 <- aut.enumLabelOverlap(i))
+      boxes(i2).addEdge(q1, q2)
 
     // reverse map
     boxes.groupBy(_._2).mapValues(_.keys)

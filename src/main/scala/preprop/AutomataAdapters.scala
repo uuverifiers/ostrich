@@ -115,12 +115,6 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel] =
     underlying.enumLabelOverlap(lbl)
 
-  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State] =
-    underlying.getImage(states, lbl)
-
-  def getImage(state : State, lbl : TransitionLabel) : Set[State] =
-    underlying.getImage(state, lbl)
-
   def replaceTransitions(a : Char,
                          states : Iterator[(State, State)]) : AtomicStateAutomaton = {
     val newUnderlying = underlying.replaceTransitions(a, states)
@@ -130,43 +124,16 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
       acceptingStates.asInstanceOf[Set[AtomicStateAutomaton#State]])
   }
 
-  def foreachTransition(f : (State, TransitionLabel, State) => Any) =
-    underlying.foreachTransition(f)
-
-  def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any) =
-    underlying.foreachTransition(q1, f)
-
-  def setInitAccept(s0 : State, sf : State) : AtomicStateAutomaton =
-    InitFinalAutomaton(underlying, s0,
-                       Set(sf).asInstanceOf[Set[AtomicStateAutomaton#State]])
-
   def isAccept(s : State) : Boolean =
     acceptingStates contains s
 
   def getBuilder : AtomicStateAutomatonBuilder[State, TransitionLabel] =
-    new AtomicStateAutomatonBuilder[State, TransitionLabel] {
-      val underlyingBuilder = underlying.getBuilder
-      val vocabularyWidth : Int = underlyingBuilder.vocabularyWidth
-      val minChar : Int = underlyingBuilder.minChar
-      val maxChar : Int = underlyingBuilder.maxChar
-      val internalChar : Int = underlyingBuilder.internalChar
-      def getNewState : State =
-        underlyingBuilder.getNewState
-      def setInitialState(q : State) : Unit =
-        underlyingBuilder.setInitialState(q)
-      def addTransition(s1 : State, label : TransitionLabel,
-                        s2 : State) : Unit =
-        underlyingBuilder.addTransition(s1, label, s2)
-      def setAccept(s : State, isAccepting : Boolean) : Unit =
-        underlyingBuilder.setAccept(s, isAccepting)
-      def getAutomaton : AtomicStateAutomaton =
-        underlyingBuilder.getAutomaton
-    }
+    underlying.getBuilder
 
   def internalise : AtomicStateAutomaton = {
     val builder = underlying.getBuilder
     val smap = new MHashMap[underlying.State, underlying.State]
-    
+
     for (s <- getStates)
       smap.put(s, builder.getNewState)
 

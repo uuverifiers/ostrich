@@ -159,20 +159,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   }
 
   /**
-   * Change initial and final states to s0 and sf respectively.  Returns
-   * a new automaton.
-   */
-  def setInitAccept(s0 : State, sf : State) : AtomicStateAutomaton = {
-      // TODO: painful to copy, can we improve?
-      val (newAut, map) = cloneWithStateMap
-      newAut.underlying.setInitialState(map(s0))
-      newAut.underlying.getAcceptStates.foreach(_.setAccept(false))
-      map(sf).setAccept(true)
-      newAut.underlying.restoreInvariant
-      newAut
-  }
-
-  /**
    * Iterate over automaton states
    */
   def getStates : Iterator[State] = underlying.getStates.iterator
@@ -267,39 +253,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       toIterable
   }
 
-  /**
-   * Get image of a set of states under a given label
-   */
-  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State] = {
-    for (s1 <- states;
-         (s2, lbl2) <- outgoingTransitions(s1);
-         if labelsOverlap(lbl, lbl2))
-      yield s2
-  }
-
-  /**
-   * Get image of a state under a given label
-   */
-  def getImage(s1 : State, lbl : TransitionLabel) : Set[State] = {
-    outgoingTransitions(s1).collect({
-      case (s2, lbl2) if (labelsOverlap(lbl, lbl2)) => s2
-    }).toSet
-  }
-
-  /**
-   * Apply f(q1, min, max, q2) to each transition q1 -[min,max]-> q2
-   */
-  def foreachTransition(f : (State, TransitionLabel, State) => Any) =
-    for (q <- underlying.getStates; t <- q.getTransitions)
-      f(q, (t.getMin, t.getMax), t.getDest)
-
-  /**
-   * Apply f(min, max, q2) to each transition q1 -[min,max]-> q2 from q1
-   */
-  def foreachTransition(q1 : State, f : (TransitionLabel, State) => Any) =
-    for (t <- q1.getTransitions)
-      f((t.getMin, t.getMax), t.getDest)
-
   /*
    * Get any word accepted by this automaton, or <code>None</code>
    * if the language is empty
@@ -373,10 +326,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
     val mins = new MTreeSet[Char]
     val maxes = new MTreeSet[Char]
-    foreachTransition({ case (_, (min, max), _) =>
+    for ((_, (min, max), _) <- transitions) {
       mins += min
       maxes += max
-    })
+    }
 
     val imin = mins.iterator
     val imax = maxes.iterator

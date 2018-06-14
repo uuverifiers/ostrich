@@ -130,7 +130,7 @@ class BricsTransducer(override val underlying : BAutomaton,
         case Pre(u) if !u.isEmpty => {
           val a = u.head
           val rest = u.tail
-          baut.foreachTransition(as, (albl, asNext) => {
+          for ((asNext, albl) <- baut.outgoingTransitions(as)) {
             if (labelContains(a, albl)) {
               if (!rest.isEmpty) {
                 addWork(ps, ts, t, asNext, Pre(rest))
@@ -138,7 +138,7 @@ class BricsTransducer(override val underlying : BAutomaton,
                 addWork(ps, ts, t, asNext, Op)
               }
             }
-          })
+          }
         }
         case Op => {
           val tOp = operations(ts, t)
@@ -148,7 +148,7 @@ class BricsTransducer(override val underlying : BAutomaton,
               addWork(ps, ts, t, as, Post(tOp.postW, lbl))
             }
             case Plus(n) => {
-              baut.foreachTransition(as, { case ((amin, amax), asNext) => {
+              for ((asNext, (amin, amax)) <- baut.outgoingTransitions(as)) {
                 val apreMin = Math.max(minChar, amin - n).toChar
                 val apreMax = Math.min(maxChar, amax - n).toChar
                 if (isNonEmptyLabel((apreMin, apreMax))) {
@@ -157,17 +157,17 @@ class BricsTransducer(override val underlying : BAutomaton,
                     addWork(ps, ts, t, asNext, Post(tOp.postW, preLbl))
                   }
                 }
-              }})
+              }
             }
           }
         }
         case Post(v, lbl) if !v.isEmpty => {
           val a = v.head
           val rest = v.tail
-          baut.foreachTransition(as, (albl, asNext) => {
+          for ((asNext, albl) <- baut.outgoingTransitions(as)) {
             if (labelContains(a, albl))
               addWork(ps, ts, t, asNext, Post(rest, lbl))
-          })
+          }
         }
         case Post(v, lbl) if v.isEmpty => {
           val psNext = getState(t.getDest, as)
