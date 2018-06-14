@@ -44,8 +44,6 @@ case class OutputOp(val preW : Seq[Char], val op : InputOp, val postW : Seq[Char
 trait Transducer extends Automaton { }
 
 trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
-  outer =>
-
   /**
    * Calculates regular language that is pre-image of the given regular
    * language.  I.e. Pre_T(aut) for transducer T
@@ -53,28 +51,11 @@ trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
   def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton
 }
 
-trait AtomicStateTransducerBuilder[State, TransitionLabel] {
+trait AtomicStateTransducerBuilder[State, TLabel] {
   /**
-   * Nr. of bits of letters in the vocabulary. Letters are
-   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
-   * See max/minChar and internalChar
+   * Operations on labels
    */
-  val vocabularyWidth : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  val minChar : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  val maxChar : Int
-
-  /**
-   * A special character outside of [minChar, maxChar] for internal use
-   */
-  val internalChar : Int
+  val LabelOps : TLabelOps[TLabel]
 
   /**
    * Initial state of transducer being built
@@ -95,7 +76,7 @@ trait AtomicStateTransducerBuilder[State, TransitionLabel] {
    * Add a transition to the transducer
    */
   def addTransition(s1 : State,
-                    lbl : TransitionLabel,
+                    lbl : TLabel,
                     op : OutputOp,
                     s2 : State) : Unit
 

@@ -34,15 +34,6 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  TreeSet => MTreeSet}
 
 object BricsAutomaton {
-  val vocabularyWidth : Int = 16  // really?
-
-  val minChar : Int = 0
-
-  val maxChar : Int = Char.MaxValue - 1
-
-  val internalChar : Int = Char.MaxValue
-
-
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
       that.underlying
@@ -73,14 +64,11 @@ object BricsAutomaton {
 }
 
 object BricsTLabelOps extends TLabelOps[(Char, Char)] {
-  /**
-   * Nr. of bits of letters in the vocabulary. Letters are
-   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
-   */
-  val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
-  val minChar : Int = BricsAutomaton.minChar
-  val maxChar : Int = BricsAutomaton.maxChar
-  val internalChar : Int = BricsAutomaton.internalChar
+
+  val vocabularyWidth : Int = 16  // really?
+  val minChar : Int = 0
+  val maxChar : Int = Char.MaxValue - 1
+  val internalChar : Int = Char.MaxValue
 
   /**
    * Check whether the given label accepts any letter
@@ -351,10 +339,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 class BricsAutomatonBuilder
     extends AtomicStateAutomatonBuilder[BricsAutomaton#State,
                                         BricsAutomaton#TLabel] {
-  val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
-  val minChar : Int = BricsAutomaton.minChar
-  val maxChar : Int = BricsAutomaton.maxChar
-  val internalChar : Int = BricsAutomaton.internalChar
+  val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
   var aut = {
     val baut = new BAutomaton

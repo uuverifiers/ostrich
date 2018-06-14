@@ -239,26 +239,9 @@ trait AtomicStateAutomaton extends Automaton {
 
 trait AtomicStateAutomatonBuilder[State, TLabel] {
   /**
-   * Nr. of bits of letters in the vocabulary. Letters are
-   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
-   * See max/minChar and internalChar
+   * Operations on labels
    */
-  val vocabularyWidth : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  val minChar : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  val maxChar : Int
-
-  /**
-   * A special character outside of [minChar, maxChar] for internal use
-   */
-  val internalChar : Int
+  val LabelOps : TLabelOps[TLabel]
 
   /**
    * Create a fresh state that can be used in the automaton

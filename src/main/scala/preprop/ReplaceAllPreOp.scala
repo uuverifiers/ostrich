@@ -122,7 +122,7 @@ object ReplaceAllPreOpWord {
     val states = initState::(List.fill(w.size - 1)(builder.getNewState))
     val finstates = List.fill(w.size)(builder.getNewState)
     val delete = OutputOp("", Delete, "")
-    val internal = OutputOp(Seq(builder.internalChar.toChar), Delete, "")
+    val internal = OutputOp(Seq(builder.LabelOps.internalChar.toChar), Delete, "")
     val end = w.size - 1
 
     builder.setAccept(initState, true)
@@ -139,17 +139,17 @@ object ReplaceAllPreOpWord {
       val output = OutputOp(w.slice(0, i), Plus(0), "")
 
       // begin again if mismatch
-      if (w(i) > builder.minChar) {
+      if (w(i) > builder.LabelOps.minChar) {
         val below = (w(i) - 1).toChar
         builder.addTransition(states(i),
-                              (builder.minChar.toChar, below),
+                              (builder.LabelOps.minChar.toChar, below),
                               output,
                               states(0))
       }
-      if (w(i) < builder.maxChar) {
+      if (w(i) < builder.LabelOps.maxChar) {
         val above = (w(i) + 1).toChar
         builder.addTransition(states(i),
-                              (above, builder.maxChar.toChar),
+                              (above, builder.LabelOps.maxChar.toChar),
                               output,
                               states(0))
       }
@@ -209,7 +209,7 @@ object ReplaceAllPreOpRegEx {
     val builder = aut.getTransducerBuilder
     val delete = OutputOp("", Delete, "")
     val copy = OutputOp("", Plus(0), "")
-    val internal = OutputOp(Seq(builder.internalChar.toChar), Delete, "")
+    val internal = OutputOp(Seq(builder.LabelOps.internalChar.toChar), Delete, "")
 
     // TODO: encapsulate this worklist automaton construction
 

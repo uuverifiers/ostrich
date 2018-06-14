@@ -192,10 +192,7 @@ class BricsTransducer(override val underlying : BAutomaton,
 class BricsTransducerBuilder
     extends AtomicStateTransducerBuilder[BricsAutomaton#State,
                                          BricsAutomaton#TLabel] {
-  val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
-  val minChar : Int = BricsAutomaton.minChar
-  val maxChar : Int = BricsAutomaton.maxChar
-  val internalChar : Int = BricsAutomaton.internalChar
+  val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
   val aut = {
     val baut = new BAutomaton
