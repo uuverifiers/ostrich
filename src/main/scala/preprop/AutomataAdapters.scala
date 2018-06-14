@@ -77,7 +77,7 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
 
   def states = underlying.states
 
-  val labelEnumerator = underlying.labelEnumerator
+  lazy val labelEnumerator = underlying.labelEnumerator
 
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
     underlying.outgoingTransitions(from)
