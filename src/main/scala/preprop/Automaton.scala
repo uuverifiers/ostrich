@@ -110,6 +110,32 @@ trait TLabelOps[TLabel] {
 }
 
 /**
+ * A label enumerator is used to enumerate labels appearing in an
+ * automaton and derived label sets
+ */
+trait TLabelEnumerator[TLabel] {
+  /**
+   * Enumerate all labels with overlaps removed.
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [5,7] [8,10] [11,15]
+   */
+  def enumDisjointLabels : Iterable[TLabel]
+
+  /**
+   * Enumerate all labels with overlaps removed such that the whole
+   * alphabet is covered (including internal characters)
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [4,4] [5,7] [8,10] [11,15] [15,..]
+   */
+  def enumDisjointLabelsComplete : Iterable[TLabel]
+
+  /**
+   * iterate over disjoint labels of the automaton that overlap with lbl
+   */
+  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel]
+}
+
+/**
  * Trait for automata with atomic/nominal states; i.e., states
  * don't have any structure and are not composite, there is a unique
  * initial state, and a set of accepting states.
@@ -146,29 +172,14 @@ trait AtomicStateAutomaton extends Automaton {
   val acceptingStates : Set[State]
 
   /**
+   * To enumerate the labels used
+   */
+  val labelEnumerator : TLabelEnumerator[TLabel]
+
+  /**
    * Given a state, iterate over all outgoing transitions
    */
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
-
-  /**
-   * Enumerate all labels with overlaps removed.
-   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
-   * [5,7] [8,10] [11,15]
-   */
-  def enumDisjointLabels : Iterable[TLabel]
-
-  /**
-   * Enumerate all labels with overlaps removed such that the whole
-   * alphabet is covered (including internal characters)
-   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
-   * [4,4] [5,7] [8,10] [11,15] [15,..]
-   */
-  def enumDisjointLabelsComplete : Iterable[TLabel]
-
-  /**
-   * iterate over disjoint labels of the automaton that overlap with lbl
-   */
-  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel]
 
   /*
    * Replace a-transitions with new a-transitions between pairs of

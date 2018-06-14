@@ -142,11 +142,12 @@ object CaleyGraph {
 
   private def getCharacterBoxes[A <: AtomicStateAutomaton](aut : A)
       : Map[Box[A], Iterable[A#TLabel]] = {
+    val ae = aut.labelEnumerator
     val boxes : Map[A#TLabel,Box[A]] =
-      aut.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
+      ae.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
 
     for ((q1, i, q2) <- aut.transitions;
-         i2 <- aut.enumLabelOverlap(i))
+         i2 <- ae.enumLabelOverlap(i))
       boxes(i2).addEdge(q1, q2)
 
     // reverse map

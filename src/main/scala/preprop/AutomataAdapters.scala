@@ -77,20 +77,13 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
 
   def getStates = underlying.getStates
 
+  val labelEnumerator = underlying.labelEnumerator
+
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
     underlying.outgoingTransitions(from)
 
-  def enumDisjointLabels : Iterable[TLabel] =
-    underlying.enumDisjointLabels
-
-  def enumDisjointLabelsComplete : Iterable[TLabel] =
-    underlying.enumDisjointLabelsComplete
-
   def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel] =
     underlying.getTransducerBuilder
-
-  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel] =
-    underlying.enumLabelOverlap(lbl)
 
   def replaceTransitions(
         a : Char,

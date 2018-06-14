@@ -127,6 +127,117 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
     for (c <- (label._1 to label._2).iterator) yield c.toInt
 }
 
+class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
+    extends TLabelEnumerator[(Char, Char)] {
+  /**
+   * Keep track of disjoint labels for fast range lookups in
+   * enumLabelOverlap.  Access with getDisjointLabels.
+   */
+  private lazy val disjointLabels : MTreeSet[(Char, Char)] =
+    calculateDisjointLabels
+  /**
+   * Like disjoint labels but covers whole alphabet including internal
+   * char.
+   */
+  private lazy val disjointLabelsComplete : List[(Char, Char)] =
+    calculateDisjointLabelsComplete
+
+  /**
+   * Enumerate all labels with overlaps removed.
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [5,8] [8,10] [10,15]
+   */
+  def enumDisjointLabels : Iterable[(Char, Char)] =
+    disjointLabels.toIterable
+
+  /**
+   * Enumerate all labels with overlaps removed such that the whole
+   * alphabet is covered (including internal characters)
+   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
+   * [4,4] [5,7] [8,10] [11,15] [15,..]
+   */
+  def enumDisjointLabelsComplete : Iterable[(Char, Char)] =
+    disjointLabelsComplete
+
+  /**
+   * iterate over the instances of lbls that overlap with lbl
+   */
+  def enumLabelOverlap(lbl : (Char, Char)) : Iterable[(Char, Char)] = {
+    val (lMin, lMax) = lbl
+    disjointLabels.
+      from((lMin, Char.MinValue)).
+      to((lMax, Char.MaxValue)).
+      toIterable
+  }
+
+  private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
+    var disjoint = new MTreeSet[(Char, Char)]()
+
+    val mins = new MTreeSet[Char]
+    val maxes = new MTreeSet[Char]
+    for ((min, max) <- labels) {
+      mins += min
+      maxes += max
+    }
+
+    val imin = mins.iterator
+    val imax = maxes.iterator
+
+    if (!imin.hasNext)
+      return disjoint
+
+    var curMin = imin.next
+    var nextMax = imax.next
+    while (imin.hasNext) {
+      val nextMin = imin.next
+      if (nextMin <= nextMax) {
+        disjoint += ((curMin, (nextMin-1).toChar))
+        curMin = nextMin
+      } else {
+        disjoint += ((curMin, nextMax))
+        curMin = nextMin
+        nextMax = imax.next
+      }
+    }
+
+    disjoint += ((curMin, nextMax))
+    curMin = (nextMax + 1).toChar
+
+    while (imax.hasNext) {
+      val nextMax = imax.next
+      disjoint += ((curMin, nextMax))
+      curMin = (nextMax + 1).toChar
+    }
+
+    disjoint
+  }
+
+  private def calculateDisjointLabelsComplete() : List[(Char, Char)] = {
+    val labelsComp = disjointLabels.foldRight(List[(Char, Char)]()) {
+      case ((min, max), Nil) => {
+        // using Char.MaxValue since we include internal chars
+        if (max < Char.MaxValue)
+          List((min,max), ((max + 1).toChar, Char.MaxValue))
+        else
+          List((min, max))
+      }
+      case ((min, max), (minLast, maxLast)::lbls) => {
+        val minLastPrev = (minLast - 1).toChar
+        if (max < minLastPrev)
+          (min, max)::((max + 1).toChar, minLastPrev)::(minLast, maxLast)::lbls
+        else
+          (min, max)::(minLast, maxLast)::lbls
+      }
+    }
+    if (Char.MinValue < labelsComp.head._1) {
+      val nextMin = (labelsComp.head._1 - 1).toChar
+      (Char.MinValue, nextMin)::labelsComp
+    } else {
+      labelsComp
+    }
+  }
+}
+
 /**
  * Wrapper for the BRICS automaton class
  */
@@ -140,19 +251,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   override val LabelOps = BricsTLabelOps
 
   override def toString : String = underlying.toString
-
-  /**
-   * Keep track of disjoint labels for fast range lookups in
-   * enumLabelOverlap.  Access with getDisjointLabels.
-   */
-  private lazy val disjointLabels : MTreeSet[TLabel] =
-    calculateDisjointLabels
-  /**
-   * Like disjoint labels but covers whole alphabet including internal
-   * char.
-   */
-  private lazy val disjointLabelsComplete : List[TLabel] =
-    calculateDisjointLabelsComplete
 
   /**
    * Union
@@ -228,33 +326,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   lazy val acceptingStates : Set[State] =
     (for (s <- getStates; if s.isAccept) yield s).toSet
 
-  /**
-   * Enumerate all labels with overlaps removed.
-   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
-   * [5,8] [8,10] [10,15]
-   */
-  def enumDisjointLabels : Iterable[TLabel] =
-    disjointLabels.toIterable
-
-  /**
-   * Enumerate all labels with overlaps removed such that the whole
-   * alphabet is covered (including internal characters)
-   * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
-   * [4,4] [5,7] [8,10] [11,15] [15,..]
-   */
-  def enumDisjointLabelsComplete : Iterable[TLabel] =
-    disjointLabelsComplete
-
-  /**
-   * iterate over the instances of lbls that overlap with lbl
-   */
-  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel] = {
-    val (lMin, lMax) = lbl
-    disjointLabels.
-      from((lMin, Char.MinValue)).
-      to((lMax, Char.MaxValue)).
-      toIterable
-  }
+  lazy val labelEnumerator =
+    new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
   /*
    * Get any word accepted by this automaton, or <code>None</code>
@@ -315,74 +388,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
-
-  private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
-    var disjoint = new MTreeSet[TLabel]()
-
-    val mins = new MTreeSet[Char]
-    val maxes = new MTreeSet[Char]
-    for ((_, (min, max), _) <- transitions) {
-      mins += min
-      maxes += max
-    }
-
-    val imin = mins.iterator
-    val imax = maxes.iterator
-
-    if (!imin.hasNext)
-      return disjoint
-
-    var curMin = imin.next
-    var nextMax = imax.next
-    while (imin.hasNext) {
-      val nextMin = imin.next
-      if (nextMin <= nextMax) {
-        disjoint += ((curMin, (nextMin-1).toChar))
-        curMin = nextMin
-      } else {
-        disjoint += ((curMin, nextMax))
-        curMin = nextMin
-        nextMax = imax.next
-      }
-    }
-
-    disjoint += ((curMin, nextMax))
-    curMin = (nextMax + 1).toChar
-
-    while (imax.hasNext) {
-      val nextMax = imax.next
-      disjoint += ((curMin, nextMax))
-      curMin = (nextMax + 1).toChar
-    }
-
-    disjoint
-  }
-
-  private def calculateDisjointLabelsComplete() : List[TLabel] = {
-    val labels = disjointLabels.foldRight(List[TLabel]()) {
-      case ((min, max), Nil) => {
-        // using Char.MaxValue since we include internal chars
-        if (max < Char.MaxValue)
-          List((min,max), ((max + 1).toChar, Char.MaxValue))
-        else
-          List((min, max))
-      }
-      case ((min, max), (minLast, maxLast)::lbls) => {
-        val minLastPrev = (minLast - 1).toChar
-        if (max < minLastPrev)
-          (min, max)::((max + 1).toChar, minLastPrev)::(minLast, maxLast)::lbls
-        else
-          (min, max)::(minLast, maxLast)::lbls
-      }
-    }
-    if (Char.MinValue < labels.head._1) {
-      val nextMin = (labels.head._1 - 1).toChar
-      (Char.MinValue, nextMin)::labels
-    } else {
-      labels
-    }
-  }
-
 }
 
 

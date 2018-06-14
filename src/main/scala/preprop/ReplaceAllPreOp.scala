@@ -205,7 +205,7 @@ object ReplaceAllPreOpRegEx {
     // last transition finished a match and reached frontier
     case class EndMatch(val frontier : Set[aut.State]) extends Mode
 
-    val labels = aut.enumDisjointLabelsComplete
+    val labels = aut.labelEnumerator.enumDisjointLabelsComplete
     val builder = aut.getTransducerBuilder
     val delete = OutputOp("", Delete, "")
     val copy = OutputOp("", Plus(0), "")
