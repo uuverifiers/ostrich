@@ -274,8 +274,19 @@ object StringTheory extends Theory {
     ////////////////////////////////////////////////////////////////////////////
 
     private val afaSolver = new AFASolver
-
     private val prepropSolver = new PrepropSolver
+
+    private def findStringModel(goal : Goal)
+                              : Option[Map[Term, List[Either[Int, Term]]]] =
+            // TODO: run solvers after each other
+            Flags.enabledSolvers.head match {
+              case Flags.Solver.afa_mc =>
+                afaSolver.findStringModel(goal)
+              case Flags.Solver.preprop =>
+                for (m <- prepropSolver.findStringModel(goal)) yield {
+                  m mapValues (w => w map (Left(_)))
+                }
+            }
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
@@ -289,19 +300,10 @@ object StringTheory extends Theory {
           case Some(actions) =>
             actions
           case None =>
-            // TODO: run solvers after each other
-            Flags.enabledSolvers.head match {
-              case Flags.Solver.afa_mc =>
-                afaSolver.findStringModel(goal) match {
+                findStringModel(goal) match {
                   case Some(model) => List()
                   case None        => List(Plugin.AddFormula(Conjunction.TRUE))
                 }
-              case Flags.Solver.preprop =>
-                prepropSolver.findStringModel(goal) match {
-                  case Some(model) => List()
-                  case None        => List(Plugin.AddFormula(Conjunction.TRUE))
-                }
-            }
 
         }
       }
@@ -354,7 +356,7 @@ object StringTheory extends Theory {
           stringMap.put(asConst(a(1)), List(a(0).constant.intValueSafe))
 
         // Add solutions from the string solver, if there are any
-        afaSolver.findStringModel(goal) match {
+        findStringModel(goal) match {
           case None => throw new IllegalArgumentException(
                          "string solver unexpectedly says unsat")
           case Some(stringModel) => {

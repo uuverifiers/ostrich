@@ -73,6 +73,14 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 
   override def toString = "replaceall"
 
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
+    (for (c <- arguments(0).iterator;
+          d <- if (c == a)
+                 arguments(1).iterator
+               else
+                 Iterator single c)
+     yield d).toList
+
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
     val rc : AtomicStateAutomaton = resultConstraint match {
@@ -319,6 +327,9 @@ object ReplaceAllPreOpRegEx {
 class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
 
   override def toString = "replaceall"
+
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
+    throw new UnsupportedOperationException
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {

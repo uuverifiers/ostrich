@@ -46,6 +46,8 @@ object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
       that.underlying
+    case that : InitFinalAutomaton[_] =>
+      toBAutomaton(that.internalise)
     case _ =>
       throw new IllegalArgumentException
   }
@@ -354,74 +356,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   def getNewState = new BState
 
-  /**
-   * Product this automaton with a number of given automaton.  Returns
-   * new automaton.
-   */
-  def productWithMap(auts : Seq[AtomicStateAutomaton]) :
-    (AtomicStateAutomaton, Map[State, (State, Seq[State])]) = {
-    val bauts = auts.map(aut => aut match {
-      case baut : BricsAutomaton => baut.underlying
-      case _ => throw new IllegalArgumentException("BricsAutomaton can only product with BricsAutomata")
-    })
-
-    val newBAut = new BAutomaton
-    // TODO: be more precise if it helps performance
-    newBAut.setDeterministic(false)
-    val initBState = newBAut.getInitialState
-    val sMap = new MHashMap[BState, (BState, Seq[BState])]
-    val sMapRev = new MHashMap[(BState, Seq[BState]), BState]
-
-    val initState = underlying.getInitialState
-    val initStates = bauts.map(_.getInitialState)
-    sMap += initBState -> (initState, initStates)
-    sMapRev += (initState, initStates) -> initBState
-
-    val worklist = MStack((initBState, (initState, initStates)))
-    val seenlist = MHashSet[(BState, Seq[BState])]()
-    while (!worklist.isEmpty) {
-      val (bs, (s, ss)) = worklist.pop()
-
-      // collects transitions from (s, ss)
-      // min, max is current range
-      // sp and ssp are s' and ss' (ss' is reversed for efficiency)
-      // ss are elements of ss from which a transition is yet to be
-      // searched
-      def addTransitions(min : Char, max : Char,
-                         sp : BState, ssp : List[BState],
-                         ss : Seq[BState]) : Unit = {
-        if (ss.size == 0) {
-            val nextState = (sp, ssp.reverse)
-            if (!seenlist.contains(nextState)) {
-                val nextBState = new State
-                nextBState.setAccept(sp.isAccept && ssp.forall(_.isAccept))
-                sMap += nextBState -> nextState
-                sMapRev += nextState -> nextBState
-                worklist.push((nextBState, nextState))
-                seenlist += nextState
-            }
-            val nextBState = sMapRev(nextState)
-            bs.addTransition(new Transition(min, max, nextBState))
-        } else {
-            val ssTail = ss.tail
-            ss.head.getTransitions.foreach(t => {
-                val newMin = Math.max(min, t.getMin).toChar
-                val newMax = Math.min(max, t.getMax).toChar
-                val s = t.getDest
-                if (newMin <= newMax)
-                    addTransitions(newMin, newMax, sp, s::ssp, ssTail)
-            })
-        }
-      }
-
-      s.getTransitions.foreach(t =>
-        addTransitions(t.getMin, t.getMax, t.getDest, List(), ss)
-      )
-    }
-
-    (new BricsAutomaton(newBAut), sMap.toMap)
-  }
-
   def isAccept(s : State) : Boolean = s.isAccept
 
   /**
@@ -501,9 +435,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     }
   }
 
-
-
-
 }
 
 
@@ -530,10 +461,10 @@ class BricsAutomatonBuilder
   def getNewState : BricsAutomaton#State = new BState()
 
   /**
-   * Initial state of the automaton being built
+   * Set the initial state
    */
-  def initialState : BricsAutomaton#State =
-      aut.initialState
+  def setInitialState(q : BricsAutomaton#State) : Unit =
+    aut.underlying.setInitialState(q)
 
   /**
    * Add a new transition q1 --label--> q2

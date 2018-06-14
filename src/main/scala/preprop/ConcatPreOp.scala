@@ -26,37 +26,23 @@ import scala.collection.JavaConversions.{asScalaIterator,
  */
 object ConcatPreOp extends PreOp {
 
-  /**
-   * At the moment this implementation is BricsAutomaton-specific; it is
-   * not really clear how a generic Automaton interface enabling this
-   * kind of computation should look like.
-   */
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
           : Iterator[Seq[Automaton]] = resultConstraint match {
 
-    case resultConstraint : BricsAutomaton =>
+    case resultConstraint : AtomicStateAutomaton =>
       // TODO: probably this won't process the states in deterministic order
-      for (s <- resultConstraint.underlying.getStates.iterator) yield {
-        val (aAut, aMap) = resultConstraint.cloneWithStateMap
-        val (bAut, bMap) = resultConstraint.cloneWithStateMap
-
-        val aMappedS = aMap(s)
-
-        for (t <- aAut.underlying.getStates)
-          t.setAccept(t == aMappedS)
-
-        aAut.underlying.restoreInvariant
-
-        bAut.underlying setInitialState bMap(s)
-        bAut.underlying.restoreInvariant
-
-        List(aAut, bAut)
+      for (s <- resultConstraint.getStates) yield {
+        List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
+             InitFinalAutomaton.setInitial(resultConstraint, s))
       }
 
     case _ =>
       throw new IllegalArgumentException
   }
+
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
+    arguments(0) ++ arguments(1)
 
   override def toString = "concat"
 

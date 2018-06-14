@@ -106,7 +106,8 @@ object CaleyGraph {
     val stateMap = new HashMap[Box[A], aut.State]
 
     val eBox = getEpsilonBox(aut)
-    val es = graphBuilder.initialState
+    val es = graphBuilder.getNewState
+    graphBuilder setInitialState es
     graphBuilder.setAccept(es, true)
     boxMap += (es -> eBox)
     stateMap += (eBox -> es)
@@ -205,7 +206,8 @@ class CaleyGraph[A <: AtomicStateAutomaton](
      * Returns boxes representing words accepted by the product of auts
      */
     def getAcceptNodes(auts : Seq[AtomicStateAutomaton]) : Iterable[Box[A]] = {
-      val (prodAut, sMap) = graph.productWithMap(auts)
-      prodAut.acceptingStates.map(ps => boxMap(sMap(ps.asInstanceOf[graph.State])._1))
+      val (prodAut, sMap) = AutomataUtils.productWithMap(List(graph) ++ auts)
+      prodAut.acceptingStates.map(ps =>
+        boxMap(sMap(ps)(0).asInstanceOf[A#State]))
     }
 }

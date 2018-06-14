@@ -29,6 +29,9 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
 
   override def toString = "transducer"
 
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
+    throw new UnsupportedOperationException
+
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
     val rc : AtomicStateAutomaton = resultConstraint match {
