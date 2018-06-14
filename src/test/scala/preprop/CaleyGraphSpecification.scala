@@ -12,12 +12,12 @@ class PrintableState extends State {
 
 class IDState(val ident : Int) extends State {
   override def toString =
-    getTransitions.foldLeft("q" + ident) { (s, t) =>
+    getTransitions.foldLeft("q" + ident + '\n') { (s, t) =>
       val dest = t.getDest match {
         case d : IDState => "q" + d.ident
         case q => q.toString
       }
-      s + "\n  --[" + t.getMin + ", " + t.getMax + "]--> " + dest
+      s + "  --[" + t.getMin + ", " + t.getMax + "]--> " + dest + '\n'
     }
 }
 

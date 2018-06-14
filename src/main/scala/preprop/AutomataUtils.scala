@@ -124,7 +124,7 @@ object AutomataUtils {
 
     if (auts.size == 1)
       return (auts.head,
-              (for (s <- auts.head.getStates) yield (s -> List(s))).toMap)
+              (for (s <- auts.head.states) yield (s -> List(s))).toMap)
 
     val autsList = auts.toList
 
@@ -202,5 +202,30 @@ object AutomataUtils {
   def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
     productWithMap(auts)._1
 
+  /**
+   * Replace a-transitions with new a-transitions between pairs of states
+   */
+  def replaceTransitions[A <: AtomicStateAutomaton](
+        aut : A,
+        a : Char,
+        states : Iterator[(A#State, A#State)]) : AtomicStateAutomaton = {
+    val builder = aut.getBuilder
+    val smap : Map[A#State, aut.State] =
+      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
 
+    for ((s1, lbl, s2) <- aut.transitions)
+      for (newLbl <- aut.LabelOps.subtractLetter(a, lbl))
+        builder.addTransition(smap(s1), newLbl, smap(s2))
+
+    val aLbl = aut.LabelOps.singleton(a)
+    for ((s1, s2) <- states)
+      builder.addTransition(smap(s1), aLbl, smap(s2))
+
+    builder.setInitialState(smap(aut.initialState))
+    for (f <- aut.acceptingStates)
+      builder.setAccept(smap(f), true)
+
+    val res = builder.getAutomaton
+    res
+  }
 }

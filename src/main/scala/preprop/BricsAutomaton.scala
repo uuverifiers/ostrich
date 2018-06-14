@@ -94,6 +94,8 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
   val sigmaLabel : (Char, Char) =
     (minChar.toChar, maxChar.toChar)
 
+  def singleton(a : Char) = (a, a)
+
   /**
    * Intersection of two labels
    */
@@ -125,6 +127,25 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    */
   def enumLetters(label : (Char, Char)) : Iterator[Int] =
     for (c <- (label._1 to label._2).iterator) yield c.toInt
+
+  /**
+   * Remove a given character from the label.  E.g. [1,10] - 5 is
+   * [1,4],[6,10]
+   */
+  def subtractLetter(a : Char, lbl : (Char, Char)) : Iterable[(Char, Char)] = {
+    val (min, max) = lbl
+    if (min <= a && a <= max) {
+      // surely a cuter solution than this exists...
+      var res = List[(Char, Char)]()
+      if (min < a)
+        res = (min, (a-1).toChar)::res
+      if (a < max)
+        res = ((a+1).toChar, max)::res
+      res
+    } else {
+      Seq(lbl)
+    }
+  }
 }
 
 class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
@@ -281,32 +302,9 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString)
 
   /**
-   * Replace a-transitions with new a-transitions between pairs of states
-   */
-  def replaceTransitions(a : Char,
-                         states : Iterator[(State, State)]) : AtomicStateAutomaton = {
-    // A \ a-transitions
-    val (newAut, map) = substWithStateMap((label, addTran) => {
-      val (min, max) = label
-      if (min <= a && a <= max)
-        if (min < a) addTran((min, (a-1).toChar))
-        if (a < max) addTran(((a+1).toChar, max))
-      else
-        addTran(label)
-    })
-    // (A \ a-transition) + {q1 -a-> q2 | (q1,q2) in box}
-    for ((q1, q2) <- states)
-      map(q1).addTransition(new Transition(a, a, map(q2)))
-
-    newAut.underlying.restoreInvariant
-
-    newAut
-  }
-
-  /**
    * Iterate over automaton states
    */
-  def getStates : Iterator[State] = underlying.getStates.iterator
+  def states : Iterable[State] = underlying.getStates
 
   /**
    * The unique initial state
@@ -324,7 +322,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * The set of accepting states
    */
   lazy val acceptingStates : Set[State] =
-    (for (s <- getStates; if s.isAccept) yield s).toSet
+    (for (s <- states; if s.isAccept) yield s).toSet
 
   lazy val labelEnumerator =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
@@ -338,50 +336,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       case null => None
       case str  => Some(for (c <- str) yield c.toInt)
     }
-
-  /**
-   * Clone automaton, and also return a map telling how the
-   * states are related
-   */
-  def cloneWithStateMap : (BricsAutomaton, Map[State, State]) =
-    substWithStateMap((label, addTran) => addTran(label._1, label._2))
-
-  /**
-   * Subst aut and provides a mapping between equivalent states.
-   *
-   * Allows the transitions to be transformed via a function
-   * transformTran(min, max, addTran), which can use addTran(newMin,
-   * newMax) to replace transitions q --min, max--> q' with q --newMin,
-   * newMax -> q' (can use addTran multiple times)
-   *
-   * @param transformTran a function processing transitions
-   * @return (aut', map) where aut' is a clone of aut and map takes a
-   * state of aut into its equivalent state in aut'
-   */
-  private def substWithStateMap(
-    transformTran: (TLabel, TLabel => Unit) => Unit
-  ) : (BricsAutomaton, Map[State, State]) = {
-    val newAut = new BAutomaton
-    newAut.setDeterministic(false)
-    val smap = new MHashMap[State, State]
-
-    val states = underlying.getStates
-    val s0 = underlying.getInitialState
-
-    for (s <- states) {
-      val p = new State
-      p.setAccept(s.isAccept)
-      smap += s -> p
-    }
-    for ((s, p) <- smap; t <- s.getTransitions)
-      transformTran((t.getMin, t.getMax), {
-        case (min, max) =>
-          p.addTransition(new Transition(min, max, smap(t.getDest)))
-      })
-    newAut.setInitialState(smap(s0))
-    newAut.restoreInvariant
-    (new BricsAutomaton(newAut), smap.toMap)
-  }
 
   def isAccept(s : State) : Boolean = s.isAccept
 

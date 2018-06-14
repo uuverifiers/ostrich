@@ -87,6 +87,11 @@ trait TLabelOps[TLabel] {
   val sigmaLabel : TLabel
 
   /**
+   * Label representing a single char a
+   */
+  def singleton(a : Char) : TLabel
+
+  /**
    * Intersection of two labels, None if not overlapping
    */
   def intersectLabels(l1 : TLabel,
@@ -107,6 +112,12 @@ trait TLabelOps[TLabel] {
    * Enumerate all letters accepted by a transition label
    */
   def enumLetters(label : TLabel) : Iterator[Int]
+
+  /**
+   * Remove a given character from the label.  E.g. [1,10] - 5 is
+   * [1,4],[6,10]
+   */
+  def subtractLetter(a : Char, l : TLabel) : Iterable[TLabel]
 }
 
 /**
@@ -159,7 +170,7 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Iterate over automaton states
    */
-  def getStates : Iterator[State]
+  def states : Iterable[State]
 
   /**
    * The unique initial state
@@ -180,14 +191,6 @@ trait AtomicStateAutomaton extends Automaton {
    * Given a state, iterate over all outgoing transitions
    */
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
-
-  /*
-   * Replace a-transitions with new a-transitions between pairs of
-   * states.  Returns a new automaton.
-   */
-  def replaceTransitions(
-        a : Char,
-        states : Iterator[(State, State)]) : AtomicStateAutomaton
 
   /**
    * Test if state is accepting
@@ -211,7 +214,7 @@ trait AtomicStateAutomaton extends Automaton {
    * Iterate over all transitions
    */
   def transitions : Iterator[(State, TLabel, State)] =
-    for (s1 <- getStates; (s2, lbl) <- outgoingTransitions(s1))
+    for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
       yield (s1, lbl, s2)
 
   /**

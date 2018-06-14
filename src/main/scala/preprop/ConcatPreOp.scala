@@ -32,7 +32,7 @@ object ConcatPreOp extends PreOp {
 
     case resultConstraint : AtomicStateAutomaton =>
       // TODO: probably this won't process the states in deterministic order
-      for (s <- resultConstraint.getStates) yield {
+      for (s <- resultConstraint.states.iterator) yield {
         List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
              InitFinalAutomaton.setInitial(resultConstraint, s))
       }

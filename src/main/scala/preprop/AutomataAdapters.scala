@@ -75,7 +75,7 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   val initialState = _initialState.asInstanceOf[State]
   val acceptingStates = _acceptingStates.asInstanceOf[Set[State]]
 
-  def getStates = underlying.getStates
+  def states = underlying.states
 
   val labelEnumerator = underlying.labelEnumerator
 
@@ -84,16 +84,6 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
 
   def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel] =
     underlying.getTransducerBuilder
-
-  def replaceTransitions(
-        a : Char,
-        states : Iterator[(State, State)]) : AtomicStateAutomaton = {
-    val newUnderlying = underlying.replaceTransitions(a, states)
-    InitFinalAutomaton(
-      newUnderlying,
-      initialState.asInstanceOf[newUnderlying.State],
-      acceptingStates.asInstanceOf[Set[AtomicStateAutomaton#State]])
-  }
 
   def isAccept(s : State) : Boolean =
     acceptingStates contains s
@@ -105,10 +95,10 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     val builder = underlying.getBuilder
     val smap = new MHashMap[underlying.State, underlying.State]
 
-    for (s <- getStates)
+    for (s <- states)
       smap.put(s, builder.getNewState)
 
-    for (s <- getStates) {
+    for (s <- states) {
       val t = smap(s)
       for ((to, label) <- outgoingTransitions(s))
         builder.addTransition(t, label, smap(to))

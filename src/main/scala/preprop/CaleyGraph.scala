@@ -160,7 +160,7 @@ object CaleyGraph {
    * @return the box
    */
   private def getEpsilonBox[A <: AtomicStateAutomaton](aut : A) : Box[A] = {
-    Box[A](aut.getStates.zip(aut.getStates).toSeq:_*)
+    Box[A](aut.states.zip(aut.states).toSeq:_*)
   }
 }
 
