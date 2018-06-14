@@ -72,32 +72,7 @@ object BricsAutomaton {
       new BricsAutomaton(BAutomaton.makeAnyString)
 }
 
-/**
- * Wrapper for the BRICS automaton class
- */
-class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
-
-  import BricsAutomaton.toBAutomaton
-
-  type State = BState
-
-  type TransitionLabel = (Char, Char)
-
-  override def toString : String = underlying.toString
-
-  /**
-   * Keep track of disjoint labels for fast range lookups in
-   * enumLabelOverlap.  Access with getDisjointLabels.
-   */
-  private lazy val disjointLabels : MTreeSet[TransitionLabel] =
-    calculateDisjointLabels
-  /**
-   * Like disjoint labels but covers whole alphabet including internal
-   * char.
-   */
-  private lazy val disjointLabelsComplete : List[TransitionLabel] =
-    calculateDisjointLabelsComplete
-
+object BricsTLabelOps extends TLabelOps[(Char, Char)] {
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
    * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
@@ -106,6 +81,78 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   val minChar : Int = BricsAutomaton.minChar
   val maxChar : Int = BricsAutomaton.maxChar
   val internalChar : Int = BricsAutomaton.internalChar
+
+  /**
+   * Check whether the given label accepts any letter
+   */
+  def isNonEmptyLabel(label : (Char, Char)) : Boolean =
+    label._1 <= label._2
+
+  /**
+   * Label accepting all letters
+   */
+  val sigmaLabel : (Char, Char) =
+    (minChar.toChar, maxChar.toChar)
+
+  /**
+   * Intersection of two labels
+   */
+  def intersectLabels(l1 : (Char, Char),
+                      l2 : (Char, Char)) : Option[(Char, Char)] = {
+    Option(l1._1 max l2._1, l1._2 min l2._2).filter(isNonEmptyLabel(_))
+  }
+
+  /**
+   * True if labels overlap
+   */
+  def labelsOverlap(l1 : (Char, Char),
+                    l2 : (Char, Char)) : Boolean = {
+    val (min1, max1) = l1
+    val (min2, max2) = l2
+    (min2 <= max1 && max2 >= min1)
+  }
+
+  /**
+   * Can l represent a?
+   */
+  def labelContains(a : Char, l : (Char, Char)) : Boolean = {
+    val (min, max) = l
+    (min <= a && a <= max)
+  }
+
+  /**
+   * Enumerate all letters accepted by a transition label
+   */
+  def enumLetters(label : (Char, Char)) : Iterator[Int] =
+    for (c <- (label._1 to label._2).iterator) yield c.toInt
+}
+
+/**
+ * Wrapper for the BRICS automaton class
+ */
+class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
+
+  import BricsAutomaton.toBAutomaton
+
+  type State = BState
+  type TLabel = (Char, Char)
+
+  override val LabelOps = BricsTLabelOps
+
+  override def toString : String = underlying.toString
+
+  /**
+   * Keep track of disjoint labels for fast range lookups in
+   * enumLabelOverlap.  Access with getDisjointLabels.
+   */
+  private lazy val disjointLabels : MTreeSet[TLabel] =
+    calculateDisjointLabels
+  /**
+   * Like disjoint labels but covers whole alphabet including internal
+   * char.
+   */
+  private lazy val disjointLabelsComplete : List[TLabel] =
+    calculateDisjointLabelsComplete
 
   /**
    * Union
@@ -171,7 +218,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   /**
    * Given a state, iterate over all outgoing transitions
    */
-  def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)] =
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
     for (t <- from.getTransitions.iterator)
     yield (t.getDest, (t.getMin, t.getMax))
 
@@ -182,55 +229,11 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     (for (s <- getStates; if s.isAccept) yield s).toSet
 
   /**
-   * Check whether the given label accepts any letter
-   */
-  def isNonEmptyLabel(label : TransitionLabel) : Boolean =
-    label._1 <= label._2
-
-  /**
-   * Label accepting all letters
-   */
-  val sigmaLabel : TransitionLabel =
-    (minChar.toChar, maxChar.toChar)
-
-  /**
-   * Intersection of two labels
-   */
-  def intersectLabels(l1 : TransitionLabel,
-                      l2 : TransitionLabel) : Option[TransitionLabel] = {
-    Option(l1._1 max l2._1, l1._2 min l2._2).filter(isNonEmptyLabel(_))
-  }
-
-  /**
-   * True if labels overlap
-   */
-  def labelsOverlap(l1 : TransitionLabel,
-                    l2 : TransitionLabel) : Boolean = {
-    val (min1, max1) = l1
-    val (min2, max2) = l2
-    (min2 <= max1 && max2 >= min1)
-  }
-
-  /**
-   * Can l represent a?
-   */
-  def labelContains(a : Char, l : TransitionLabel) : Boolean = {
-    val (min, max) = l
-    (min <= a && a <= max)
-  }
-
-  /**
-   * Enumerate all letters accepted by a transition label
-   */
-  def enumLetters(label : TransitionLabel) : Iterator[Int] =
-    for (c <- (label._1 to label._2).iterator) yield c.toInt
-
-  /**
    * Enumerate all labels with overlaps removed.
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
    * [5,8] [8,10] [10,15]
    */
-  def enumDisjointLabels : Iterable[TransitionLabel] =
+  def enumDisjointLabels : Iterable[TLabel] =
     disjointLabels.toIterable
 
   /**
@@ -239,13 +242,13 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
    * [4,4] [5,7] [8,10] [11,15] [15,..]
    */
-  def enumDisjointLabelsComplete : Iterable[TransitionLabel] =
+  def enumDisjointLabelsComplete : Iterable[TLabel] =
     disjointLabelsComplete
 
   /**
    * iterate over the instances of lbls that overlap with lbl
    */
-  def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel] = {
+  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel] = {
     val (lMin, lMax) = lbl
     disjointLabels.
       from((lMin, Char.MinValue)).
@@ -283,7 +286,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * state of aut into its equivalent state in aut'
    */
   private def substWithStateMap(
-    transformTran: (TransitionLabel, TransitionLabel => Unit) => Unit
+    transformTran: (TLabel, TLabel => Unit) => Unit
   ) : (BricsAutomaton, Map[State, State]) = {
     val newAut = new BAutomaton
     newAut.setDeterministic(false)
@@ -307,22 +310,14 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     (new BricsAutomaton(newAut), smap.toMap)
   }
 
-  def getNewState = new BState
-
   def isAccept(s : State) : Boolean = s.isAccept
-
-  /**
-   * Set state accepting
-   */
-  def setAccept(q : State, isAccepting : Boolean) : Unit =
-    q.setAccept(isAccepting)
 
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
 
   private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
-    var disjoint = new MTreeSet[TransitionLabel]()
+    var disjoint = new MTreeSet[TLabel]()
 
     val mins = new MTreeSet[Char]
     val maxes = new MTreeSet[Char]
@@ -363,8 +358,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     disjoint
   }
 
-  private def calculateDisjointLabelsComplete() : List[TransitionLabel] = {
-    val labels = disjointLabels.foldRight(List[TransitionLabel]()) {
+  private def calculateDisjointLabelsComplete() : List[TLabel] = {
+    val labels = disjointLabels.foldRight(List[TLabel]()) {
       case ((min, max), Nil) => {
         // using Char.MaxValue since we include internal chars
         if (max < Char.MaxValue)
@@ -396,7 +391,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
  */
 class BricsAutomatonBuilder
     extends AtomicStateAutomatonBuilder[BricsAutomaton#State,
-                                        BricsAutomaton#TransitionLabel] {
+                                        BricsAutomaton#TLabel] {
   val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
   val minChar : Int = BricsAutomaton.minChar
   val maxChar : Int = BricsAutomaton.maxChar
@@ -423,17 +418,14 @@ class BricsAutomatonBuilder
    * Add a new transition q1 --label--> q2
    */
   def addTransition(q1 : BricsAutomaton#State,
-                    label : BricsAutomaton#TransitionLabel,
+                    label : BricsAutomaton#TLabel,
                     q2 : BricsAutomaton#State) : Unit = {
-    if (aut.isNonEmptyLabel(label)) {
+    if (aut.LabelOps.isNonEmptyLabel(label)) {
       val (min, max) = label
       q1.addTransition(new Transition(min, max, q2))
     }
   }
 
-  /**
-   * Set state accepting
-   */
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
     q.setAccept(isAccepting)
 

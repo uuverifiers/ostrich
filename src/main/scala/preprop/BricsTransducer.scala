@@ -85,7 +85,7 @@ class BricsTransducer(override val underlying : BAutomaton,
     case object Op extends Mode
     // .. or working through post part, once done any new transition
     // added to pre-image aut should have label lbl
-    case class Post(u : Seq[Char], lbl : TransitionLabel) extends Mode
+    case class Post(u : Seq[Char], lbl : TLabel) extends Mode
 
     // (ps, ts, t, as, m)
     // state of pre aut to add new transitions from
@@ -131,7 +131,7 @@ class BricsTransducer(override val underlying : BAutomaton,
           val a = u.head
           val rest = u.tail
           for ((asNext, albl) <- baut.outgoingTransitions(as)) {
-            if (labelContains(a, albl)) {
+            if (LabelOps.labelContains(a, albl)) {
               if (!rest.isEmpty) {
                 addWork(ps, ts, t, asNext, Pre(rest))
               } else {
@@ -149,11 +149,11 @@ class BricsTransducer(override val underlying : BAutomaton,
             }
             case Plus(n) => {
               for ((asNext, (amin, amax)) <- baut.outgoingTransitions(as)) {
-                val apreMin = Math.max(minChar, amin - n).toChar
-                val apreMax = Math.min(maxChar, amax - n).toChar
-                if (isNonEmptyLabel((apreMin, apreMax))) {
-                  for (preLbl <- intersectLabels((apreMin, apreMax),
-                                                 (t.getMin, t.getMax))) {
+                val apreMin = Math.max(LabelOps.minChar, amin - n).toChar
+                val apreMax = Math.min(LabelOps.maxChar, amax - n).toChar
+                if (LabelOps.isNonEmptyLabel((apreMin, apreMax))) {
+                  for (preLbl <- LabelOps.intersectLabels((apreMin, apreMax),
+                                                          (t.getMin, t.getMax))) {
                     addWork(ps, ts, t, asNext, Post(tOp.postW, preLbl))
                   }
                 }
@@ -165,7 +165,7 @@ class BricsTransducer(override val underlying : BAutomaton,
           val a = v.head
           val rest = v.tail
           for ((asNext, albl) <- baut.outgoingTransitions(as)) {
-            if (labelContains(a, albl))
+            if (LabelOps.labelContains(a, albl))
               addWork(ps, ts, t, asNext, Post(rest, lbl))
           }
         }
@@ -191,7 +191,7 @@ class BricsTransducer(override val underlying : BAutomaton,
 
 class BricsTransducerBuilder
     extends AtomicStateTransducerBuilder[BricsAutomaton#State,
-                                         BricsAutomaton#TransitionLabel] {
+                                         BricsAutomaton#TLabel] {
   val vocabularyWidth : Int = BricsAutomaton.vocabularyWidth
   val minChar : Int = BricsAutomaton.minChar
   val maxChar : Int = BricsAutomaton.maxChar
@@ -211,10 +211,10 @@ class BricsTransducerBuilder
   def setAccept(s : BricsAutomaton#State, isAccept : Boolean) = s.setAccept(isAccept)
 
   def addTransition(s1 : BricsAutomaton#State,
-                    lbl : BricsAutomaton#TransitionLabel,
+                    lbl : BricsAutomaton#TLabel,
                     op : OutputOp,
                     s2 : BricsAutomaton#State) = {
-    if (aut.isNonEmptyLabel(lbl)) {
+    if (aut.LabelOps.isNonEmptyLabel(lbl)) {
       val t = new BTransition(lbl._1, lbl._2, s2)
       s1.addTransition(t)
       operations += ((s1, t) -> op)

@@ -349,7 +349,8 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     //
     val cg = CaleyGraph[rc.type](rc)
     for (box <- cg.getAcceptNodes(zcons).iterator) yield {
-      val yprimeCons = rc.replaceTransitions(rc.internalChar.toChar, box.getEdges)
+      val yprimeCons = rc.replaceTransitions(rc.LabelOps.internalChar.toChar,
+                                             box.getEdges)
       val newYCon = tran.preImage(yprimeCons)
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]

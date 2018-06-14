@@ -21,19 +21,19 @@ package strsolver.preprop
 import scala.collection.mutable.{HashMap => MHashMap}
 
 object InitFinalAutomaton {
-  def setInitial[A <: AtomicStateAutomaton](aut : A,
-                                            initialState : A#State) =
+  def setInitial[A <: AtomicStateAutomaton](aut : A, initialState : A#State) =
     aut match {
       case InitFinalAutomaton(a, oldInit, oldFinal) =>
         InitFinalAutomaton(a, initialState, oldFinal)
       case _ =>
-        InitFinalAutomaton(aut, initialState,
-                           aut.acceptingStates.asInstanceOf[Set[A#State]])
+        InitFinalAutomaton(
+          aut, initialState,
+          aut.acceptingStates.
+          asInstanceOf[Set[AtomicStateAutomaton#State]]
+        )
     }
 
-  def setFinal[A <: AtomicStateAutomaton](
-        aut : A,
-        acceptingStates : Set[AtomicStateAutomaton#State]) =
+  def setFinal[A <: AtomicStateAutomaton](aut : A, acceptingStates : Set[AtomicStateAutomaton#State]) =
     aut match {
       case InitFinalAutomaton(a, oldInit, oldFinal) =>
         InitFinalAutomaton(a, oldInit, acceptingStates)
@@ -55,12 +55,8 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   import InitFinalAutomaton.intern
 
   type State = underlying.State
-  type TransitionLabel = underlying.TransitionLabel
-
-  val vocabularyWidth : Int = underlying.vocabularyWidth
-  val minChar = underlying.minChar
-  val maxChar = underlying.maxChar
-  val internalChar = underlying.internalChar
+  type TLabel = underlying.TLabel
+  override val LabelOps = underlying.LabelOps
 
   def |(that : Automaton) : Automaton =
     intern(this) | intern(that)
@@ -81,42 +77,24 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
 
   def getStates = underlying.getStates
 
-  def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)] =
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
     underlying.outgoingTransitions(from)
 
-  def isNonEmptyLabel(label : TransitionLabel) : Boolean =
-    underlying.isNonEmptyLabel(label)
-
-  val sigmaLabel = underlying.sigmaLabel
-
-  def intersectLabels(l1 : TransitionLabel,
-                      l2 : TransitionLabel) : Option[TransitionLabel] =
-    underlying.intersectLabels(l1, l2)
-
-  def labelsOverlap(l1 : TransitionLabel,
-                    l2 : TransitionLabel) : Boolean =
-    underlying.labelsOverlap(l1, l2)
-
-  def labelContains(a : Char, l : TransitionLabel) : Boolean =
-    underlying.labelContains(a, l)
-
-  def enumLetters(label : TransitionLabel) : Iterator[Int] =
-    underlying.enumLetters(label)
-
-  def enumDisjointLabels : Iterable[TransitionLabel] =
+  def enumDisjointLabels : Iterable[TLabel] =
     underlying.enumDisjointLabels
 
-  def enumDisjointLabelsComplete : Iterable[TransitionLabel] =
+  def enumDisjointLabelsComplete : Iterable[TLabel] =
     underlying.enumDisjointLabelsComplete
 
-  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TransitionLabel] =
-    throw new UnsupportedOperationException
+  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel] =
+    underlying.getTransducerBuilder
 
-  def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel] =
+  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel] =
     underlying.enumLabelOverlap(lbl)
 
-  def replaceTransitions(a : Char,
-                         states : Iterator[(State, State)]) : AtomicStateAutomaton = {
+  def replaceTransitions(
+        a : Char,
+        states : Iterator[(State, State)]) : AtomicStateAutomaton = {
     val newUnderlying = underlying.replaceTransitions(a, states)
     InitFinalAutomaton(
       newUnderlying,
@@ -127,7 +105,7 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   def isAccept(s : State) : Boolean =
     acceptingStates contains s
 
-  def getBuilder : AtomicStateAutomatonBuilder[State, TransitionLabel] =
+  def getBuilder : AtomicStateAutomatonBuilder[State, TLabel] =
     underlying.getBuilder
 
   def internalise : AtomicStateAutomaton = {

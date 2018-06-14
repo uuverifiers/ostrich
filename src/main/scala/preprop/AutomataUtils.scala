@@ -35,8 +35,7 @@ object AutomataUtils {
    * The automata are required to all have the same label type (though this is
    * not checked statically)
    */
-  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton])
-                                : Boolean = {
+  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean = {
     val autsList = auts.toList
     val visitedStates = new MHashSet[List[Any]]
     val todo = new ArrayStack[List[Any]]
@@ -49,20 +48,21 @@ object AutomataUtils {
 
     def enumNext(auts : List[AtomicStateAutomaton],
                  states : List[Any],
-                 intersectedLabels : Any) : Iterator[List[Any]] = auts match {
-      case List() =>
-        Iterator(List())
-      case aut :: otherAuts => {
-        val state :: otherStates = states
-        for ((to, label) <- aut.outgoingTransitions(
-                              state.asInstanceOf[aut.State]);
-             newILabel <- aut.intersectLabels(
-                           intersectedLabels.asInstanceOf[aut.TransitionLabel],
-                           label).toSeq;
-             tailNext <- enumNext(otherAuts, otherStates, newILabel))
-        yield (to :: tailNext)
+                 intersectedLabels : Any) : Iterator[List[Any]] =
+      auts match {
+        case List() =>
+          Iterator(List())
+        case aut :: otherAuts => {
+          val state :: otherStates = states
+          for ((to, label) <- aut.outgoingTransitions(
+                                state.asInstanceOf[aut.State]);
+               newILabel <- aut.LabelOps.intersectLabels(
+                             intersectedLabels.asInstanceOf[aut.TLabel],
+                             label).toSeq;
+               tailNext <- enumNext(otherAuts, otherStates, newILabel))
+          yield (to :: tailNext)
+        }
       }
-    }
 
     val initial = (autsList map (_.initialState))
 
@@ -74,7 +74,7 @@ object AutomataUtils {
 
     while (!todo.isEmpty) {
       val next = todo.pop
-      for (reached <- enumNext(autsList, next, auts.head.sigmaLabel))
+      for (reached <- enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
         if (!(visitedStates contains reached)) {
           if (isAccepting(reached))
             return true
@@ -93,7 +93,9 @@ object AutomataUtils {
     if (auts.isEmpty) {
       true
     } else if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
-      areConsistentAtomicAutomata(auts map (_.asInstanceOf[AtomicStateAutomaton]))
+      areConsistentAtomicAutomata(
+        auts map (_.asInstanceOf[AtomicStateAutomaton])
+      )
     } else {
       !(auts reduceLeft (_ & _)).isEmpty
     }
@@ -137,7 +139,7 @@ object AutomataUtils {
 
     val worklist = new MStack[(BState, List[Any])]
     worklist push ((initBState, initStates))
-    
+
     val seenlist = MHashSet[List[Any]]()
     seenlist += initStates
 
@@ -184,7 +186,7 @@ object AutomataUtils {
             }
         }
       }
- 
+
       addTransitions(Char.MinValue, Char.MaxValue, List(), autsList, ss)
     }
 

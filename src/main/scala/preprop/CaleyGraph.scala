@@ -132,7 +132,7 @@ object CaleyGraph {
 
         val sa = stateMap(wa)
         for (a <- as)
-          graphBuilder.addTransition(s, a.asInstanceOf[aut.TransitionLabel], sa)
+          graphBuilder.addTransition(s, a.asInstanceOf[aut.TLabel], sa)
       }
     }
 
@@ -141,8 +141,8 @@ object CaleyGraph {
   }
 
   private def getCharacterBoxes[A <: AtomicStateAutomaton](aut : A)
-      : Map[Box[A], Iterable[A#TransitionLabel]] = {
-    val boxes : Map[A#TransitionLabel,Box[A]] =
+      : Map[Box[A], Iterable[A#TLabel]] = {
+    val boxes : Map[A#TLabel,Box[A]] =
       aut.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
 
     for ((q1, i, q2) <- aut.transitions;

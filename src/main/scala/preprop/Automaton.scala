@@ -22,29 +22,6 @@ package strsolver.preprop
  * Interface for different implementations of finite-state automata.
  */
 trait Automaton {
-
-  /**
-   * Nr. of bits of letters in the vocabulary. Letters are
-   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
-   * See max/minChar and internalChar
-   */
-  val vocabularyWidth : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  val minChar : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  val maxChar : Int
-
-  /**
-   * A special character outside of [minChar, maxChar] for internal use
-   */
-  val internalChar : Int
-
   /**
    * Union
    */
@@ -75,6 +52,63 @@ trait Automaton {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+
+trait TLabelOps[TLabel] {
+  /**
+   * Nr. of bits of letters in the vocabulary. Letters are
+   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
+   * See max/minChar and internalChar
+   */
+  def vocabularyWidth : Int
+
+  /**
+   * A minimum character value in the range given by vocabularyWidth
+   */
+  def minChar : Int
+
+  /**
+   * A minimum character value in the range given by vocabularyWidth
+   */
+  def maxChar : Int
+
+  /**
+   * A special character outside of [minChar, maxChar] for internal use
+   */
+  def internalChar : Int
+
+  /**
+   * Check whether the given label accepts some letter
+   */
+  def isNonEmptyLabel(label : TLabel) : Boolean
+
+  /**
+   * Label accepting all letters
+   */
+  val sigmaLabel : TLabel
+
+  /**
+   * Intersection of two labels, None if not overlapping
+   */
+  def intersectLabels(l1 : TLabel,
+                      l2 : TLabel) : Option[TLabel]
+
+  /**
+   * True if labels overlap
+   */
+  def labelsOverlap(l1 : TLabel,
+                    l2 : TLabel) : Boolean
+
+  /**
+   * Can l represent a?
+   */
+  def labelContains(a : Char, l : TLabel) : Boolean
+
+  /**
+   * Enumerate all letters accepted by a transition label
+   */
+  def enumLetters(label : TLabel) : Iterator[Int]
+}
+
 /**
  * Trait for automata with atomic/nominal states; i.e., states
  * don't have any structure and are not composite, there is a unique
@@ -87,10 +121,14 @@ trait AtomicStateAutomaton extends Automaton {
   type State
 
   /**
-   * Type of labels on transitions
-   * (e.g., concrete letters, intervals, bit-vector formulas)
+   * Type of labels
    */
-  type TransitionLabel
+  type TLabel
+
+  /**
+   * Operations on labels
+   */
+  val LabelOps : TLabelOps[TLabel]
 
   /**
    * Iterate over automaton states
@@ -110,46 +148,14 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Given a state, iterate over all outgoing transitions
    */
-  def outgoingTransitions(from : State) : Iterator[(State, TransitionLabel)]
-
-  /**
-   * Check whether the given label accepts some letter
-   */
-  def isNonEmptyLabel(label : TransitionLabel) : Boolean
-
-  /**
-   * Label accepting all letters
-   */
-  val sigmaLabel : TransitionLabel
-
-  /**
-   * Intersection of two labels, None if not overlapping
-   */
-  def intersectLabels(l1 : TransitionLabel,
-                      l2 : TransitionLabel) : Option[TransitionLabel]
-
-  /**
-   * True if labels overlap
-   */
-  def labelsOverlap(l1 : TransitionLabel,
-                    l2 : TransitionLabel) : Boolean
-
-  /**
-   * Can l represent a?
-   */
-  def labelContains(a : Char, l : TransitionLabel) : Boolean
-
-  /**
-   * Enumerate all letters accepted by a transition label
-   */
-  def enumLetters(label : TransitionLabel) : Iterator[Int]
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
 
   /**
    * Enumerate all labels with overlaps removed.
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
    * [5,7] [8,10] [11,15]
    */
-  def enumDisjointLabels : Iterable[TransitionLabel]
+  def enumDisjointLabels : Iterable[TLabel]
 
   /**
    * Enumerate all labels with overlaps removed such that the whole
@@ -157,19 +163,20 @@ trait AtomicStateAutomaton extends Automaton {
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
    * [4,4] [5,7] [8,10] [11,15] [15,..]
    */
-  def enumDisjointLabelsComplete : Iterable[TransitionLabel]
+  def enumDisjointLabelsComplete : Iterable[TLabel]
 
   /**
    * iterate over disjoint labels of the automaton that overlap with lbl
    */
-  def enumLabelOverlap(lbl : TransitionLabel) : Iterable[TransitionLabel]
+  def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel]
 
   /*
    * Replace a-transitions with new a-transitions between pairs of
    * states.  Returns a new automaton.
    */
-  def replaceTransitions(a : Char,
-                         states : Iterator[(State, State)]) : AtomicStateAutomaton
+  def replaceTransitions(
+        a : Char,
+        states : Iterator[(State, State)]) : AtomicStateAutomaton
 
   /**
    * Test if state is accepting
@@ -179,12 +186,12 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Return new automaton builder of compatible type
    */
-  def getBuilder : AtomicStateAutomatonBuilder[State, TransitionLabel]
+  def getBuilder : AtomicStateAutomatonBuilder[State, TLabel]
 
   /**
    * Return new automaton builder of compatible type
    */
-  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TransitionLabel]
+  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel]
 
   //////////////////////////////////////////////////////////////////////////
   // Derived methods
@@ -192,31 +199,31 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Iterate over all transitions
    */
-  def transitions : Iterator[(State, TransitionLabel, State)] =
+  def transitions : Iterator[(State, TLabel, State)] =
     for (s1 <- getStates; (s2, lbl) <- outgoingTransitions(s1))
       yield (s1, lbl, s2)
 
   /**
    * Get image of a set of states under a given label
    */
-  def getImage(states : Set[State], lbl : TransitionLabel) : Set[State] = {
+  def getImage(states : Set[State], lbl : TLabel) : Set[State] = {
     for (s1 <- states;
          (s2, lbl2) <- outgoingTransitions(s1);
-         if labelsOverlap(lbl, lbl2))
+         if LabelOps.labelsOverlap(lbl, lbl2))
       yield s2
   }
 
   /**
    * Get image of a state under a given label
    */
-  def getImage(s1 : State, lbl : TransitionLabel) : Set[State] = {
+  def getImage(s1 : State, lbl : TLabel) : Set[State] = {
     outgoingTransitions(s1).collect({
-      case (s2, lbl2) if (labelsOverlap(lbl, lbl2)) => s2
+      case (s2, lbl2) if (LabelOps.labelsOverlap(lbl, lbl2)) => s2
     }).toSet
   }
 }
 
-trait AtomicStateAutomatonBuilder[State, TransitionLabel] {
+trait AtomicStateAutomatonBuilder[State, TLabel] {
   /**
    * Nr. of bits of letters in the vocabulary. Letters are
    * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
@@ -252,7 +259,7 @@ trait AtomicStateAutomatonBuilder[State, TransitionLabel] {
   /**
    * Add a new transition q1 --label--> q2
    */
-  def addTransition(s1 : State, label : TransitionLabel, s2 : State) : Unit
+  def addTransition(s1 : State, label : TLabel, s2 : State) : Unit
 
   /**
    * Set state accepting
