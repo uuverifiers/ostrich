@@ -12,3 +12,4 @@
 (assert (str.in.re c (re.+ (str.to.re "x"))))
 
 (check-sat)
+(get-model)

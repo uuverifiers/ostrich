@@ -39,6 +39,8 @@ object Exploration {
     def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]]
 
     def getContents : List[Automaton]
+
+    def getAcceptedWord : Seq[Int]
   }
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
@@ -95,6 +97,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     (argTermNum.keySet.toSet, sortedApps.toSeq)
   }
 
+  for ((ops, t) <- sortedFunApps)
+    if (ops.size > 1)
+      throw new Exception("Multiple definitions found for " + t)
+
+  val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
+
   println("   Considered function applications:")
   for ((apps, res) <- sortedFunApps) {
     println("   " + res + " =")
@@ -133,9 +141,23 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
                       : Option[Map[Term, Seq[Int]]] = apps match {
 
-    case List() =>
+    case List() => {
       // we are finished and just have to construct a model
-      Some(Map()) // ...
+      val model = new MHashMap[Term, Seq[Int]]
+      for (t <- leafTerms)
+        model.put(t, constraintStores(t).getAcceptedWord)
+      for ((ops, res) <- sortedFunApps.reverseIterator;
+           (op, args) <- ops.iterator) {
+        val resValue = op.eval(args map model)
+        for (oldValue <- model get res)
+          if (resValue != oldValue)
+            throw new Exception("Model extraction failed: " +
+                                (oldValue mkString ", ") + " != " +
+                                (resValue mkString ", "))
+        model.put(res, resValue)
+      }
+      Some(model.toMap)
+    }
     case (op, args, res) :: otherApps =>
       dfExploreOp(op, args, constraintStores(res).getContents,
                   otherApps)
@@ -229,6 +251,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def getContents : List[Automaton] =
       currentConstraint.toList
+
+    def getAcceptedWord : Seq[Int] =
+      currentConstraint match {
+        case Some(aut) => aut.getAcceptedWord.get
+        case None      => List()
+      }
   }
 
 }
@@ -345,6 +373,12 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def getContents : List[Automaton] =
       constraints.toList
+
+    def getAcceptedWord : Seq[Int] =
+      constraints match {
+        case Seq() => List()
+        case auts  => (auts reduceLeft (_ & _)).getAcceptedWord.get
+      }
   }
 
 }

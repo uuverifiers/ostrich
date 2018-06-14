@@ -35,7 +35,8 @@ object AutomataUtils {
    * The automata are required to all have the same label type (though this is
    * not checked statically)
    */
-  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean = {
+  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton])
+                                : Boolean = {
     val autsList = auts.toList
     val visitedStates = new MHashSet[List[Any]]
     val todo = new ArrayStack[List[Any]]

@@ -16,7 +16,7 @@
 (declare-fun x9 () String)
 
 (assert (= a (str.++ b (str.++ (str.++ c c) b))))
-(assert (= b (str.++ d c)))
+; (assert (= b (str.++ d c)))
 
 (assert (= b (str.++ x0 x0)))
 (assert (= x0 (str.++ x1 x1)))

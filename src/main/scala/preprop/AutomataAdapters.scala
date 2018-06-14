@@ -74,7 +74,7 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     throw new UnsupportedOperationException
 
   def getAcceptedWord : Option[Seq[Int]] =
-    throw new UnsupportedOperationException
+    internalise.getAcceptedWord
 
   val initialState = _initialState.asInstanceOf[State]
   val acceptingStates = _acceptingStates.asInstanceOf[Set[State]]

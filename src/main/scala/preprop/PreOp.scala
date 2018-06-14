@@ -42,4 +42,9 @@ trait PreOp {
             resultConstraint : Automaton)
           : Iterator[Seq[Automaton]]
 
+  /**
+   * Evaluate the described function
+   */
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int]
+
 }
