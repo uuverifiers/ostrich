@@ -330,8 +330,10 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
 
   override def toString = "replaceall"
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
-    throw new UnsupportedOperationException
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
+    Console.err.println("Warning: ReplaceAllPreOpTran.eval not implemented yet")
+    List()
+  }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
