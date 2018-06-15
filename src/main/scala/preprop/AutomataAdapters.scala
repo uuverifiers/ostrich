@@ -52,10 +52,10 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
     !AutomataUtils.areConsistentAtomicAutomata(List(this))
 
   def apply(word : Seq[Int]) : Boolean =
-    internalise.apply(word)
+    internalise.apply(word)     // TODO: optimise
 
   def getAcceptedWord : Option[Seq[Int]] =
-    internalise.getAcceptedWord
+    internalise.getAcceptedWord // TODO: optimise
 
   protected def computeReachableStates(initState : State,
                                        accStates : Set[State])

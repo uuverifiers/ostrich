@@ -353,20 +353,15 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           potentialConflicts = potentialConflicts.tail
         }
 
-        if (aut.isEmpty) {
-          addIncAutomata(List(aut))
-          Some(List(TermConstraint(t, aut)))
-        } else {
-          AutomataUtils.findUnsatCore(constraints, aut) match {
-            case Some(core) => {
-              addIncAutomata(core)
-              Some(for (a <- core.toList) yield TermConstraint(t, a))
-            }
-            case None => {
-              constraints += aut
-              constraintSet += aut
-              None
-            }
+        AutomataUtils.findUnsatCore(constraints, aut) match {
+          case Some(core) => {
+            addIncAutomata(core)
+            Some(for (a <- core.toList) yield TermConstraint(t, a))
+          }
+          case None => {
+            constraints += aut
+            constraintSet += aut
+            None
           }
         }
       }

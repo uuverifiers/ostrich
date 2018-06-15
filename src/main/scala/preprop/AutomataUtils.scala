@@ -22,8 +22,8 @@ import dk.brics.automaton.{BasicAutomata, BasicOperations,
                            Automaton => BAutomaton, State => BState, Transition}
 
 import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
-                                 Stack => MStack,
-                                 HashMap => MHashMap}
+                                 Stack => MStack, HashMap => MHashMap,
+                                 ArrayBuffer}
 
 /**
  * Collection of useful functions for automata
@@ -107,12 +107,31 @@ object AutomataUtils {
    * status of the combination with <code>newAut</code> is unknown.
    */
   def findUnsatCore(oldAuts : Seq[Automaton],
-                    newAut : Automaton) : Option[Seq[Automaton]] =
-    if (areConsistentAutomata(List(newAut) ++ oldAuts))
-      None
-    else
-      // naive core
-      Some(List(newAut) ++ oldAuts)
+                    newAut : Automaton) : Option[Seq[Automaton]] = {
+
+    val consideredAuts = new ArrayBuffer[Automaton]
+    consideredAuts += newAut
+
+    // add automata until we encounter a conflict
+    var cont = areConsistentAutomata(consideredAuts)
+    val oldAutsIt = oldAuts.iterator
+    while (cont && oldAutsIt.hasNext) {
+      consideredAuts += oldAutsIt.next
+      cont = areConsistentAutomata(consideredAuts)
+    }
+
+    if (cont)
+      return None
+
+    // remove automata to get a small core
+    for (i <- (consideredAuts.size - 2) to 1 by -1) {
+      val removedAut = consideredAuts remove i
+      if (areConsistentAutomata(consideredAuts))
+        consideredAuts.insert(i, removedAut)
+    }
+
+    Some(consideredAuts)
+  }
 
   /**
    * Product of a number of given automata.  Returns
