@@ -141,20 +141,9 @@ object ReplaceAllPreOpWord {
       val output = OutputOp(w.slice(0, i), Plus(0), "")
 
       // begin again if mismatch
-      if (w(i) > builder.LabelOps.minChar) {
-        val below = (w(i) - 1).toChar
-        builder.addTransition(states(i),
-                              (builder.LabelOps.minChar.toChar, below),
-                              output,
-                              states(0))
-      }
-      if (w(i) < builder.LabelOps.maxChar) {
-        val above = (w(i) + 1).toChar
-        builder.addTransition(states(i),
-                              (above, builder.LabelOps.maxChar.toChar),
-                              output,
-                              states(0))
-      }
+      val anyLbl = builder.LabelOps.sigmaLabel
+      for (lbl <- builder.LabelOps.subtractLetter(w(i), anyLbl))
+        builder.addTransition(states(i), lbl, output, states(0))
 
       // handle word ending in middle of match
       builder.addTransition(states(i), (w(i), w(i)), output, finstates(i))
