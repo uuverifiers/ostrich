@@ -20,40 +20,24 @@ package strsolver.preprop
 
 import scala.collection.mutable.{HashMap => MHashMap, ArrayStack,
                                  HashSet => MHashSet}
+import scala.collection.{Set => GSet}
 
-object InitFinalAutomaton {
-  def setInitial[A <: AtomicStateAutomaton](aut : A, initialState : A#State) =
-    aut match {
-      case InitFinalAutomaton(a, oldInit, oldFinal) =>
-        InitFinalAutomaton(a, initialState, oldFinal)
-      case _ =>
-        InitFinalAutomaton(
-          aut, initialState,
-          aut.acceptingStates.
-          asInstanceOf[Set[AtomicStateAutomaton#State]]
-        )
-    }
-
-  def setFinal[A <: AtomicStateAutomaton](aut : A, acceptingStates : Set[AtomicStateAutomaton#State]) =
-    aut match {
-      case InitFinalAutomaton(a, oldInit, oldFinal) =>
-        InitFinalAutomaton(a, oldInit, acceptingStates)
-      case _ =>
-        InitFinalAutomaton(aut, aut.initialState, acceptingStates)
-    }
-
+object AtomicStateAutomatonAdapter {
   def intern(a : Automaton) : Automaton = a match {
-    case a : InitFinalAutomaton[_] => a.internalise
+    case a : AtomicStateAutomatonAdapter[_] => a.internalise
+    case a => a
+  }
+  def intern(a : AtomicStateAutomaton) : AtomicStateAutomaton = a match {
+    case a : AtomicStateAutomatonAdapter[_] => a.internalise
     case a => a
   }
 }
 
-case class InitFinalAutomaton[A <: AtomicStateAutomaton]
-                             (underlying : A,
-                              val _initialState : A#State,
-                              val _acceptingStates : Set[A#State])
-     extends AtomicStateAutomaton {
-  import InitFinalAutomaton.intern
+abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
+                                          (val underlying : A)
+         extends AtomicStateAutomaton {
+
+  import AtomicStateAutomatonAdapter.intern
 
   type State = underlying.State
   type TLabel = underlying.TLabel
@@ -68,19 +52,19 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     !AutomataUtils.areConsistentAtomicAutomata(List(this))
 
   def apply(word : Seq[Int]) : Boolean =
-    throw new UnsupportedOperationException
+    internalise.apply(word)
 
   def getAcceptedWord : Option[Seq[Int]] =
-    internalise.getAcceptedWord // TODO
+    internalise.getAcceptedWord
 
-  val initialState = _initialState.asInstanceOf[State]
-
-  lazy val states = {
+  protected def computeReachableStates(initState : State,
+                                       accStates : Set[State])
+                                     : GSet[State] = {
     val fwdReachable, bwdReachable = new MHashSet[State]
-    fwdReachable += initialState
+    fwdReachable += initState
 
     val worklist = new ArrayStack[State]
-    worklist push initialState
+    worklist push initState
 
     while (!worklist.isEmpty)
       for ((s, _) <- underlying.outgoingTransitions(worklist.pop))
@@ -93,7 +77,7 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
       for ((t, _) <- underlying.outgoingTransitions(s))
         backMapping.getOrElseUpdate(t, new MHashSet) += s
 
-    for (_s <- _acceptingStates; s = _s.asInstanceOf[State])
+    for (_s <- accStates; s = _s.asInstanceOf[State])
       if (fwdReachable contains s) {
         bwdReachable += s
         worklist push s
@@ -105,32 +89,10 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
           worklist push s
 
     if (bwdReachable.isEmpty)
-      bwdReachable add initialState
+      bwdReachable add initState
 
     bwdReachable
   }
-
-  lazy val acceptingStates =
-    _acceptingStates.asInstanceOf[Set[State]] & states
-
-  // TODO: this will enumerate too much
-  lazy val labelEnumerator = underlying.labelEnumerator
-
-  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
-    val _states = states
-    for (p@(s, _) <- underlying.outgoingTransitions(from);
-         if _states contains s)
-    yield p
-  }
-
-  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel] =
-    underlying.getTransducerBuilder
-
-  def isAccept(s : State) : Boolean =
-    acceptingStates contains s
-
-  def getBuilder : AtomicStateAutomatonBuilder[State, TLabel] =
-    underlying.getBuilder
 
   def internalise : AtomicStateAutomaton = {
     val builder = underlying.getBuilder
@@ -151,4 +113,75 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     builder.getAutomaton
   }
 
+  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel] =
+    underlying.getTransducerBuilder
+
+  def getBuilder : AtomicStateAutomatonBuilder[State, TLabel] =
+    underlying.getBuilder
+
+  def isAccept(s : State) : Boolean =
+    acceptingStates contains s
+
+  // The fellowing fields can be redefined to modify the automaton
+
+  lazy val initialState = underlying.initialState
+
+  lazy val states = underlying.states
+
+  lazy val acceptingStates = underlying.acceptingStates
+
+  lazy val labelEnumerator = underlying.labelEnumerator
+
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
+    underlying.outgoingTransitions(from)
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+object InitFinalAutomaton {
+  def setInitial[A <: AtomicStateAutomaton]
+                (aut : A, initialState : A#State) =
+    aut match {
+      case InitFinalAutomaton(a, oldInit, oldFinal) =>
+        InitFinalAutomaton(a, initialState, oldFinal)
+      case _ =>
+        InitFinalAutomaton(
+          aut, initialState,
+          aut.acceptingStates.asInstanceOf[Set[AtomicStateAutomaton#State]]
+        )
+    }
+
+  def setFinal[A <: AtomicStateAutomaton]
+              (aut : A, acceptingStates : Set[AtomicStateAutomaton#State]) =
+    aut match {
+      case InitFinalAutomaton(a, oldInit, oldFinal) =>
+        InitFinalAutomaton(a, oldInit, acceptingStates)
+      case _ =>
+        InitFinalAutomaton(aut, aut.initialState, acceptingStates)
+    }
+}
+
+case class InitFinalAutomaton[A <: AtomicStateAutomaton]
+                             (_underlying : A,
+                              val _initialState : A#State,
+                              val _acceptingStates : Set[A#State])
+     extends AtomicStateAutomatonAdapter[A](_underlying) {
+  import AtomicStateAutomatonAdapter.intern
+
+  override lazy val initialState = _initialState.asInstanceOf[State]
+
+  override lazy val states =
+    computeReachableStates(_initialState.asInstanceOf[State],
+                           _acceptingStates.asInstanceOf[Set[State]])
+
+  override lazy val acceptingStates =
+    _acceptingStates.asInstanceOf[Set[State]] & states
+
+  override def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
+    val _states = states
+    for (p@(s, _) <- underlying.outgoingTransitions(from);
+         if _states contains s)
+    yield p
+  }
 }
