@@ -292,7 +292,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   /**
    * Iterate over automaton states
    */
-  def states : Iterable[State] = underlying.getStates
+  lazy val states : Iterable[State] = underlying.getStates
 
   /**
    * The unique initial state
