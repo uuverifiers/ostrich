@@ -22,10 +22,12 @@ import ap.terfor.Term
 import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
-                                 HashSet => MHashSet}
+                                 HashSet => MHashSet, LinkedHashSet}
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
+
+  type ConflictSet = Seq[TermConstraint]
 
   abstract class ConstraintStore {
     def push : Unit
@@ -36,7 +38,7 @@ object Exploration {
      * Add new automata to the store, return a sequence of term constraints
      * in case the asserted constraints have become inconsistent
      */
-    def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]]
+    def assertConstraint(aut : Automaton) : Option[ConflictSet]
 
     def getContents : List[Automaton]
 
@@ -50,6 +52,8 @@ object Exploration {
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)]) : Exploration =
     new LazyExploration(funApps, initialConstraints)
+
+  private case class FoundModel(model : Map[Term, Seq[Int]]) extends Exception
 }
 
 /**
@@ -129,7 +133,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             (op, args) <- apps)
        yield (op, args, res)).toList
 
-    val res = dfExplore(funAppList)
+    val res = try {
+      dfExplore(funAppList)
+      None
+    } catch {
+      case FoundModel(model) => Some(model)
+    }
 
     println("nr of pre-op applications: " + preopCnt)
 
@@ -139,7 +148,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private var preopCnt = 0
 
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
-                      : Option[Map[Term, Seq[Int]]] = apps match {
+                      : ConflictSet = apps match {
 
     case List() => {
       // we are finished and just have to construct a model
@@ -156,50 +165,75 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                                 (resValue mkString ", "))
         model.put(res, resValue)
       }
-      Some(model.toMap)
+      throw FoundModel(model.toMap)
     }
     case (op, args, res) :: otherApps =>
-      dfExploreOp(op, args, constraintStores(res).getContents,
+      dfExploreOp(op, args, res, constraintStores(res).getContents,
                   otherApps)
   }
 
   private def dfExploreOp(op : PreOp,
                           args : Seq[Term],
+                          res : Term,
                           resConstraints : List[Automaton],
                           nextApps : List[(PreOp, Seq[Term], Term)])
-                        : Option[Map[Term, Seq[Int]]] = resConstraints match {
+                        : ConflictSet = resConstraints match {
     case List() =>
       dfExplore(nextApps)
-      
+
     case resAut :: otherAuts => {
       preopCnt = preopCnt + 1
       ap.util.Timeout.check
 
-      val argConstraints = for (a <- args) yield constraintStores(a).getContents
-      
-      Seqs.some(for (argCS <- op(argConstraints, resAut)) yield {
+      val argConstraints = for (a <- args) yield List[Automaton]() // constraintStores(a).getContents
+
+      val collectedConflicts = new LinkedHashSet[TermConstraint]
+
+      val newConstraintsIt = op(argConstraints, resAut)
+      while (newConstraintsIt.hasNext) {
+        val argCS = newConstraintsIt.next
+
         for (a <- args)
           constraintStores(a).push
 
-        var consistent = true
-        for ((a, aut) <- args zip argCS)
-          if (consistent)
-            constraintStores(a).assertConstraint(aut) match {
-              case Some(_) => consistent = false
-              case None    => // nothing
+        try {
+          val newConstraints = new MHashSet[TermConstraint]
+
+          var consistent = true
+          for ((a, aut) <- args zip argCS) {
+            newConstraints += TermConstraint(a, aut)
+
+            if (consistent)
+              constraintStores(a).assertConstraint(aut) match {
+                case Some(conflict) => {
+                  consistent = false
+
+                  assert(!Seqs.disjointSeq(newConstraints, conflict))
+                  collectedConflicts ++=
+                    (conflict.iterator filterNot newConstraints)
+                }
+                case None => // nothing
+              }
+          }
+
+          if (consistent) {
+            val conflict = dfExploreOp(op, args, res, otherAuts, nextApps)
+            if (Seqs.disjointSeq(newConstraints, conflict)) {
+              // we can backjump, because the found conflict does not depend
+              // on the considered function application
+//println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
+              return conflict
             }
+            collectedConflicts ++= (conflict.iterator filterNot newConstraints)
+          }
+        } finally {
+          for (a <- args)
+            constraintStores(a).pop
+        }
+      }
 
-        val res =
-          if (consistent)
-            dfExploreOp(op, args, otherAuts, nextApps)
-          else
-            None
-
-        for (a <- args)
-          constraintStores(a).pop
-
-        res
-      })
+      collectedConflicts += TermConstraint(res, resAut)
+      collectedConflicts.toSeq
     }
   }
 
@@ -228,7 +262,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     
     def pop : Unit = currentConstraint = constraintStack.pop
 
-    def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
+    def assertConstraint(aut : Automaton) : Option[ConflictSet] =
       if (aut.isEmpty) {
         Some(List(TermConstraint(t, aut)))
       } else {
@@ -324,7 +358,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       }
     }
 
-    def assertConstraint(aut : Automaton) : Option[Seq[TermConstraint]] =
+    def assertConstraint(aut : Automaton) : Option[ConflictSet] =
       if (constraintSet contains aut) {
         None
       } else {
