@@ -45,6 +45,8 @@ object SMTLIBMain {
         model = value
       case CmdlParser.Opt("assert", value) =>
         assertions = value
+      case CmdlParser.Opt("eager", value) =>
+        Flags.eagerAutomataOperations = value
       case CmdlParser.Opt("splitOpt", value) =>
         Flags.splitOptimization = value
       case CmdlParser.ValueOpt("modelChecker", mcs) =>

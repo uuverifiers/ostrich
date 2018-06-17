@@ -64,8 +64,11 @@ class PrepropSolver {
         Console.err.println("Warning: ignoring " + a)
     }
 
-//    val exploration = Exploration.eagerExp(funApps, regexes)
-    val exploration = Exploration.lazyExp(funApps, regexes)
+    val exploration =
+      if (Flags.eagerAutomataOperations)
+        Exploration.eagerExp(funApps, regexes)
+      else
+        Exploration.lazyExp(funApps, regexes)
 
     exploration.findModel match {
       case Some(model) => Some(model mapValues (_.toList))

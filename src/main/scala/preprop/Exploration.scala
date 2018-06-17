@@ -40,7 +40,15 @@ object Exploration {
      */
     def assertConstraint(aut : Automaton) : Option[ConflictSet]
 
+    /**
+     * Return some representation of the asserted constraints
+     */
     def getContents : List[Automaton]
+
+    /**
+     * Return all constraints that were asserted (without any modifications)
+     */
+    def getCompleteContents : List[Automaton]
 
     def getAcceptedWord : Seq[Int]
   }
@@ -185,7 +193,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       preopCnt = preopCnt + 1
       ap.util.Timeout.check
 
-      val argConstraints = for (a <- args) yield constraintStores(a).getContents
+      val argConstraints =
+        for (a <- args) yield constraintStores(a).getCompleteContents
 
       val collectedConflicts = new LinkedHashSet[TermConstraint]
 
@@ -200,10 +209,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           val newConstraints = new MHashSet[TermConstraint]
 
           var consistent = true
-          for ((a, aut) <- args zip argCS) {
-            newConstraints += TermConstraint(a, aut)
+          for ((a, aut) <- args zip argCS)
+            if (consistent) {
+              newConstraints += TermConstraint(a, aut)
 
-            if (consistent)
               constraintStores(a).assertConstraint(aut) match {
                 case Some(conflict) => {
                   consistent = false
@@ -214,14 +223,14 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                 }
                 case None => // nothing
               }
-          }
+            }
 
           if (consistent) {
             val conflict = dfExploreOp(op, args, res, otherAuts, nextApps)
             if (Seqs.disjointSeq(newConstraints, conflict)) {
               // we can backjump, because the found conflict does not depend
               // on the considered function application
-//println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
+println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
@@ -232,11 +241,18 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         }
       }
 
-      collectedConflicts += TermConstraint(res, resAut)
+      if (needCompleteContentsForConflicts)
+        collectedConflicts ++=
+          (for (aut <- constraintStores(res).getCompleteContents)
+           yield TermConstraint(res, aut))
+      else
+        collectedConflicts += TermConstraint(res, resAut)
+
       collectedConflicts ++=
         (for ((t, auts) <- args.iterator zip argDependencies.iterator;
               aut <- auts.iterator)
          yield TermConstraint(t, aut))
+
       collectedConflicts.toSeq
     }
   }
@@ -244,6 +260,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   //////////////////////////////////////////////////////////////////////////////
 
   protected def newStore(t : Term) : ConstraintStore
+
+  protected val needCompleteContentsForConflicts : Boolean
 
 }
 
@@ -258,13 +276,21 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
   import Exploration._
 
-  protected def newStore(t : Term) : ConstraintStore = new ConstraintStore {
-    private var currentConstraint : Option[Automaton] = None
-    private val constraintStack = new ArrayStack[Option[Automaton]]
+  protected val needCompleteContentsForConflicts : Boolean = true
 
-    def push : Unit = constraintStack push currentConstraint
+  protected def newStore(t : Term) : ConstraintStore = new ConstraintStore {
+    private val constraints = new ArrayBuffer[Automaton]
+    private var currentConstraint : Option[Automaton] = None
+    private val constraintStack = new ArrayStack[(Int, Option[Automaton])]
+
+    def push : Unit =
+      constraintStack push (constraints.size, currentConstraint)
     
-    def pop : Unit = currentConstraint = constraintStack.pop
+    def pop : Unit = {
+      val (oldSize, lastCC) = constraintStack.pop
+      constraints reduceToSize oldSize
+      currentConstraint = lastCC
+    }
 
     def assertConstraint(aut : Automaton) : Option[ConflictSet] =
       if (aut.isEmpty) {
@@ -274,13 +300,16 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           case Some(oldAut) => {
             val newAut = oldAut & aut
             if (newAut.isEmpty) {
-              Some(List(TermConstraint(t, oldAut), TermConstraint(t, aut)))
+              Some(for (a <- aut :: constraints.toList)
+                   yield TermConstraint(t, a))
             } else {
+              constraints += aut
               currentConstraint = Some(newAut)
               None
             }
           }
           case None => {
+            constraints += aut
             currentConstraint = Some(aut)
             None
           }
@@ -289,6 +318,8 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def getContents : List[Automaton] =
       currentConstraint.toList
+    def getCompleteContents : List[Automaton] =
+      constraints.toList
 
     def getAcceptedWord : Seq[Int] =
       currentConstraint match {
@@ -310,6 +341,8 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       extends Exploration(_funApps, _initialConstraints) {
 
   import Exploration._
+
+  protected val needCompleteContentsForConflicts : Boolean = false
 
   private val stores = new ArrayBuffer[Store]
 
@@ -405,6 +438,8 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       }
 
     def getContents : List[Automaton] =
+      constraints.toList
+    def getCompleteContents : List[Automaton] =
       constraints.toList
 
     def getAcceptedWord : Seq[Int] =

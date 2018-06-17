@@ -17,9 +17,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     (result split "\n") contains expResult
   }
 
-  def checkFile(filename : String, result : String) : Boolean =
+  def checkFile(filename : String, result : String,
+                extractOpts : String*) : Boolean =
     expectResult(result) {
-      SMTLIBMain.doMain(Array("+assert", filename), false)
+      SMTLIBMain.doMain((List("+assert", filename) ++ extractOpts).toArray,
+                        false)
     }
 
   property("concat-regex.smt2") =
@@ -30,6 +32,15 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex3.smt2", "sat")
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
+
+  property("concat-regex.smt2 eager") =
+    checkFile("tests/concat-regex.smt2", "sat", "+eager")
+  property("concat-regex2.smt2 eager") =
+    checkFile("tests/concat-regex2.smt2", "unsat", "+eager")
+  property("concat-regex3.smt2 eager") =
+    checkFile("tests/concat-regex3.smt2", "sat", "+eager")
+  property("concat-regex4.smt2 eager") =
+    checkFile("tests/concat-regex4.smt2", "sat", "+eager")
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")

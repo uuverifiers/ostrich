@@ -29,6 +29,10 @@ object Flags {
   // order in which solvers should be tried
   val enabledSolvers : Seq[Solver.Value] = List(Solver.preprop)
 
+  // Pre-image specific options
+
+  var eagerAutomataOperations = false
+
   // AFA-Sloth specific options
 
   object ModelChecker extends Enumeration {
