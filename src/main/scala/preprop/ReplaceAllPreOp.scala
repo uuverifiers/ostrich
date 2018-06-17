@@ -82,7 +82,8 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
      yield d).toList
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
+            resultConstraint : Automaton)
+          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
       case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
@@ -93,6 +94,7 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
     })
     val cg = CaleyGraph[rc.type](rc)
 
+    val res =
     for (box <- cg.getAcceptNodes(zcons).iterator;
          newYCon = AutomataUtils.replaceTransitions(rc, a, box.getEdges);
          if (AutomataUtils.
@@ -104,6 +106,8 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
       val newZCon = AutomataUtils.product(newZCons)
       Seq(newYCon, newZCon)
     }
+
+    (res, argumentConstraints)
   }
 }
 
@@ -327,7 +331,8 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
+            resultConstraint : Automaton)
+          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
       case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
@@ -341,6 +346,7 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     // y' = tran(y); x = replaceall(y', w, z)
     //
     val cg = CaleyGraph[rc.type](rc)
+    val res =
     for (box <- cg.getAcceptNodes(zcons).iterator;
          yprimeCons = AutomataUtils.replaceTransitions(
                         rc,
@@ -357,6 +363,8 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
       val newZCon = AutomataUtils.product(newZCons)
       Seq(newYCon, newZCon)
     }
+
+    (res, argumentConstraints)
   }
 }
 

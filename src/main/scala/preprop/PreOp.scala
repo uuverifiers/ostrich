@@ -37,10 +37,14 @@ trait PreOp {
    *     to a word accepted by the result constraint, then the word tuple
    *     is also accepted by one of the returned constraints</li>
    * </ul>
+   *
+   * If the result depends on the given <code>argumentConstraints</code>,
+   * then the used constraints also have to be returned as second result
+   * component.
    */
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
-          : Iterator[Seq[Automaton]]
+          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]])
 
   /**
    * Evaluate the described function

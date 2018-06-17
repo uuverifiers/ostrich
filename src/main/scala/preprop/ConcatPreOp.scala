@@ -28,18 +28,20 @@ object ConcatPreOp extends PreOp {
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
-          : Iterator[Seq[Automaton]] = resultConstraint match {
+          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) =
+    resultConstraint match {
 
-    case resultConstraint : AtomicStateAutomaton =>
-      // TODO: probably this won't process the states in deterministic order
-      for (s <- resultConstraint.states.iterator) yield {
-        List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
-             InitFinalAutomaton.setInitial(resultConstraint, s))
-      }
+      case resultConstraint : AtomicStateAutomaton =>
+        // TODO: probably this won't process the states in deterministic order
+        (for (s <- resultConstraint.states.iterator) yield {
+           List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
+                InitFinalAutomaton.setInitial(resultConstraint, s))
+         },
+         List())
 
-    case _ =>
-      throw new IllegalArgumentException
-  }
+      case _ =>
+        throw new IllegalArgumentException
+    }
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
     arguments(0) ++ arguments(1)

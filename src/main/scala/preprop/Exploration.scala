@@ -185,11 +185,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       preopCnt = preopCnt + 1
       ap.util.Timeout.check
 
-      val argConstraints = for (a <- args) yield List[Automaton]() // constraintStores(a).getContents
+      val argConstraints = for (a <- args) yield constraintStores(a).getContents
 
       val collectedConflicts = new LinkedHashSet[TermConstraint]
 
-      val newConstraintsIt = op(argConstraints, resAut)
+      val (newConstraintsIt, argDependencies) = op(argConstraints, resAut)
       while (newConstraintsIt.hasNext) {
         val argCS = newConstraintsIt.next
 
@@ -233,6 +233,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       }
 
       collectedConflicts += TermConstraint(res, resAut)
+      collectedConflicts ++=
+        (for ((t, auts) <- args.iterator zip argDependencies.iterator;
+              aut <- auts.iterator)
+         yield TermConstraint(t, aut))
       collectedConflicts.toSeq
     }
   }

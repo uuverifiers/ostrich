@@ -125,70 +125,70 @@ object ReplaceAllPreOpSpecification
 
   property("Simple single char test 1") = {
     // abcd = replaceall(x, e, bc)
-    ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("aed"))
     })
   }
 
   property("Simple single char test 2") = {
     // abcd = replaceall(x, e, bc)
-    ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("abcd"))
     })
   }
 
   property("Simple single char test 3") = {
     // abcd = replaceall(x, e, bc)
-    !ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    !ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("abd"))
     })
   }
 
   property("Simple word test 1") = {
     // abcd = replaceall(x, word, bc)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("awordd"))
     })
   }
 
   property("Simple word test 2") = {
     // abcd = replaceall(x, word, bc)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("abcd"))
     })
   }
 
   property("Simple word test 3") = {
     // abcd = replaceall(x, word, bc)
-    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("xbcx"))
     })
   }
 
   property("Simple word test 4") = {
     // abcd = replaceall(x, word, bc)
-    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut).exists(cons => {
+    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("word"))
     })
   }
 
   property("Double word test 1") = {
     // aa = replaceall(x, word, bc)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaAut).exists(cons => {
+    ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaAut)._1.exists(cons => {
       cons(0)(seq("wordword"))
     })
   }
 
   property("Double word test 3") = {
     // aa = replaceall(x, word, bc)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut).exists(cons => {
+    ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
       cons(0)(seq("wordword"))
     })
   }
 
   property("Double word test 4") = {
     // aa = replaceall(x, word, bc)
-    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut).exists(cons => {
+    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
       cons(0)(seq("ab"))
     })
   }
@@ -196,7 +196,7 @@ object ReplaceAllPreOpSpecification
   property("Regex simple test 1") = {
     // bc = replaceall(x, a*, bc)
     val aut = BricsAutomaton("a*")
-    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut).exists(cons => {
+    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
       cons(0)(seq("aaaa"))
     })
   }
@@ -204,7 +204,7 @@ object ReplaceAllPreOpSpecification
   property("Regex simple test 2") = {
     // bc = replaceall(x, a*, bc)
     val aut = BricsAutomaton("a*")
-    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut).exists(cons => {
+    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
       cons(0)(seq("bc"))
     })
   }
@@ -212,7 +212,7 @@ object ReplaceAllPreOpSpecification
   property("Regex simple test 3") = {
     // bc = replaceall(x, a*, bc)
     val aut = BricsAutomaton("a*")
-    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut).exists(cons => {
+    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
       cons(0)(seq("abc"))
     })
   }
@@ -220,7 +220,7 @@ object ReplaceAllPreOpSpecification
   property("Regex leftmost test 1") = {
     // dba = replaceall(x, aba, d)
     val aut = BricsAutomaton("aba")
-    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), dbaAut).exists(cons => {
+    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), dbaAut)._1.exists(cons => {
       cons(0)(seq("ababa"))
     })
   }
@@ -228,7 +228,7 @@ object ReplaceAllPreOpSpecification
   property("Regex leftmost test 2") = {
     // abd = replaceall(x, aba, d)
     val aut = BricsAutomaton("aba")
-    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), abdAut).exists(cons => {
+    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), abdAut)._1.exists(cons => {
       cons(0)(seq("ababa"))
     })
   }

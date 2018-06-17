@@ -33,11 +33,12 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
     throw new UnsupportedOperationException
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton) : Iterator[Seq[Automaton]] = {
+            resultConstraint : Automaton)
+          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
       case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
     }
-    Iterator(Seq(t.preImage(rc)))
+    (Iterator(Seq(t.preImage(rc))), List())
   }
 }
