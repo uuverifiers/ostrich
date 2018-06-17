@@ -82,6 +82,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     val argTermNum = new MHashMap[Term, Int]
     for ((_, _, res) <- funApps)
       argTermNum.put(res, 0)
+    for ((t, _) <- initialConstraints)
+      argTermNum.put(t, 0)
     for ((_, args, _) <- funApps; a <- args)
       argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
 
