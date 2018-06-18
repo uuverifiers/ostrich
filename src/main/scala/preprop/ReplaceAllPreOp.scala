@@ -36,7 +36,7 @@ object ReplaceAllPreOp {
     val charw = w.map(_ match {
       case Left(c) => c.toChar
       case _ =>
-        throw new IllegalArgumentException("ReplaceAllPreOp only supports single character replacement.")
+        throw new IllegalArgumentException("ReplaceAllPreOp only supports word or character replacement, got " + w)
     })
     ReplaceAllPreOp(charw)
   }

@@ -67,7 +67,12 @@ class PrepropSolver {
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
       case FunPred(`replaceall`) =>
         val b = (regex2AFA buildStrings a(1)).next
-        funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
+        if (b.forall(_.isLeft)) {
+          funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
+        } else {
+          val regex = (regex2AFA buildRegex a(1))
+          funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
+        }
       case FunPred(`reverse`) =>
         funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
