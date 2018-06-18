@@ -22,9 +22,11 @@ import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
                           ConcatPreOp, ReplaceAllPreOp, ReversePreOp}
 
 import ap.terfor.Term
+import ap.terfor.preds.PredConj
 import ap.proof.goal.Goal
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.breakOut
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 class PrepropSolver {
 
@@ -45,12 +47,20 @@ class PrepropSolver {
 
     println(atoms)
 
+    val concreteWords = findConcreteWords(atoms) match {
+      case Some(w) => w
+      case None => return None
+    }
+
     // extract regex constraints and function applications from the
     // literals
     val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
     val regexes = new ArrayBuffer[(Term, Automaton)]
 
     for (a <- atoms.positiveLits) a.pred match {
+      case FunPred(`wordChar` | `wordEps` | `wordCat`)
+        if concreteWords contains a.last =>
+        // nothing, can be ignored
       case `member` =>
         regexes += ((a.head, BricsAutomaton(a.last, atoms)))
       case FunPred(`wordCat`) =>
@@ -62,9 +72,33 @@ class PrepropSolver {
         funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
         // nothing
-      case _ =>
+      case p if (StringTheory.predicates contains p) =>
         Console.err.println("Warning: ignoring " + a)
+      case _ =>
+        // nothing
     }
+
+    for (a <- atoms.negativeLits) a.pred match {
+      case p if (StringTheory.predicates contains p) =>
+        Console.err.println("Warning: ignoring !" + a)
+      case _ =>
+        // nothing
+    }
+
+    val interestingTerms =
+      ((for ((t, _) <- regexes.iterator) yield t) ++
+       (for ((_, args, res) <- funApps.iterator;
+             t <- args.iterator ++ Iterator(res)) yield t)).toSet
+
+    for (t <- interestingTerms)
+      (concreteWords get t) match {
+        case Some(w) => {
+          val str : String = w.map(i => i.toChar)(breakOut)
+          regexes += ((t, BricsAutomaton fromString str))
+        }
+        case None =>
+          // nothing
+      }
 
     val exploration =
       if (Flags.eagerAutomataOperations)
@@ -73,9 +107,50 @@ class PrepropSolver {
         Exploration.lazyExp(funApps, regexes)
 
     exploration.findModel match {
-      case Some(model) => Some(model mapValues (_.toList))
+      case Some(model) => Some((model mapValues (_.toList)) ++
+                               (concreteWords mapValues (_.toList)))
       case None        => None
     }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  private object Inconsistent extends Exception
+
+  private def findConcreteWords(atoms : PredConj)
+                              : Option[Map[Term, Seq[Int]]] = try {
+    val res = new MHashMap[Term, Seq[Int]]
+
+    def assign(t : Term, w : Seq[Int]) : Unit =
+      (res get t) match {
+        case Some(u) =>
+          if (u != w)
+            // inconsistent words
+            throw Inconsistent
+        case None =>
+          res.put(t, w)
+      }
+
+    for (a <- atoms positiveLitsWithPred p(wordEps))
+      assign(a.last, List())
+    for (a <- atoms positiveLitsWithPred p(wordChar)) {
+      if (!a.head.isConstant)
+        throw new Exception("Cannot handle " + a)
+      assign(a.last, List(a.head.constant.intValueSafe))
+    }
+
+    var oldSize = 0
+    while (res.size > oldSize) {
+      oldSize = res.size
+
+      for (a <- atoms positiveLitsWithPred p(wordCat))
+        if ((res contains a(0)) && (res contains a(1)))
+          assign(a(2), res(a(0)) ++ res(a(1)))
+    }
+
+    Some(res.toMap)
+  } catch {
+    case Inconsistent => None
   }
 
 }
