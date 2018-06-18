@@ -58,8 +58,11 @@ class PrepropSolver {
     val regexes = new ArrayBuffer[(Term, Automaton)]
 
     for (a <- atoms.positiveLits) a.pred match {
-      case FunPred(`wordChar` | `wordEps` | `wordCat`)
+      case FunPred(`wordChar` | `wordEps`)
         if concreteWords contains a.last =>
+        // nothing, can be ignored
+      case FunPred(`wordCat`)
+        if a forall { t => concreteWords contains t } =>
         // nothing, can be ignored
       case `member` =>
         regexes += ((a.head, BricsAutomaton(a.last, atoms)))
