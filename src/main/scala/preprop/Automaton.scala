@@ -244,6 +244,11 @@ trait AtomicStateAutomatonBuilder[State, TLabel] {
   val LabelOps : TLabelOps[TLabel]
 
   /**
+   * The initial state of the automaton being built
+   */
+  def initialState : State
+
+  /**
    * Create a fresh state that can be used in the automaton
    */
   def getNewState : State

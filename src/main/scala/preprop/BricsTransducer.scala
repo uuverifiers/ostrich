@@ -201,7 +201,7 @@ class BricsTransducerBuilder
   }
   val operations = new MHashMap[(BState, BTransition), OutputOp]
 
-  def initialState : BricsAutomaton#State = aut.initialState
+  lazy val initialState : BricsAutomaton#State = aut.initialState
 
   def getNewState : BricsAutomaton#State = new BState
 

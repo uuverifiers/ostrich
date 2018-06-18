@@ -341,11 +341,16 @@ class BricsAutomatonBuilder
                                         BricsAutomaton#TLabel] {
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
-  var aut = {
+  val aut : BricsAutomaton = {
     val baut = new BAutomaton
     baut.setDeterministic(false)
     new BricsAutomaton(baut)
   }
+
+  /**
+   * The initial state of the automaton being built
+   */
+  def initialState : BricsAutomaton#State = aut.initialState
 
   /**
    * Create a fresh state that can be used in the automaton

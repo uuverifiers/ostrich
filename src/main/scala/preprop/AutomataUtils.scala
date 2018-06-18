@@ -247,4 +247,26 @@ object AutomataUtils {
     val res = builder.getAutomaton
     res
   }
+
+  /**
+   * Build automaton accepting reverse language of given automaton
+   */
+  def reverse(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
+    val builder = aut.getBuilder
+
+    val smap : Map[aut.State, aut.State] =
+      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+
+    val initState = builder.initialState
+    builder.setAccept(smap(aut.initialState), true)
+
+    val autAccept = aut.acceptingStates
+    for ((s1, l, s2) <- aut.transitions) {
+      if (autAccept contains s2)
+        builder.addTransition(initState, l, smap(s1))
+      builder.addTransition(smap(s2), l, smap(s1))
+    }
+
+    builder.getAutomaton
+  }
 }

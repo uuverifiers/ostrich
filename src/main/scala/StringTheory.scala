@@ -36,7 +36,7 @@ import scala.collection.mutable.{ArrayBuffer, LinkedHashMap, LinkedHashSet, Hash
 object StringTheory extends Theory {
 
   override def toString = "StringTheory"
-  
+
   // TODO: use proper sorts for the operations
 
   val wordEps    = new IFunction("wordEps",    0, true, false)
@@ -137,13 +137,13 @@ object StringTheory extends Theory {
       case IFunApp(`rexEmpty`, _) => rexEps()
       case t                      => rexStar(t)
     }
-  } 
+  }
 
   //////////////////////////////////////////////////////////////////////////////
 
   val functions = List(wordEps, wordCat, wordChar, wordLen, wordSlice,
                        rexEmpty, rexEps, rexSigma, rexCat, rexChar,
-                       rexUnion, rexStar, rexNeg, rexRange, replaceall, replace)
+                       rexUnion, rexStar, rexNeg, rexRange, replaceall, replace, reverse)
 
   val iAxioms = {
     import IExpression._
@@ -546,7 +546,7 @@ object StringTheory extends Theory {
                   Plugin.AddFormula(!conj(newAtoms))))
       else
         None
-    
+
   }
 
   //////////////////////////////////////////////////////////////////////////////

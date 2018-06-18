@@ -19,7 +19,7 @@
 package strsolver
 
 import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
-                          ConcatPreOp, ReplaceAllPreOp}
+                          ConcatPreOp, ReplaceAllPreOp, ReversePreOp}
 
 import ap.terfor.Term
 import ap.proof.goal.Goal
@@ -28,7 +28,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class PrepropSolver {
 
-  import StringTheory.{member, replaceall, replace,
+  import StringTheory.{member, replaceall, replace, reverse,
                        wordEps, wordCat, wordChar, wordDiff,
                        rexEmpty, rexEps, rexSigma,
                        rexStar, rexUnion, rexChar, rexCat, rexNeg, rexRange,
@@ -58,6 +58,8 @@ class PrepropSolver {
       case FunPred(`replaceall`) =>
         val b = (regex2AFA buildStrings a(1)).next
         funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
+      case FunPred(`reverse`) =>
+        funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
         // nothing
       case _ =>

@@ -46,7 +46,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/test-replace.smt2", "sat")
   property("test-replace2.smt2") =
     checkFile("tests/test-replace2.smt2", "unsat")
-    
+
   property("test-replace3.smt2") =
     checkFile("tests/test-replace3.smt2", "sat")
   property("test-replace4.smt2") =
@@ -60,4 +60,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("membership_427.smt2") =
     checkFile("tests/membership_427.smt2", "unsat")
 
+  property("test-reverse.smt2") =
+    checkFile("tests/test-reverse.smt2", "sat")
+  property("test-reverse2.smt2") =
+    checkFile("tests/test-reverse2.smt2", "unsat")
 }
