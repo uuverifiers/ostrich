@@ -276,8 +276,13 @@ object StringTheory extends Theory {
     private val afaSolver = new AFASolver
     private val prepropSolver = new PrepropSolver
 
+    private val modelCache =
+      new ap.util.LRUCache[Conjunction,
+                           Option[Map[Term, List[Either[Int, Term]]]]](3)
+
     private def findStringModel(goal : Goal)
                               : Option[Map[Term, List[Either[Int, Term]]]] =
+      modelCache(goal.facts) {
             // TODO: run solvers after each other
             Flags.enabledSolvers.head match {
               case Flags.Solver.afa_mc =>
@@ -287,6 +292,7 @@ object StringTheory extends Theory {
                   m mapValues (w => w map (Left(_)))
                 }
             }
+      }
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {

@@ -57,6 +57,12 @@ object BricsAutomaton {
     new BricsAutomaton(new RegExp(pattern).toAutomaton(true))
 
   /**
+   * Build brics automaton that accepts exactly the given word
+   */
+  def fromString(str : String) : BricsAutomaton =
+    new BricsAutomaton(BasicAutomata makeString str)
+
+  /**
    * A new automaton that accepts any string
    */
   def makeAnyString() : BricsAutomaton =
