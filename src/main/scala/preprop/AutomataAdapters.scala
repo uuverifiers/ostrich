@@ -19,7 +19,8 @@
 package strsolver.preprop
 
 import scala.collection.mutable.{HashMap => MHashMap, ArrayStack,
-                                 HashSet => MHashSet}
+                                 HashSet => MHashSet, MultiMap,
+                                 Set => MSet}
 import scala.collection.{Set => GSet}
 
 object AtomicStateAutomatonAdapter {
@@ -183,5 +184,43 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     for (p@(s, _) <- underlying.outgoingTransitions(from);
          if _states contains s)
     yield p
+  }
+}
+
+
+/**
+ * Representation of A with char-transitions removed and replaced with
+ * s -- char --> s' for all (s, s') in replacements
+ */
+case class ReplaceCharAutomaton[A <: AtomicStateAutomaton]
+                               (_underlying : A,
+                                private val char: Char,
+                                private val replacements : Iterable[(A#State, A#State)])
+     extends AtomicStateAutomatonAdapter[A](_underlying) {
+  import AtomicStateAutomatonAdapter.intern
+
+  private lazy val replacementMap =
+    replacements.foldLeft(new MHashMap[State, MSet[State]]
+                                 with MultiMap[State, State])({
+      case (m, (s1, s2)) => m.addBinding(s1.asInstanceOf[State],
+                                         s2.asInstanceOf[State])
+    })
+
+  override def outgoingTransitions(from : State)
+      : Iterator[(State, TLabel)] = {
+    val itOrig =
+      for ((s, lbl) <- underlying.outgoingTransitions(from);
+           newLbl <- underlying.LabelOps.subtractLetter(char, lbl))
+        yield (s, newLbl)
+
+    if (replacementMap contains from) {
+        val aLbl = underlying.LabelOps.singleton(char)
+        val itNew =
+          for (s <- replacementMap(from).iterator)
+            yield (s, aLbl)
+        itOrig ++ itNew
+    } else {
+      itOrig
+    }
   }
 }

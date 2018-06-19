@@ -227,26 +227,8 @@ object AutomataUtils {
   def replaceTransitions[A <: AtomicStateAutomaton](
         aut : A,
         a : Char,
-        states : Iterator[(A#State, A#State)]) : AtomicStateAutomaton = {
-    val builder = aut.getBuilder
-    val smap : Map[A#State, aut.State] =
-      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
-
-    for ((s1, lbl, s2) <- aut.transitions)
-      for (newLbl <- aut.LabelOps.subtractLetter(a, lbl))
-        builder.addTransition(smap(s1), newLbl, smap(s2))
-
-    val aLbl = aut.LabelOps.singleton(a)
-    for ((s1, s2) <- states)
-      builder.addTransition(smap(s1), aLbl, smap(s2))
-
-    builder.setInitialState(smap(aut.initialState))
-    for (f <- aut.acceptingStates)
-      builder.setAccept(smap(f), true)
-
-    val res = builder.getAutomaton
-    res
-  }
+        states : Iterable[(A#State, A#State)]) : AtomicStateAutomaton =
+    new ReplaceCharAutomaton(aut, a, states)
 
   /**
    * Build automaton accepting reverse language of given automaton
