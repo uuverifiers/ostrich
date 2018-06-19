@@ -29,7 +29,7 @@ object ReversePreOp extends PreOp {
     resultConstraint match {
       case resultConstraint : AtomicStateAutomaton =>
         // TODO: what should the second element be?
-        (Iterator(Seq(AutomataUtils.reverse(resultConstraint))), List())
+        (Iterator(Seq(ReverseAutomaton(resultConstraint))), List())
 
       case _ =>
         throw new IllegalArgumentException

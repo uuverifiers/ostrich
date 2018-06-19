@@ -187,42 +187,38 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
   }
 }
 
-
 /**
- * Representation of A with char-transitions removed and replaced with
- * s -- char --> s' for all (s, s') in replacements
+ * Case class representation of AutomataUtils.replaceTransitions
  */
 case class ReplaceCharAutomaton[A <: AtomicStateAutomaton]
-                               (_underlying : A,
-                                private val char: Char,
-                                private val replacements : Iterable[(A#State, A#State)])
-     extends AtomicStateAutomatonAdapter[A](_underlying) {
-  import AtomicStateAutomatonAdapter.intern
+                               (aut : A,
+                                a : Char,
+                                newTrans : Iterable[(A#State, A#State)])
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.replaceTransitions(aut, a, newTrans)
+    ) { }
 
-  private lazy val replacementMap =
-    replacements.foldLeft(new MHashMap[State, MSet[State]]
-                                 with MultiMap[State, State])({
-      case (m, (s1, s2)) => m.addBinding(s1.asInstanceOf[State],
-                                         s2.asInstanceOf[State])
-    })
+/**
+ * Case class representation of AutomataUtils.product
+ */
+case class ProductAutomaton(auts : Seq[AtomicStateAutomaton])
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.product(auts)
+    ) { }
 
-  override lazy val labelEnumerator = underlying.labelEnumerator.split(char)
+/**
+ * Case class representation of tran.preImage(aut)
+ */
+case class PreImageAutomaton(tran : AtomicStateTransducer,
+                             targ : AtomicStateAutomaton)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      tran.preImage(targ)
+    ) { }
 
-  override def outgoingTransitions(from : State)
-      : Iterator[(State, TLabel)] = {
-    val itOrig =
-      for ((s, lbl) <- underlying.outgoingTransitions(from);
-           newLbl <- underlying.LabelOps.subtractLetter(char, lbl))
-        yield (s, newLbl)
-
-    if (replacementMap contains from) {
-        val aLbl = underlying.LabelOps.singleton(char)
-        val itNew =
-          for (s <- replacementMap(from).iterator)
-            yield (s, aLbl)
-        itOrig ++ itNew
-    } else {
-      itOrig
-    }
-  }
-}
+/**
+ * Case class representation of AutomataUtils.reverse
+ */
+case class ReverseAutomaton(aut : AtomicStateAutomaton)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.reverse(aut)
+    ) { }

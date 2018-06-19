@@ -96,14 +96,12 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 
     val res =
     for (box <- cg.getAcceptNodes(zcons).iterator;
-         newYCon = AutomataUtils.replaceTransitions(rc, a, box.getEdges);
-         if (AutomataUtils.
-               areConsistentAutomata(newYCon +: argumentConstraints(0)))) yield {
+         newYCon = ReplaceCharAutomaton(rc, a, box.getEdges)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
         new InitFinalAutomaton(rc, q1, fin)
       }).toSeq
-      val newZCon = AutomataUtils.product(newZCons)
+      val newZCon = ProductAutomaton(newZCons)
       Seq(newYCon, newZCon)
     }
 
@@ -348,19 +346,17 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     val cg = CaleyGraph[rc.type](rc)
     val res =
     for (box <- cg.getAcceptNodes(zcons).iterator;
-         yprimeCons = AutomataUtils.replaceTransitions(
+         yprimeCons = ReplaceCharAutomaton(
                         rc,
                         rc.LabelOps.internalChar.toChar,
                         box.getEdges
                       );
-         newYCon = tran.preImage(yprimeCons);
-         if (AutomataUtils.
-               areConsistentAutomata(newYCon +: argumentConstraints(0)))) yield {
+         newYCon = PreImageAutomaton(tran, yprimeCons)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
         new InitFinalAutomaton(rc, q1, fin)
       }).toSeq
-      val newZCon = AutomataUtils.product(newZCons)
+      val newZCon = ProductAutomaton(newZCons)
       Seq(newYCon, newZCon)
     }
 
