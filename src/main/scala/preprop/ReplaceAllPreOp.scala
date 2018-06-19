@@ -96,9 +96,7 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 
     val res =
     for (box <- cg.getAcceptNodes(zcons).iterator;
-         newYCon = AutomataUtils.replaceTransitions(rc, a, box.getEdges);
-         if (AutomataUtils.
-               areConsistentAutomata(newYCon +: argumentConstraints(0)))) yield {
+         newYCon = AutomataUtils.replaceTransitions(rc, a, box.getEdges)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
         new InitFinalAutomaton(rc, q1, fin)
@@ -353,9 +351,7 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
                         rc.LabelOps.internalChar.toChar,
                         box.getEdges
                       );
-         newYCon = tran.preImage(yprimeCons);
-         if (AutomataUtils.
-               areConsistentAutomata(newYCon +: argumentConstraints(0)))) yield {
+         newYCon = tran.preImage(yprimeCons)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
         new InitFinalAutomaton(rc, q1, fin)

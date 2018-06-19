@@ -49,6 +49,11 @@ trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
    * language.  I.e. Pre_T(aut) for transducer T
    */
   def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton
+
+  /**
+   * Iterate over outgoing transition with operation
+   */
+  def outgoingTransitionsOps(from : State) : Iterator[(State, TLabel, OutputOp)]
 }
 
 trait AtomicStateTransducerBuilder[State, TLabel] {

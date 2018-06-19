@@ -46,6 +46,13 @@ class BricsTransducer(override val underlying : BAutomaton,
                       val operations : Map[(BState, BTransition), OutputOp])
   extends BricsAutomaton(underlying) with AtomicStateTransducer {
 
+  /**
+   * Iterate over outgoing transition with operation
+   */
+  def outgoingTransitionsOps : Iterator[(State, TLabel, OutputOp)] =
+    for (t <- from.getTransitions.iterator)
+    yield (t.getDest, (t.getMin, t.getMax), operations((from, t)))
+
   def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
     val preBuilder = aut.getBuilder
 
