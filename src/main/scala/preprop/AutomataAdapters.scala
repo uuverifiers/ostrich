@@ -206,6 +206,8 @@ case class ReplaceCharAutomaton[A <: AtomicStateAutomaton]
                                          s2.asInstanceOf[State])
     })
 
+  override lazy val labelEnumerator = underlying.labelEnumerator.split(char)
+
   override def outgoingTransitions(from : State)
       : Iterator[(State, TLabel)] = {
     val itOrig =

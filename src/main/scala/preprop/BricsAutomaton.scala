@@ -198,6 +198,13 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
       toIterable
   }
 
+  /**
+   * Takes disjoint enumeration and splits it at the point defined by
+   * Char.  E.g. [1,10] split at 5 is [1,4][5][6,10]
+   */
+  def split(a : Char) : TLabelEnumerator[(Char, Char)] =
+    new BricsTLabelEnumerator(disjointLabels.iterator ++ Iterator((a, a)))
+
   private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
     var disjoint = new MTreeSet[(Char, Char)]()
 

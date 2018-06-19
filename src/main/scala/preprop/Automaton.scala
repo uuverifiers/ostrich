@@ -154,6 +154,12 @@ trait TLabelEnumerator[TLabel] {
    * iterate over disjoint labels of the automaton that overlap with lbl
    */
   def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel]
+
+  /**
+   * Takes disjoint enumeration and splits it at the point defined by
+   * Char.  E.g. [1,10] split at 5 is [1,4][5][6,10]
+   */
+  def split(a : Char) : TLabelEnumerator[TLabel]
 }
 
 /**
