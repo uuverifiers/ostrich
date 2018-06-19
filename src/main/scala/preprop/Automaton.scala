@@ -118,6 +118,16 @@ trait TLabelOps[TLabel] {
    * [1,4],[6,10]
    */
   def subtractLetter(a : Char, l : TLabel) : Iterable[TLabel]
+
+  /**
+   * Shift characters by n, do not wrap.  E.g. [1,2].shift 3 = [4,5]
+   */
+  def shift(lbl : TLabel, n : Int) : TLabel
+
+  /**
+   * Get representation of interval [min,max]
+   */
+  def interval(min : Char, max : Char) : TLabel
 }
 
 /**

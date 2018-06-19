@@ -140,6 +140,19 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
       Seq(lbl)
     }
   }
+
+  /**
+   * Shift characters by n, do not wrap.  E.g. [1,2].shift 3 = [4,5]
+   */
+  def shift(lbl : (Char, Char), n : Int) : (Char, Char) = {
+    val (cmin, cmax) = lbl
+    (Math.max(minChar, cmin - n).toChar, Math.min(maxChar, cmax - n).toChar)
+  }
+
+  /**
+   * Get representation of interval [min,max]
+   */
+  def interval(min : Char, max : Char) : (Char, Char) = (min, max)
 }
 
 class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
