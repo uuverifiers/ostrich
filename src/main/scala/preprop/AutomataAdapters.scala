@@ -19,7 +19,8 @@
 package strsolver.preprop
 
 import scala.collection.mutable.{HashMap => MHashMap, ArrayStack,
-                                 HashSet => MHashSet}
+                                 HashSet => MHashSet, MultiMap,
+                                 Set => MSet}
 import scala.collection.{Set => GSet}
 
 object AtomicStateAutomatonAdapter {
@@ -185,3 +186,39 @@ case class InitFinalAutomaton[A <: AtomicStateAutomaton]
     yield p
   }
 }
+
+/**
+ * Case class representation of AutomataUtils.replaceTransitions
+ */
+case class ReplaceCharAutomaton[A <: AtomicStateAutomaton]
+                               (aut : A,
+                                a : Char,
+                                newTrans : Iterable[(A#State, A#State)])
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.replaceTransitions(aut, a, newTrans)
+    ) { }
+
+/**
+ * Case class representation of AutomataUtils.product
+ */
+case class ProductAutomaton(auts : Seq[AtomicStateAutomaton])
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.product(auts)
+    ) { }
+
+/**
+ * Case class representation of tran.preImage(aut)
+ */
+case class PreImageAutomaton(tran : AtomicStateTransducer,
+                             targ : AtomicStateAutomaton)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      tran.preImage(targ)
+    ) { }
+
+/**
+ * Case class representation of AutomataUtils.reverse
+ */
+case class ReverseAutomaton(aut : AtomicStateAutomaton)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.reverse(aut)
+    ) { }

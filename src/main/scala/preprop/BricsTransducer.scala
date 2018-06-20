@@ -26,7 +26,7 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
                            Transition => BTransition}
 
-import scala.collection.JavaConversions.iterableAsScalaIterable
+import scala.collection.JavaConversions.{iterableAsScalaIterable,asJavaCollection}
 
 object BricsTransducer {
   def apply() : BricsTransducer =
@@ -47,20 +47,15 @@ class BricsTransducer(override val underlying : BAutomaton,
   extends BricsAutomaton(underlying) with AtomicStateTransducer {
 
   def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
-    val baut : BricsAutomaton = aut match {
-      case baut : BricsAutomaton => baut
-      case _ => throw new IllegalArgumentException("BricsTransducers can only compute pre of a BricsAutomaton")
-    }
-
-    val preBuilder = baut.getBuilder
+    val preBuilder = aut.getBuilder
 
     // map states of pre-image aut to state of transducer and state of
     // aut
-    val sMap = new MHashMap[State, (State, State)]
-    val sMapRev = new MHashMap[(State, State), State]
+    val sMap = new MHashMap[aut.State, (State, aut.State)]
+    val sMapRev = new MHashMap[(State, aut.State), aut.State]
 
     val initState = underlying.getInitialState
-    val initAutState = baut.initialState
+    val initAutState = aut.initialState
     val newInitState = preBuilder.getNewState
     preBuilder setInitialState newInitState
 
@@ -68,7 +63,7 @@ class BricsTransducer(override val underlying : BAutomaton,
     sMapRev += (initState, initAutState) -> newInitState
 
     // transducer state, automaton state
-    def getState(ts : State, as : State) = {
+    def getState(ts : State, as : aut.State) = {
       sMapRev.getOrElse((ts, as), {
         val ps = preBuilder.getNewState
         sMapRev += ((ts, as) -> ps)
@@ -85,7 +80,7 @@ class BricsTransducer(override val underlying : BAutomaton,
     case object Op extends Mode
     // .. or working through post part, once done any new transition
     // added to pre-image aut should have label lbl
-    case class Post(u : Seq[Char], lbl : TLabel) extends Mode
+    case class Post(u : Seq[Char], lbl : aut.TLabel) extends Mode
 
     // (ps, ts, t, as, m)
     // state of pre aut to add new transitions from
@@ -93,19 +88,23 @@ class BricsTransducer(override val underlying : BAutomaton,
     // transition being processed
     // current state of target aut reached
     // mode as above
-    val worklist = new MStack[(State, State, BTransition, State, Mode)]
-    val seenlist = new MHashSet[(State, State, BTransition, State, Mode)]
+    val worklist = new MStack[(aut.State, State, BTransition, aut.State, Mode)]
+    val seenlist = new MHashSet[(aut.State, State, BTransition, aut.State, Mode)]
 
-    def addWork(ps : State , ts : State, t : BTransition, as : State, m : Mode) {
+    def addWork(ps : aut.State ,
+                ts : State,
+                t : BTransition,
+                as : aut.State,
+                m : Mode) {
       if (!seenlist.contains((ps, ts, t, as, m))) {
         seenlist += ((ps, ts, t, as, m))
         worklist.push((ps, ts, t, as, m))
       }
     }
 
-    def reachStates(ts : State, as : State) {
+    def reachStates(ts : State, as : aut.State) {
       val ps = getState(ts, as)
-      if (isAccept(ts) && baut.isAccept(as))
+      if (isAccept(ts) && aut.isAccept(as))
         preBuilder.setAccept(ps, true)
 
       for (t <- ts.getTransitions) {
@@ -117,7 +116,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       }
     }
 
-    reachStates(initialState, baut.initialState)
+    reachStates(initialState, aut.initialState)
 
     while (!worklist.isEmpty) {
       // pre aut state, transducer state, automaton state
@@ -130,8 +129,8 @@ class BricsTransducer(override val underlying : BAutomaton,
         case Pre(u) if !u.isEmpty => {
           val a = u.head
           val rest = u.tail
-          for ((asNext, albl) <- baut.outgoingTransitions(as)) {
-            if (LabelOps.labelContains(a, albl)) {
+          for ((asNext, albl) <- aut.outgoingTransitions(as)) {
+            if (aut.LabelOps.labelContains(a, albl)) {
               if (!rest.isEmpty) {
                 addWork(ps, ts, t, asNext, Pre(rest))
               } else {
@@ -144,16 +143,15 @@ class BricsTransducer(override val underlying : BAutomaton,
           val tOp = operations(ts, t)
           tOp.op match {
             case Delete => {
-              val lbl = (t.getMin, t.getMax)
+              val lbl = aut.LabelOps.interval(t.getMin, t.getMax)
               addWork(ps, ts, t, as, Post(tOp.postW, lbl))
             }
             case Plus(n) => {
-              for ((asNext, (amin, amax)) <- baut.outgoingTransitions(as)) {
-                val apreMin = Math.max(LabelOps.minChar, amin - n).toChar
-                val apreMax = Math.min(LabelOps.maxChar, amax - n).toChar
-                if (LabelOps.isNonEmptyLabel((apreMin, apreMax))) {
-                  for (preLbl <- LabelOps.intersectLabels((apreMin, apreMax),
-                                                          (t.getMin, t.getMax))) {
+              for ((asNext, albl) <- aut.outgoingTransitions(as)) {
+                val shftLbl = aut.LabelOps.shift(albl, n)
+                if (aut.LabelOps.isNonEmptyLabel(shftLbl)) {
+                  val tlbl = aut.LabelOps.interval(t.getMin, t.getMax)
+                  for (preLbl <- aut.LabelOps.intersectLabels(shftLbl, tlbl)) {
                     addWork(ps, ts, t, asNext, Post(tOp.postW, preLbl))
                   }
                 }
@@ -164,8 +162,8 @@ class BricsTransducer(override val underlying : BAutomaton,
         case Post(v, lbl) if !v.isEmpty => {
           val a = v.head
           val rest = v.tail
-          for ((asNext, albl) <- baut.outgoingTransitions(as)) {
-            if (LabelOps.labelContains(a, albl))
+          for ((asNext, albl) <- aut.outgoingTransitions(as)) {
+            if (aut.LabelOps.labelContains(a, albl))
               addWork(ps, ts, t, asNext, Post(rest, lbl))
           }
         }
@@ -180,7 +178,8 @@ class BricsTransducer(override val underlying : BAutomaton,
       }
     }
 
-    preBuilder.getAutomaton
+    val res = preBuilder.getAutomaton
+    res
   }
 
   override def toString = {
@@ -219,7 +218,14 @@ class BricsTransducerBuilder
   }
 
   def getTransducer = {
-    // do not restore invariant since will break operations map
+    // restrict to states that can reach accept
+    val liveStates = aut.underlying.getLiveStates
+    for (s <- liveStates) {
+      val toRemove = s.getTransitions.filter(t => !liveStates.contains(t.getDest))
+      s.getTransitions.removeAll(toRemove)
+      for (t <- toRemove)
+        operations -= ((s, t))
+    }
     new BricsTransducer(aut.underlying, operations.toMap)
   }
 }

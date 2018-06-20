@@ -37,7 +37,7 @@ object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
       that.underlying
-    case that : InitFinalAutomaton[_] =>
+    case that : AtomicStateAutomatonAdapter[_] =>
       toBAutomaton(that.internalise)
     case _ =>
       throw new IllegalArgumentException
@@ -140,6 +140,19 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
       Seq(lbl)
     }
   }
+
+  /**
+   * Shift characters by n, do not wrap.  E.g. [1,2].shift 3 = [4,5]
+   */
+  def shift(lbl : (Char, Char), n : Int) : (Char, Char) = {
+    val (cmin, cmax) = lbl
+    (Math.max(minChar, cmin - n).toChar, Math.min(maxChar, cmax - n).toChar)
+  }
+
+  /**
+   * Get representation of interval [min,max]
+   */
+  def interval(min : Char, max : Char) : (Char, Char) = (min, max)
 }
 
 class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
@@ -184,6 +197,13 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
       to((lMax, Char.MaxValue)).
       toIterable
   }
+
+  /**
+   * Takes disjoint enumeration and splits it at the point defined by
+   * Char.  E.g. [1,10] split at 5 is [1,4][5][6,10]
+   */
+  def split(a : Char) : TLabelEnumerator[(Char, Char)] =
+    new BricsTLabelEnumerator(disjointLabels.iterator ++ Iterator((a, a)))
 
   private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
     var disjoint = new MTreeSet[(Char, Char)]()

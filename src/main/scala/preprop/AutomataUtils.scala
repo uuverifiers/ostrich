@@ -18,9 +18,6 @@
 
 package strsolver.preprop
 
-import dk.brics.automaton.{BasicAutomata, BasicOperations,
-                           Automaton => BAutomaton, State => BState, Transition}
-
 import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
                                  Stack => MStack, HashMap => MHashMap,
                                  ArrayBuffer}
@@ -141,77 +138,80 @@ object AutomataUtils {
   def productWithMap(auts : Seq[AtomicStateAutomaton]) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
+    if (auts.size == 0)
+      return (BricsAutomaton.makeAnyString, Map.empty[Any, Seq[Any]])
+
     if (auts.size == 1)
       return (auts.head,
               (for (s <- auts.head.states) yield (s -> List(s))).toMap)
 
     val autsList = auts.toList
 
-    val newBAut = new BAutomaton
-    val initBState = newBAut.getInitialState
-    val sMap = new MHashMap[BState, List[Any]]
-    val sMapRev = new MHashMap[List[Any], BState]
+    val head = auts.head
+    val builder = head.getBuilder
+    val initState = builder.initialState
+    val sMap = new MHashMap[head.State, List[Any]]
+    val sMapRev = new MHashMap[List[Any], head.State]
 
     val initStates = (auts.map(_.initialState)).toList
-    sMap += initBState -> initStates
-    sMapRev += initStates -> initBState
+    sMap += initState -> initStates
+    sMapRev += initStates -> initState
 
-    val worklist = new MStack[(BState, List[Any])]
-    worklist push ((initBState, initStates))
+    val worklist = new MStack[(head.State, List[Any])]
+    worklist push ((initState, initStates))
 
     val seenlist = MHashSet[List[Any]]()
     seenlist += initStates
 
-    initBState.setAccept(auts forall { aut => aut.isAccept(aut.initialState) })
+    builder.setAccept(initState, auts forall { aut => aut.isAccept(aut.initialState) })
 
     while (!worklist.isEmpty) {
-      val (bs, ss) = worklist.pop()
+      val (ps, ss) = worklist.pop()
 
       // collects transitions from (s, ss)
       // min, max is current range
       // sp and ssp are s' and ss' (ss' is reversed for efficiency)
       // ss are elements of ss from which a transition is yet to be
       // searched
-      def addTransitions(curMin : Char, curMax : Char,
+      def addTransitions(lbl : head.TLabel,
                          ssp : List[Any],
                          remAuts : List[AtomicStateAutomaton],
                          ss : List[Any]) : Unit = ss match {
         case List() =>  {
             val nextState = ssp.reverse
             if (!seenlist.contains(nextState)) {
-                val nextBState = new BState
-                nextBState.setAccept(
-                  (auts.iterator zip nextState.iterator) forall {
-                    case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
-                  })
-                sMap += nextBState -> nextState
-                sMapRev += nextState -> nextBState
-                worklist.push((nextBState, nextState))
+                val nextPState = builder.getNewState
+                val isAccept = (auts.iterator zip nextState.iterator) forall {
+                  case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
+                }
+                builder.setAccept(nextPState, isAccept)
+                sMap += nextPState -> nextState
+                sMapRev += nextState -> nextPState
+                worklist.push((nextPState, nextState))
                 seenlist += nextState
             }
-            val nextBState = sMapRev(nextState)
-            bs.addTransition(new Transition(curMin, curMax, nextBState))
+            val nextPState = sMapRev(nextState)
+            builder.addTransition(ps, lbl, nextPState)
         }
         case _state :: ssTail => {
             val aut :: autsTail = remAuts
             val state = _state.asInstanceOf[aut.State]
             aut.outgoingTransitions(state) foreach {
-              case (s, (lblMin : Char, lblMax : Char)) => {
-                val newMin = (curMin max lblMin).toChar
-                val newMax = (curMax min lblMax).toChar
-                if (newMin <= newMax)
-                    addTransitions(newMin, newMax, s::ssp, autsTail, ssTail)
+              case (s, nextLbl) => {
+                val newLbl =
+                    builder.LabelOps.intersectLabels(lbl,
+                                                     nextLbl.asInstanceOf[head.TLabel])
+                for (l <- newLbl)
+                  addTransitions(l, s::ssp, autsTail, ssTail)
               }
             }
         }
       }
 
-      addTransitions(Char.MinValue, Char.MaxValue, List(), autsList, ss)
+      addTransitions(builder.LabelOps.sigmaLabel, List(), autsList, ss)
     }
 
-    newBAut.restoreInvariant
-
-    (new BricsAutomaton(newBAut), sMap.toMap)
+    (builder.getAutomaton, sMap.toMap)
   }
 
   /**
@@ -227,7 +227,7 @@ object AutomataUtils {
   def replaceTransitions[A <: AtomicStateAutomaton](
         aut : A,
         a : Char,
-        states : Iterator[(A#State, A#State)]) : AtomicStateAutomaton = {
+        states : Iterable[(A#State, A#State)]) : AtomicStateAutomaton = {
     val builder = aut.getBuilder
     val smap : Map[A#State, aut.State] =
       aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)

@@ -130,6 +130,16 @@ trait TLabelOps[TLabel] {
    * [1,4],[6,10]
    */
   def subtractLetter(a : Char, l : TLabel) : Iterable[TLabel]
+
+  /**
+   * Shift characters by n, do not wrap.  E.g. [1,2].shift 3 = [4,5]
+   */
+  def shift(lbl : TLabel, n : Int) : TLabel
+
+  /**
+   * Get representation of interval [min,max]
+   */
+  def interval(min : Char, max : Char) : TLabel
 }
 
 /**
@@ -156,6 +166,12 @@ trait TLabelEnumerator[TLabel] {
    * iterate over disjoint labels of the automaton that overlap with lbl
    */
   def enumLabelOverlap(lbl : TLabel) : Iterable[TLabel]
+
+  /**
+   * Takes disjoint enumeration and splits it at the point defined by
+   * Char.  E.g. [1,10] split at 5 is [1,4][5][6,10]
+   */
+  def split(a : Char) : TLabelEnumerator[TLabel]
 }
 
 /**
