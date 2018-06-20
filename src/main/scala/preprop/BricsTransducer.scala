@@ -178,7 +178,8 @@ class BricsTransducer(override val underlying : BAutomaton,
       }
     }
 
-    preBuilder.getAutomaton
+    val res = preBuilder.getAutomaton
+    res
   }
 
   override def toString = {

@@ -151,7 +151,8 @@ object ReplaceAllPreOpWord {
       builder.addTransition(states(i), (w(i), w(i)), output, finstates(i))
     }
 
-    builder.getTransducer
+    val res = builder.getTransducer
+    res
   }
 }
 
