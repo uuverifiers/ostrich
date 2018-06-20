@@ -26,7 +26,7 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
                            Transition => BTransition}
 
-import scala.collection.JavaConversions.iterableAsScalaIterable
+import scala.collection.JavaConversions.{iterableAsScalaIterable,asJavaCollection}
 
 object BricsTransducer {
   def apply() : BricsTransducer =
@@ -217,7 +217,14 @@ class BricsTransducerBuilder
   }
 
   def getTransducer = {
-    // do not restore invariant since will break operations map
+    // restrict to states that can reach accept
+    val liveStates = aut.underlying.getLiveStates
+    for (s <- liveStates) {
+      val toRemove = s.getTransitions.filter(t => !liveStates.contains(t.getDest))
+      s.getTransitions.removeAll(toRemove)
+      for (t <- toRemove)
+        operations -= ((s, t))
+    }
     new BricsTransducer(aut.underlying, operations.toMap)
   }
 }
