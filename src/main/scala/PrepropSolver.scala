@@ -115,22 +115,36 @@ class PrepropSolver {
       }
 
     SimpleAPI.withProver { lengthProver =>
-      lengthProver setConstructProofs true
-      lengthProver.addConstantsRaw(order sort order.orderedConstants)
+      val lProver =
+        if (Flags.useLength) {
+          lengthProver setConstructProofs true
+          lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
-      for (t <- interestingTerms)
-        lengthVars.getOrElseUpdate(
-          t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
+/*
+          val lengthConsts = (for (t <- lengthVars.values.iterator;
+                                   c <- t.constants.iterator)
+                              yield c).toSet
+          for (f <- goal.facts.arithConj.iterator)
+            if (f.constants subsetOf lengthConsts)
+              lengthProver addAssertion f
+ */
+
+          for (t <- interestingTerms)
+            lengthVars.getOrElseUpdate(
+              t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
+              
+          Some(lengthProver)
+        } else {
+          None
+        }
 
       val exploration =
         if (Flags.eagerAutomataOperations)
           Exploration.eagerExp(funApps, regexes,
-                               Some(lengthProver),
-                               lengthVars.toMap)
+                               lProver, lengthVars.toMap)
         else
           Exploration.lazyExp(funApps, regexes,
-                              Some(lengthProver),
-                              lengthVars.toMap)
+                              lProver, lengthVars.toMap)
 
       exploration.findModel match {
         case Some(model) => Some((model mapValues (_.toList)) ++

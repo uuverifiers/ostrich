@@ -268,7 +268,7 @@ trait AtomicStateAutomaton extends Automaton {
    * Compute the length abstraction of this automaton. Special case of
    * Parikh images, following the procedure in Verma et al, CADE 2005
    */
-  lazy val getLengthAbstraction : Formula = ap.util.Timer.measure("length abstraction") {
+  lazy val getLengthAbstraction : Formula = Exploration.measure("length abstraction") {
     import TerForConvenience._
     implicit val order = TermOrder.EMPTY
 

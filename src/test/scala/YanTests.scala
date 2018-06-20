@@ -20,7 +20,7 @@ object YanTests extends Properties("YanTests") {
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
-      SMTLIBMain.doMain((List("+assert", filename) ++ extractOpts).toArray,
+      SMTLIBMain.doMain((List("+assert", "-timeout=10", filename) ++ extractOpts).toArray,
                         false)
     }
 

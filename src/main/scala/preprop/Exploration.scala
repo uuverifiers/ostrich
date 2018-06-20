@@ -18,6 +18,8 @@
 
 package strsolver.preprop
 
+import strsolver.Flags
+
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.terfor.Term
@@ -69,6 +71,12 @@ object Exploration {
     new LazyExploration(funApps, initialConstraints, lengthProver, lengthVars)
 
   private case class FoundModel(model : Map[Term, Seq[Int]]) extends Exception
+
+  def measure[A](op : String)(comp : => A) : A =
+    if (Flags.measureTimes)
+      ap.util.Timer.measure(op)(comp)
+    else
+      comp
 }
 
 /**
@@ -157,8 +165,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
                                                aut.getLengthAbstraction)
 
-      if (ap.util.Timer.measure("check length consistency") { p.??? } ==
-            ProverStatus.Unsat)
+      if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
     }
 
@@ -218,9 +225,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       val collectedConflicts = new LinkedHashSet[TermConstraint]
 
       val (newConstraintsIt, argDependencies) =
-        ap.util.Timer.measure("pre-op") { op(argConstraints, resAut) }
-      while (newConstraintsIt.hasNext) {
-        val argCS = newConstraintsIt.next
+        measure("pre-op") { op(argConstraints, resAut) }
+      while (measure("pre-op hasNext") {newConstraintsIt.hasNext}) {
+        val argCS = measure("pre-op next") {newConstraintsIt.next}
 
         for (a <- args)
           constraintStores(a).push
@@ -303,8 +310,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                                                     aut.getLengthAbstraction)
            }
 
-           ap.util.Timer.measure("check length consistency") {p.???} ==
-             ProverStatus.Unsat
+           measure("check length consistency") {p.???} == ProverStatus.Unsat
          }) yield {
       for (n <- p.getUnsatCore.toList.sorted; if n > 0)
       yield lengthPartitions(n - 1)
@@ -495,7 +501,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           potentialConflicts = potentialConflicts.tail
         }
 
-        ap.util.Timer.measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints, aut) } match {
+        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints, aut) } match {
           case Some(core) => {
             addIncAutomata(core)
             Some(for (a <- core.toList) yield TermConstraint(t, a))

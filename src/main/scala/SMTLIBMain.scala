@@ -47,6 +47,10 @@ object SMTLIBMain {
         assertions = value
       case CmdlParser.Opt("eager", value) =>
         Flags.eagerAutomataOperations = value
+      case CmdlParser.Opt("times", value) =>
+        Flags.measureTimes = value
+      case CmdlParser.Opt("length", value) =>
+        Flags.useLength = value
       case CmdlParser.Opt("splitOpt", value) =>
         Flags.splitOptimization = value
       case CmdlParser.ValueOpt("modelChecker", mcs) =>
@@ -121,6 +125,8 @@ object SMTLIBMain {
     val intFormula = StringTheoryTranslator(formulaWithoutQuans,
       reader.wordConstants)
 
+    ap.util.Timer.reset
+
     SimpleAPI.withProver(enableAssert = assertions) { p =>
       import IExpression._
       import SimpleAPI._
@@ -172,9 +178,10 @@ object SMTLIBMain {
           }
         }
 
-        Console.err.println
-        Console.err.println(ap.util.Timer)
-        ap.util.Timer.reset
+        if (Flags.measureTimes) {
+          Console.err.println
+          Console.err.println(ap.util.Timer)
+        }
 
       } finally {
         // Make sure that the prover actually stops. If stopping takes

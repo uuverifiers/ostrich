@@ -32,6 +32,8 @@ object Flags {
   // Pre-image specific options
 
   var eagerAutomataOperations = false
+  var measureTimes = false
+  var useLength = false
 
   // AFA-Sloth specific options
 
