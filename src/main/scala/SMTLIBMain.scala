@@ -172,6 +172,10 @@ object SMTLIBMain {
           }
         }
 
+        Console.err.println
+        Console.err.println(ap.util.Timer)
+        ap.util.Timer.reset
+
       } finally {
         // Make sure that the prover actually stops. If stopping takes
         // too long, kill the whole process

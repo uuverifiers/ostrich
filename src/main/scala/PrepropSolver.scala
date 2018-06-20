@@ -21,8 +21,10 @@ package strsolver
 import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
                           ConcatPreOp, ReplaceAllPreOp, ReversePreOp}
 
+import ap.SimpleAPI
 import ap.terfor.Term
 import ap.terfor.preds.PredConj
+import ap.types.Sort
 import ap.proof.goal.Goal
 
 import scala.collection.breakOut
@@ -31,7 +33,7 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 class PrepropSolver {
 
   import StringTheory.{member, replaceall, replace, reverse,
-                       wordEps, wordCat, wordChar, wordDiff,
+                       wordEps, wordCat, wordChar, wordDiff, wordLen,
                        rexEmpty, rexEps, rexSigma,
                        rexStar, rexUnion, rexChar, rexCat, rexNeg, rexRange,
                        FunPred}
@@ -43,6 +45,7 @@ class PrepropSolver {
 
   def findStringModel(goal : Goal) : Option[Map[Term, List[Int]]] = {
     val atoms = goal.facts.predConj
+    val order = goal.order
     val regex2AFA = new Regex2AFA(atoms)
 
     println(atoms)
@@ -56,6 +59,7 @@ class PrepropSolver {
     // literals
     val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
     val regexes = new ArrayBuffer[(Term, Automaton)]
+    val lengthVars = new MHashMap[Term, Term]
 
     for (a <- atoms.positiveLits) a.pred match {
       case FunPred(`wordChar` | `wordEps`)
@@ -76,6 +80,8 @@ class PrepropSolver {
           val regex = (regex2AFA buildRegex a(1))
           funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
         }
+      case FunPred(`wordLen`) =>
+        lengthVars.put(a(0), a(1))
       case FunPred(`reverse`) =>
         funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
@@ -108,16 +114,29 @@ class PrepropSolver {
           // nothing
       }
 
-    val exploration =
-      if (Flags.eagerAutomataOperations)
-        Exploration.eagerExp(funApps, regexes)
-      else
-        Exploration.lazyExp(funApps, regexes)
+    SimpleAPI.withProver { lengthProver =>
+      lengthProver setConstructProofs true
+      lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
-    exploration.findModel match {
-      case Some(model) => Some((model mapValues (_.toList)) ++
-                               (concreteWords mapValues (_.toList)))
-      case None        => None
+      for (t <- interestingTerms)
+        lengthVars.getOrElseUpdate(
+          t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
+
+      val exploration =
+        if (Flags.eagerAutomataOperations)
+          Exploration.eagerExp(funApps, regexes,
+                               Some(lengthProver),
+                               lengthVars.toMap)
+        else
+          Exploration.lazyExp(funApps, regexes,
+                              Some(lengthProver),
+                              lengthVars.toMap)
+
+      exploration.findModel match {
+        case Some(model) => Some((model mapValues (_.toList)) ++
+                                 (concreteWords mapValues (_.toList)))
+        case None        => None
+      }
     }
   }
 

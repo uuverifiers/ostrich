@@ -18,7 +18,7 @@
 
 package strsolver.preprop
 
-import ap.terfor.Term
+import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.preds.PredConj
 
 import dk.brics.automaton.RegExp
@@ -80,6 +80,15 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
                else
                  Iterator single c)
      yield d).toList
+
+  override def lengthApproximation(arguments : Seq[Term], result : Term,
+                                   order : TermOrder) : Formula = {
+    import TerForConvenience._
+    implicit val _ = order
+    (arguments(1) === 1 & result === arguments(0)) |
+    (arguments(1) < 1 & result <= arguments(0)) |
+    (arguments(1) > 1 & result >= arguments(0))
+  }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)

@@ -18,6 +18,8 @@
 
 package strsolver.preprop
 
+import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
+
 import scala.collection.JavaConversions.{asScalaIterator,
                                          iterableAsScalaIterable}
 
@@ -45,6 +47,13 @@ object ConcatPreOp extends PreOp {
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
     arguments(0) ++ arguments(1)
+
+  override def lengthApproximation(arguments : Seq[Term], result : Term,
+                                   order : TermOrder) : Formula = {
+    import TerForConvenience._
+    implicit val _ = order
+    result === arguments(0) + arguments(1)
+  }
 
   override def toString = "concat"
 

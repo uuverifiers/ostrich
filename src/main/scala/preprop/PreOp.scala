@@ -18,6 +18,9 @@
 
 package strsolver.preprop
 
+import ap.terfor.{Term, Formula, TermOrder}
+import ap.terfor.conjunctions.Conjunction
+
 /**
  * Interface for back-propagating regex constraints over n-ary functions f.
  */
@@ -50,5 +53,13 @@ trait PreOp {
    * Evaluate the described function
    */
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int]
+
+  /**
+   * Generate a formula that approximates the length relationship between
+   * arguments and result. It is sound to just return <code>true</code>.
+   */
+  def lengthApproximation(arguments : Seq[Term], result : Term,
+                          order : TermOrder) : Formula =
+    Conjunction.TRUE
 
 }
