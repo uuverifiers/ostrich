@@ -63,7 +63,7 @@ class Box[A <: AtomicStateAutomaton] {
    * Iterate over all edges (q1, q2) in the box
    */
   lazy val getEdges : Iterable[(A#State, A#State)] =
-    for ((q1, qs) <- arrows; q2 <- qs )
+    for ((q1, qs) <- arrows.toIterable; q2 <- qs )
       yield (q1, q2)
 
   /**
