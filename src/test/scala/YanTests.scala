@@ -92,8 +92,8 @@ object YanTests extends Properties("YanTests") {
     checkFile("tests/yan-benchmarks/replaceAll-015.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-016.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-016.smt2", "sat")
-  property("tests/yan-benchmarks/replaceAll-017.smt2") =
-    checkFile("tests/yan-benchmarks/replaceAll-017.smt2", "sat")
+//  property("tests/yan-benchmarks/replaceAll-017.smt2") =
+//    checkFile("tests/yan-benchmarks/replaceAll-017.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-018.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-018.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-019.smt2") =

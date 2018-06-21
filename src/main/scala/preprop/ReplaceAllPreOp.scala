@@ -116,6 +116,21 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 
     (res, argumentConstraints)
   }
+
+  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
+    val yCons = argumentConstraints(0).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val zCons = argumentConstraints(1).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val yProd = ProductAutomaton(yCons)
+    val zProd = ProductAutomaton(zCons)
+
+    NestedAutomaton(yProd, a, zProd)
+  }
 }
 
 /**
@@ -371,6 +386,26 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     }
 
     (res, argumentConstraints)
+  }
+
+  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
+    val yCons = argumentConstraints(0).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val zCons = argumentConstraints(1).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val yProd = ProductAutomaton(yCons)
+    val zProd = ProductAutomaton(zCons)
+
+    println(yProd)
+    println(tran)
+    println(tran.postImage(yProd))
+    val tpost = PostImageAutomaton(yProd, tran)
+    println(tpost.transitions)
+    NestedAutomaton(tpost, yProd.LabelOps.internalChar.toChar, zProd)
   }
 }
 
