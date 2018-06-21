@@ -269,4 +269,98 @@ object AutomataUtils {
 
     builder.getAutomaton
   }
+
+  /**
+   * Build automaton accepting reverse language of given automaton
+   * aut1 and aut2 must have compatible label types
+   */
+  def concat(aut1 : AtomicStateAutomaton,
+             aut2 : AtomicStateAutomaton) : AtomicStateAutomaton = {
+    val builder = aut1.getBuilder
+
+    val smap1 : Map[aut1.State, aut1.State] =
+      aut1.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+    val smap2 : Map[aut2.State, aut1.State] =
+      aut2.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+
+    builder.setInitialState(smap1(aut1.initialState))
+    for (sf <- aut2.acceptingStates)
+      builder.setAccept(smap2(sf), true)
+    if (aut1.isAccept(aut1.initialState))
+      for (sf <- aut1.acceptingStates)
+        builder.setAccept(smap1(sf), true)
+
+    for ((s1, l, s2) <- aut1.transitions)
+      builder.addTransition(smap1(s1), l, smap1(s2))
+
+    for ((s1, l, s2) <- aut2.transitions) {
+      val convL = l.asInstanceOf[aut1.TLabel]
+      if (s1 == aut2.initialState)
+        for (sf <- aut1.acceptingStates)
+          builder.addTransition(smap1(sf), convL, smap2(s2))
+      builder.addTransition(smap2(s2), convL, smap2(s1))
+    }
+
+    builder.getAutomaton
+  }
+
+  /**
+   * Inserts second automaton into the first replacing transitions over
+   * a give character.  I.e. s1 --a--> s2 becomes s1 -->into aut / from
+   * final --> s2.
+   *
+   * Assumes autOuter and autInner have compatible label types
+   *
+   * This is approximate in that there is only a single copy of the
+   * inserted automaton, so ingoing and outgoing transitions are not
+   * mapped.
+   */
+  def nestAutomata(autOuter : AtomicStateAutomaton,
+                   toReplace : Char,
+                   autInner : AtomicStateAutomaton) : AtomicStateAutomaton = {
+    val builder = autOuter.getBuilder
+
+    val smapOuter : Map[autOuter.State, autOuter.State] =
+      autOuter.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+    val smapInner : Map[autInner.State, autOuter.State] =
+      autInner.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+
+    builder.setInitialState(smapOuter(autOuter.initialState))
+    for (sf <- autOuter.acceptingStates)
+      builder.setAccept(smapOuter(sf), true)
+
+    val canBeEmptyWord = autInner.isAccept(autInner.initialState)
+
+    val entryStates = new MHashSet[autOuter.State]
+    val exitStates = new MHashSet[autOuter.State]
+
+    for ((s1, lbl, s2) <- autOuter.transitions) {
+      for (newLbl <- autOuter.LabelOps.subtractLetter(toReplace, lbl)) {
+        builder.addTransition(smapOuter(s1), newLbl, smapOuter(s2))
+      }
+
+      if (autOuter.LabelOps.labelContains(toReplace, lbl)) {
+        entryStates += smapOuter(s1)
+        exitStates += smapOuter(s2)
+      }
+    }
+
+    for ((s1, lbl, s2) <- autInner.transitions) {
+      val newS1 = smapInner(s1)
+      val newS2 = smapInner(s2)
+      val convL = lbl.asInstanceOf[autOuter.TLabel]
+      builder.addTransition(newS1, convL, newS2)
+
+      if (s1 == autInner.initialState)
+        for (es <- entryStates)
+          builder.addTransition(es, convL, newS2)
+
+      if (autInner.isAccept(s2))
+        for (es <- exitStates)
+          builder.addTransition(newS1, convL, es)
+    }
+
+    val res = builder.getAutomaton
+    res
+  }
 }

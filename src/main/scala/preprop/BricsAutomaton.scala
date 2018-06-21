@@ -146,7 +146,7 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    */
   def shift(lbl : (Char, Char), n : Int) : (Char, Char) = {
     val (cmin, cmax) = lbl
-    (Math.max(minChar, cmin - n).toChar, Math.min(maxChar, cmax - n).toChar)
+    (Math.max(minChar, cmin + n).toChar, Math.min(maxChar, cmax + n).toChar)
   }
 
   /**
@@ -400,6 +400,11 @@ class BricsAutomatonBuilder
       q1.addTransition(new Transition(min, max, q2))
     }
   }
+
+  def outgoingTransitions(q : BricsAutomaton#State)
+        : Iterator[(BricsAutomaton#State, BricsAutomaton#TLabel)] =
+    for (t <- q.getTransitions.iterator)
+      yield (t.getDest, (t.getMin, t.getMax))
 
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
     q.setAccept(isAccepting)

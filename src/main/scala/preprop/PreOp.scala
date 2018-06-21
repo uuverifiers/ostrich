@@ -62,4 +62,10 @@ trait PreOp {
                           order : TermOrder) : Formula =
     Conjunction.TRUE
 
+  /**
+   * Given constraints on the input variables, produce an over-approximation
+   * constraint on the output.
+   */
+  def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton =
+    BricsAutomaton.makeAnyString
 }

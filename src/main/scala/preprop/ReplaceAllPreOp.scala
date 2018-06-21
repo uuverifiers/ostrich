@@ -116,6 +116,21 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 
     (res, argumentConstraints)
   }
+
+  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
+    val yCons = argumentConstraints(0).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val zCons = argumentConstraints(1).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val yProd = ProductAutomaton(yCons)
+    val zProd = ProductAutomaton(zCons)
+
+    NestedAutomaton(yProd, a, zProd)
+  }
 }
 
 /**
@@ -157,7 +172,8 @@ object ReplaceAllPreOpWord {
         builder.addTransition(states(i), lbl, output, states(0))
 
       // handle word ending in middle of match
-      builder.addTransition(states(i), (w(i), w(i)), output, finstates(i))
+      val outop = if (i == w.size -1) internal else output
+      builder.addTransition(states(i), (w(i), w(i)), outop, finstates(i))
     }
 
     val res = builder.getTransducer
@@ -371,6 +387,22 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     }
 
     (res, argumentConstraints)
+  }
+
+  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
+    val yCons = argumentConstraints(0).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val zCons = argumentConstraints(1).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val yProd = ProductAutomaton(yCons)
+    val zProd = ProductAutomaton(zCons)
+
+    val tpost = PostImageAutomaton(yProd, tran)
+    NestedAutomaton(tpost, yProd.LabelOps.internalChar.toChar, zProd)
   }
 }
 

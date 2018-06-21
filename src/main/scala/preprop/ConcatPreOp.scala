@@ -55,6 +55,20 @@ object ConcatPreOp extends PreOp {
     result === arguments(0) + arguments(1)
   }
 
+  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
+    val fstCons = argumentConstraints(0).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val sndCons = argumentConstraints(1).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val fstProd = ProductAutomaton(fstCons)
+    val sndProd = ProductAutomaton(sndCons)
+    ConcatAutomaton(fstProd, sndProd)
+  }
+
   override def toString = "concat"
 
 }
