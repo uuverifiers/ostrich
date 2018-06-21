@@ -351,6 +351,9 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
     case PlainSymbol(n@("seq-replace-all" | "str.replaceall")) =>
       translateFun(n, SMTLIBStringTheory.seq_replace_all, args, (_.head))
 
+    case PlainSymbol(n@("seq-replace-all-re" | "str.replaceall-re")) =>
+      translateFun(n, SMTLIBStringTheory.seq_replace_all_re, args, (_.head))
+
     case PlainSymbol(n@("seq-replace" | "str.replace")) =>
       translateFun(n, SMTLIBStringTheory.seq_replace, args, (_.head))
 

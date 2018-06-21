@@ -32,7 +32,7 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 class PrepropSolver {
 
-  import StringTheory.{member, replaceall, replace, reverse,
+  import StringTheory.{member, replaceall, replaceallre, replace, reverse,
                        wordEps, wordCat, wordChar, wordDiff, wordLen,
                        rexEmpty, rexEps, rexSigma,
                        rexStar, rexUnion, rexChar, rexCat, rexNeg, rexRange,
@@ -72,14 +72,15 @@ class PrepropSolver {
         regexes += ((a.head, BricsAutomaton(a.last, atoms)))
       case FunPred(`wordCat`) =>
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
-      case FunPred(`replaceall`) =>
+      case FunPred(`replaceall`) => {
         val b = (regex2AFA buildStrings a(1)).next
-        if (b.forall(_.isLeft)) {
-          funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
-        } else {
-          val regex = (regex2AFA buildRegex a(1))
-          funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
-        }
+        funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
+      }
+      case FunPred(`replaceallre`) => {
+        val b = (regex2AFA buildStrings a(1)).next
+        val regex = (regex2AFA buildRegex a(1))
+        funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
+      }
       case FunPred(`wordLen`) =>
         lengthVars.put(a(0), a(1))
       case FunPred(`reverse`) =>

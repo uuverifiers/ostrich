@@ -359,6 +359,9 @@ class StringTheoryTranslator private (constraint : IFormula,
     case IAtom(SMTLIBPred(`seq_replace_all`), _) =>
       IAtom(toPred(StringTheory.replaceall), toTermSeq(subres))
 
+    case IAtom(SMTLIBPred(`seq_replace_all_re`), _) =>
+      IAtom(toPred(StringTheory.replaceallre), toTermSeq(subres))
+
     case IAtom(SMTLIBPred(`seq_reverse`), _) =>
       IAtom(toPred(StringTheory.reverse), toTermSeq(subres))
 
@@ -397,9 +400,13 @@ class StringTheoryTranslator private (constraint : IFormula,
       Seq(c : IConstant, _)) =>
         regexVariables += c
       case IAtom(StringPred(StringTheory.replace | StringTheory.replaceall 
-                            | StringTheory.reverse),
-      args) =>
+                            | StringTheory.reverse), args) =>
         for (c <- args) c match {
+          case c : IConstant => wordVariables += c
+          case _ => // nothing
+        }
+      case IAtom(StringPred(StringTheory.replaceallre), args) =>
+        for (c <- Iterator(args(0), args(2))) c match {
           case c : IConstant => wordVariables += c
           case _ => // nothing
         }

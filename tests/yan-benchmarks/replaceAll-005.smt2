@@ -2,7 +2,7 @@
 (declare-const y String)
 (declare-const z String)
 
-(assert (= x (str.replaceall y (str.to.re "a") z)))
+(assert (= x (str.replaceall-re y (str.to.re "a") z)))
 
 
 

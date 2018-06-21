@@ -6,9 +6,9 @@
 (declare-fun w () String)
 (declare-fun v () String)
 
-(assert (= x (str.replaceall y (str.to.re "010") z)))
-(assert (= y (str.replaceall w (str.to.re "1") v)))
-(assert (= w (str.replaceall x1 (str.to.re "00") y1)))
+(assert (= x (str.replaceall-re y (str.to.re "010") z)))
+(assert (= y (str.replaceall-re w (str.to.re "1") v)))
+(assert (= w (str.replaceall-re x1 (str.to.re "00") y1)))
 
 (assert 
 (str.in.re x 

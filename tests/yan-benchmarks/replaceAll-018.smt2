@@ -4,8 +4,8 @@
 (declare-const w String)
 (declare-const v String)
 
-(assert (= x (str.replaceall y (str.to.re "010") z)))
-(assert (= z (str.replaceall w (str.to.re "00") v)))
+(assert (= x (str.replaceall-re y (str.to.re "010") z)))
+(assert (= z (str.replaceall-re w (str.to.re "00") v)))
 
 (assert 
 (str.in.re x 

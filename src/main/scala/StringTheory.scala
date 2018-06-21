@@ -60,6 +60,7 @@ object StringTheory extends Theory {
 
   /// Constraints representing transducers
   val replaceall = new IFunction("replaceall", 3, true, false)
+  val replaceallre = new IFunction("replaceallre", 3, true, false)
   val replace    = new IFunction("replace",    3, true, false)
   val reverse    = new IFunction("reverse",    1, true, false)
   val wordDiff   = new Predicate("wordDiff",   2)
@@ -143,7 +144,8 @@ object StringTheory extends Theory {
 
   val functions = List(wordEps, wordCat, wordChar, wordLen, wordSlice,
                        rexEmpty, rexEps, rexSigma, rexCat, rexChar,
-                       rexUnion, rexStar, rexNeg, rexRange, replaceall, replace, reverse)
+                       rexUnion, rexStar, rexNeg, rexRange, replaceall,
+                       replaceallre, replace, reverse)
 
   val iAxioms = {
     import IExpression._
