@@ -165,6 +165,8 @@ object AutomataUtils {
 
     builder.setAccept(initState, auts forall { aut => aut.isAccept(aut.initialState) })
 
+    var checkCnt = 0
+
     while (!worklist.isEmpty) {
       val (ps, ss) = worklist.pop()
 
@@ -176,8 +178,12 @@ object AutomataUtils {
       def addTransitions(lbl : head.TLabel,
                          ssp : List[Any],
                          remAuts : List[AtomicStateAutomaton],
-                         ss : List[Any]) : Unit = ss match {
-        case List() =>  {
+                         ss : List[Any]) : Unit = {
+        checkCnt = checkCnt + 1
+        if (checkCnt % 1000 == 0)
+          ap.util.Timeout.check
+        ss match {
+          case List() =>  {
             val nextState = ssp.reverse
             if (!seenlist.contains(nextState)) {
                 val nextPState = builder.getNewState
@@ -192,8 +198,8 @@ object AutomataUtils {
             }
             val nextPState = sMapRev(nextState)
             builder.addTransition(ps, lbl, nextPState)
-        }
-        case _state :: ssTail => {
+          }
+          case _state :: ssTail => {
             val aut :: autsTail = remAuts
             val state = _state.asInstanceOf[aut.State]
             aut.outgoingTransitions(state) foreach {
@@ -205,6 +211,7 @@ object AutomataUtils {
                   addTransitions(l, s::ssp, autsTail, ssTail)
               }
             }
+          }
         }
       }
 
