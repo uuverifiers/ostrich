@@ -147,7 +147,8 @@ object StringTheory extends Theory {
                        rexUnion, rexStar, rexNeg, rexRange, replaceall,
                        replaceallre, replace, reverse)
 
-  val iAxioms = {
+  // TODO: have different theory objects for the different solvers
+  val iAxioms = if (Flags.enabledSolvers contains Flags.Solver.afa_mc) {
     import IExpression._
 
     all(w => trig(wordLen(w) >= 0, wordLen(w))) &
@@ -167,6 +168,8 @@ object StringTheory extends Theory {
      /* all(x => all(y => all(z =>
           trig(wordCat(wordCat(x, y), z) === wordCat(x, wordCat(y, z)),
              wordCat(x, wordCat(y, z)))))), */
+  } else {
+    IBoolLit(true)
   }
 
   val (functionalPredicatesSeq, preAxioms, preOrder,
@@ -189,7 +192,7 @@ object StringTheory extends Theory {
 
   private val p = functionPredicateMap
 
-  val axioms = {
+  val axioms = if (Flags.enabledSolvers contains Flags.Solver.afa_mc) {
     import TerForConvenience._
     implicit val _ = order
 
@@ -251,6 +254,8 @@ object StringTheory extends Theory {
 
     conj(List(epsAxiom1, epsAxiom2, epsAxiom3, epsAxiom4,
               charAxiom1, charAxiom2, charAxiom3, preAxioms))
+  } else {
+    Conjunction.TRUE
   }
 
   val predicateMatchConfig : Signature.PredicateMatchConfig = Map()

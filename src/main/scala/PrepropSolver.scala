@@ -48,7 +48,7 @@ class PrepropSolver {
     val order = goal.order
     val regex2AFA = new Regex2AFA(atoms)
 
-    println(atoms)
+//    println(atoms)
 
     val concreteWords = findConcreteWords(atoms) match {
       case Some(w) => w
