@@ -37,7 +37,7 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
-      case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
+      case _ => throw new IllegalArgumentException("TransducerPreOp needs an AtomicStateAutomaton")
     }
     (Iterator(Seq(t.preImage(rc))), List())
   }
