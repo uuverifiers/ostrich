@@ -28,6 +28,11 @@ import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
 object AutomataUtils {
 
   /**
+   * The maximum number of automata to product simultaneously
+   */
+  val MaxSimultaneousProduct = 5
+
+  /**
    * Check whether there is some word accepted by all of the given automata.
    * The automata are required to all have the same label type (though this is
    * not checked statically)
@@ -138,23 +143,63 @@ object AutomataUtils {
   def productWithMap(auts : Seq[AtomicStateAutomaton]) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
+    val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
+    productWithMaps(auts.map((_, idMap)))
+  }
+
+  /**
+   * Takes the product of the list of automata and returns mapping from
+   * states of the new automaton to tuples of the original.  auts may
+   * already be products and come with a similar map, these are composed
+   * for the result map
+   */
+  private def productWithMaps(auts : Seq[(AtomicStateAutomaton,
+                                         Map[Any, Seq[Any]])]) :
+    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+
     if (auts.size == 0)
       return (BricsAutomaton.makeAnyString, Map.empty[Any, Seq[Any]])
 
     if (auts.size == 1)
-      return (auts.head,
-              (for (s <- auts.head.states) yield (s -> List(s))).toMap)
+      return auts.head
 
-    val autsList = auts.toList
+    val firstSlice = auts.grouped(MaxSimultaneousProduct)
+                         .map(fullProductWithMaps(_))
+                         .toSeq
 
-    val head = auts.head
+    if (firstSlice.size == 1)
+      return firstSlice(0)
+    else
+      return productWithMaps(firstSlice)
+  }
+
+  /**
+   * Takes the product of the list of automata and returns mapping from
+   * states of the new automaton to tuples of the original.  auts may
+   * already be products and come with a similar map, these are composed
+   * for the result map
+   */
+  private def fullProductWithMaps(auts : Seq[(AtomicStateAutomaton,
+                                             Map[Any, Seq[Any]])]) :
+    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+
+    val (autsSeq, mapsSeq) = auts.unzip
+
+    // get image of states under maps in mapsSeq
+    def mapsImage(ss: Seq[Any]) : List[Any] = {
+      ss.iterator.zip(mapsSeq.iterator).flatMap({ case (s, sMap) => sMap(s) }).toList
+    }
+
+    val head = autsSeq.head
     val builder = head.getBuilder
     val initState = builder.initialState
+    // from new states to list of old (composed with input maps)
     val sMap = new MHashMap[head.State, List[Any]]
+    // from list of states of argument automata (not composed with maps)
     val sMapRev = new MHashMap[List[Any], head.State]
 
-    val initStates = (auts.map(_.initialState)).toList
-    sMap += initState -> initStates
+    val initStates = (autsSeq.map(_.initialState)).toList
+    sMap += initState -> mapsImage(initStates)
     sMapRev += initStates -> initState
 
     val worklist = new MStack[(head.State, List[Any])]
@@ -163,7 +208,8 @@ object AutomataUtils {
     val seenlist = MHashSet[List[Any]]()
     seenlist += initStates
 
-    builder.setAccept(initState, auts forall { aut => aut.isAccept(aut.initialState) })
+    builder.setAccept(initState,
+                      autsSeq forall { aut => aut.isAccept(aut.initialState) })
 
     var checkCnt = 0
 
@@ -183,15 +229,15 @@ object AutomataUtils {
         if (checkCnt % 1000 == 0)
           ap.util.Timeout.check
         ss match {
-          case List() =>  {
+          case Seq() =>  {
             val nextState = ssp.reverse
             if (!seenlist.contains(nextState)) {
                 val nextPState = builder.getNewState
-                val isAccept = (auts.iterator zip nextState.iterator) forall {
+                val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
                   case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
                 }
                 builder.setAccept(nextPState, isAccept)
-                sMap += nextPState -> nextState
+                sMap += nextPState -> mapsImage(nextState)
                 sMapRev += nextState -> nextPState
                 worklist.push((nextPState, nextState))
                 seenlist += nextState
@@ -215,7 +261,7 @@ object AutomataUtils {
         }
       }
 
-      addTransitions(builder.LabelOps.sigmaLabel, List(), autsList, ss)
+      addTransitions(builder.LabelOps.sigmaLabel, List(), autsSeq.toList, ss)
     }
 
     (builder.getAutomaton, sMap.toMap)
