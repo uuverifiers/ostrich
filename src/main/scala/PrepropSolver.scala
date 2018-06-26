@@ -101,6 +101,8 @@ class PrepropSolver {
     }
 
     for (a <- atoms.negativeLits) a.pred match {
+      case `member` =>
+        regexes += ((a.head, !BricsAutomaton(a.last, atoms)))
       case p if (StringTheory.predicates contains p) =>
         Console.err.println("Warning: ignoring !" + a)
       case _ =>

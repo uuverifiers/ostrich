@@ -80,4 +80,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/transducer2c.smt2", "unsat")
   property("transducer2d.smt2") =
     checkFile("tests/transducer2d.smt2", "sat")
+
+  property("1234.corecstrs.readable.smt2") =
+    checkFile("tests/1234.corecstrs.readable.smt2", "sat")
 }
