@@ -401,6 +401,11 @@ class BricsAutomatonBuilder
     }
   }
 
+  def outgoingTransitions(q : BricsAutomaton#State)
+        : Iterator[(BricsAutomaton#State, BricsAutomaton#TLabel)] =
+    for (t <- q.getTransitions.iterator)
+      yield (t.getDest, (t.getMin, t.getMax))
+
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =
     q.setAccept(isAccepting)
 

@@ -192,12 +192,14 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
    * constraints to constraintStores
    */
   private def addForwardConstraints : Unit = {
+    println("Adding forwards")
     for ((apps, res) <- sortedFunApps.reverseIterator;
          (op, args) <- apps) {
       val arguments = for (a <- args) yield constraintStores(a).getCompleteContents
       val resultConstraint = op.forwardApprox(arguments)
       constraintStores(res).assertConstraint(resultConstraint)
     }
+    println("Done")
   }
 
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])

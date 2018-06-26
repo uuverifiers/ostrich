@@ -361,7 +361,6 @@ object AutomataUtils {
     }
 
     val res = builder.getAutomaton
-    println(res)
     res
   }
 }

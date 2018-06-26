@@ -361,7 +361,7 @@ trait AtomicStateAutomaton extends Automaton {
 
       val prodNonNeg =
         prodVars >= 0
- 
+
       val prodImps =
         (for (((source, _), prodVar) <-
                 productions.iterator zip prodVars.iterator;
@@ -415,6 +415,11 @@ trait AtomicStateAutomatonBuilder[State, TLabel] {
    * Add a new transition q1 --label--> q2
    */
   def addTransition(s1 : State, label : TLabel, s2 : State) : Unit
+
+  /**
+   * Iterate over outgoing transitions from state
+   */
+  def outgoingTransitions(q : State) : Iterator[(State, TLabel)]
 
   /**
    * Set state accepting

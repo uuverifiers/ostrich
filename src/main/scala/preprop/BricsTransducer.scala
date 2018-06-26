@@ -20,7 +20,9 @@ package strsolver.preprop
 
 import scala.collection.mutable.{HashSet => MHashSet,
                                  HashMap => MHashMap,
-                                 Stack => MStack}
+                                 Stack => MStack,
+                                 MultiMap => MMultiMap,
+                                 Set => MSet}
 
 import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
@@ -192,11 +194,15 @@ class BricsTransducer(override val underlying : BAutomaton,
 
     val initState = underlying.getInitialState
     val initAutState = aut.initialState
-    val newInitState = builder.getNewState
-    builder setInitialState newInitState
+    val newInitState = builder.initialState
 
     sMap += (newInitState -> ((initState, initAutState)))
     sMapRev += (initState, initAutState) -> newInitState
+
+    // collect silent transitions during main loop and eliminate them
+    // after (TODO: think of more efficient solution)
+    val silentTransitions = new MHashMap[aut.State, MSet[aut.State]]
+                            with MMultiMap[aut.State, aut.State]
 
     val worklist = new MStack[aut.State]
     worklist.push(newInitState)
@@ -223,8 +229,9 @@ class BricsTransducer(override val underlying : BAutomaton,
       if (word.isEmpty) {
         ps
       } else if (word.size == 1 && !targState.isEmpty) {
-        builder.addTransition(ps, aut.LabelOps.singleton(word(0)), targState.get)
-        targState.get
+        val targ = targState.get
+        builder.addTransition(ps, aut.LabelOps.singleton(word(0)), targ)
+        targ
       } else {
         val psNext = builder.getNewState
         builder.addTransition(ps, aut.LabelOps.singleton(word(0)), psNext)
@@ -245,7 +252,9 @@ class BricsTransducer(override val underlying : BAutomaton,
         val tOp = operations((ts, t))
         tOp.op match {
           case Delete => {
-            if (tOp.postW.isEmpty) {
+            if (tOp.preW.isEmpty && tOp.postW.isEmpty) {
+              silentTransitions.addBinding(ps, psNext)
+            } else if (tOp.postW.isEmpty) {
               wordRun(ps, tOp.preW, Some(psNext))
             } else  {
               val psMid = wordRun(ps, tOp.preW, None)
@@ -266,6 +275,30 @@ class BricsTransducer(override val underlying : BAutomaton,
             }
           }
         }
+      }
+    }
+
+    // transitive closes (modifies in place) the map representing a list
+    // of pairs (x, y)
+    def tranClose[A](pairs : MMultiMap[A, A]) = {
+      val worklist = new MStack[(A, A)]
+
+      for ((x, ys) <- pairs; y <- ys)
+        worklist.push((x, y))
+
+      while (!worklist.isEmpty) {
+        val (x, y) = worklist.pop
+        for (z <- pairs.getOrElse(y, List()); if !pairs(x).contains(z)) {
+          pairs.addBinding(x, z)
+          worklist.push((x, z))
+        }
+      }
+    }
+
+    tranClose(silentTransitions)
+    for ((ps1, ps2s) <- silentTransitions; ps2 <- ps2s; if (ps1 != ps2)) {
+      for ((ps3, lbl) <- builder.outgoingTransitions(ps2)) {
+        builder.addTransition(ps1, lbl, ps3)
       }
     }
 

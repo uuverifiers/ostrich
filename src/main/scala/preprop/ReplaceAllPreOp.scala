@@ -172,7 +172,8 @@ object ReplaceAllPreOpWord {
         builder.addTransition(states(i), lbl, output, states(0))
 
       // handle word ending in middle of match
-      builder.addTransition(states(i), (w(i), w(i)), output, finstates(i))
+      val outop = if (i == w.size -1) internal else output
+      builder.addTransition(states(i), (w(i), w(i)), outop, finstates(i))
     }
 
     val res = builder.getTransducer
@@ -400,11 +401,7 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     val yProd = ProductAutomaton(yCons)
     val zProd = ProductAutomaton(zCons)
 
-    println(yProd)
-    println(tran)
-    println(tran.postImage(yProd))
     val tpost = PostImageAutomaton(yProd, tran)
-    println(tpost.transitions)
     NestedAutomaton(tpost, yProd.LabelOps.internalChar.toChar, zProd)
   }
 }
