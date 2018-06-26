@@ -275,7 +275,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             }
 
           if (consistent)
-            for (core <- addLengthConstraints(newConstraints.toSeq)) {
+            for (core <- checkLengthConsistency) {
 //println("length conflict: " + core.size)
               collectedConflicts ++= (core.iterator filterNot newConstraints)
               consistent = false
@@ -319,17 +319,18 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private val lengthPartitionStack = new ArrayStack[Int]
   private val lengthPartitions = new ArrayBuffer[TermConstraint]
 
-  private def addLengthConstraints(constraints : Seq[TermConstraint])
-                                 : Option[Seq[TermConstraint]] =
+  protected def addLengthConstraint(constraint : TermConstraint) : Unit =
+    for (p <- lengthProver) {
+           val TermConstraint(t, aut) = constraint
+           lengthPartitions += constraint
+           p setPartitionNumber lengthPartitions.size
+           p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
+                                                  aut.getLengthAbstraction)
+        }
+
+  private def checkLengthConsistency : Option[Seq[TermConstraint]] =
     for (p <- lengthProver;
          if {
-           for (c@TermConstraint(t, aut) <- constraints) {
-             lengthPartitions += c
-             p setPartitionNumber lengthPartitions.size
-             p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                                    aut.getLengthAbstraction)
-           }
-
            measure("check length consistency") {p.???} == ProverStatus.Unsat
          }) yield {
       for (n <- p.getUnsatCore.toList.sorted; if n > 0)
@@ -392,19 +393,21 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       } else {
         currentConstraint match {
           case Some(oldAut) => {
-            val newAut = oldAut & aut
+            val newAut = measure("intersection") { oldAut & aut }
             if (newAut.isEmpty) {
               Some(for (a <- aut :: constraints.toList)
                    yield TermConstraint(t, a))
             } else {
               constraints += aut
               currentConstraint = Some(newAut)
+              addLengthConstraint(TermConstraint(t, newAut))
               None
             }
           }
           case None => {
             constraints += aut
             currentConstraint = Some(aut)
+            addLengthConstraint(TermConstraint(t, aut))
             None
           }
         }
@@ -529,6 +532,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           case None => {
             constraints += aut
             constraintSet += aut
+            addLengthConstraint(TermConstraint(t, aut))
             None
           }
         }

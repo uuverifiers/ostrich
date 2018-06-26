@@ -19,13 +19,16 @@
 package strsolver
 
 import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
-                          ConcatPreOp, ReplaceAllPreOp, ReversePreOp}
+                          ConcatPreOp, ReplaceAllPreOp, ReversePreOp,
+                          RRFunsToTransducer, TransducerPreOp,
+                          AtomicStateTransducer}
 
 import ap.SimpleAPI
-import ap.terfor.Term
+import ap.terfor.{Term, TerForConvenience}
 import ap.terfor.preds.PredConj
 import ap.types.Sort
 import ap.proof.goal.Goal
+import ap.basetypes.IdealInt
 
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
@@ -45,10 +48,10 @@ class PrepropSolver {
 
   def findStringModel(goal : Goal) : Option[Map[Term, List[Int]]] = {
     val atoms = goal.facts.predConj
-    val order = goal.order
+    implicit val order = goal.order
     val regex2AFA = new Regex2AFA(atoms)
 
-    println(atoms)
+//    println(atoms)
 
     val concreteWords = findConcreteWords(atoms) match {
       case Some(w) => w
@@ -87,6 +90,10 @@ class PrepropSolver {
         funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
         // nothing
+      case pred if (RRFunsToTransducer get pred).isDefined =>
+        funApps += ((TransducerPreOp(RRFunsToTransducer.get(pred)
+                                      .get.asInstanceOf[AtomicStateTransducer]),
+                     List(a(0)), a(1)))
       case p if (StringTheory.predicates contains p) =>
         Console.err.println("Warning: ignoring " + a)
       case _ =>
@@ -94,10 +101,31 @@ class PrepropSolver {
     }
 
     for (a <- atoms.negativeLits) a.pred match {
+      case `member` =>
+        regexes += ((a.head, !BricsAutomaton(a.last, atoms)))
       case p if (StringTheory.predicates contains p) =>
         Console.err.println("Warning: ignoring !" + a)
       case _ =>
         // nothing
+    }
+
+    {
+      import TerForConvenience._
+      
+      for (lc <- goal.facts.arithConj.negativeEqs) lc match {
+        case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
+          if concreteWords contains l(c) => {
+            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
+            regexes += ((l(d), !(BricsAutomaton fromString str)))
+        }
+        case Seq((IdealInt.ONE, d), (IdealInt.MINUS_ONE, c))
+          if concreteWords contains l(c) => {
+            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
+            regexes += ((l(d), !(BricsAutomaton fromString str)))
+        }
+        case _ =>        
+          Console.err.println("Warning: ignoring " + (lc =/= 0))
+      }
     }
 
     val interestingTerms =

@@ -19,6 +19,7 @@
 package strsolver.preprop
 
 import ap.basetypes.IdealInt
+import ap.PresburgerTools
 import ap.terfor.{Formula, Term, TerForConvenience, TermOrder, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
@@ -38,6 +39,11 @@ trait Automaton {
    * Intersection
    */
   def &(that : Automaton) : Automaton
+
+  /**
+   * Complementation
+   */
+  def unary_! : Automaton
 
   /**
    * Check whether this automaton accepts any word.
@@ -384,6 +390,7 @@ trait AtomicStateAutomaton extends Automaton {
         exists(prodVars.size + zVars.size, matrix)
       val constraint =
         ReduceWithConjunction(Conjunction.TRUE, order)(rawConstraint)
+//        PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
 
       constraint
     })

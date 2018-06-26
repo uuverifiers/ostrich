@@ -302,6 +302,12 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
                                                     toBAutomaton(that)))
 
   /**
+   * Complementation
+   */
+  def unary_! : Automaton =
+    new BricsAutomaton(BasicOperations.complement(this.underlying))
+
+  /**
    * Check whether this automaton describes the empty language.
    */
   def isEmpty : Boolean =

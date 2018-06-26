@@ -29,15 +29,17 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
 
   override def toString = "transducer"
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
-    throw new UnsupportedOperationException
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
+    Console.err.println("Warning: TransducerPreOp.eval not implemented yet")
+    List()
+  }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
-      case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
+      case _ => throw new IllegalArgumentException("TransducerPreOp needs an AtomicStateAutomaton")
     }
     (Iterator(Seq(t.preImage(rc))), List())
   }
