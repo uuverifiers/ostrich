@@ -143,8 +143,12 @@ object AutomataUtils {
   def productWithMap(auts : Seq[AtomicStateAutomaton]) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
+    println("product with map in: " + auts.size)
+    println("product with map in states: " + auts.map(_.states.size).sum)
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
-    productWithMaps(auts.map((_, idMap)))
+    val res = productWithMaps(auts.map((_, idMap)))
+    println("product with map out")
+    res
   }
 
   /**
@@ -183,7 +187,11 @@ object AutomataUtils {
                                              Map[Any, Seq[Any]])]) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
+    println("full product with map in: " + auts.size)
+    println("full product with map in states: " + auts.map(_._1.states.size).sum)
     val (autsSeq, mapsSeq) = auts.unzip
+
+    val size = auts.map(_._1.states.size).sum
 
     // get image of states under maps in mapsSeq
     def mapsImage(ss: Seq[Any]) : List[Any] = {
@@ -214,6 +222,7 @@ object AutomataUtils {
     var checkCnt = 0
 
     while (!worklist.isEmpty) {
+      println("worklist size: " + worklist.size)
       val (ps, ss) = worklist.pop()
 
       // collects transitions from (s, ss)
@@ -248,6 +257,19 @@ object AutomataUtils {
           case _state :: ssTail => {
             val aut :: autsTail = remAuts
             val state = _state.asInstanceOf[aut.State]
+
+            if (size > 300) {
+              println("auts left: " + autsTail.size)
+              println("num outgoing: " + aut.outgoingTransitions(state).size)
+              if (aut.outgoingTransitions(state).size > 100) {
+                println("Why we go so many?")
+                for (t <- aut.outgoingTransitions(state)) {
+                  println(t)
+                }
+
+              }
+            }
+
             aut.outgoingTransitions(state) foreach {
               case (s, nextLbl) => {
                 val newLbl =
@@ -264,6 +286,7 @@ object AutomataUtils {
       addTransitions(builder.LabelOps.sigmaLabel, List(), autsSeq.toList, ss)
     }
 
+    println("Full product out")
     (builder.getAutomaton, sMap.toMap)
   }
 
