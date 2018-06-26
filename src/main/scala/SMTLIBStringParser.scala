@@ -18,12 +18,15 @@
 
 package strsolver
 
+import ap.SimpleAPI
 import ap.basetypes.IdealInt
 import ap.parameters.ParserSettings
 import ap.parser._
 import ap.terfor.preds.Predicate
 import ap.theories._
 import scala.collection.mutable.{HashSet => MHashSet}
+
+import strsolver.preprop.RRFunsToTransducer
 
 object SMTLIBStringParser {
 
@@ -517,8 +520,21 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
     }
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+
   override protected def registerRecFunctions(
-                                               funs : Seq[(IFunction, (IExpression, SMTType))]) : Unit = {
+              funs : Seq[(IFunction, (IExpression, SMTType))]) : Unit = {
+//    registerRecFunctionsAFA(funs)
+//    registerRecFunctionsPreProp(funs)
+    RRFunsToTransducer.registerRecFunctionsPreProp(
+      for ((f, body) <- funs) yield (f, asFormula(body)),
+      observedBitwidth.getOrElse(8))
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  private def registerRecFunctionsAFA(
+              funs : Seq[(IFunction, (IExpression, SMTType))]) : Unit = {
     import IExpression._
 
     val states = funs map (_._1)

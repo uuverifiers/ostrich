@@ -41,6 +41,11 @@ trait Automaton {
   def &(that : Automaton) : Automaton
 
   /**
+   * Complementation
+   */
+  def unary_! : Automaton
+
+  /**
    * Check whether this automaton accepts any word.
    */
   def isEmpty : Boolean

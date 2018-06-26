@@ -49,6 +49,9 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
   def &(that : Automaton) : Automaton =
     intern(this) & intern(that)
 
+  def unary_! : Automaton =
+    !intern(this)
+
   def isEmpty : Boolean =
     !AutomataUtils.areConsistentAtomicAutomata(List(this))
 

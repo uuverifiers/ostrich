@@ -25,6 +25,8 @@ import ap.util.CmdlParser
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryRegistry
 
+import strsolver.preprop.RRFunsToTransducer
+
 object SMTLIBMain {
 
   class MainException(msg : String) extends Exception(msg)
@@ -118,8 +120,10 @@ object SMTLIBMain {
 
     // tell the AFA store about introduced relations
     for ((p, f) <- functionEnc.predTranslation)
-      if ((TheoryRegistry lookupSymbol f).isEmpty)
+      if ((TheoryRegistry lookupSymbol f).isEmpty) {
         RRFunsToAFA.addRel2Fun(p, f)
+        RRFunsToTransducer.addRel2Fun(p, f)
+      }
 
     val formulaWithoutQuans = SMTReader.eliminateUniQuantifiers(formula)
     val intFormula = StringTheoryTranslator(formulaWithoutQuans,
