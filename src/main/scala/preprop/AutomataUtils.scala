@@ -336,7 +336,6 @@ object AutomataUtils {
 
     for ((s1, lbl, s2) <- autOuter.transitions) {
       for (newLbl <- autOuter.LabelOps.subtractLetter(toReplace, lbl)) {
-        println("Adding " + smapOuter(s1), newLbl, smapOuter(s2))
         builder.addTransition(smapOuter(s1), newLbl, smapOuter(s2))
       }
 
