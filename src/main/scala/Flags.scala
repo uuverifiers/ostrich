@@ -34,6 +34,7 @@ object Flags {
   var eagerAutomataOperations = false
   var measureTimes = false
   var useLength = false
+  var forwardApprox = false
 
   // AFA-Sloth specific options
 

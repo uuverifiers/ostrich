@@ -20,7 +20,7 @@ package strsolver.preprop
 
 import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
                                  Stack => MStack, HashMap => MHashMap,
-                                 ArrayBuffer}
+                                 MultiMap, ArrayBuffer, Set => MSet}
 
 /**
  * Collection of useful functions for automata
@@ -393,42 +393,85 @@ object AutomataUtils {
     val smapInner : Map[autInner.State, autOuter.State] =
       autInner.states.map(s => (s -> builder.getNewState))(collection.breakOut)
 
+    val innerInit = smapInner(autInner.initialState)
+    val innerFinal = autInner.acceptingStates.map(smapInner)
+
     builder.setInitialState(smapOuter(autOuter.initialState))
     for (sf <- autOuter.acceptingStates)
       builder.setAccept(smapOuter(sf), true)
 
-    val canBeEmptyWord = autInner.isAccept(autInner.initialState)
+    val epsilons = new MHashMap[autOuter.State, MSet[autOuter.State]]
+                       with MultiMap[autOuter.State, autOuter.State]
 
-    val entryStates = new MHashSet[autOuter.State]
-    val exitStates = new MHashSet[autOuter.State]
-
+    // copy outer
     for ((s1, lbl, s2) <- autOuter.transitions) {
+      val newS1 = smapOuter(s1)
+      val newS2 = smapOuter(s2)
+
       for (newLbl <- autOuter.LabelOps.subtractLetter(toReplace, lbl)) {
-        builder.addTransition(smapOuter(s1), newLbl, smapOuter(s2))
+        builder.addTransition(newS1, newLbl, newS2)
       }
 
       if (autOuter.LabelOps.labelContains(toReplace, lbl)) {
-        entryStates += smapOuter(s1)
-        exitStates += smapOuter(s2)
+        epsilons.addBinding(newS1, innerInit)
+        for (sf <- innerFinal)
+          epsilons.addBinding(sf, newS2)
       }
     }
 
+    // copy inner
     for ((s1, lbl, s2) <- autInner.transitions) {
       val newS1 = smapInner(s1)
       val newS2 = smapInner(s2)
       val convL = lbl.asInstanceOf[autOuter.TLabel]
       builder.addTransition(newS1, convL, newS2)
-
-      if (s1 == autInner.initialState)
-        for (es <- entryStates)
-          builder.addTransition(es, convL, newS2)
-
-      if (autInner.isAccept(s2))
-        for (es <- exitStates)
-          builder.addTransition(newS1, convL, es)
     }
 
-    val res = builder.getAutomaton
-    res
+    buildEpsilons(builder, epsilons)
+
+    builder.getAutomaton
+  }
+
+  /**
+   * Continue a build by providing epsilon transitions.
+   * Note, adding new transitions after calling this will invalidate the
+   * results of this function
+   *
+   * @param builder the builder to add transitions to
+   * @param epsilons epsilons(q) = set of q' where there is an e-transition from q to q'
+   */
+  def buildEpsilons[State, TLabel](builder : AtomicStateAutomatonBuilder[State, TLabel],
+                                   epsilons : MultiMap[State, State]) : Unit = {
+    // transitive closes (modifies in place) the map representing a list
+    // of pairs (x, y)
+    def tranClose[A](pairs : MultiMap[A, A]) : MultiMap[A, A] = {
+      val worklist = new MStack[(A, A)]
+      val closure = new MHashMap[A, MSet[A]] with MultiMap[A, A]
+
+      for ((x, ys) <- pairs; y <- ys) {
+        worklist.push((x, y))
+        closure.addBinding(x, y)
+      }
+
+      while (!worklist.isEmpty) {
+        val (x, y) = worklist.pop
+        for (z <- pairs.getOrElse(y, List()); if !closure(x).contains(z)) {
+          closure.addBinding(x, z)
+          worklist.push((x, z))
+        }
+      }
+
+      closure
+    }
+
+    val closure = tranClose(epsilons)
+    for ((ps1, ps2s) <- closure; ps2 <- ps2s; if (ps1 != ps2)) {
+      if (builder.isAccept(ps2))
+        builder.setAccept(ps1, true)
+
+      for ((ps3, lbl) <- builder.outgoingTransitions(ps2)) {
+        builder.addTransition(ps1, lbl, ps3)
+      }
+    }
   }
 }

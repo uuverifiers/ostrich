@@ -53,6 +53,8 @@ object SMTLIBMain {
         Flags.measureTimes = value
       case CmdlParser.Opt("length", value) =>
         Flags.useLength = value
+      case CmdlParser.Opt("forward", value) =>
+        Flags.forwardApprox = value
       case CmdlParser.Opt("splitOpt", value) =>
         Flags.splitOptimization = value
       case CmdlParser.ValueOpt("modelChecker", mcs) =>

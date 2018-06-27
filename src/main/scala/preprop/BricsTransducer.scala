@@ -278,29 +278,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       }
     }
 
-    // transitive closes (modifies in place) the map representing a list
-    // of pairs (x, y)
-    def tranClose[A](pairs : MMultiMap[A, A]) = {
-      val worklist = new MStack[(A, A)]
-
-      for ((x, ys) <- pairs; y <- ys)
-        worklist.push((x, y))
-
-      while (!worklist.isEmpty) {
-        val (x, y) = worklist.pop
-        for (z <- pairs.getOrElse(y, List()); if !pairs(x).contains(z)) {
-          pairs.addBinding(x, z)
-          worklist.push((x, z))
-        }
-      }
-    }
-
-    tranClose(silentTransitions)
-    for ((ps1, ps2s) <- silentTransitions; ps2 <- ps2s; if (ps1 != ps2)) {
-      for ((ps3, lbl) <- builder.outgoingTransitions(ps2)) {
-        builder.addTransition(ps1, lbl, ps3)
-      }
-    }
+    AutomataUtils.buildEpsilons(builder, silentTransitions)
 
     builder.getAutomaton
   }
