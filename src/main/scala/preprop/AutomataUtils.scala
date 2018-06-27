@@ -145,20 +145,8 @@ object AutomataUtils {
    */
   def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
-
-    println("product with map in: ")
-    for (aut <- auts) {
-        println("")
-        println("")
-        println(aut)
-        println("")
-        println(aut.toDetailedString)
-    }
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
-    val res = productWithMaps(auts.map((_, idMap)), minimize)
-    println("product with map out")
-    println(res)
-    res
+    productWithMaps(auts.map((_, idMap)), minimize)
   }
 
   /**
@@ -291,7 +279,6 @@ object AutomataUtils {
       addTransitions(builder.LabelOps.sigmaLabel, List(), autsSeq.toList, ss)
     }
 
-    println("Full product out")
     (builder.getAutomaton, sMap.toMap)
   }
 
@@ -352,7 +339,7 @@ object AutomataUtils {
   }
 
   /**
-   * Build automaton accepting reverse language of given automaton
+   * Build automaton accepting concat language of given automata
    * aut1 and aut2 must have compatible label types
    */
   def concat(aut1 : AtomicStateAutomaton,

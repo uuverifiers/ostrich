@@ -377,16 +377,16 @@ class BricsAutomatonBuilder
 
   var minimize = true
 
-  val aut : BricsAutomaton = {
+  val baut : BAutomaton = {
     val baut = new BAutomaton
     baut.setDeterministic(false)
-    new BricsAutomaton(baut)
+    baut
   }
 
   /**
    * The initial state of the automaton being built
    */
-  def initialState : BricsAutomaton#State = aut.initialState
+  def initialState : BricsAutomaton#State = baut.getInitialState
 
   /**
    * By default one can assume built automata are minimised before the
@@ -403,7 +403,7 @@ class BricsAutomatonBuilder
    * Set the initial state
    */
   def setInitialState(q : BricsAutomaton#State) : Unit =
-    aut.underlying.setInitialState(q)
+    baut.setInitialState(q)
 
   /**
    * Add a new transition q1 --label--> q2
@@ -411,7 +411,7 @@ class BricsAutomatonBuilder
   def addTransition(q1 : BricsAutomaton#State,
                     label : BricsAutomaton#TLabel,
                     q2 : BricsAutomaton#State) : Unit = {
-    if (aut.LabelOps.isNonEmptyLabel(label)) {
+    if (LabelOps.isNonEmptyLabel(label)) {
       val (min, max) = label
       q1.addTransition(new Transition(min, max, q2))
     }
@@ -430,10 +430,10 @@ class BricsAutomatonBuilder
    * automaton cannot change
    */
   def getAutomaton : BricsAutomaton = {
-    aut.underlying.restoreInvariant
+    baut.restoreInvariant
     if (minimize)
-      aut.underlying.minimize
-    aut
+      baut.minimize
+    new BricsAutomaton(baut)
   }
 }
 

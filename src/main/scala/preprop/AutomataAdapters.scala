@@ -140,7 +140,6 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
 
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
     underlying.outgoingTransitions(from)
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////
