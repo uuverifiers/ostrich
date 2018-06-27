@@ -148,7 +148,7 @@ class BricsTransducer(override val underlying : BAutomaton,
             }
             case Plus(n) => {
               for ((asNext, albl) <- aut.outgoingTransitions(as)) {
-                val shftLbl = aut.LabelOps.shift(albl, n)
+                val shftLbl = aut.LabelOps.shift(albl, -n)
                 if (aut.LabelOps.isNonEmptyLabel(shftLbl)) {
                   val tlbl = aut.LabelOps.interval(t.getMin, t.getMax)
                   for (preLbl <- aut.LabelOps.intersectLabels(shftLbl, tlbl)) {

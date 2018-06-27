@@ -146,7 +146,7 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    */
   def shift(lbl : (Char, Char), n : Int) : (Char, Char) = {
     val (cmin, cmax) = lbl
-    (Math.max(minChar, cmin - n).toChar, Math.min(maxChar, cmax - n).toChar)
+    (Math.max(minChar, cmin + n).toChar, Math.min(maxChar, cmax + n).toChar)
   }
 
   /**
