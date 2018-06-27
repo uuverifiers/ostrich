@@ -139,15 +139,25 @@ object AutomataUtils {
    * Product of a number of given automata.  Returns
    * new automaton.  Returns map from new states of result to (q0, [q1,
    * ..., qn]) giving states of this and auts respectively
+   *
+   * The minimize argument enable minimization of the product automaton,
+   * which should only be used if the returned maps are not used.
    */
-  def productWithMap(auts : Seq[AtomicStateAutomaton]) :
+  def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
-    println("product with map in: " + auts.size)
-    println("product with map in states: " + auts.map(_.states.size).sum)
+    println("product with map in: ")
+    for (aut <- auts) {
+        println("")
+        println("")
+        println(aut)
+        println("")
+        println(aut.toDetailedString)
+    }
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
-    val res = productWithMaps(auts.map((_, idMap)))
+    val res = productWithMaps(auts.map((_, idMap)), minimize)
     println("product with map out")
+    println(res)
     res
   }
 
@@ -156,9 +166,13 @@ object AutomataUtils {
    * states of the new automaton to tuples of the original.  auts may
    * already be products and come with a similar map, these are composed
    * for the result map
+   *
+   * The minimize argument enable minimization of the product automaton,
+   * which should only be used if the returned maps are not used.
    */
   private def productWithMaps(auts : Seq[(AtomicStateAutomaton,
-                                         Map[Any, Seq[Any]])]) :
+                                         Map[Any, Seq[Any]])],
+                              minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
     if (auts.size == 0)
@@ -168,13 +182,13 @@ object AutomataUtils {
       return auts.head
 
     val firstSlice = auts.grouped(MaxSimultaneousProduct)
-                         .map(fullProductWithMaps(_))
+                         .map(fullProductWithMaps(_, minimize))
                          .toSeq
 
     if (firstSlice.size == 1)
       return firstSlice(0)
     else
-      return productWithMaps(firstSlice)
+      return productWithMaps(firstSlice, minimize)
   }
 
   /**
@@ -182,24 +196,28 @@ object AutomataUtils {
    * states of the new automaton to tuples of the original.  auts may
    * already be products and come with a similar map, these are composed
    * for the result map
+   * The minimize argument enable minimization of the product automaton,
+   * which should only be used if the returned maps are not used.
    */
   private def fullProductWithMaps(auts : Seq[(AtomicStateAutomaton,
-                                             Map[Any, Seq[Any]])]) :
+                                             Map[Any, Seq[Any]])],
+                                  minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
-    println("full product with map in: " + auts.size)
-    println("full product with map in states: " + auts.map(_._1.states.size).sum)
     val (autsSeq, mapsSeq) = auts.unzip
 
-    val size = auts.map(_._1.states.size).sum
-
     // get image of states under maps in mapsSeq
+    // or just return ss if minimize is true
     def mapsImage(ss: Seq[Any]) : List[Any] = {
-      ss.iterator.zip(mapsSeq.iterator).flatMap({ case (s, sMap) => sMap(s) }).toList
+      if (minimize)
+        ss.toList
+      else
+        ss.iterator.zip(mapsSeq.iterator).flatMap({ case (s, sMap) => sMap(s) }).toList
     }
 
     val head = autsSeq.head
     val builder = head.getBuilder
+    builder.setMinimize(minimize)
     val initState = builder.initialState
     // from new states to list of old (composed with input maps)
     val sMap = new MHashMap[head.State, List[Any]]
@@ -222,7 +240,6 @@ object AutomataUtils {
     var checkCnt = 0
 
     while (!worklist.isEmpty) {
-      println("worklist size: " + worklist.size)
       val (ps, ss) = worklist.pop()
 
       // collects transitions from (s, ss)
@@ -258,18 +275,6 @@ object AutomataUtils {
             val aut :: autsTail = remAuts
             val state = _state.asInstanceOf[aut.State]
 
-            if (size > 300) {
-              println("auts left: " + autsTail.size)
-              println("num outgoing: " + aut.outgoingTransitions(state).size)
-              if (aut.outgoingTransitions(state).size > 100) {
-                println("Why we go so many?")
-                for (t <- aut.outgoingTransitions(state)) {
-                  println(t)
-                }
-
-              }
-            }
-
             aut.outgoingTransitions(state) foreach {
               case (s, nextLbl) => {
                 val newLbl =
@@ -295,7 +300,7 @@ object AutomataUtils {
    * automaton
    */
   def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
-    productWithMap(auts)._1
+    productWithMap(auts, true)._1
 
   /**
    * Replace a-transitions with new a-transitions between pairs of states

@@ -359,6 +359,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   def isAccept(s : State) : Boolean = s.isAccept
 
+  def toDetailedString : String = underlying.toString
+
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
@@ -373,6 +375,8 @@ class BricsAutomatonBuilder
                                         BricsAutomaton#TLabel] {
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
+  var minimize = true
+
   val aut : BricsAutomaton = {
     val baut = new BAutomaton
     baut.setDeterministic(false)
@@ -383,6 +387,12 @@ class BricsAutomatonBuilder
    * The initial state of the automaton being built
    */
   def initialState : BricsAutomaton#State = aut.initialState
+
+  /**
+   * By default one can assume built automata are minimised before the
+   * are returned.  Use this to enable or disable it
+   */
+  def setMinimize(minimize : Boolean) : Unit = { this.minimize = minimize }
 
   /**
    * Create a fresh state that can be used in the automaton
@@ -421,6 +431,8 @@ class BricsAutomatonBuilder
    */
   def getAutomaton : BricsAutomaton = {
     aut.underlying.restoreInvariant
+    if (minimize)
+      aut.underlying.minimize
     aut
   }
 }

@@ -61,6 +61,8 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
   def getAcceptedWord : Option[Seq[Int]] =
     internalise.getAcceptedWord // TODO: optimise
 
+  def toDetailedString : String = underlying.toDetailedString
+
   protected def computeReachableStates(initState : State,
                                        accStates : Set[State])
                                      : GSet[State] = {
