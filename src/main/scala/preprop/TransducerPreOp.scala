@@ -43,4 +43,13 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
     }
     (Iterator(Seq(t.preImage(rc))), List())
   }
+
+  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
+    val cons = argumentConstraints(0).map(_ match {
+        case saut : AtomicStateAutomaton => saut
+        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+    })
+    val prod = ProductAutomaton(cons)
+    PostImageAutomaton(prod, t)
+  }
 }

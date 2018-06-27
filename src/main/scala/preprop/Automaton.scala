@@ -435,6 +435,16 @@ trait AtomicStateAutomatonBuilder[State, TLabel] {
   def addTransition(s1 : State, label : TLabel, s2 : State) : Unit
 
   /**
+   * Iterate over outgoing transitions from state
+   */
+  def outgoingTransitions(q : State) : Iterator[(State, TLabel)]
+
+  /**
+   * Ask if state is accepting
+   */
+  def isAccept(q : State) : Boolean
+
+  /**
    * Set state accepting
    */
   def setAccept(s : State, isAccepting : Boolean) : Unit

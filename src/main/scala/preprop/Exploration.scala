@@ -36,7 +36,7 @@ object Exploration {
 
   abstract class ConstraintStore {
     def push : Unit
-    
+
     def pop : Unit
 
     /**
@@ -154,11 +154,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     for (t <- allTerms)
       constraintStores.put(t, newStore(t))
 
-    for ((t, aut) <- initialConstraints)
+    for ((t, aut) <- initialConstraints) {
       constraintStores(t).assertConstraint(aut) match {
         case Some(_) => return None
         case None    => // nothing
       }
+    }
 
     for (p <- lengthProver) {
       for ((t, aut) <- initialConstraints)
@@ -168,6 +169,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
     }
+
+    if (Flags.forwardApprox)
+      addForwardConstraints
 
     val funAppList =
       (for ((apps, res) <- sortedFunApps;
@@ -179,6 +183,19 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       None
     } catch {
       case FoundModel(model) => Some(model)
+    }
+  }
+
+  /**
+   * Propagates approximate constraints forwards from the root, adds new
+   * constraints to constraintStores
+   */
+  private def addForwardConstraints : Unit = {
+    for ((apps, res) <- sortedFunApps.reverseIterator;
+         (op, args) <- apps) {
+      val arguments = for (a <- args) yield constraintStores(a).getCompleteContents
+      val resultConstraint = op.forwardApprox(arguments)
+      constraintStores(res).assertConstraint(resultConstraint)
     }
   }
 
@@ -360,7 +377,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def push : Unit =
       constraintStack push (constraints.size, currentConstraint)
-    
+
     def pop : Unit = {
       val (oldSize, lastCC) = constraintStack.pop
       constraints reduceToSize oldSize
@@ -466,7 +483,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       }
 
     def push : Unit = constraintStack push constraints.size
-    
+
     def pop : Unit = {
       val oldSize = constraintStack.pop
       while (constraints.size > oldSize) {
@@ -500,7 +517,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
             return Some(for (a <- inconsistentAutomata(autInd).toList)
                         yield TermConstraint(t, a))
           }
-            
+
           potentialConflicts = potentialConflicts.tail
         }
 

@@ -61,6 +61,8 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
   def getAcceptedWord : Option[Seq[Int]] =
     internalise.getAcceptedWord // TODO: optimise
 
+  def toDetailedString : String = underlying.toDetailedString
+
   protected def computeReachableStates(initState : State,
                                        accStates : Set[State])
                                      : GSet[State] = {
@@ -138,8 +140,6 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
 
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
     underlying.outgoingTransitions(from)
-
-  def toDetailedString : String = underlying.toDetailedString
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -220,9 +220,39 @@ case class PreImageAutomaton(tran : AtomicStateTransducer,
     ) { }
 
 /**
+ * Case class representation of tran.preImage(aut)
+ */
+case class PostImageAutomaton(inAut : AtomicStateAutomaton,
+                              tran : AtomicStateTransducer)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      tran.postImage(inAut)
+    ) { }
+
+/**
  * Case class representation of AutomataUtils.reverse
  */
 case class ReverseAutomaton(aut : AtomicStateAutomaton)
     extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
       AutomataUtils.reverse(aut)
     ) { }
+
+/**
+ * Case class representation of AutomataUtils.reverse
+ */
+case class ConcatAutomaton(aut1 : AtomicStateAutomaton, aut2 : AtomicStateAutomaton)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.concat(aut1, aut2)
+    ) { }
+
+/**
+ * Case class representation of one automaton inserted into another to
+ * replace a-transitions.  See AutomatonUtils.nestAutomata.
+ */
+case class NestedAutomaton(inner: AtomicStateAutomaton,
+                           a : Char,
+                           outer: AtomicStateAutomaton)
+    extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
+      AutomataUtils.nestAutomata(inner, a, outer)
+    ) { }
+
+

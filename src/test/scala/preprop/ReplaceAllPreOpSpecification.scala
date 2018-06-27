@@ -8,118 +8,14 @@ import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 object ReplaceAllPreOpSpecification
 	extends Properties("ReplaceAllPreOp"){
 
-  // Automaton q1 -[a]-> q2 -[b]-> q3 -[c]-> q4 -[d]-> q5
-  val abcdAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    val q5 = new IDState(5)
-    q5.setAccept(true)
-    q1.addTransition(new Transition('a', 'a', q2))
-    q2.addTransition(new Transition('b', 'b', q3))
-    q3.addTransition(new Transition('c', 'c', q4))
-    q4.addTransition(new Transition('d', 'd', q5))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[b]-> q2 -[c]-> q3
-  val bcAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    q3.setAccept(true)
-    q1.addTransition(new Transition('b', 'b', q2))
-    q2.addTransition(new Transition('c', 'c', q3))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[a]-> q2 -[a]-> q3
-  val aaAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    q3.setAccept(true)
-    q1.addTransition(new Transition('a', 'a', q2))
-    q2.addTransition(new Transition('a', 'a', q3))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[a,b]-> q2
-  val aorbAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    q2.setAccept(true)
-    q1.addTransition(new Transition('a', 'b', q2))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[a]-> q2 -[a]-> q3
-  //              -[b]-> q4 -[b]->
-  val aaorbbAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    q3.setAccept(true)
-    q1.addTransition(new Transition('a', 'a', q2))
-    q2.addTransition(new Transition('a', 'a', q3))
-    q1.addTransition(new Transition('b', 'b', q2))
-    q4.addTransition(new Transition('b', 'b', q3))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[a]-> q2 -[b]-> q3 -[d]-> q4
-  val abdAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    q4.setAccept(true)
-    q1.addTransition(new Transition('a', 'a', q2))
-    q2.addTransition(new Transition('b', 'b', q3))
-    q3.addTransition(new Transition('d', 'd', q4))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[d]-> q2 -[b]-> q3 -[a]-> q4
-  val dbaAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    q4.setAccept(true)
-    q1.addTransition(new Transition('d', 'd', q2))
-    q2.addTransition(new Transition('b', 'b', q3))
-    q3.addTransition(new Transition('a', 'a', q4))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
-  // Automaton q1 -[d]-> q
-  val dAut = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    q2.setAccept(true)
-    q1.addTransition(new Transition('d', 'd', q2))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    new BricsAutomaton(aut)
-  }
-
+  val abcdAut = BricsAutomaton.fromString("abcd")
+  val bcAut = BricsAutomaton.fromString("bc")
+  val aaAut = BricsAutomaton.fromString("aa")
+  val aorbAut = BricsAutomaton.fromString("a") | BricsAutomaton.fromString("b")
+  val aaorbbAut = BricsAutomaton.fromString("aa") | BricsAutomaton.fromString("bb")
+  val abdAut = BricsAutomaton.fromString("abd")
+  val dbaAut = BricsAutomaton.fromString("dba")
+  val dAut = BricsAutomaton.fromString("d")
 
   def seq(s : String) = s.map(_.toInt)
 
@@ -231,6 +127,74 @@ object ReplaceAllPreOpSpecification
     !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), abdAut)._1.exists(cons => {
       cons(0)(seq("ababa"))
     })
+  }
+
+  property("Simple Post Char") = {
+    val baut1 = BricsAutomaton.fromString("hello")
+    val baut2 = BricsAutomaton.fromString("world")
+
+    val post = ReplaceAllPreOp('l').
+      forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
+                        Seq(baut2.asInstanceOf[Automaton])))
+
+    // negative ones are subjective i suppose due to over-approx
+    post(seq("heworldworldo")) &&
+      !post(seq("hello")) &&
+      !post(seq("hworldo")) &&
+      !post(seq("hworldllo"))
+  }
+
+  property("Simple Post Word") = {
+    val baut1 = BricsAutomaton.fromString("hello")
+    val baut2 = BricsAutomaton.fromString("world")
+
+    val post = ReplaceAllPreOp("el").
+      forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
+                        Seq(baut2.asInstanceOf[Automaton])))
+
+    // negative ones are subjective i suppose due to over-approx
+    post(seq("hworldlo")) &&
+      !post(seq("hello")) &&
+      !post(seq("hworldo")) &&
+      !post(seq("hworldllo"))
+  }
+
+  property("Simple Post Regex") = {
+    val baut1 = BricsAutomaton.fromString("hello")
+    val baut2 = BricsAutomaton.fromString("world")
+    val regex = BricsAutomaton.fromString("el")
+
+    val post = ReplaceAllPreOp(regex).
+      forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
+                        Seq(baut2.asInstanceOf[Automaton])))
+
+    // negative ones are subjective i suppose due to over-approx
+    post(seq("hworldlo")) &&
+      !post(seq("hello")) &&
+      !post(seq("hworldo")) &&
+      !post(seq("hworldllo"))
+  }
+
+  property("Simple Post Regex Loop") = {
+    val baut1 = BricsAutomaton.fromString("hello")
+    val baut2 = BricsAutomaton.fromString("world")
+
+    val q0 = new IDState(0)
+    q0.addTransition(new Transition('l', q0))
+    q0.setAccept(true)
+    val aut = new BAutomaton
+    aut.setInitialState(q0)
+    val regex = new BricsAutomaton(aut)
+
+    val post = ReplaceAllPreOp(regex).
+      forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
+                        Seq(baut2.asInstanceOf[Automaton])))
+
+    // negative ones are subjective i suppose due to over-approx
+    post(seq("heworldo")) &&
+      !post(seq("heworldlo")) &&
+      !post(seq("hworldo")) &&
+      !post(seq("hworldllo"))
   }
 }
 

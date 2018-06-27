@@ -20,7 +20,7 @@ package strsolver.preprop
 
 import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
                                  Stack => MStack, HashMap => MHashMap,
-                                 ArrayBuffer}
+                                 MultiMap, ArrayBuffer, Set => MSet}
 
 /**
  * Collection of useful functions for automata
@@ -145,10 +145,8 @@ object AutomataUtils {
    */
   def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
-
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
-    val res = productWithMaps(auts.map((_, idMap)), minimize)
-    res
+    productWithMaps(auts.map((_, idMap)), minimize)
   }
 
   /**
@@ -338,5 +336,142 @@ object AutomataUtils {
     }
 
     builder.getAutomaton
+  }
+
+  /**
+   * Build automaton accepting concat language of given automata
+   * aut1 and aut2 must have compatible label types
+   */
+  def concat(aut1 : AtomicStateAutomaton,
+             aut2 : AtomicStateAutomaton) : AtomicStateAutomaton = {
+    val builder = aut1.getBuilder
+
+    val smap1 : Map[aut1.State, aut1.State] =
+      aut1.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+    val smap2 : Map[aut2.State, aut1.State] =
+      aut2.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+
+    builder.setInitialState(smap1(aut1.initialState))
+    for (sf <- aut2.acceptingStates)
+      builder.setAccept(smap2(sf), true)
+    if (aut1.isAccept(aut1.initialState))
+      for (sf <- aut1.acceptingStates)
+        builder.setAccept(smap1(sf), true)
+
+    for ((s1, l, s2) <- aut1.transitions)
+      builder.addTransition(smap1(s1), l, smap1(s2))
+
+    for ((s1, l, s2) <- aut2.transitions) {
+      val convL = l.asInstanceOf[aut1.TLabel]
+      if (s1 == aut2.initialState)
+        for (sf <- aut1.acceptingStates)
+          builder.addTransition(smap1(sf), convL, smap2(s2))
+      builder.addTransition(smap2(s2), convL, smap2(s1))
+    }
+
+    builder.getAutomaton
+  }
+
+  /**
+   * Inserts second automaton into the first replacing transitions over
+   * a give character.  I.e. s1 --a--> s2 becomes s1 -->into aut / from
+   * final --> s2.
+   *
+   * Assumes autOuter and autInner have compatible label types
+   *
+   * This is approximate in that there is only a single copy of the
+   * inserted automaton, so ingoing and outgoing transitions are not
+   * mapped.
+   */
+  def nestAutomata(autOuter : AtomicStateAutomaton,
+                   toReplace : Char,
+                   autInner : AtomicStateAutomaton) : AtomicStateAutomaton = {
+    val builder = autOuter.getBuilder
+
+    val smapOuter : Map[autOuter.State, autOuter.State] =
+      autOuter.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+    val smapInner : Map[autInner.State, autOuter.State] =
+      autInner.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+
+    val innerInit = smapInner(autInner.initialState)
+    val innerFinal = autInner.acceptingStates.map(smapInner)
+
+    builder.setInitialState(smapOuter(autOuter.initialState))
+    for (sf <- autOuter.acceptingStates)
+      builder.setAccept(smapOuter(sf), true)
+
+    val epsilons = new MHashMap[autOuter.State, MSet[autOuter.State]]
+                       with MultiMap[autOuter.State, autOuter.State]
+
+    // copy outer
+    for ((s1, lbl, s2) <- autOuter.transitions) {
+      val newS1 = smapOuter(s1)
+      val newS2 = smapOuter(s2)
+
+      for (newLbl <- autOuter.LabelOps.subtractLetter(toReplace, lbl)) {
+        builder.addTransition(newS1, newLbl, newS2)
+      }
+
+      if (autOuter.LabelOps.labelContains(toReplace, lbl)) {
+        epsilons.addBinding(newS1, innerInit)
+        for (sf <- innerFinal)
+          epsilons.addBinding(sf, newS2)
+      }
+    }
+
+    // copy inner
+    for ((s1, lbl, s2) <- autInner.transitions) {
+      val newS1 = smapInner(s1)
+      val newS2 = smapInner(s2)
+      val convL = lbl.asInstanceOf[autOuter.TLabel]
+      builder.addTransition(newS1, convL, newS2)
+    }
+
+    buildEpsilons(builder, epsilons)
+
+    builder.getAutomaton
+  }
+
+  /**
+   * Continue a build by providing epsilon transitions.
+   * Note, adding new transitions after calling this will invalidate the
+   * results of this function
+   *
+   * @param builder the builder to add transitions to
+   * @param epsilons epsilons(q) = set of q' where there is an e-transition from q to q'
+   */
+  def buildEpsilons[State, TLabel](builder : AtomicStateAutomatonBuilder[State, TLabel],
+                                   epsilons : MultiMap[State, State]) : Unit = {
+    // transitive closes (modifies in place) the map representing a list
+    // of pairs (x, y)
+    def tranClose[A](pairs : MultiMap[A, A]) : MultiMap[A, A] = {
+      val worklist = new MStack[(A, A)]
+      val closure = new MHashMap[A, MSet[A]] with MultiMap[A, A]
+
+      for ((x, ys) <- pairs; y <- ys) {
+        worklist.push((x, y))
+        closure.addBinding(x, y)
+      }
+
+      while (!worklist.isEmpty) {
+        val (x, y) = worklist.pop
+        for (z <- pairs.getOrElse(y, List()); if !closure(x).contains(z)) {
+          closure.addBinding(x, z)
+          worklist.push((x, z))
+        }
+      }
+
+      closure
+    }
+
+    val closure = tranClose(epsilons)
+    for ((ps1, ps2s) <- closure; ps2 <- ps2s; if (ps1 != ps2)) {
+      if (builder.isAccept(ps2))
+        builder.setAccept(ps1, true)
+
+      for ((ps3, lbl) <- builder.outgoingTransitions(ps2)) {
+        builder.addTransition(ps1, lbl, ps3)
+      }
+    }
   }
 }

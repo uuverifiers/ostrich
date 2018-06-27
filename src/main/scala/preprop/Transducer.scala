@@ -49,6 +49,12 @@ trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
    * language.  I.e. Pre_T(aut) for transducer T
    */
   def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton
+
+  /**
+   * Calculates regular language that is the post-image of the given regular
+   * language.  I.e. Post_T(aut) for transducer T
+   */
+  def postImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton
 }
 
 trait AtomicStateTransducerBuilder[State, TLabel] {
