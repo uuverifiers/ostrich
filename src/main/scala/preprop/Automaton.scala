@@ -241,6 +241,11 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel]
 
+  /**
+   * String representation of automaton in full gory detail
+   */
+  def toDetailedString : String
+
   //////////////////////////////////////////////////////////////////////////
   // Derived methods
 
@@ -367,7 +372,7 @@ trait AtomicStateAutomaton extends Automaton {
 
       val prodNonNeg =
         prodVars >= 0
- 
+
       val prodImps =
         (for (((source, _), prodVar) <-
                 productions.iterator zip prodVars.iterator;
@@ -402,6 +407,12 @@ trait AtomicStateAutomatonBuilder[State, TLabel] {
    * Operations on labels
    */
   val LabelOps : TLabelOps[TLabel]
+
+  /**
+   * By default one can assume built automata are minimised before the
+   * are returned.  Use this to enable or disable it
+   */
+  def setMinimize(minimize : Boolean) : Unit
 
   /**
    * The initial state of the automaton being built

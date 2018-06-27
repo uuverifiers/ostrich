@@ -102,6 +102,7 @@ class Box[A <: AtomicStateAutomaton] {
 object CaleyGraph {
   def apply[A <: AtomicStateAutomaton](aut : A) : CaleyGraph[A] = {
     val graphBuilder = aut.getBuilder
+    graphBuilder.setMinimize(false)
     val boxMap = new HashMap[aut.State, Box[A]]
     val stateMap = new HashMap[Box[A], aut.State]
 

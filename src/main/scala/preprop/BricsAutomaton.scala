@@ -359,6 +359,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   def isAccept(s : State) : Boolean = s.isAccept
 
+  def toDetailedString : String = underlying.toString
+
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
@@ -373,16 +375,24 @@ class BricsAutomatonBuilder
                                         BricsAutomaton#TLabel] {
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
-  val aut : BricsAutomaton = {
+  var minimize = true
+
+  val baut : BAutomaton = {
     val baut = new BAutomaton
     baut.setDeterministic(false)
-    new BricsAutomaton(baut)
+    baut
   }
 
   /**
    * The initial state of the automaton being built
    */
-  def initialState : BricsAutomaton#State = aut.initialState
+  def initialState : BricsAutomaton#State = baut.getInitialState
+
+  /**
+   * By default one can assume built automata are minimised before the
+   * are returned.  Use this to enable or disable it
+   */
+  def setMinimize(minimize : Boolean) : Unit = { this.minimize = minimize }
 
   /**
    * Create a fresh state that can be used in the automaton
@@ -393,7 +403,7 @@ class BricsAutomatonBuilder
    * Set the initial state
    */
   def setInitialState(q : BricsAutomaton#State) : Unit =
-    aut.underlying.setInitialState(q)
+    baut.setInitialState(q)
 
   /**
    * Add a new transition q1 --label--> q2
@@ -401,7 +411,7 @@ class BricsAutomatonBuilder
   def addTransition(q1 : BricsAutomaton#State,
                     label : BricsAutomaton#TLabel,
                     q2 : BricsAutomaton#State) : Unit = {
-    if (aut.LabelOps.isNonEmptyLabel(label)) {
+    if (LabelOps.isNonEmptyLabel(label)) {
       val (min, max) = label
       q1.addTransition(new Transition(min, max, q2))
     }
@@ -415,8 +425,10 @@ class BricsAutomatonBuilder
    * automaton cannot change
    */
   def getAutomaton : BricsAutomaton = {
-    aut.underlying.restoreInvariant
-    aut
+    baut.restoreInvariant
+    if (minimize)
+      baut.minimize
+    new BricsAutomaton(baut)
   }
 }
 
