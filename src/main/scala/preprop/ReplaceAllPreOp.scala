@@ -108,7 +108,7 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
          newYCon = ReplaceCharAutomaton(rc, a, box.getEdges)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
-        new InitFinalAutomaton(rc, q1, fin)
+        InitFinalAutomaton(rc, q1, fin)
       }).toSeq
       val newZCon = ProductAutomaton(newZCons)
       Seq(newYCon, newZCon)
@@ -380,7 +380,7 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
          newYCon = PreImageAutomaton(tran, yprimeCons)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
-        new InitFinalAutomaton(rc, q1, fin)
+        InitFinalAutomaton(rc, q1, fin)
       }).toSeq
       val newZCon = ProductAutomaton(newZCons)
       Seq(newYCon, newZCon)

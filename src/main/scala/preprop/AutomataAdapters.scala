@@ -145,13 +145,26 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
 ////////////////////////////////////////////////////////////////////////////////
 
 object InitFinalAutomaton {
+  def apply[A <: AtomicStateAutomaton]
+           (aut : A,
+            initialState : A#State,
+            acceptingStates : Set[A#State]) : AtomicStateAutomaton =
+    aut match {
+      case _InitFinalAutomaton(a, _, _) =>
+        _InitFinalAutomaton(a,
+                            initialState.asInstanceOf[AtomicStateAutomaton#State],
+                            acceptingStates.asInstanceOf[Set[AtomicStateAutomaton#State]])
+      case _ =>
+        _InitFinalAutomaton(aut, initialState, acceptingStates)
+    }
+
   def setInitial[A <: AtomicStateAutomaton]
                 (aut : A, initialState : A#State) =
     aut match {
-      case InitFinalAutomaton(a, oldInit, oldFinal) =>
-        InitFinalAutomaton(a, initialState, oldFinal)
+      case _InitFinalAutomaton(a, oldInit, oldFinal) =>
+        _InitFinalAutomaton(a, initialState, oldFinal)
       case _ =>
-        InitFinalAutomaton(
+        _InitFinalAutomaton(
           aut, initialState,
           aut.acceptingStates.asInstanceOf[Set[AtomicStateAutomaton#State]]
         )
@@ -160,14 +173,19 @@ object InitFinalAutomaton {
   def setFinal[A <: AtomicStateAutomaton]
               (aut : A, acceptingStates : Set[AtomicStateAutomaton#State]) =
     aut match {
-      case InitFinalAutomaton(a, oldInit, oldFinal) =>
-        InitFinalAutomaton(a, oldInit, acceptingStates)
+      case _InitFinalAutomaton(a, oldInit, oldFinal) =>
+        _InitFinalAutomaton(a, oldInit, acceptingStates)
       case _ =>
-        InitFinalAutomaton(aut, aut.initialState, acceptingStates)
+        _InitFinalAutomaton(aut, aut.initialState, acceptingStates)
     }
 }
 
-case class InitFinalAutomaton[A <: AtomicStateAutomaton]
+/**
+ * Representation of automaton with initial and final states changed
+ *
+ * See InitFinalAutomaton for building
+ */
+case class _InitFinalAutomaton[A <: AtomicStateAutomaton]
                              (_underlying : A,
                               val _initialState : A#State,
                               val _acceptingStates : Set[A#State])
@@ -202,10 +220,25 @@ case class ReplaceCharAutomaton[A <: AtomicStateAutomaton]
       AutomataUtils.replaceTransitions(aut, a, newTrans)
     ) { }
 
+
 /**
- * Case class representation of AutomataUtils.product
+ * Facade for _ProductAutomaton that just returns the automaton if only
+ * one is given, else products the given automata
  */
-case class ProductAutomaton(auts : Seq[AtomicStateAutomaton])
+object ProductAutomaton {
+  def apply(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton = {
+    if (auts.size == 1)
+      auts(0)
+    else
+      _ProductAutomaton(auts)
+  }
+}
+
+/**
+ * Case class representation of AutomataUtils.product, see
+ * ProductAutomaton
+ */
+case class _ProductAutomaton(auts : Seq[AtomicStateAutomaton])
     extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
       AutomataUtils.product(auts)
     ) { }
