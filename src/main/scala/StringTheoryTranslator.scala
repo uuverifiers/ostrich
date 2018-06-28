@@ -374,7 +374,7 @@ class StringTheoryTranslator private (constraint : IFormula,
   //////////////////////////////////////////////////////////////////////////////
 
   private val preConstraint =
-    visit(constraint, Context()).asInstanceOf[IFormula]
+    visit(constraint, Context(())).asInstanceOf[IFormula]
 
   //////////////////////////////////////////////////////////////////////////////
   // Detect word variables that are used in word/regex context
