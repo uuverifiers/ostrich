@@ -24,6 +24,7 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
 
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
+    !(new java.io.File(filename)).exists ||
     expectResult(result) {
 //      SMTLIBMain.doMain((List("+assert", "-timeout=10", filename) ++ extractOpts).toArray,
 //                        false)
