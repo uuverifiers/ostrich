@@ -101,10 +101,10 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
       case zcon : AtomicStateAutomaton => zcon
       case _ => throw new IllegalArgumentException("ReplaceAllPreOp can only use AtomicStateAutomaton constraints.")
     })
-    val cg = CaleyGraph[rc.type](rc)
+    val cg = CaleyGraph[rc.type](rc, zcons)
 
     val res =
-    for (box <- cg.getAcceptNodes(zcons).iterator;
+    for (box <- cg.getAcceptNodes.iterator;
          newYCon = ReplaceCharAutomaton(rc, a, box.getEdges)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
@@ -369,9 +369,9 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     // x = replaceall(y, w, z) internally translated to
     // y' = tran(y); x = replaceall(y', w, z)
     //
-    val cg = CaleyGraph[rc.type](rc)
+    val cg = CaleyGraph[rc.type](rc, zcons)
     val res =
-    for (box <- cg.getAcceptNodes(zcons).iterator;
+    for (box <- cg.getAcceptNodes.iterator;
          yprimeCons = ReplaceCharAutomaton(
                         rc,
                         rc.LabelOps.internalChar.toChar,

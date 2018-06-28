@@ -100,7 +100,14 @@ class Box[A <: AtomicStateAutomaton] {
  * @param aut
  */
 object CaleyGraph {
-  def apply[A <: AtomicStateAutomaton](aut : A) : CaleyGraph[A] = {
+  /**
+   * Build a Caley graph for aut.  Restrict to boxes representing words
+   * that are prefixes of those accepted by all automata in wordBounds.
+   */
+  def apply[A <: AtomicStateAutomaton]
+           (aut : A,
+            wordBounds : Seq[AtomicStateAutomaton] = Seq()) : CaleyGraph[A] = Exploration.measure("build caley graph") {
+    val boundAut = AutomataUtils.product(wordBounds)
     val graphBuilder = aut.getBuilder
     graphBuilder.setMinimize(false)
     val boxMap = new HashMap[aut.State, Box[A]]
@@ -109,31 +116,39 @@ object CaleyGraph {
     val eBox = getEpsilonBox(aut)
     val es = graphBuilder.getNewState
     graphBuilder setInitialState es
-    graphBuilder.setAccept(es, true)
+    graphBuilder.setAccept(es, boundAut.isAccept(boundAut.initialState))
     boxMap += (es -> eBox)
     stateMap += (eBox -> es)
 
     val characterBoxes = getCharacterBoxes(aut)
 
-    val worklist = Stack((es, eBox))
-    val seenlist = new HashSet[Box[A]]
+    // worklist contains (state of graph, corresponding box, a state
+    // that boundAut may have reaced reading a word to es)
+    val worklist = Stack((es, eBox, boundAut.initialState))
+    // the boxes and states of boundAut we've explored before
+    val seenlist = new HashSet[(Box[A], boundAut.State)]
 
     while (!worklist.isEmpty) {
-      val (s, w) = worklist.pop()
+      val (s, w, bs) = worklist.pop()
+
       for ((box, as) <- characterBoxes) {
         val wa = w ++ box
-        if (!seenlist.contains(wa)) {
-          val sa = graphBuilder.getNewState
-          graphBuilder.setAccept(sa, true)
-          boxMap += (sa -> wa)
-          stateMap += (wa -> sa)
-          worklist.push((sa, wa))
-          seenlist += wa
-        }
+        for ((bsNext, blbl) <- boundAut.outgoingTransitions(bs);
+             if as.exists(a => boundAut.LabelOps.labelsOverlap(
+                                 blbl, a.asInstanceOf[boundAut.TLabel]))) {
+          if (!seenlist.contains((wa, bsNext))) {
+            val sa = graphBuilder.getNewState
+            graphBuilder.setAccept(sa, boundAut.isAccept(bsNext))
+            boxMap += (sa -> wa)
+            stateMap += (wa -> sa)
+            worklist.push((sa, wa, bsNext))
+            seenlist += ((wa, bsNext))
+          }
 
-        val sa = stateMap(wa)
-        for (a <- as)
-          graphBuilder.addTransition(s, a.asInstanceOf[aut.TLabel], sa)
+          val sa = stateMap(wa)
+          for (a <- as)
+            graphBuilder.addTransition(s, a.asInstanceOf[aut.TLabel], sa)
+        }
       }
     }
 
@@ -204,11 +219,9 @@ class CaleyGraph[A <: AtomicStateAutomaton](
     override def hashCode : Int = Objects.hash(boxMap, stateMap, graph)
 
     /**
-     * Returns boxes representing words accepted by the product of auts
+     * Returns boxes that are accepting according to how the caley graph
+     * was built (see CaleyGraph.apply)
      */
-    def getAcceptNodes(auts : Seq[AtomicStateAutomaton]) : Iterable[Box[A]] = {
-      val (prodAut, sMap) = AutomataUtils.productWithMap(List(graph) ++ auts)
-      prodAut.acceptingStates.map(ps =>
-        boxMap(sMap(ps)(0).asInstanceOf[A#State]))
-    }
+    def getAcceptNodes : Iterable[Box[A]] =
+      graph.acceptingStates.map(boxMap)
 }
