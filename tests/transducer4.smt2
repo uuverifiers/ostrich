@@ -463,8 +463,8 @@
 (declare-fun cat () String)
 
 ; <button onclick="createCatList(\'' + y + '\')">' + x + '</button>'>; 
-(assert (= w1 "<button onclick=\"createCatList('"))
-(assert (= w2 "\")'"))
+(assert (= w1 "<button onclick=\""createCatList('"))
+(assert (= w2 "\"")'"))
 (assert (= w3 "</button'>"))
 ;(assert (= cat "Flora & Fauna"))
 (assert (= cat "');alert(1);//"))
@@ -474,6 +474,6 @@
 (assert (= z (str.++ w1 y w2 x w3)))
 
 ; regex /<button onclick="createList\('   ('|[^']*[^'\\]') \); [^']*[^'\\] ')">   .*   <\/button>/
-(assert (str.in.re z (re.++ (str.to.re "<button onclick=\"createList('") (re.union (re.range #b00100111 #b00100111) (re.++ (re.* (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b11111111))) (re.++ (re.union (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b01011011)) (re.range #b01011101 #b11111111)) (re.range #b00100111 #b00100111)))) (str.to.re ");") (re.* (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b11111111))) (re.union (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b01011011)) (re.range #b01011101 #b11111111)) (str.to.re "')\">") (re.* re.allchar) (str.to.re "</button>"))))
+(assert (str.in.re z (re.++ (str.to.re "<button onclick=\""createList('") (re.union (re.range #b00100111 #b00100111) (re.++ (re.* (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b11111111))) (re.++ (re.union (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b01011011)) (re.range #b01011101 #b11111111)) (re.range #b00100111 #b00100111)))) (str.to.re ");") (re.* (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b11111111))) (re.union (re.union (re.range #b00000000 #b00100110) (re.range #b00101000 #b01011011)) (re.range #b01011101 #b11111111)) (str.to.re "')\"">") (re.* re.allchar) (str.to.re "</button>"))))
 
 (check-sat)
