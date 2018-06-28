@@ -1,6 +1,6 @@
 /*
  * This file is part of Sloth, an SMT solver for strings.
- * Copyright (C) 2017  Philipp Ruemmer, Petr Janku
+ * Copyright (C) 2017-2018  Philipp Ruemmer, Petr Janku
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,9 +129,9 @@ object RRFunsToTransducer {
 
                 for (c <- conjuncts) c match {
                   case EqLit(Difference(`inputC`, `outputC`), offset) =>
-                    inputOp = Some(Plus(offset.intValueSafe))
-                  case EqLit(Difference(`outputC`, `inputC`), offset) =>
                     inputOp = Some(Plus(-offset.intValueSafe))
+                  case EqLit(Difference(`outputC`, `inputC`), offset) =>
+                    inputOp = Some(Plus(offset.intValueSafe))
                   case EqLit(`inputC`, value) => {
                     lBound = Some(value.intValueSafe.toChar)
                     uBound = Some(value.intValueSafe.toChar)
@@ -148,12 +148,14 @@ object RRFunsToTransducer {
                     Console.err.println("Ignoring " + c)
                 }
 
-                val trans = new BTransition(lBound getOrElse Char.MinValue,
-                                            uBound getOrElse Char.MaxValue,
-                                            funs2Brics(targetFun))
+                val lb = lBound getOrElse Char.MinValue
+                val ub = uBound getOrElse Char.MaxValue
+
+                val trans = new BTransition(lb, ub, funs2Brics(targetFun))
                 val op = OutputOp(List(), inputOp.get, outputChars)
 
-                println("  " + trans + ":   " + op)
+                println("  [" + lb + ", " + ub + "] -> " +
+                        targetFun.name + ": \t" + op)
 
                 funs2Brics(f).addTransition(trans)
                 operations.put((funs2Brics(f), trans), op)
