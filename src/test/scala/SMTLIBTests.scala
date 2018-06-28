@@ -83,4 +83,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("1234.corecstrs.readable.smt2") =
     checkFile("tests/1234.corecstrs.readable.smt2", "sat")
+
+  property("extract-1.smt2") =
+    checkFile("tests/extract-1.smt2", "unsat")
+  property("extract-1b.smt2") =
+    checkFile("tests/extract-1b.smt2", "unsat")
+  property("extract-1c.smt2") =
+    checkFile("tests/extract-1c.smt2", "sat")
 }
