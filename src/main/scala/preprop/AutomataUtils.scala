@@ -77,10 +77,9 @@ object AutomataUtils {
     while (!todo.isEmpty) {
       val next = todo.pop
       for (reached <- enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
-        if (!(visitedStates contains reached)) {
+        if (visitedStates.add(reached)) {
           if (isAccepting(reached))
             return true
-          visitedStates += reached
           todo push reached
         }
     }
@@ -134,6 +133,80 @@ object AutomataUtils {
 
     Some(consideredAuts)
   }
+
+  /**
+   * Check whether there is some word of length <code>len</code> accepted
+   * by all of the given automata.
+   * The automata are required to all have the same label type (though this is
+   * not checked statically)
+   */
+  def findAcceptedWordAtomic(auts : Seq[AtomicStateAutomaton],
+                             len : Int) : Option[Seq[Int]] = {
+    val autsList = auts.toList
+    val headAut = autsList.head
+    val visitedStates = new MHashSet[(List[Any], Int)]
+    val todo = new ArrayStack[(List[Any], List[Int])]
+
+    def isAccepting(states : List[Any]) : Boolean =
+          (auts.iterator zip states.iterator) forall {
+             case (aut, state) =>
+               aut.acceptingStates contains state.asInstanceOf[aut.State]
+          }
+
+    def enumNext(auts : List[AtomicStateAutomaton],
+                 states : List[Any],
+                 intersectedLabels : Any) : Iterator[(List[Any], Int)] =
+      auts match {
+        case List() =>
+          Iterator((List(),
+                    headAut.LabelOps.enumLetters(
+                      intersectedLabels.asInstanceOf[headAut.TLabel]).next))
+        case aut :: otherAuts => {
+          val state :: otherStates = states
+          for ((to, label) <- aut.outgoingTransitions(
+                                state.asInstanceOf[aut.State]);
+               newILabel <- aut.LabelOps.intersectLabels(
+                             intersectedLabels.asInstanceOf[aut.TLabel],
+                             label).toSeq;
+               (tailNext, let) <- enumNext(otherAuts, otherStates, newILabel))
+          yield (to :: tailNext, let)
+        }
+      }
+
+    val initial = (autsList map (_.initialState))
+
+    if (isAccepting(initial) && len == 0)
+      return Some(List())
+
+    visitedStates += ((initial, 0))
+    todo push ((initial, List()))
+
+    while (!todo.isEmpty) {
+      val (next, w) = todo.pop
+      val wSize = w.size
+      for ((reached, let) <-
+            enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
+        if (visitedStates.add((reached, wSize + 1))) {
+          val newW = let :: w
+          if (isAccepting(reached) && wSize + 1 == len)
+            return Some(newW.reverse)
+          if (wSize + 1 < len)
+            todo push (reached, newW)
+        }
+    }
+
+    None
+  }
+
+  /**
+   * Check whether there is some word of length <code>len</code> accepted
+   * by all of the given automata.
+   */
+  def findAcceptedWord(auts : Seq[Automaton],
+                       len : Int) : Option[Seq[Int]] =
+    findAcceptedWordAtomic(for (aut <- auts)
+                             yield aut.asInstanceOf[AtomicStateAutomaton],
+                           len)
 
   /**
    * Product of a number of given automata.  Returns
