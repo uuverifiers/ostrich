@@ -30,6 +30,8 @@ import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.basetypes.IdealInt
 
+import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
+
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
@@ -89,8 +91,27 @@ class PrepropSolver {
       }
       case FunPred(`replaceallre`) => {
         val b = (regex2AFA buildStrings a(1)).next
-        val regex = (regex2AFA buildRegex a(1))
-        funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
+        if (!b.isEmpty && b(0).isLeft) {
+          // In this case we've been given a string regex and expect it
+          // to start and end with / /
+          // if it just defines one string, treat it as a replaceall
+          // else treat it as true replaceall-re
+          val stringB : String = b.map(_.left.get.toChar)(collection.breakOut)
+          if (stringB(0) != '/' || stringB.last != '/')
+            throw new IllegalArgumentException("replaceall-re with a string argument expects the regular expression to start and end with /")
+          val sregex = stringB.slice(1, stringB.size - 1)
+          val baut = new RegExp(sregex, RegExp.NONE).toAutomaton(true)
+          val w = baut.getSingleton
+          if (w != null) {
+            funApps += ((ReplaceAllPreOp(w), List(a(0), a(2)), a(3)))
+          } else {
+            funApps += ((ReplaceAllPreOp(new BricsAutomaton(baut)),
+                         List(a(0), a(2)), a(3)))
+          }
+        } else {
+          val regex = (regex2AFA buildRegex a(1))
+          funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
+        }
       }
       case FunPred(`wordLen`) =>
         lengthVars.put(a(0), a(1))
@@ -119,7 +140,7 @@ class PrepropSolver {
 
     {
       import TerForConvenience._
-      
+
       for (lc <- goal.facts.arithConj.negativeEqs) lc match {
         case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
           if concreteWords contains l(c) => {
@@ -131,7 +152,7 @@ class PrepropSolver {
             val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
             regexes += ((l(d), !(BricsAutomaton fromString str)))
         }
-        case _ =>        
+        case _ =>
           Console.err.println("Warning: ignoring " + (lc =/= 0))
       }
     }
@@ -162,7 +183,7 @@ class PrepropSolver {
           for (t <- interestingTerms)
             lengthVars.getOrElseUpdate(
               t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
-              
+
           Some(lengthProver)
         } else {
           None
