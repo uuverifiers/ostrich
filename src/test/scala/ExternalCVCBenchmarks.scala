@@ -57,7 +57,7 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
     //property("64") = checkFile("external-benchmarks/cvc/64/model", "sat")
     //property("145") = checkFile("external-benchmarks/cvc/145/model", "sat")
     //property("147") = checkFile("external-benchmarks/cvc/147/model", "sat")
-    property("149") = checkFile("external-benchmarks/cvc/149/model", "unsat")
+    property("149") = checkFile("external-benchmarks/cvc/149/model", "sat")
     //property("150") = checkFile("external-benchmarks/cvc/150/model", "sat")
     property("151") = checkFile("external-benchmarks/cvc/151/model", "sat")
     property("152") = checkFile("external-benchmarks/cvc/152/model", "sat")
