@@ -349,7 +349,7 @@ object ReplaceAllPreOpRegEx {
  */
 class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
 
-  override def toString = "replaceall"
+  override def toString = "replaceall-tran"
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
     Console.err.println("Warning: ReplaceAllPreOpTran.eval not implemented yet")
