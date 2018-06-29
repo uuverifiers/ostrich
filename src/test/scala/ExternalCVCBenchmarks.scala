@@ -27,7 +27,7 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
-      SMTLIBMain.doMain((List("+assert", "-timeout=10", filename) ++ extractOpts).toArray,
+      SMTLIBMain.doMain((List("+assert", filename) ++ extractOpts).toArray,
                         false)
 //      SMTLIBMain.doMain((List("+assert", "+forward", filename) ++ extractOpts).toArray,
 //                        false)
@@ -36,7 +36,7 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
   // TODO: commented out if we don't know if sat or not
   if (!IgnoreTests) {
     property("28") = checkFile("external-benchmarks/cvc/28/model", "sat")
-    //property("30") = checkFile("external-benchmarks/cvc/30/model", "sat")
+    property("30") = checkFile("external-benchmarks/cvc/30/model", "sat")
     property("31") = checkFile("external-benchmarks/cvc/31/model", "unsat")
     //property("32") = checkFile("external-benchmarks/cvc/32/model", "sat")
     property("36") = checkFile("external-benchmarks/cvc/36/model", "unsat")
@@ -44,7 +44,7 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
     property("39") = checkFile("external-benchmarks/cvc/39/model", "unsat")
     //property("40") = checkFile("external-benchmarks/cvc/40/model", "sat")
     property("44") = checkFile("external-benchmarks/cvc/44/model", "unsat")
-    //property("46") = checkFile("external-benchmarks/cvc/46/model", "sat")
+    property("46") = checkFile("external-benchmarks/cvc/46/model", "sat")
     property("47") = checkFile("external-benchmarks/cvc/47/model", "unsat")
     //property("48") = checkFile("external-benchmarks/cvc/48/model", "sat")
     property("52") = checkFile("external-benchmarks/cvc/52/model", "unsat")
@@ -63,9 +63,9 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
     property("152") = checkFile("external-benchmarks/cvc/152/model", "sat")
     property("153") = checkFile("external-benchmarks/cvc/153/model", "sat")
     //property("154") = checkFile("external-benchmarks/cvc/154/model", "sat")
-    //property("252") = checkFile("external-benchmarks/cvc/252/model", "sat")
+    property("252") = checkFile("external-benchmarks/cvc/252/model", "sat")
     //property("343") = checkFile("external-benchmarks/cvc/343/model", "sat")
-    //property("346") = checkFile("external-benchmarks/cvc/346/model", "sat")
+    property("346") = checkFile("external-benchmarks/cvc/346/model", "sat")
     property("518") = checkFile("external-benchmarks/cvc/518/model", "sat")
     property("519") = checkFile("external-benchmarks/cvc/519/model", "sat")
     property("520") = checkFile("external-benchmarks/cvc/520/model", "sat")
@@ -119,8 +119,8 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
     property("1643") = checkFile("external-benchmarks/cvc/1643/model", "sat")
     //property("1820") = checkFile("external-benchmarks/cvc/1820/model", "sat")
     property("1821") = checkFile("external-benchmarks/cvc/1821/model", "sat")
-    //property("1822") = checkFile("external-benchmarks/cvc/1822/model", "sat")
-    //property("1828") = checkFile("external-benchmarks/cvc/1828/model", "sat")
+    property("1822") = checkFile("external-benchmarks/cvc/1822/model", "sat")
+    property("1828") = checkFile("external-benchmarks/cvc/1828/model", "sat")
     property("1830") = checkFile("external-benchmarks/cvc/1830/model", "sat")
     property("1832") = checkFile("external-benchmarks/cvc/1832/model", "sat")
     property("1834") = checkFile("external-benchmarks/cvc/1834/model", "sat")
@@ -131,7 +131,7 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
     property("1839") = checkFile("external-benchmarks/cvc/1839/model", "sat")
     property("1840") = checkFile("external-benchmarks/cvc/1840/model", "sat")
     property("1841") = checkFile("external-benchmarks/cvc/1841/model", "sat")
-    //property("1856") = checkFile("external-benchmarks/cvc/1856/model", "sat")
+    property("1856") = checkFile("external-benchmarks/cvc/1856/model", "sat")
     property("2204") = checkFile("external-benchmarks/cvc/2204/model", "unsat")
     property("2648") = checkFile("external-benchmarks/cvc/2648/model", "unsat")
     property("2705") = checkFile("external-benchmarks/cvc/2705/model", "unsat")
@@ -146,13 +146,13 @@ object ExternalCVCBenchmarks extends Properties("ExternalCVCBenchmarks") {
     property("2892") = checkFile("external-benchmarks/cvc/2892/model", "sat")
     //property("2893") = checkFile("external-benchmarks/cvc/2893/model", "sat")
     property("3786") = checkFile("external-benchmarks/cvc/3786/model", "sat")
-    //property("4062") = checkFile("external-benchmarks/cvc/4062/model", "sat")
-    //property("4158") = checkFile("external-benchmarks/cvc/4158/model", "sat")
-    //property("4200") = checkFile("external-benchmarks/cvc/4200/model", "sat")
-    //property("4237") = checkFile("external-benchmarks/cvc/4237/model", "sat")
+    property("4062") = checkFile("external-benchmarks/cvc/4062/model", "sat")
+    property("4158") = checkFile("external-benchmarks/cvc/4158/model", "sat")
+    property("4200") = checkFile("external-benchmarks/cvc/4200/model", "sat")
+    property("4237") = checkFile("external-benchmarks/cvc/4237/model", "sat")
     property("4267") = checkFile("external-benchmarks/cvc/4267/model", "sat")
-    //property("4308") = checkFile("external-benchmarks/cvc/4308/model", "sat")
-    //property("4312") = checkFile("external-benchmarks/cvc/4312/model", "sat")
+    property("4308") = checkFile("external-benchmarks/cvc/4308/model", "sat")
+    property("4312") = checkFile("external-benchmarks/cvc/4312/model", "sat")
     property("4319") = checkFile("external-benchmarks/cvc/4319/model", "sat")
     property("4595") = checkFile("external-benchmarks/cvc/4595/model", "sat")
   }
