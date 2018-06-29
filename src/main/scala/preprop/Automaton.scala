@@ -73,26 +73,9 @@ trait Automaton {
 
 trait TLabelOps[TLabel] {
   /**
-   * Nr. of bits of letters in the vocabulary. Letters are
-   * interpreted as numbers in the range <code>[0, 2^vocabularyWidth)</code>
-   * See max/minChar and internalChar
+   * Nr. of bits of letters in the vocabulary.
    */
   def vocabularyWidth : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  def minChar : Int
-
-  /**
-   * A minimum character value in the range given by vocabularyWidth
-   */
-  def maxChar : Int
-
-  /**
-   * A special character outside of [minChar, maxChar] for internal use
-   */
-  def internalChar : Int
 
   /**
    * Check whether the given label accepts some letter

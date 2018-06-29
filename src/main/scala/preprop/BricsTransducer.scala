@@ -48,8 +48,23 @@ class BricsTransducer(override val underlying : BAutomaton,
                       val operations : Map[(BState, BTransition), OutputOp])
   extends BricsAutomaton(underlying) with AtomicStateTransducer {
 
-  def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
+  def preImage[A <: AtomicStateAutomaton]
+              (aut : A,
+               internal : Iterable[(A#State, A#State)]
+                 = Iterable[(A#State, A#State)]()) : AtomicStateAutomaton = {
+
     val preBuilder = aut.getBuilder
+
+    val internalMap =
+      new MHashMap[aut.State, MSet[aut.State]]
+          with MMultiMap[aut.State, aut.State] {
+        override def default(q : aut.State) : MSet[aut.State] =
+          MSet.empty[aut.State]
+      }
+
+    for ((s1, s2) <- internal)
+      internalMap.addBinding(s1.asInstanceOf[aut.State],
+                             s2.asInstanceOf[aut.State])
 
     // map states of pre-image aut to state of transducer and state of
     // aut
@@ -148,6 +163,11 @@ class BricsTransducer(override val underlying : BAutomaton,
               val lbl = aut.LabelOps.interval(t.getMin, t.getMax)
               addWork(ps, ts, t, as, Post(tOp.postW, lbl))
             }
+            case Internal => {
+              val lbl = aut.LabelOps.interval(t.getMin, t.getMax)
+              for (asNext <- internalMap(as))
+                addWork(ps, ts, t, asNext, Post(tOp.postW, lbl))
+            }
             case Plus(n) => {
               for ((asNext, albl) <- aut.outgoingTransitions(as)) {
                 val shftLbl = aut.LabelOps.shift(albl, -n)
@@ -184,13 +204,22 @@ class BricsTransducer(override val underlying : BAutomaton,
     res
   }
 
-  def postImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
+  def postImage[A <: AtomicStateAutomaton]
+               (aut : A, internalAut : Option[A] = None)
+      : AtomicStateAutomaton = {
     val builder = aut.getBuilder
 
     // map states of pre-image aut to state of transducer and state of
     // aut
     val sMap = new MHashMap[aut.State, (State, aut.State)]
     val sMapRev = new MHashMap[(State, aut.State), aut.State]
+
+    val internalStateMap : Option[Map[A#State, aut.State]] =
+      internalAut.map(_.states.map(s => (s -> builder.getNewState)).toMap)
+    val internalInit : Option[aut.State] =
+      internalAut.map(ia => internalStateMap.get(ia.initialState))
+    val internalFins : Option[Set[aut.State]] =
+      internalAut.map(_.acceptingStates.map(internalStateMap.get))
 
     val initState = underlying.getInitialState
     val initAutState = aut.initialState
@@ -261,6 +290,15 @@ class BricsTransducer(override val underlying : BAutomaton,
               wordRun(psMid, tOp.postW, Some(psNext))
             }
           }
+          case Internal => {
+            if (internalAut.isEmpty) {
+              throw new IllegalArgumentException("Post image of a transducer with internal transitions needs and internalAut")
+            } else {
+              silentTransitions.addBinding(ps, internalInit.get)
+              for (f <- internalFins.get)
+                silentTransitions.addBinding(f, psNext)
+            }
+          }
           case Plus(n) => {
             val shiftLbl = aut.LabelOps.shift(lbl, n)
             if (aut.LabelOps.isNonEmptyLabel(shiftLbl)) {
@@ -276,6 +314,13 @@ class BricsTransducer(override val underlying : BAutomaton,
           }
         }
       }
+    }
+
+    if (!internalAut.isEmpty) {
+      for ((is1, ilbl, is2) <- internalAut.get.transitions)
+        builder.addTransition(internalStateMap.get(is1),
+                              ilbl.asInstanceOf[aut.TLabel],
+                              internalStateMap.get(is2))
     }
 
     AutomataUtils.buildEpsilons(builder, silentTransitions)

@@ -150,7 +150,8 @@ object ReplaceAllPreOpWord {
     val states = initState::(List.fill(w.size - 1)(builder.getNewState))
     val finstates = List.fill(w.size)(builder.getNewState)
     val delete = OutputOp("", Delete, "")
-    val internal = OutputOp(Seq(builder.LabelOps.internalChar.toChar), Delete, "")
+    // TODO: internal
+    val internal = OutputOp("", Internal, "")
     val end = w.size - 1
 
     builder.setAccept(initState, true)
@@ -214,6 +215,7 @@ object ReplaceAllPreOpRegEx {
    * regex by rewriting matches to internalChar.
    *
    * TODO: currently does not handle empty matches
+   * TODO: internal
    */
   private def buildTransducer(aut : AtomicStateAutomaton) : AtomicStateTransducer = {
     abstract class Mode
@@ -228,7 +230,7 @@ object ReplaceAllPreOpRegEx {
     val builder = aut.getTransducerBuilder
     val delete = OutputOp("", Delete, "")
     val copy = OutputOp("", Plus(0), "")
-    val internal = OutputOp(Seq(builder.LabelOps.internalChar.toChar), Delete, "")
+    val internal = OutputOp("", Internal, "")
 
     // TODO: encapsulate this worklist automaton construction
 
@@ -372,12 +374,7 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     val cg = CaleyGraph[rc.type](rc, zcons)
     val res =
     for (box <- cg.getAcceptNodes.iterator;
-         yprimeCons = ReplaceCharAutomaton(
-                        rc,
-                        rc.LabelOps.internalChar.toChar,
-                        box.getEdges
-                      );
-         newYCon = PreImageAutomaton(tran, yprimeCons)) yield {
+         newYCon = PreImageAutomaton(tran, rc, box.getEdges)) yield {
       val newZCons = box.getEdges.map({ case (q1, q2) =>
         val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
         InitFinalAutomaton(rc, q1, fin)
@@ -401,8 +398,7 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
     val yProd = ProductAutomaton(yCons)
     val zProd = ProductAutomaton(zCons)
 
-    val tpost = PostImageAutomaton(yProd, tran)
-    NestedAutomaton(tpost, yProd.LabelOps.internalChar.toChar, zProd)
+    PostImageAutomaton(yProd, tran, Some(zProd))
   }
 }
 

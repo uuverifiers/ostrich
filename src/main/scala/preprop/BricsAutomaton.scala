@@ -72,9 +72,6 @@ object BricsAutomaton {
 object BricsTLabelOps extends TLabelOps[(Char, Char)] {
 
   val vocabularyWidth : Int = 16  // really?
-  val minChar : Int = 0
-  val maxChar : Int = Char.MaxValue - 1
-  val internalChar : Int = Char.MaxValue
 
   /**
    * Check whether the given label accepts any letter
@@ -86,7 +83,7 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    * Label accepting all letters
    */
   val sigmaLabel : (Char, Char) =
-    (minChar.toChar, maxChar.toChar)
+    (Char.MinValue, Char.MaxValue)
 
   def singleton(a : Char) = (a, a)
 
@@ -146,7 +143,8 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    */
   def shift(lbl : (Char, Char), n : Int) : (Char, Char) = {
     val (cmin, cmax) = lbl
-    (Math.max(minChar, cmin + n).toChar, Math.min(maxChar, cmax + n).toChar)
+    (Math.max(Char.MinValue, cmin + n).toChar,
+     Math.min(Char.MaxValue, cmax + n).toChar)
   }
 
   /**

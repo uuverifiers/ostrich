@@ -27,6 +27,10 @@ abstract class InputOp
  */
 case object Delete extends InputOp
 /**
+ * Replace input char with a special "internal symbol"
+ */
+case object Internal extends InputOp
+/**
  * Change input character by shifting (+0 to copy)
  */
 case class Plus(val n : Int) extends InputOp
@@ -47,14 +51,34 @@ trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
   /**
    * Calculates regular language that is pre-image of the given regular
    * language.  I.e. Pre_T(aut) for transducer T
+   *
+   * Convenience method for when there are no internal transitions
    */
-  def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton
+  def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton =
+    preImage(aut, Iterable.empty[(aut.State, aut.State)])
+
+  /**
+   * Calculates regular language that is pre-image of the given regular
+   * language.  I.e. Pre_T(aut) for transducer T
+   *
+   * internal is a map indicating which states should be considered to
+   * have an Internal character between them.  I.e. map(s) contains s'
+   * if there is an internal transition between s and s'
+   */
+  def preImage[A <: AtomicStateAutomaton]
+              (aut : A,
+               internal : Iterable[(A#State, A#State)]) : AtomicStateAutomaton
 
   /**
    * Calculates regular language that is the post-image of the given regular
-   * language.  I.e. Post_T(aut) for transducer T
+   * language.  I.e. Post_T(aut) for transducer T.  Will fail if the
+   * transducer uses the internal char op. and internalApprox is None.
+   *
+   * internalApprox will nest the automaton internalApprox whenever an
+   * internal transition should have been output.
    */
-  def postImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton
+  def postImage[A <: AtomicStateAutomaton]
+               (aut : A, internalApprox : Option[A] = None) : AtomicStateAutomaton
 }
 
 trait AtomicStateTransducerBuilder[State, TLabel] {

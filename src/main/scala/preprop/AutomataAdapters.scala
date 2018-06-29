@@ -244,21 +244,25 @@ case class _ProductAutomaton(auts : Seq[AtomicStateAutomaton])
     ) { }
 
 /**
- * Case class representation of tran.preImage(aut)
+ * Case class representation of tran.preImage(aut, internal)
  */
-case class PreImageAutomaton(tran : AtomicStateTransducer,
-                             targ : AtomicStateAutomaton)
+case class PreImageAutomaton[A <: AtomicStateAutomaton]
+                            (tran : AtomicStateTransducer,
+                             targ : A,
+                             internal : Iterable[(A#State, A#State)])
     extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
-      tran.preImage(targ)
+      tran.preImage(targ, internal)
     ) { }
 
 /**
- * Case class representation of tran.preImage(aut)
+ * Case class representation of tran.preImage(aut, internalAut)
  */
-case class PostImageAutomaton(inAut : AtomicStateAutomaton,
-                              tran : AtomicStateTransducer)
+case class PostImageAutomaton[A <: AtomicStateAutomaton]
+                             (inAut : A,
+                              tran : AtomicStateTransducer,
+                              internalAut : Option[A] = None)
     extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
-      tran.postImage(inAut)
+      tran.postImage(inAut, internalAut)
     ) { }
 
 /**
