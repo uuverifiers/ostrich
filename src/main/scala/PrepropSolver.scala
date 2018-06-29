@@ -51,6 +51,14 @@ class PrepropSolver {
     implicit val order = goal.order
     val regex2AFA = new Regex2AFA(atoms)
 
+    val containsLength = !(atoms positiveLitsWithPred p(wordLen)).isEmpty
+    val eagerMode = containsLength || Flags.eagerAutomataOperations
+    val useLength = containsLength || Flags.useLength
+
+    if (containsLength)
+      Console.err.println(
+        "Warning: using +eager and +length to handle length constraints")
+
 //    println(atoms)
 
     val concreteWords = findConcreteWords(atoms) match {
@@ -145,18 +153,11 @@ class PrepropSolver {
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
-        if (Flags.useLength) {
+        if (useLength) {
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
-/*
-          val lengthConsts = (for (t <- lengthVars.values.iterator;
-                                   c <- t.constants.iterator)
-                              yield c).toSet
-          for (f <- goal.facts.arithConj.iterator)
-            if (f.constants subsetOf lengthConsts)
-              lengthProver addAssertion f
- */
+          lengthProver addAssertion goal.facts.arithConj
 
           for (t <- interestingTerms)
             lengthVars.getOrElseUpdate(
@@ -168,12 +169,12 @@ class PrepropSolver {
         }
 
       val exploration =
-        if (Flags.eagerAutomataOperations)
+        if (eagerMode)
           Exploration.eagerExp(funApps, regexes,
-                               lProver, lengthVars.toMap)
+                               lProver, lengthVars.toMap, containsLength)
         else
           Exploration.lazyExp(funApps, regexes,
-                              lProver, lengthVars.toMap)
+                              lProver, lengthVars.toMap, containsLength)
 
       exploration.findModel match {
         case Some(model) => Some((model mapValues (_.toList)) ++

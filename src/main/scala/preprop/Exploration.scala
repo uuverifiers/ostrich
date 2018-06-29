@@ -22,7 +22,9 @@ import strsolver.Flags
 
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
-import ap.terfor.Term
+import ap.basetypes.IdealInt
+import ap.terfor.{Term, ConstantTerm, OneTerm}
+import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
 import ap.util.Seqs
 
@@ -56,19 +58,25 @@ object Exploration {
     def getCompleteContents : List[Automaton]
 
     def getAcceptedWord : Seq[Int]
+
+    def getAcceptedWordLen(len : Int) : Seq[Int]
   }
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
                lengthProver : Option[SimpleAPI],
-               lengthVars : Map[Term, Term]) : Exploration =
-    new EagerExploration(funApps, initialConstraints, lengthProver, lengthVars)
+               lengthVars : Map[Term, Term],
+               strictLengths : Boolean) : Exploration =
+    new EagerExploration(funApps, initialConstraints,
+                         lengthProver, lengthVars, strictLengths)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
               lengthProver : Option[SimpleAPI],
-              lengthVars : Map[Term, Term]) : Exploration =
-    new LazyExploration(funApps, initialConstraints, lengthProver, lengthVars)
+              lengthVars : Map[Term, Term],
+              strictLengths : Boolean) : Exploration =
+    new LazyExploration(funApps, initialConstraints,
+                        lengthProver, lengthVars, strictLengths)
 
   private case class FoundModel(model : Map[Term, Seq[Int]]) extends Exception
 
@@ -86,7 +94,8 @@ object Exploration {
 abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
                            lengthProver : Option[SimpleAPI],
-                           lengthVars : Map[Term, Term]) {
+                           lengthVars : Map[Term, Term],
+                           strictLengths : Boolean) {
 
   import Exploration._
 
@@ -199,22 +208,61 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
+  private def evalTerm(t : Term)(model : SimpleAPI.PartialModel)
+                      : Option[IdealInt] = t match {
+    case c : ConstantTerm =>
+      model eval c
+    case OneTerm =>
+      Some(IdealInt.ONE)
+    case lc : LinearCombination => {
+      val terms = for ((coeff, t) <- lc) yield (coeff, evalTerm(t)(model))
+      if (terms forall { case (_, None) => false
+                         case _ => true })
+        Some((for ((coeff, Some(v)) <- terms) yield (coeff * v)).sum)
+      else
+        None
+    }
+  }
+
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
                       : ConflictSet = apps match {
 
     case List() => {
       // we are finished and just have to construct a model
       val model = new MHashMap[Term, Seq[Int]]
-      for (t <- leafTerms)
-        model.put(t, constraintStores(t).getAcceptedWord)
+
+      val lengthModel =
+        if (strictLengths) Some(lengthProver.get.partialModel) else None
+
+      def getVarLength(t : Term) : Option[IdealInt] =
+        for (lModel <- lengthModel;
+             lengthVar <- lengthVars get t;
+             tlen <- evalTerm(lengthVar)(lModel))
+        yield tlen
+
+      for (t <- leafTerms) {
+        val store = constraintStores(t)
+        model.put(t,
+                  (for (tlen <- getVarLength(t))
+                   yield store.getAcceptedWordLen(tlen.intValueSafe))
+                  .getOrElse(store.getAcceptedWord))
+      }
+
       for ((ops, res) <- sortedFunApps.reverseIterator;
            (op, args) <- ops.iterator) {
         val resValue = op.eval(args map model)
+
         for (oldValue <- model get res)
           if (resValue != oldValue)
             throw new Exception("Model extraction failed: " +
                                 (oldValue mkString ", ") + " != " +
                                 (resValue mkString ", "))
+
+        for (resLen <- getVarLength(res))
+          if (resValue.size != resLen.intValueSafe)
+            throw new Exception(
+              "Could not satisfy length constraints for " + res)
+
         model.put(res, resValue)
       }
       throw FoundModel(model.toMap)
@@ -362,9 +410,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _initialConstraints : Seq[(Term, Automaton)],
                        _lengthProver : Option[SimpleAPI],
-                       _lengthVars : Map[Term, Term])
+                       _lengthVars : Map[Term, Term],
+                       _strictLengths : Boolean)
       extends Exploration(_funApps, _initialConstraints,
-                          _lengthProver, _lengthVars) {
+                          _lengthProver, _lengthVars, _strictLengths) {
 
   import Exploration._
 
@@ -420,6 +469,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
         case Some(aut) => aut.getAcceptedWord.get
         case None      => List()
       }
+
+    def getAcceptedWordLen(len : Int) : Seq[Int] =
+      currentConstraint match {
+        case Some(aut) => AutomataUtils.findAcceptedWord(List(aut), len).get
+        case None      => List()
+      }
   }
 
 }
@@ -433,9 +488,10 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _initialConstraints : Seq[(Term, Automaton)],
                       _lengthProver : Option[SimpleAPI],
-                      _lengthVars : Map[Term, Term])
+                      _lengthVars : Map[Term, Term],
+                      _strictLengths : Boolean)
       extends Exploration(_funApps, _initialConstraints,
-                          _lengthProver, _lengthVars) {
+                          _lengthProver, _lengthVars, _strictLengths) {
 
   import Exploration._
 
@@ -544,6 +600,12 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       constraints match {
         case Seq() => List()
         case auts  => (auts reduceLeft (_ & _)).getAcceptedWord.get
+      }
+
+    def getAcceptedWordLen(len : Int) : Seq[Int] =
+      constraints match {
+        case Seq() => for (_ <- 0 until len) yield 0
+        case auts  => AutomataUtils.findAcceptedWord(auts, len).get
       }
   }
 
