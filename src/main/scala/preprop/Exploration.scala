@@ -292,6 +292,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       val (newConstraintsIt, argDependencies) =
         measure("pre-op") { op(argConstraints, resAut) }
       while (measure("pre-op hasNext") {newConstraintsIt.hasNext}) {
+        ap.util.Timeout.check
+
         val argCS = measure("pre-op next") {newConstraintsIt.next}
 
         for (a <- args)

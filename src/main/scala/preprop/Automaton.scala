@@ -24,7 +24,9 @@ import ap.terfor.{Formula, Term, TerForConvenience, TermOrder, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
 
-import scala.collection.mutable.{BitSet => MBitSet}
+import scala.collection.mutable.{BitSet => MBitSet,
+                                 HashMap => MHashMap, HashSet => MHashSet,
+                                 ArrayStack}
 
 /**
  * Interface for different implementations of finite-state automata.
@@ -269,18 +271,24 @@ trait AtomicStateAutomaton extends Automaton {
     val stateSeq = states.toIndexedSeq
     val state2Index = stateSeq.iterator.zipWithIndex.toMap
 
-    val preStates, transPreStates = Array.fill(stateSeq.size)(new MBitSet)
+    lazy val preStates = {
+      val preStates = Array.fill(stateSeq.size)(new MBitSet)
 
-    for ((from, _, to) <- transitions)
-      preStates(state2Index(to)) += state2Index(from)
+      for ((from, _, to) <- transitions)
+        preStates(state2Index(to)) += state2Index(from)
 
-    for ((s1, s2) <- preStates.iterator zip transPreStates.iterator)
-      s2 ++= s1
+      preStates
+    }
 
-    for ((s, n) <- transPreStates.iterator.zipWithIndex)
-      s += n
+    lazy val transPreStates = {
+      val transPreStates = Array.fill(stateSeq.size)(new MBitSet)
 
-    {
+      for ((s1, s2) <- preStates.iterator zip transPreStates.iterator)
+        s2 ++= s1
+
+      for ((s, n) <- transPreStates.iterator.zipWithIndex)
+        s += n
+
       // fixed-point iterator, to find transitively referenced states
       var changed = true
       while (changed) {
@@ -298,11 +306,60 @@ trait AtomicStateAutomaton extends Automaton {
             changed = true
         }
       }
-    }
 
+      transPreStates
+    }
+ 
     val initialStateInd = state2Index(initialState)
 
-    disj(for (finalState <- acceptingStates) yield {
+    ////////////////////////////////////////////////////////////////////////////
+
+    val uniqueLengthStates = new MHashMap[State, Int]
+
+    {
+      val nonUniqueLengthStates = new MHashSet[State]
+      val todo = new ArrayStack[State]
+
+      uniqueLengthStates.put(initialState, 0)
+      todo push initialState
+
+      while (!todo.isEmpty) {
+        val s = todo.pop
+        if (nonUniqueLengthStates contains s) {
+          for ((to, _) <- outgoingTransitions(s)) {
+            uniqueLengthStates -= to
+            if (nonUniqueLengthStates add to)
+              todo push to
+          }
+        } else {
+          val sLen = uniqueLengthStates(s)
+          for ((to, _) <- outgoingTransitions(s))
+            (uniqueLengthStates get to) match {
+              case Some(oldLen) =>
+                if (oldLen != sLen + 1) {
+                  uniqueLengthStates -= to
+                  nonUniqueLengthStates += to
+                  todo push to
+                }
+              case None =>
+                if (!(nonUniqueLengthStates contains to)) {
+                  uniqueLengthStates.put(to, sLen + 1)
+                  todo push to
+                }
+          }
+        }
+      }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    disjFor(for (finalState <- acceptingStates)
+            yield (uniqueLengthStates get finalState) match {
+
+    case Some(len) =>
+      v(0) === len
+
+    case None => {
       val finalStateInd = state2Index(finalState)
       val refStates = transPreStates(finalStateInd)
 
@@ -381,7 +438,7 @@ trait AtomicStateAutomaton extends Automaton {
 //        PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
 
       constraint
-    })
+    }})
   }
 }
 
