@@ -79,6 +79,15 @@ trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
    */
   def postImage[A <: AtomicStateAutomaton]
                (aut : A, internalApprox : Option[A] = None) : AtomicStateAutomaton
+
+  /**
+   * Apply the transducer to the input, replacing any internal
+   * characters with the given string.
+   *
+   * Assumes transducer is functional, so returns the first found output
+   * or None
+   */
+  def apply(input : String, internal : String = "") : Option[String]
 }
 
 trait AtomicStateTransducerBuilder[State, TLabel] {

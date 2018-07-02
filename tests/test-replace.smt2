@@ -10,3 +10,4 @@
 (assert (str.in.re x (str.to.re "hbllo")))
 
 (check-sat)
+(get-model)

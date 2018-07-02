@@ -331,6 +331,52 @@ class BricsTransducer(override val underlying : BAutomaton,
   override def toString = {
     super.toString + '\n' + operations.mkString("\n")
   }
+
+  /**
+   * Apply the transducer to the input, replacing any internal
+   * characters with the given string.
+   *
+   * Assumes transducer is functional, so returns the first found output
+   */
+  def apply(input : String, internal : String = "") : Option[String] = {
+    if (input.length == 0) {
+      if (isAccept(initialState))
+        return Some("")
+      else
+        return None
+    }
+
+    val worklist = new MStack[(State, Int, String)]
+    val seenlist = new MHashSet[(State, Int)]
+
+    worklist.push((initialState, 0, ""))
+
+    while (!worklist.isEmpty) {
+      val (s, pos, output) = worklist.pop
+      val a = input(pos)
+      val pnext = pos + 1
+
+      for (t <- s.getTransitions) {
+        val snext = t.getDest
+        val lbl = (t.getMin, t.getMax)
+        if (LabelOps.labelContains(a, lbl) && !seenlist.contains((snext, pnext))) {
+          val tOp = operations((s, t))
+          val opOut = tOp.op match {
+            case Delete => ""
+            case Plus(n) => (a + n).toChar.toString
+            case Internal => internal
+          }
+          val outnext = output + tOp.preW + opOut + tOp.postW
+          if (pnext >= input.length && isAccept(snext))
+            return Some(outnext)
+          if (pnext < input.length)
+            worklist.push((snext, pnext, outnext))
+        }
+      }
+    }
+
+    return None
+  }
 }
 
 class BricsTransducerBuilder
