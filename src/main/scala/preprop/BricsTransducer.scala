@@ -366,7 +366,7 @@ class BricsTransducer(override val underlying : BAutomaton,
             case Plus(n) => (a + n).toChar.toString
             case Internal => internal
           }
-          val outnext = output + tOp.preW + opOut + tOp.postW
+          val outnext = output + tOp.preW.mkString + opOut + tOp.postW.mkString
           if (pnext >= input.length && isAccept(snext))
             return Some(outnext)
           if (pnext < input.length)
