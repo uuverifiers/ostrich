@@ -141,6 +141,10 @@ class PrepropSolver {
     {
       import TerForConvenience._
 
+      val lengthConstants =
+        (for (t <- lengthVars.values.iterator;
+              c <- t.constants.iterator) yield c).toSet
+
       for (lc <- goal.facts.arithConj.negativeEqs) lc match {
         case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
           if concreteWords contains l(c) => {
@@ -152,6 +156,9 @@ class PrepropSolver {
             val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
             regexes += ((l(d), !(BricsAutomaton fromString str)))
         }
+        case lc
+          if useLength && (lc.constants forall lengthConstants) =>
+          // nothing
         case _ =>
           Console.err.println("Warning: ignoring " + (lc =/= 0))
       }

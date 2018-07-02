@@ -201,8 +201,13 @@ object SMTLIBMain {
       }
     }
   } catch {
-    case t@(TimeoutException | StoppedException) =>
+    case t@(TimeoutException | StoppedException) => {
       println("unknown")
+      if (Flags.measureTimes) {
+        Console.err.println
+        Console.err.println(ap.util.Timer)
+      }
+    }
     case t : Throwable => {
       println("(error \"" + t.getMessage + "\")")
         t.printStackTrace
