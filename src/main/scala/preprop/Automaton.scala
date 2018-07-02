@@ -261,6 +261,60 @@ trait AtomicStateAutomaton extends Automaton {
   }
 
   /**
+   * Compute states that can only be reached through words with some
+   * unique length
+   */
+  lazy val uniqueLengthStates : Map[State, Int] = {
+    val uniqueLengthStates = new MHashMap[State, Int]
+    val nonUniqueLengthStates = new MHashSet[State]
+    val todo = new ArrayStack[State]
+
+    uniqueLengthStates.put(initialState, 0)
+    todo push initialState
+
+    while (!todo.isEmpty) {
+      val s = todo.pop
+      if (nonUniqueLengthStates contains s) {
+        for ((to, _) <- outgoingTransitions(s)) {
+          uniqueLengthStates -= to
+          if (nonUniqueLengthStates add to)
+            todo push to
+        }
+      } else {
+        val sLen = uniqueLengthStates(s)
+        for ((to, _) <- outgoingTransitions(s))
+          (uniqueLengthStates get to) match {
+            case Some(oldLen) =>
+              if (oldLen != sLen + 1) {
+                uniqueLengthStates -= to
+                nonUniqueLengthStates += to
+                todo push to
+              }
+            case None =>
+              if (!(nonUniqueLengthStates contains to)) {
+                uniqueLengthStates.put(to, sLen + 1)
+                todo push to
+              }
+        }
+      }
+    }
+
+    uniqueLengthStates.toMap
+  }
+
+  /**
+   * Field that is defined if the automaton only accepts words of some length l
+   * (and the language accepted by the automaton is non-empty)
+   */
+  lazy val uniqueAcceptedWordLength : Option[Int] = {
+    val lengths = for (s <- acceptingStates) yield (uniqueLengthStates get s)
+    if (lengths.size == 1 && !(lengths contains None))
+      lengths.iterator.next
+    else
+      None
+  }
+
+  /**
    * Compute the length abstraction of this automaton. Special case of
    * Parikh images, following the procedure in Verma et al, CADE 2005
    */
@@ -311,45 +365,6 @@ trait AtomicStateAutomaton extends Automaton {
     }
  
     val initialStateInd = state2Index(initialState)
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    val uniqueLengthStates = new MHashMap[State, Int]
-
-    {
-      val nonUniqueLengthStates = new MHashSet[State]
-      val todo = new ArrayStack[State]
-
-      uniqueLengthStates.put(initialState, 0)
-      todo push initialState
-
-      while (!todo.isEmpty) {
-        val s = todo.pop
-        if (nonUniqueLengthStates contains s) {
-          for ((to, _) <- outgoingTransitions(s)) {
-            uniqueLengthStates -= to
-            if (nonUniqueLengthStates add to)
-              todo push to
-          }
-        } else {
-          val sLen = uniqueLengthStates(s)
-          for ((to, _) <- outgoingTransitions(s))
-            (uniqueLengthStates get to) match {
-              case Some(oldLen) =>
-                if (oldLen != sLen + 1) {
-                  uniqueLengthStates -= to
-                  nonUniqueLengthStates += to
-                  todo push to
-                }
-              case None =>
-                if (!(nonUniqueLengthStates contains to)) {
-                  uniqueLengthStates.put(to, sLen + 1)
-                  todo push to
-                }
-          }
-        }
-      }
-    }
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -433,9 +448,15 @@ trait AtomicStateAutomaton extends Automaton {
         conj(allEqs :: prodNonNeg :: prodImps ::: zImps)
       val rawConstraint =
         exists(prodVars.size + zVars.size, matrix)
+
       val constraint =
-        ReduceWithConjunction(Conjunction.TRUE, order)(rawConstraint)
-//        PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
+        ap.util.Timeout.withTimeoutMillis(1000) {
+          // best-effort attempt to get a quantifier-free version of the
+          // length abstraction
+          PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
+        } {
+          ReduceWithConjunction(Conjunction.TRUE, order)(rawConstraint)
+        }
 
       constraint
     }})

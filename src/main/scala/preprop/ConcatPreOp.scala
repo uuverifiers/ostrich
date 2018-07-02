@@ -33,13 +33,59 @@ object ConcatPreOp extends PreOp {
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) =
     resultConstraint match {
 
-      case resultConstraint : AtomicStateAutomaton =>
+      case resultConstraint : AtomicStateAutomaton => {
         // TODO: probably this won't process the states in deterministic order
-        (for (s <- resultConstraint.states.iterator) yield {
-           List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
-                InitFinalAutomaton.setInitial(resultConstraint, s))
-         },
-         List())
+
+        val argLengths =
+          (for (argAuts <- argumentConstraints.iterator) yield {
+             (for (aut <- argAuts.iterator;
+                   if aut.isInstanceOf[AtomicStateAutomaton];
+                   l <- aut.asInstanceOf[AtomicStateAutomaton]
+                           .uniqueAcceptedWordLength.iterator)
+              yield (aut, l)).toSeq.headOption
+           }).toSeq
+
+        argLengths(0) match {
+          case Some((lenAut, len)) =>
+            // the prefix needs to be of a certain length, only pick
+            // states correspondingly
+            (for (s <- resultConstraint.states.iterator;
+                  if ((resultConstraint.uniqueLengthStates get s) match {
+                    case Some(l) => l == len
+                    case None => true
+                  })) yield {
+               List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
+                    InitFinalAutomaton.setInitial(resultConstraint, s))
+             },
+             List(List(lenAut), List()))
+
+          case None =>
+            argLengths(1) match {
+              case Some((lenAut, len))
+                if resultConstraint.uniqueAcceptedWordLength.isDefined => {
+                // the suffix needs to be of a certain length
+                val resLength = resultConstraint.uniqueAcceptedWordLength.get
+                (for (s <- resultConstraint.states.iterator;
+                      if ((resultConstraint.uniqueLengthStates get s) match {
+                        case Some(l) => l + len == resLength
+                        case None => true
+                      })) yield {
+                   List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
+                        InitFinalAutomaton.setInitial(resultConstraint, s))
+                 },
+                 List(List(), List(lenAut)))
+              }
+
+              case _ => 
+                (for (s <- resultConstraint.states.iterator) yield {
+                   List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
+                        InitFinalAutomaton.setInitial(resultConstraint, s))
+                 },
+                 List())
+            }
+        }
+
+      }
 
       case _ =>
         throw new IllegalArgumentException

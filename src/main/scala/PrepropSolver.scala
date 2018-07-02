@@ -113,8 +113,11 @@ class PrepropSolver {
           funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
         }
       }
-      case FunPred(`wordLen`) =>
+      case FunPred(`wordLen`) => {
         lengthVars.put(a(0), a(1))
+        if (a(1).isZero)
+          regexes += ((a(0), BricsAutomaton fromString ""))
+      }
       case FunPred(`reverse`) =>
         funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
