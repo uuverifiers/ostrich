@@ -54,12 +54,12 @@ class PrepropSolver {
     val regex2AFA = new Regex2AFA(atoms)
 
     val containsLength = !(atoms positiveLitsWithPred p(wordLen)).isEmpty
-    val eagerMode = containsLength || Flags.eagerAutomataOperations
+    val eagerMode = Flags.eagerAutomataOperations
     val useLength = containsLength || Flags.useLength
 
     if (containsLength)
       Console.err.println(
-        "Warning: using +eager and +length to handle length constraints")
+        "Warning: using +length to handle length constraints")
 
 //    println(atoms)
 

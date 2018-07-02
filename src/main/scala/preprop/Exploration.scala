@@ -57,6 +57,8 @@ object Exploration {
      */
     def getCompleteContents : List[Automaton]
 
+    def ensureCompleteLengthConstraints : Unit
+
     def getAcceptedWord : Seq[Int]
 
     def getAcceptedWordLen(len : Int) : Seq[Int]
@@ -232,7 +234,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       val model = new MHashMap[Term, Seq[Int]]
 
       val lengthModel =
-        if (strictLengths) Some(lengthProver.get.partialModel) else None
+        if (strictLengths) {
+          for (t <- allTerms)
+            constraintStores(t).ensureCompleteLengthConstraints
+          for (core <- checkLengthConsistency)
+            return core
+          Some(lengthProver.get.partialModel)
+        } else {
+          None
+        }
 
       def getVarLength(t : Term) : Option[IdealInt] =
         for (lModel <- lengthModel;
@@ -364,24 +374,27 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   //////////////////////////////////////////////////////////////////////////////
 
   private val lengthPartitionStack = new ArrayStack[Int]
-  private val lengthPartitions = new ArrayBuffer[TermConstraint]
+  private val lengthPartitions = new ArrayBuffer[Seq[TermConstraint]]
 
-  protected def addLengthConstraint(constraint : TermConstraint) : Unit =
+  protected def addLengthConstraint(constraint : TermConstraint,
+                                    sources : Seq[TermConstraint]) : Unit =
     for (p <- lengthProver) {
-           val TermConstraint(t, aut) = constraint
-           lengthPartitions += constraint
-           p setPartitionNumber lengthPartitions.size
-           p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
+      lengthPartitions += sources
+      p setPartitionNumber lengthPartitions.size
+      val TermConstraint(t, aut) = constraint
+      p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
                                                   aut.getLengthAbstraction)
-        }
+    }
 
   private def checkLengthConsistency : Option[Seq[TermConstraint]] =
     for (p <- lengthProver;
          if {
            measure("check length consistency") {p.???} == ProverStatus.Unsat
          }) yield {
-      for (n <- p.getUnsatCore.toList.sorted; if n > 0)
-      yield lengthPartitions(n - 1)
+      for (n <- p.getUnsatCore.toList.sorted;
+           if n > 0;
+           c <- lengthPartitions(n - 1))
+      yield c
     }
 
   private def pushLengthConstraints : Unit =
@@ -448,14 +461,17 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
             } else {
               constraints += aut
               currentConstraint = Some(newAut)
-              addLengthConstraint(TermConstraint(t, newAut))
+              addLengthConstraint(TermConstraint(t, newAut),
+                                  for (a <- constraints)
+                                  yield TermConstraint(t, a))
               None
             }
           }
           case None => {
             constraints += aut
             currentConstraint = Some(aut)
-            addLengthConstraint(TermConstraint(t, aut))
+            val c = TermConstraint(t, aut)
+            addLengthConstraint(c, List(c))
             None
           }
         }
@@ -465,6 +481,8 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       currentConstraint.toList
     def getCompleteContents : List[Automaton] =
       constraints.toList
+
+    def ensureCompleteLengthConstraints : Unit = ()
 
     def getAcceptedWord : Seq[Int] =
       currentConstraint match {
@@ -587,7 +605,8 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           case None => {
             constraints += aut
             constraintSet += aut
-            addLengthConstraint(TermConstraint(t, aut))
+            val c = TermConstraint(t, aut)
+            addLengthConstraint(c, List(c))
             None
           }
         }
@@ -598,10 +617,22 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def getCompleteContents : List[Automaton] =
       constraints.toList
 
+    private def intersection : Automaton = constraints reduceLeft (_ & _)
+
+    def ensureCompleteLengthConstraints : Unit =
+      constraints match {
+        case Seq() | Seq(_) =>
+          // nothing, all length constraints already pushed
+        case auts =>
+          addLengthConstraint(TermConstraint(t, intersection),
+                              for (a <- constraints)
+                              yield TermConstraint(t, a))
+      }
+
     def getAcceptedWord : Seq[Int] =
       constraints match {
         case Seq() => List()
-        case auts  => (auts reduceLeft (_ & _)).getAcceptedWord.get
+        case auts  => intersection.getAcceptedWord.get
       }
 
     def getAcceptedWordLen(len : Int) : Seq[Int] =

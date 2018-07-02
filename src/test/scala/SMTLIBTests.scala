@@ -97,4 +97,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/simple-cvc-smtlib-b.smt2", "unsat")
   property("simple-cvc-smtlib-c.smt2") =
     checkFile("tests/simple-cvc-smtlib-c.smt2", "sat", "+model")
+
+  property("simple-cvc-smtlib.smt2 +eager") =
+    checkFile("tests/simple-cvc-smtlib.smt2", "sat", "+model", "+eager")
+  property("simple-cvc-smtlib-b.smt2 +eager") =
+    checkFile("tests/simple-cvc-smtlib-b.smt2", "unsat", "+eager")
+  property("simple-cvc-smtlib-c.smt2 +eager") =
+    checkFile("tests/simple-cvc-smtlib-c.smt2", "sat", "+model", "+eager")
 }
