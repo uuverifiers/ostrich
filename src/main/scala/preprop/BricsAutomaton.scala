@@ -320,9 +320,33 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString)
 
   /**
-   * Iterate over automaton states
+   * Iterate over automaton states, return in deterministic order
    */
-  lazy val states : Iterable[State] = underlying.getStates
+  lazy val states : Iterable[State] = {
+    // do this the hard way to give a deterministic ordering
+    val worklist = new MStack[State]
+    val seenstates = new MHashSet[State]
+    var seenlist = List.empty[State]
+
+    worklist.push(initialState)
+    seenstates.add(initialState)
+    seenlist = initialState::seenlist
+
+    while(!worklist.isEmpty) {
+      val s = worklist.pop
+
+      for (t <- s.getSortedTransitions(false)) {
+        val to = t.getDest
+        if (!seenlist.contains(to)) {
+          worklist.push(to)
+          seenstates.add(to)
+          seenlist = to::seenlist
+        }
+      }
+    }
+
+    seenlist
+  }
 
   /**
    * The unique initial state
