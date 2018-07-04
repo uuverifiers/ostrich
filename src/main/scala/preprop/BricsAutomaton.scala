@@ -30,6 +30,7 @@ import scala.collection.JavaConversions.{asScalaIterator,
                                          iterableAsScalaIterable}
 import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
+                                 LinkedHashSet => MLinkedHashSet,
                                  Stack => MStack,
                                  TreeSet => MTreeSet}
 
@@ -325,27 +326,24 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   lazy val states : Iterable[State] = {
     // do this the hard way to give a deterministic ordering
     val worklist = new MStack[State]
-    val seenstates = new MHashSet[State]
-    var seenlist = List.empty[State]
+    val seenstates = new MLinkedHashSet[State]
 
     worklist.push(initialState)
     seenstates.add(initialState)
-    seenlist = initialState::seenlist
 
     while(!worklist.isEmpty) {
       val s = worklist.pop
 
       for (t <- s.getSortedTransitions(false)) {
         val to = t.getDest
-        if (!seenlist.contains(to)) {
+        if (!seenstates.contains(to)) {
           worklist.push(to)
           seenstates.add(to)
-          seenlist = to::seenlist
         }
       }
     }
 
-    seenlist
+    seenstates
   }
 
   /**
@@ -357,7 +355,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    * Given a state, iterate over all outgoing transitions
    */
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
-    for (t <- from.getTransitions.iterator)
+    for (t <- from.getSortedTransitions(false).iterator)
     yield (t.getDest, (t.getMin, t.getMax))
 
   /**
