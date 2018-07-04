@@ -338,37 +338,10 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
       val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
-      for (t <- s.getTransitions) {
-        val to = t.getDest
+      for ((to, _) <- outgoingTransitions(s)) {
         if (!seenstates.contains(to)) {
-          dests.addBinding((t.getMin, t.getMax), to)
-        }
-      }
-
-      for (lbl <- dests.keys.toList.sorted) {
-
-        def sortingFn(s1 : State, s2 : State) : Boolean = {
-          // sort by lowest outgoing transition
-          for ((t1, t2) <- s1.getSortedTransitions(false)
-                           zip
-                           s2.getSortedTransitions(false)) {
-            import scala.math.Ordering.Implicits._
-            val lbl1 = (t1.getMin, t1.getMax)
-            val lbl2 = (t2.getMin, t2.getMax)
-            if (lbl1 < lbl2)
-              return true
-            else if (lbl2 < lbl1)
-              return false
-          }
-          // if all else fails, make an arbitrary choice
-          return true
-        }
-
-        val sortedDests = dests(lbl).toList.sortWith(sortingFn)
-
-        for (s <- sortedDests) {
-          worklist.push(s)
-          seenstates.add(s)
+          worklist.push(to)
+          seenstates += to
         }
       }
     }
@@ -382,11 +355,45 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   lazy val initialState : State = underlying.getInitialState
 
   /**
-   * Given a state, iterate over all outgoing transitions
+   * Given a state, iterate over all outgoing transitions, try to be
+   * deterministic
    */
-  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
-    for (t <- from.getSortedTransitions(false).iterator)
-    yield (t.getDest, (t.getMin, t.getMax))
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
+    val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
+
+    for (t <- from.getTransitions)
+      dests.addBinding((t.getMin, t.getMax), t.getDest)
+
+    val outgoing = new MLinkedHashSet[(State, TLabel)]
+
+    for (lbl <- dests.keys.toList.sorted) {
+
+      def sortingFn(s1 : State, s2 : State) : Boolean = {
+        // sort by lowest outgoing transition
+        for ((t1, t2) <- s1.getSortedTransitions(false)
+                         zip
+                         s2.getSortedTransitions(false)) {
+          import scala.math.Ordering.Implicits._
+          val lbl1 = (t1.getMin, t1.getMax)
+          val lbl2 = (t2.getMin, t2.getMax)
+          if (lbl1 < lbl2)
+            return true
+          else if (lbl2 < lbl1)
+            return false
+        }
+        // if all else fails, make an arbitrary choice
+        return true
+      }
+
+      val sortedDests = dests(lbl).toList.sortWith(sortingFn)
+
+      for (s <- sortedDests) {
+        outgoing += ((s, lbl))
+      }
+    }
+
+    outgoing.iterator
+  }
 
   /**
    * The set of accepting states
