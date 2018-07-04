@@ -69,21 +69,21 @@ object ReplaceAllPreOpSpecification
   }
 
   property("Double word test 1") = {
-    // aa = replaceall(x, word, bc)
+    // aa = replaceall(x, word, a|b)
     ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaAut)._1.exists(cons => {
       cons(0)(seq("wordword"))
     })
   }
 
   property("Double word test 3") = {
-    // aa = replaceall(x, word, bc)
+    // aa = replaceall(x, word, a|b)
     ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
       cons(0)(seq("wordword"))
     })
   }
 
   property("Double word test 4") = {
-    // aa = replaceall(x, word, bc)
+    // aa = replaceall(x, word, a|b)
     !ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
       cons(0)(seq("ab"))
     })

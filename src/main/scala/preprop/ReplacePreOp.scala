@@ -25,143 +25,80 @@ import dk.brics.automaton.RegExp
 
 import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
 
-object ReplaceAllPreOp {
-  def apply(a : Char) : PreOp = new ReplaceAllPreOpChar(a)
+object ReplacePreOp {
+  def apply(a : Char) : PreOp = ReplacePreOpWord(Seq(a))
 
   /**
-   * preop for a replaceall(_, w, _) for whatever we get out of
+   * preop for a replace(_, w, _) for whatever we get out of
    * PrepropSolver.
    */
   def apply(w : List[Either[Int,Term]]) : PreOp = {
     val charw = w.map(_ match {
       case Left(c) => c.toChar
       case _ =>
-        throw new IllegalArgumentException("ReplaceAllPreOp only supports word or character replacement, got " + w)
+        throw new IllegalArgumentException("ReplacePreOp only supports word or character replacement, got " + w)
     })
-    ReplaceAllPreOp(charw)
+    ReplacePreOp(charw)
   }
 
-  def apply(w : Seq[Char]) : PreOp = {
-    if (w.size == 1) {
-      new ReplaceAllPreOpChar(w(0))
-    } else {
-      ReplaceAllPreOpWord(w)
-    }
-  }
+  def apply(w : Seq[Char]) : PreOp = ReplacePreOpWord(w)
 
-  def apply(s : String) : PreOp = ReplaceAllPreOp(s.toSeq)
+  def apply(s : String) : PreOp = ReplacePreOp(s.toSeq)
 
   /**
-   * PreOp for x = replaceall(y, e, z) for regex e
+   * PreOp for x = replace(y, e, z) for regex e
    */
   def apply(c : Term, context : PredConj) : PreOp =
-    ReplaceAllPreOpRegEx(c, context)
+    ReplacePreOpRegEx(c, context)
 
   /**
-   * PreOp for x = replaceall(y, e, z) for regex e represented as
+   * PreOp for x = replace(y, e, z) for regex e represented as
    * automaton aut
    */
   def apply(aut : AtomicStateAutomaton) : PreOp =
-    ReplaceAllPreOpRegEx(aut)
+    ReplacePreOpRegEx(aut)
 }
 
 /**
-* Representation of x = replaceall(y, a, z) where a is a single
-* character.
-*/
-class ReplaceAllPreOpChar(a : Char) extends PreOp {
-
-  override def toString = "replaceall"
-
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
-    (for (c <- arguments(0).iterator;
-          d <- if (c == a)
-                 arguments(1).iterator
-               else
-                 Iterator single c)
-     yield d).toList
-
-  override def lengthApproximation(arguments : Seq[Term], result : Term,
-                                   order : TermOrder) : Formula = {
-    import TerForConvenience._
-    implicit val _ = order
-    (arguments(1) === 1 & result === arguments(0)) |
-    (arguments(1) < 1 & result <= arguments(0)) |
-    (arguments(1) > 1 & result >= arguments(0))
-  }
-
-  def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton)
-          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val rc : AtomicStateAutomaton = resultConstraint match {
-      case resCon : AtomicStateAutomaton => resCon
-      case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
-    }
-    val zcons = argumentConstraints(1).map(_ match {
-      case zcon : AtomicStateAutomaton => zcon
-      case _ => throw new IllegalArgumentException("ReplaceAllPreOp can only use AtomicStateAutomaton constraints.")
-    })
-    val cg = CaleyGraph[rc.type](rc, zcons)
-
-    val res =
-    for (box <- cg.getAcceptNodes.iterator;
-         newYCon = ReplaceCharAutomaton(rc, a, box.getEdges)) yield {
-      val newZCons = box.getEdges.map({ case (q1, q2) =>
-        val fin = Set(q2).asInstanceOf[Set[AtomicStateAutomaton#State]]
-        InitFinalAutomaton(rc, q1, fin)
-      }).toSeq
-      val newZCon = ProductAutomaton(newZCons)
-      Seq(newYCon, newZCon)
-    }
-
-    (res, argumentConstraints)
-  }
-
-  override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
-    val yCons = argumentConstraints(0).map(_ match {
-        case saut : AtomicStateAutomaton => saut
-        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
-    })
-    val zCons = argumentConstraints(1).map(_ match {
-        case saut : AtomicStateAutomaton => saut
-        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
-    })
-    val yProd = ProductAutomaton(yCons)
-    val zProd = ProductAutomaton(zCons)
-
-    NestedAutomaton(yProd, a, zProd)
-  }
-}
-
-/**
- * Companion object for ReplaceAllPreOpWord, does precomputation of
+ * Companion object for ReplacePreOpWord, does precomputation of
  * transducer representation of word
  */
-object ReplaceAllPreOpWord {
+object ReplacePreOpWord {
   def apply(w : Seq[Char]) = {
     val wtran = buildWordTransducer(w)
-    new ReplaceAllPreOpTran(wtran)
+    new ReplacePreOpTran(wtran)
   }
 
+  /**
+   * Build transducer that identifies first instance of w and replaces it with
+   * internal char
+   */
   private def buildWordTransducer(w : Seq[Char]) : AtomicStateTransducer = {
     val builder = BricsTransducer.getBuilder
 
     val initState = builder.initialState
     val states = initState::(List.fill(w.size - 1)(builder.getNewState))
     val finstates = List.fill(w.size)(builder.getNewState)
+    val copyRest = builder.getNewState
     val delete = OutputOp("", Delete, "")
+    // TODO: internal
     val internal = OutputOp("", Internal, "")
+    val copy = OutputOp("", Plus(0), "")
     val end = w.size - 1
 
     builder.setAccept(initState, true)
     finstates.foreach(builder.setAccept(_, true))
+    builder.setAccept(copyRest, true)
 
     // recognise word
     // deliberately miss last element
     for (i <- 0 until w.size - 1) {
       builder.addTransition(states(i), (w(i), w(i)), delete, states(i+1))
     }
-    builder.addTransition(states(end), (w(end), w(end)), internal, states(0))
+    builder.addTransition(states(end), (w(end), w(end)), internal, copyRest)
+
+    // copy rest after first match
+    builder.addTransition(copyRest, builder.LabelOps.sigmaLabel, copy, copyRest)
 
     for (i <- 0 until w.size) {
       val output = OutputOp(w.slice(0, i), Plus(0), "")
@@ -182,16 +119,16 @@ object ReplaceAllPreOpWord {
 }
 
 /**
- * Companion class for building representation of x = replaceall(y, e,
+ * Companion class for building representation of x = replace(y, e,
  * z) for a regular expression e.
  */
-object ReplaceAllPreOpRegEx {
+object ReplacePreOpRegEx {
   /**
    * Build preop from c and context giving regex to be replaced
    */
   def apply(c : Term, context : PredConj) : PreOp = {
     val tran = buildTransducer(c, context)
-    new ReplaceAllPreOpTran(tran)
+    new ReplacePreOpTran(tran)
   }
 
   /**
@@ -199,18 +136,18 @@ object ReplaceAllPreOpRegEx {
    */
   def apply(aut : AtomicStateAutomaton) : PreOp = {
     val tran = buildTransducer(aut)
-    new ReplaceAllPreOpTran(tran)
+    new ReplacePreOpTran(tran)
   }
 
   /**
-   * Builds transducer that identifies leftmost and longest matches of
+   * Builds transducer that identifies leftmost and longest match of
    * regex by rewriting matches to internalChar
    */
   private def buildTransducer(c : Term, context : PredConj) : AtomicStateTransducer =
     buildTransducer(BricsAutomaton(c, context))
 
   /**
-   * Builds transducer that identifies leftmost and longest matches of
+   * Builds transducer that identifies leftmost and longest match of
    * regex by rewriting matches to internalChar.
    *
    * TODO: currently does not handle empty matches
@@ -223,6 +160,8 @@ object ReplaceAllPreOpRegEx {
     case class Matching(val frontier : Set[aut.State]) extends Mode
     // last transition finished a match and reached frontier
     case class EndMatch(val frontier : Set[aut.State]) extends Mode
+    // copy the rest of the word after first match
+    case object CopyRest extends Mode
 
     val labels = aut.labelEnumerator.enumDisjointLabelsComplete
     val builder = aut.getTransducerBuilder
@@ -256,6 +195,7 @@ object ReplaceAllPreOpRegEx {
           case NotMatching => goodNoreach
           case EndMatch(_) => goodNoreach
           case Matching(_) => false
+          case CopyRest => goodNoreach
         })
         if (goodNoreach)
           worklist.push(s)
@@ -316,18 +256,15 @@ object ReplaceAllPreOpRegEx {
             val frontImg = aut.getImage(frontier, lbl)
             val noreachImg = aut.getImage(noreach, lbl)
 
-            val noMatch = getState(NotMatching, initImg ++ frontImg ++ noreachImg)
+            val noMatch = getState(CopyRest, initImg ++ frontImg ++ noreachImg)
             builder.addTransition(ts, lbl, copy, noMatch)
-
-            if (!initImg.isEmpty) {
-              val newMatch = getState(Matching(initImg), frontImg ++ noreachImg)
-              builder.addTransition(ts, lbl, delete, newMatch)
-            }
-
-            if (initImg.exists(aut.isAccept(_))) {
-              val oneCharMatch = getState(EndMatch(initImg), frontImg ++ noreachImg)
-              builder.addTransition(ts, lbl, internal, oneCharMatch)
-            }
+          }
+        }
+        case CopyRest => {
+          for (lbl <- labels) {
+            val noreachImg = aut.getImage(noreach, lbl)
+            val copyRest = getState(CopyRest, noreachImg)
+            builder.addTransition(ts, lbl, copy, copyRest)
           }
         }
       }
@@ -339,20 +276,20 @@ object ReplaceAllPreOpRegEx {
 }
 
 /**
- * Representation of x = replaceall(y, tran, z) where tran is a
- * transducer that replaces parts of the word to be replaced with
- * internalChar.  Build with companion object ReplaceAllPreOpWord or
- * ReplaceAllPreOpTran
+ * Representation of x = replace(y, tran, z) where tran is a
+ * transducer that replaces part of the word to be replaced with
+ * internalChar.  Build with companion object ReplacePreOpWord or
+ * ReplacePreOpTran
  */
-class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
+class ReplacePreOpTran(tran : AtomicStateTransducer) extends PreOp {
 
-  override def toString = "replaceall-tran"
+  override def toString = "replace-tran"
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
     val res = tran(arguments(0).map(_.toChar).mkString,
                    arguments(1).map(_.toChar).mkString)
     res match {
-      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to arguments: transducer gives no result")
+      case None => throw new IllegalArgumentException("ReplacePreOpTran cannot be applied to arguments: transducer gives no result")
       case Some(s) => s.toSeq.map(_.toInt)
     }
   }
@@ -362,15 +299,15 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
-      case _ => throw new IllegalArgumentException("ReplaceAllPreOp needs an AtomicStateAutomaton")
+      case _ => throw new IllegalArgumentException("ReplacePreOp needs an AtomicStateAutomaton")
     }
     val zcons = argumentConstraints(1).map(_ match {
       case zcon : AtomicStateAutomaton => zcon
-      case _ => throw new IllegalArgumentException("ReplaceAllPreOp can only use AtomicStateAutomaton constraints.")
+      case _ => throw new IllegalArgumentException("ReplacePreOp can only use AtomicStateAutomaton constraints.")
     })
 
-    // x = replaceall(y, w, z) internally translated to
-    // y' = tran(y); x = replaceall(y', w, z)
+    // x = replace(y, w, z) internally translated to
+    // y' = tran(y); x = replace(y', w, z)
     //
     val cg = CaleyGraph[rc.type](rc, zcons)
     val res =
