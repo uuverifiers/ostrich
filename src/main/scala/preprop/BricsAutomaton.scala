@@ -32,7 +32,9 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
                                  LinkedHashSet => MLinkedHashSet,
                                  Stack => MStack,
-                                 TreeSet => MTreeSet}
+                                 TreeSet => MTreeSet,
+                                 MultiMap => MMultiMap,
+                                 Set => MSet}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -334,11 +336,39 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     while(!worklist.isEmpty) {
       val s = worklist.pop
 
-      for (t <- s.getSortedTransitions(false)) {
+      val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
+
+      for (t <- s.getTransitions) {
         val to = t.getDest
         if (!seenstates.contains(to)) {
-          worklist.push(to)
-          seenstates.add(to)
+          dests.addBinding((t.getMin, t.getMax), to)
+        }
+      }
+
+      for (lbl <- dests.keys.toList.sorted) {
+
+        def sortingFn(s1 : State, s2 : State) : Boolean = {
+          // sort by lowest outgoing transition
+          for ((t1, t2) <- s1.getSortedTransitions(false)
+                           zip
+                           s2.getSortedTransitions(false)) {
+            import scala.math.Ordering.Implicits._
+            val lbl1 = (t1.getMin, t1.getMax)
+            val lbl2 = (t2.getMin, t2.getMax)
+            if (lbl1 < lbl2)
+              return true
+            else if (lbl2 < lbl1)
+              return false
+          }
+          // if all else fails, make an arbitrary choice
+          return true
+        }
+
+        val sortedDests = dests(lbl).toList.sortWith(sortingFn)
+
+        for (s <- sortedDests) {
+          worklist.push(s)
+          seenstates.add(s)
         }
       }
     }
