@@ -20,6 +20,7 @@ package strsolver.preprop
 
 import scala.collection.mutable.{HashMap => MHashMap, ArrayStack,
                                  HashSet => MHashSet, MultiMap,
+                                 LinkedHashSet => MLinkedHashSet,
                                  Set => MSet}
 import scala.collection.{Set => GSet}
 
@@ -66,7 +67,7 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
   protected def computeReachableStates(initState : State,
                                        accStates : Set[State])
                                      : GSet[State] = {
-    val fwdReachable, bwdReachable = new MHashSet[State]
+    val fwdReachable, bwdReachable = new MLinkedHashSet[State]
     fwdReachable += initState
 
     val worklist = new ArrayStack[State]
