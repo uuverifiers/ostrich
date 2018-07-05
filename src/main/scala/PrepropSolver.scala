@@ -19,9 +19,10 @@
 package strsolver
 
 import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
-                          ConcatPreOp, ReplaceAllPreOp, ReversePreOp,
+                          ConcatPreOp, ReplaceAllPreOp, ReplacePreOp,
+                          ReversePreOp,
                           RRFunsToTransducer, TransducerPreOp,
-                          AtomicStateTransducer}
+                          AtomicStateTransducer, AtomicStateAutomaton}
 
 import ap.SimpleAPI
 import ap.terfor.{Term, TerForConvenience}
@@ -37,8 +38,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 class PrepropSolver {
 
-  import StringTheory.{member, replaceall, replaceallre, replace, reverse,
-                       wordEps, wordCat, wordChar, wordDiff, wordLen,
+  import StringTheory.{member, replaceall, replaceallre, replace, replacere,
+                       reverse, wordEps, wordCat, wordChar, wordDiff, wordLen,
                        rexEmpty, rexEps, rexSigma,
                        rexStar, rexUnion, rexChar, rexCat, rexNeg, rexRange,
                        FunPred}
@@ -89,28 +90,24 @@ class PrepropSolver {
         val b = (regex2AFA buildStrings a(1)).next
         funApps += ((ReplaceAllPreOp(b), List(a(0), a(2)), a(3)))
       }
-      case FunPred(`replaceallre`) => {
+      case FunPred(`replace`) => {
         val b = (regex2AFA buildStrings a(1)).next
-        if (!b.isEmpty && b(0).isLeft) {
-          // In this case we've been given a string regex and expect it
-          // to start and end with / /
-          // if it just defines one string, treat it as a replaceall
-          // else treat it as true replaceall-re
-          val stringB : String = b.map(_.left.get.toChar)(collection.breakOut)
-          if (stringB(0) != '/' || stringB.last != '/')
-            throw new IllegalArgumentException("replaceall-re with a string argument expects the regular expression to start and end with /")
-          val sregex = stringB.slice(1, stringB.size - 1)
-          val baut = new RegExp(sregex, RegExp.NONE).toAutomaton(true)
-          val w = baut.getSingleton
-          if (w != null) {
+        funApps += ((ReplacePreOp(b), List(a(0), a(2)), a(3)))
+      }
+      case FunPred(`replaceallre`) => {
+        regexValue(a(1), regex2AFA) match {
+          case Left(w) =>
             funApps += ((ReplaceAllPreOp(w), List(a(0), a(2)), a(3)))
-          } else {
-            funApps += ((ReplaceAllPreOp(new BricsAutomaton(baut)),
-                         List(a(0), a(2)), a(3)))
-          }
-        } else {
-          val regex = (regex2AFA buildRegex a(1))
-          funApps += ((ReplaceAllPreOp(BricsAutomaton(regex)), List(a(0), a(2)), a(3)))
+          case Right(aut) =>
+            funApps += ((ReplaceAllPreOp(aut), List(a(0), a(2)), a(3)))
+        }
+      }
+      case FunPred(`replacere`) => {
+        regexValue(a(1), regex2AFA) match {
+          case Left(w) =>
+            funApps += ((ReplacePreOp(w), List(a(0), a(2)), a(3)))
+          case Right(aut) =>
+            funApps += ((ReplacePreOp(aut), List(a(0), a(2)), a(3)))
         }
       }
       case FunPred(`wordLen`) => {
@@ -255,4 +252,30 @@ class PrepropSolver {
     case Inconsistent => None
   }
 
+  /**
+   * Translate term in a regex argument position into an automaton
+   * returns a string if it detects only one word is accepted
+   */
+  private def regexValue(regex : Term, regex2AFA : Regex2AFA)
+      : Either[String,AtomicStateAutomaton] = {
+    val b = (regex2AFA buildStrings regex).next
+    if (!b.isEmpty && b(0).isLeft) {
+      // In this case we've been given a string regex and expect it
+      // to start and end with / /
+      // if it just defines one string, treat it as a replaceall
+      // else treat it as true replaceall-re
+      val stringB : String = b.map(_.left.get.toChar)(collection.breakOut)
+      if (stringB(0) != '/' || stringB.last != '/')
+        throw new IllegalArgumentException("regex defined with a string argument expects the regular expression to start and end with /")
+      val sregex = stringB.slice(1, stringB.size - 1)
+      val baut = new RegExp(sregex, RegExp.NONE).toAutomaton(true)
+      val w = baut.getSingleton
+      if (w != null)
+        return Left(w)
+      else
+        return Right(new BricsAutomaton(baut))
+    } else {
+      return Right(BricsAutomaton(regex2AFA buildRegex regex))
+    }
+  }
 }

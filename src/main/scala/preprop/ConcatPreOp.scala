@@ -34,7 +34,9 @@ object ConcatPreOp extends PreOp {
     resultConstraint match {
 
       case resultConstraint : AtomicStateAutomaton => {
-        // TODO: probably this won't process the states in deterministic order
+        // processes states in det order so long as the automaton's
+        // .states method returns them in a deterministic order (this is
+        // true for BricsAutomaton)
 
         val argLengths =
           (for (argAuts <- argumentConstraints.iterator) yield {
@@ -76,7 +78,7 @@ object ConcatPreOp extends PreOp {
                  List(List(), List(lenAut)))
               }
 
-              case _ => 
+              case _ =>
                 (for (s <- resultConstraint.states.iterator) yield {
                    List(InitFinalAutomaton.setFinal(resultConstraint, Set(s)),
                         InitFinalAutomaton.setInitial(resultConstraint, s))

@@ -360,6 +360,9 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
     case PlainSymbol(n@("seq-replace" | "str.replace")) =>
       translateFun(n, SMTLIBStringTheory.seq_replace, args, (_.head))
 
+    case PlainSymbol(n@("seq-replace-re" | "str.replace-re")) =>
+      translateFun(n, SMTLIBStringTheory.seq_replace_re, args, (_.head))
+
     case PlainSymbol(n@("seq-reverse" | "str.reverse")) =>
       translateFun(n, SMTLIBStringTheory.seq_reverse, args, (_.head))
 

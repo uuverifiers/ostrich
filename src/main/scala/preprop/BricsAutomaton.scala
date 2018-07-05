@@ -30,8 +30,11 @@ import scala.collection.JavaConversions.{asScalaIterator,
                                          iterableAsScalaIterable}
 import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
+                                 LinkedHashSet => MLinkedHashSet,
                                  Stack => MStack,
-                                 TreeSet => MTreeSet}
+                                 TreeSet => MTreeSet,
+                                 MultiMap => MMultiMap,
+                                 Set => MSet}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -320,9 +323,31 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString)
 
   /**
-   * Iterate over automaton states
+   * Iterate over automaton states, return in deterministic order
    */
-  lazy val states : Iterable[State] = underlying.getStates
+  lazy val states : Iterable[State] = {
+    // do this the hard way to give a deterministic ordering
+    val worklist = new MStack[State]
+    val seenstates = new MLinkedHashSet[State]
+
+    worklist.push(initialState)
+    seenstates.add(initialState)
+
+    while(!worklist.isEmpty) {
+      val s = worklist.pop
+
+      val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
+
+      for ((to, _) <- outgoingTransitions(s)) {
+        if (!seenstates.contains(to)) {
+          worklist.push(to)
+          seenstates += to
+        }
+      }
+    }
+
+    seenstates
+  }
 
   /**
    * The unique initial state
@@ -330,11 +355,45 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   lazy val initialState : State = underlying.getInitialState
 
   /**
-   * Given a state, iterate over all outgoing transitions
+   * Given a state, iterate over all outgoing transitions, try to be
+   * deterministic
    */
-  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] =
-    for (t <- from.getTransitions.iterator)
-    yield (t.getDest, (t.getMin, t.getMax))
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
+    val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
+
+    for (t <- from.getTransitions)
+      dests.addBinding((t.getMin, t.getMax), t.getDest)
+
+    val outgoing = new MLinkedHashSet[(State, TLabel)]
+
+    for (lbl <- dests.keys.toList.sorted) {
+
+      def sortingFn(s1 : State, s2 : State) : Boolean = {
+        // sort by lowest outgoing transition
+        for ((t1, t2) <- s1.getSortedTransitions(false)
+                         zip
+                         s2.getSortedTransitions(false)) {
+          import scala.math.Ordering.Implicits._
+          val lbl1 = (t1.getMin, t1.getMax)
+          val lbl2 = (t2.getMin, t2.getMax)
+          if (lbl1 < lbl2)
+            return true
+          else if (lbl2 < lbl1)
+            return false
+        }
+        // if all else fails, make an arbitrary choice
+        return true
+      }
+
+      val sortedDests = dests(lbl).toList.sortWith(sortingFn)
+
+      for (s <- sortedDests) {
+        outgoing += ((s, lbl))
+      }
+    }
+
+    outgoing.iterator
+  }
 
   /**
    * The set of accepting states
