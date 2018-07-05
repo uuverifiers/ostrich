@@ -76,7 +76,7 @@ object RRFunsToTransducer {
       val headConstReplacer = new SeqHeadReplacer(headConsts)
 
       val epsTransitions =
-        new MHashMap[IFunction, ArrayBuffer[(Char, IFunction)]]
+        new MHashMap[IFunction, ArrayBuffer[(Option[Char], IFunction)]]
 
       def outputWords(from : IFunction,
                       seenStates : Set[IFunction] = Set())
@@ -89,7 +89,7 @@ object RRFunsToTransducer {
           case Some(transitions) =>
             for ((c, to) <- transitions.iterator;
                  (l, finalTo) <- outputWords(to, seenStates + from))
-            yield (c :: l, finalTo)
+            yield (c.toList ::: l, finalTo)
           case None =>
             Iterator((List(), from))
         }
@@ -150,10 +150,18 @@ object RRFunsToTransducer {
                 !! (bvLabel)
                 while (??? == ProverStatus.Sat) {
                   val out = eval(outputC)
-                  transBuffer += ((out.intValueSafe.toChar, targetFun))
+                  transBuffer += ((Some(out.intValueSafe.toChar), targetFun))
                   !! (outputC =/= out)
                 }
               }
+            }
+
+            case EqZ(IFunApp(targetFun,
+                             Seq(IVariable(1), IVariable(0)))) =>
+            if (phase == 1) {
+              val transBuffer =
+                epsTransitions.getOrElseUpdate(f, new ArrayBuffer)
+              transBuffer += ((None, targetFun))
             }
 
             case EqZ(IFunApp(targetFun,
