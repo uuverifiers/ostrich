@@ -64,8 +64,9 @@ class PrepropSolver {
 
 //    println(atoms)
 
-    val concreteWords = findConcreteWords(atoms) match {
-      case Some(w) => w
+    val concreteWords = new MHashMap[Term, Seq[Int]]
+    findConcreteWords(atoms) match {
+      case Some(w) => concreteWords ++= w
       case None => return None
     }
 
@@ -164,6 +165,32 @@ class PrepropSolver {
       }
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+
+    // check whether any of the function applications can be evaluated
+    {
+      var changed = true
+      while (changed) {
+        changed = false
+
+        for (n <- (funApps.size - 1) to 0 by -1) {
+          val (op, args, res) = funApps(n)
+          if (args forall (concreteWords contains _)) {
+            val newRes = op.eval(args map concreteWords)
+            (concreteWords get res) match {
+              case Some(oldRes) =>
+                if (newRes != oldRes)
+                  return None
+              case None =>
+                concreteWords.put(res, newRes)
+            }
+            funApps remove n
+            changed = true
+          }
+        }
+      }
+    }
+
     val interestingTerms =
       ((for ((t, _) <- regexes.iterator) yield t) ++
        (for ((_, args, res) <- funApps.iterator;
@@ -178,6 +205,8 @@ class PrepropSolver {
         case None =>
           // nothing
       }
+
+    ////////////////////////////////////////////////////////////////////////////
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =

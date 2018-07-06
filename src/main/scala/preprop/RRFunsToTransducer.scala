@@ -134,6 +134,9 @@ object RRFunsToTransducer {
             if (phase == 2) {
               println("  (accepting)")
               funs2Brics(f) setAccept true
+              if (epsTransitions contains f)
+                throw new Exception(
+                  "eps transitions from accepting states are not supported")
             }
 
           } else targetConds.head match {
@@ -231,7 +234,13 @@ object RRFunsToTransducer {
 
         }
       }
-    }}}
+    }}
+
+    if (epsTransitions contains stateFuns.head)
+      throw new Exception(
+        "eps transitions from the initial state are not supported")
+
+    }
 
     println
 

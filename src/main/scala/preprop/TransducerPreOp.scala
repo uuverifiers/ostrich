@@ -18,6 +18,8 @@
 
 package strsolver.preprop
 
+import scala.collection.breakOut
+
 object TransducerPreOp {
   def apply(t : AtomicStateTransducer) = new TransducerPreOp(t)
 }
@@ -30,8 +32,15 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
   override def toString = "transducer"
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
-    Console.err.println("Warning: TransducerPreOp.eval not implemented yet")
-    List()
+    assert(arguments.size == 1)
+    val str : String = arguments.head.map(i => i.toChar)(breakOut)
+    t(str) match {
+      case Some(res) =>
+        res map (_.toInt)
+      case None =>
+        throw new IllegalArgumentException(
+          "transducer is not defined for the input " + str)
+    }
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
