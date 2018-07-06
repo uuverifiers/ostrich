@@ -79,38 +79,78 @@ object RRFunsToTransducer {
         new MHashMap[IFunction, ArrayBuffer[(Option[Char], IFunction)]]
       val epsTransitionsPre =
         new MHashMap[IFunction, ArrayBuffer[(Option[Char], IFunction)]]
+      // has incoming non-e transition
+      val hasIncoming = new MHashSet[IFunction]
 
+      // When collecting predecessor e-transitions, we introduce a
+      // transition from every found state that may be the stopping
+      // point of a non-empty transition.  I.e. directly has an
+      // incoming, or is final (see outputWordsPost), or is initial.
+      //
+      // First final seen will be last stopping point need to consider
+      // except for initial state.  Any incoming transitions will meet
+      // us at the final state.  Note, in general this is not true if
+      // two final states appear on a path of e-transitions, but this
+      // would imply a non-functional transducer.
+      //
+      // We are more conservative with post.
+      def outputWordsPre(to: IFunction,
+                         seenStates : Set[IFunction] = Set(),
+                         initialOnly : Boolean = false)
+                        : Iterator[(List[Char], IFunction)] = {
+        if (seenStates contains to)
+          throw new Exception(
+            "Found transducer cycle that does not read any letters: " +
+            to.name)
+        val isFin = funs2Brics(to).isAccept
+        val add = (!initialOnly && (hasIncoming.contains(to) || isFin)) ||
+                  (to == stateFuns.head)
+        val tran = if (add) Iterator((List(), to))
+                   else Iterator()
+        val restTrans = (epsTransitionsPre get to) match {
+          case Some(transitions) =>
+            for ((c, from) <- transitions.iterator;
+                 (l, finalFrom) <- outputWordsPre(from,
+                                                  seenStates + to,
+                                                  initialOnly || isFin))
+            yield (l ::: c.toList, finalFrom)
+          case None => Iterator()
+        }
 
-      def outputWordsGen(from : IFunction,
-                         seenStates : Set[IFunction],
-                         epsMap : MHashMap[IFunction, ArrayBuffer[(Option[Char], IFunction)]])
+        tran ++ restTrans
+      }
+
+      // when adding post e-transitions we always introduce a transition
+      // to the direct successor (no e-tran) as this would be the
+      // meeting point for any e-transitions coming back to  us.  After
+      // that we rely on pre coming back except for final transitions.
+      // We introduce a post transition to the first final state we see
+      // on a run.  No need to look for a second as it will imply a
+      // non-functional transducer.
+      def outputWordsPost(from : IFunction,
+                          seenStates : Set[IFunction] = Set())
                         : Iterator[(List[Char], IFunction)] = {
         if (seenStates contains from)
           throw new Exception(
             "Found transducer cycle that does not read any letters: " +
             from.name)
-        // don't cross final states
         if (funs2Brics(from).isAccept)
           return Iterator((List(), from))
-        (epsMap get from) match {
+
+        // always have transition with no e-transitions taken
+        val firstTran = if (seenStates.isEmpty) Iterator((List(), from))
+                        else Iterator()
+        val restTrans = (epsTransitionsPost get from) match {
           case Some(transitions) =>
             for ((c, to) <- transitions.iterator;
-                 (l, finalTo) <- outputWordsGen(to, seenStates + from, epsMap))
+                 (l, finalTo) <- outputWordsPost(to, seenStates + from))
             yield (c.toList ::: l, finalTo)
           case None =>
             Iterator((List(), from))
         }
+
+        firstTran ++ restTrans
       }
-
-      def outputWordsPre(from : IFunction)
-                        : Iterator[(List[Char], IFunction)] =
-        outputWordsGen(from, Set(), epsTransitionsPre).map({
-          case (w, s) => (w.reverse, s)
-        })
-
-      def outputWordsPost(from : IFunction)
-                        : Iterator[(List[Char], IFunction)] =
-        outputWordsGen(from, Set(), epsTransitionsPost)
 
       // we traverse the transition formulas twice:
       // first to identify input-epsilon transitions, and then to
@@ -190,6 +230,10 @@ object RRFunsToTransducer {
                                  outPat@(IVariable(0) |
                                          IFunApp(SMTLIBStringTheory.seq_tail,
                                                  Seq(IVariable(0))))))) =>
+            if (phase == 1) {
+              // assume label will be non-empty
+              hasIncoming += targetFun
+            }
             if (phase == 2) {
               val presLabel = p.simplify(bvLabel)
               val splitLabel = NegEqSplitter(Transform2NNF(presLabel))
@@ -254,12 +298,6 @@ object RRFunsToTransducer {
         }
       }
     }}
-
-// TODO: is this an issue?
-//    if (epsTransitionsPost contains stateFuns.head)
-//      throw new Exception(
-//        "eps transitions from the initial state are not supported")
-//
     }
 
     println

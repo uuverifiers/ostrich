@@ -349,10 +349,11 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
   override def toString = "replaceall-tran"
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
-    val res = tran(arguments(0).map(_.toChar).mkString,
-                   arguments(1).map(_.toChar).mkString)
+    val arg1 = arguments(0).map(_.toChar).mkString
+    val arg2 = arguments(1).map(_.toChar).mkString
+    val res = tran(arg1, arg2)
     res match {
-      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to arguments: transducer gives no result")
+      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to " + (arg1, arg2) + ": transducer gives no result")
       case Some(s) => s.toSeq.map(_.toInt)
     }
   }
