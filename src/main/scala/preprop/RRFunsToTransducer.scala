@@ -75,24 +75,81 @@ object RRFunsToTransducer {
       val headConsts = Array(outputC, inputC)
       val headConstReplacer = new SeqHeadReplacer(headConsts)
 
-      val epsTransitions =
+      val epsTransitionsPost =
         new MHashMap[IFunction, ArrayBuffer[(Option[Char], IFunction)]]
+      val epsTransitionsPre =
+        new MHashMap[IFunction, ArrayBuffer[(Option[Char], IFunction)]]
+      // has incoming non-e transition
+      val hasIncoming = new MHashSet[IFunction]
 
-      def outputWords(from : IFunction,
-                      seenStates : Set[IFunction] = Set())
-                    : Iterator[(List[Char], IFunction)] = {
+      // When collecting predecessor e-transitions, we introduce a
+      // transition from every found state that may be the stopping
+      // point of a non-empty transition.  I.e. directly has an
+      // incoming, or is final (see outputWordsPost), or is initial.
+      //
+      // First final seen will be last stopping point need to consider
+      // except for initial state.  Any incoming transitions will meet
+      // us at the final state.  Note, in general this is not true if
+      // two final states appear on a path of e-transitions, but this
+      // would imply a non-functional transducer.
+      //
+      // We are more conservative with post.
+      def outputWordsPre(to: IFunction,
+                         seenStates : Set[IFunction] = Set(),
+                         initialOnly : Boolean = false)
+                        : Iterator[(List[Char], IFunction)] = {
+        if (seenStates contains to)
+          throw new Exception(
+            "Found transducer cycle that does not read any letters: " +
+            to.name)
+        val isFin = funs2Brics(to).isAccept
+        val add = (!initialOnly && (hasIncoming.contains(to) || isFin)) ||
+                  (to == stateFuns.head)
+        val tran = if (add) Iterator((List(), to))
+                   else Iterator()
+        val restTrans = (epsTransitionsPre get to) match {
+          case Some(transitions) =>
+            for ((c, from) <- transitions.iterator;
+                 (l, finalFrom) <- outputWordsPre(from,
+                                                  seenStates + to,
+                                                  initialOnly || isFin))
+            yield (l ::: c.toList, finalFrom)
+          case None => Iterator()
+        }
+
+        tran ++ restTrans
+      }
+
+      // when adding post e-transitions we always introduce a transition
+      // to the direct successor (no e-tran) as this would be the
+      // meeting point for any e-transitions coming back to  us.  After
+      // that we rely on pre coming back except for final transitions.
+      // We introduce a post transition to the first final state we see
+      // on a run.  No need to look for a second as it will imply a
+      // non-functional transducer.
+      def outputWordsPost(from : IFunction,
+                          seenStates : Set[IFunction] = Set())
+                        : Iterator[(List[Char], IFunction)] = {
         if (seenStates contains from)
           throw new Exception(
             "Found transducer cycle that does not read any letters: " +
             from.name)
-        (epsTransitions get from) match {
+        if (funs2Brics(from).isAccept)
+          return Iterator((List(), from))
+
+        // always have transition with no e-transitions taken
+        val firstTran = if (seenStates.isEmpty) Iterator((List(), from))
+                        else Iterator()
+        val restTrans = (epsTransitionsPost get from) match {
           case Some(transitions) =>
             for ((c, to) <- transitions.iterator;
-                 (l, finalTo) <- outputWords(to, seenStates + from))
+                 (l, finalTo) <- outputWordsPost(to, seenStates + from))
             yield (c.toList ::: l, finalTo)
           case None =>
             Iterator((List(), from))
         }
+
+        firstTran ++ restTrans
       }
 
       // we traverse the transition formulas twice:
@@ -102,9 +159,6 @@ object RRFunsToTransducer {
       for (phase <- List(1, 2)) {
 
       for ((f, transitions) <- funs) {
-        if (phase == 2)
-          println("State " + f.name + ":")
-
         for (trans <-
              LineariseVisitor(Transform2NNF(transitions), IBinJunctor.Or)) {
           val conjuncts = LineariseVisitor(trans, IBinJunctor.And)
@@ -131,12 +185,9 @@ object RRFunsToTransducer {
               (SymbolCollector variables and(emptinessConds)) ==
                 ((0 until tracks) map (v(_))).toSet) {
 
+            funs2Brics(f) setAccept true
             if (phase == 2) {
-              println("  (accepting)")
-              funs2Brics(f) setAccept true
-              if (epsTransitions contains f)
-                throw new Exception(
-                  "eps transitions from accepting states are not supported")
+              println(f.name + " (accepting)")
             }
 
           } else targetConds.head match {
@@ -146,14 +197,17 @@ object RRFunsToTransducer {
                                  IFunApp(SMTLIBStringTheory.seq_tail,
                                          Seq(IVariable(0)))))) =>
             if (phase == 1) {
-              val transBuffer =
-                epsTransitions.getOrElseUpdate(f, new ArrayBuffer)
+              val transBufferPost =
+                epsTransitionsPost.getOrElseUpdate(f, new ArrayBuffer)
               p.scope {
                 import p._
                 !! (bvLabel)
                 while (??? == ProverStatus.Sat) {
                   val out = eval(outputC)
-                  transBuffer += ((Some(out.intValueSafe.toChar), targetFun))
+                  transBufferPost += ((Some(out.intValueSafe.toChar), targetFun))
+                  val transBufferPre =
+                    epsTransitionsPre.getOrElseUpdate(targetFun, new ArrayBuffer)
+                  transBufferPre += ((Some(out.intValueSafe.toChar), f))
                   !! (outputC =/= out)
                 }
               }
@@ -162,9 +216,12 @@ object RRFunsToTransducer {
             case EqZ(IFunApp(targetFun,
                              Seq(IVariable(1), IVariable(0)))) =>
             if (phase == 1) {
-              val transBuffer =
-                epsTransitions.getOrElseUpdate(f, new ArrayBuffer)
-              transBuffer += ((None, targetFun))
+              val transBufferPost =
+                epsTransitionsPost.getOrElseUpdate(f, new ArrayBuffer)
+              transBufferPost += ((None, targetFun))
+              val transBufferPre =
+                epsTransitionsPre.getOrElseUpdate(targetFun, new ArrayBuffer)
+              transBufferPre += ((None, f))
             }
 
             case EqZ(IFunApp(targetFun,
@@ -173,6 +230,10 @@ object RRFunsToTransducer {
                                  outPat@(IVariable(0) |
                                          IFunApp(SMTLIBStringTheory.seq_tail,
                                                  Seq(IVariable(0))))))) =>
+            if (phase == 1) {
+              // assume label will be non-empty
+              hasIncoming += targetFun
+            }
             if (phase == 2) {
               val presLabel = p.simplify(bvLabel)
               val splitLabel = NegEqSplitter(Transform2NNF(presLabel))
@@ -214,16 +275,18 @@ object RRFunsToTransducer {
                   // this means no output is produced
                   inputOp = Some(Delete)
 
-                for ((tail, finalTarget) <- outputWords(targetFun)) {
+                for ((head, finalSource) <- outputWordsPre(f);
+                     (tail, finalTarget) <- outputWordsPost(targetFun)) {
                   val trans = new BTransition(lb, ub, funs2Brics(finalTarget))
-                  val op = OutputOp(List(), inputOp.get,
+                  val op = OutputOp(head, inputOp.get,
                                     (outputChars ::: tail).mkString)
 
-                  println("  [" + lb + ", " + ub + "] -> " +
+                  println(finalSource.name +
+                          "-  [" + lb + ", " + ub + "] -> " +
                           finalTarget.name + ": \t" + op)
 
-                  funs2Brics(f).addTransition(trans)
-                  operations.put((funs2Brics(f), trans), op)
+                  funs2Brics(finalSource).addTransition(trans)
+                  operations.put((funs2Brics(finalSource), trans), op)
                 }
               }
             }
@@ -235,11 +298,6 @@ object RRFunsToTransducer {
         }
       }
     }}
-
-    if (epsTransitions contains stateFuns.head)
-      throw new Exception(
-        "eps transitions from the initial state are not supported")
-
     }
 
     println

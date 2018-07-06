@@ -33,8 +33,10 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
     assert (arguments.size == 1)
-    t(arguments(0).map(_.toChar).mkString) match {
-      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to arguments: transducer gives no result")
+    println("eval 1")
+    val arg = arguments(0).map(_.toChar).mkString
+    t(arg) match {
+      case None => throw new IllegalArgumentException("TransducerPreOp cannot be applied to " + arg + ": transducer gives no result")
       case Some(s) => s.toSeq.map(_.toInt)
     }
   }
