@@ -32,14 +32,10 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
   override def toString = "transducer"
 
   def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
-    assert(arguments.size == 1)
-    val str : String = arguments.head.map(i => i.toChar)(breakOut)
-    t(str) match {
-      case Some(res) =>
-        res map (_.toInt)
-      case None =>
-        throw new IllegalArgumentException(
-          "transducer is not defined for the input " + str)
+    assert (arguments.size == 1)
+    t(arguments(0).map(_.toChar).mkString) match {
+      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to arguments: transducer gives no result")
+      case Some(s) => s.toSeq.map(_.toInt)
     }
   }
 
