@@ -29,10 +29,12 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
 
   override def toString = "transducer"
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
-    Console.err.println("Warning: TransducerPreOp.eval not implemented yet")
-    List()
-  }
+  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
+    t(arguments(0).map(_.toChar).mkString) match {
+      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to arguments: transducer gives no result")
+      case Some(s) => s.toSeq.map(_.toInt)
+    }
+
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
