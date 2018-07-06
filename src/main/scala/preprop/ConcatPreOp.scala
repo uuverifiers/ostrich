@@ -93,8 +93,8 @@ object ConcatPreOp extends PreOp {
         throw new IllegalArgumentException
     }
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
-    arguments(0) ++ arguments(1)
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] =
+    Some(arguments(0) ++ arguments(1))
 
   override def lengthApproximation(arguments : Seq[Term], result : Term,
                                    order : TermOrder) : Formula = {

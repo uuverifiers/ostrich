@@ -260,7 +260,13 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
       for ((ops, res) <- sortedFunApps.reverseIterator;
            (op, args) <- ops.iterator) {
-        val resValue = op.eval(args map model)
+        val resValue = op.eval(args map model) match {
+          case Some(v) => v
+          case None =>
+            throw new Exception(
+              "Model extraction failed: " + op + " is not defined for " +
+              (args map model).mkString(", "))
+        }
 
         for (oldValue <- model get res)
           if (resValue != oldValue)

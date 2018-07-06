@@ -35,8 +35,8 @@ object ReversePreOp extends PreOp {
         throw new IllegalArgumentException
     }
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
-    arguments(0).reverse
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] =
+    Some(arguments(0).reverse)
 
   override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
     val cons = argumentConstraints(0).map(_ match {

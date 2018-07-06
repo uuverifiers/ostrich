@@ -73,13 +73,13 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
 
   override def toString = "replaceall"
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] =
-    (for (c <- arguments(0).iterator;
-          d <- if (c == a)
-                 arguments(1).iterator
-               else
-                 Iterator single c)
-     yield d).toList
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] =
+    Some((for (c <- arguments(0).iterator;
+               d <- if (c == a)
+                      arguments(1).iterator
+                    else
+                      Iterator single c)
+          yield d).toList)
 
   override def lengthApproximation(arguments : Seq[Term], result : Term,
                                    order : TermOrder) : Formula = {
@@ -348,14 +348,10 @@ class ReplaceAllPreOpTran(tran : AtomicStateTransducer) extends PreOp {
 
   override def toString = "replaceall-tran"
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] = {
     val arg1 = arguments(0).map(_.toChar).mkString
     val arg2 = arguments(1).map(_.toChar).mkString
-    val res = tran(arg1, arg2)
-    res match {
-      case None => throw new IllegalArgumentException("ReplaceAllPreOpTran cannot be applied to " + (arg1, arg2) + ": transducer gives no result")
-      case Some(s) => s.toSeq.map(_.toInt)
-    }
+    for (s <- tran(arg1, arg2)) yield s.toSeq.map(_.toInt)
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],

@@ -176,13 +176,17 @@ class PrepropSolver {
         for (n <- (funApps.size - 1) to 0 by -1) {
           val (op, args, res) = funApps(n)
           if (args forall (concreteWords contains _)) {
-            val newRes = op.eval(args map concreteWords)
-            (concreteWords get res) match {
-              case Some(oldRes) =>
-                if (newRes != oldRes)
-                  return None
+            op.eval(args map concreteWords) match {
+              case Some(newRes) =>
+                (concreteWords get res) match {
+                  case Some(oldRes) =>
+                    if (newRes != oldRes)
+                      return None
+                  case None =>
+                    concreteWords.put(res, newRes)
+                }
               case None =>
-                concreteWords.put(res, newRes)
+                return None
             }
             funApps remove n
             changed = true

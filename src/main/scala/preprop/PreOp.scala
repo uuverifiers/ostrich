@@ -50,9 +50,10 @@ trait PreOp {
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]])
 
   /**
-   * Evaluate the described function
+   * Evaluate the described function; return <code>None</code> if the
+   * function is not defined for the given arguments.
    */
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int]
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]]
 
   /**
    * Generate a formula that approximates the length relationship between

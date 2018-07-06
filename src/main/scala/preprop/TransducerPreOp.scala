@@ -31,13 +31,10 @@ class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
 
   override def toString = "transducer"
 
-  def eval(arguments : Seq[Seq[Int]]) : Seq[Int] = {
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] = {
     assert (arguments.size == 1)
     val arg = arguments(0).map(_.toChar).mkString
-    t(arg) match {
-      case None => throw new IllegalArgumentException("TransducerPreOp cannot be applied to " + arg + ": transducer gives no result")
-      case Some(s) => s.toSeq.map(_.toInt)
-    }
+    for (s <- t(arg)) yield s.toSeq.map(_.toInt)
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
