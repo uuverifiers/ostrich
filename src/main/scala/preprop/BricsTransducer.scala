@@ -51,7 +51,8 @@ class BricsTransducer(override val underlying : BAutomaton,
   def preImage[A <: AtomicStateAutomaton]
               (aut : A,
                internal : Iterable[(A#State, A#State)]
-                 = Iterable[(A#State, A#State)]()) : AtomicStateAutomaton = {
+                 = Iterable[(A#State, A#State)]()) : AtomicStateAutomaton =
+  Exploration.measure("transducer pre-op") {
 
     val preBuilder = aut.getBuilder
 
@@ -124,7 +125,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       if (isAccept(ts) && aut.isAccept(as))
         preBuilder.setAccept(ps, true)
 
-      for (t <- ts.getTransitions) {
+      for (t <- ts.getSortedTransitions(false)) {
         val tOp = operations(ts, t)
         if (tOp.preW.isEmpty)
           addWork(ps, ts, t, as, Op)
@@ -273,7 +274,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       val ps = worklist.pop()
       val (ts, as) = sMap(ps)
 
-      for (t <- ts.getTransitions;
+      for (t <- ts.getSortedTransitions(false);
            (asNext, aLbl) <- aut.outgoingTransitions(as);
            tLbl = aut.LabelOps.interval(t.getMin, t.getMax);
            lbl <- aut.LabelOps.intersectLabels(aLbl, tLbl)) {
@@ -356,7 +357,7 @@ class BricsTransducer(override val underlying : BAutomaton,
       val a = input(pos)
       val pnext = pos + 1
 
-      for (t <- s.getTransitions) {
+      for (t <- s.getSortedTransitions(false)) {
         val snext = t.getDest
         val lbl = (t.getMin, t.getMax)
         if (LabelOps.labelContains(a, lbl) && !seenlist.contains((snext, pnext))) {
