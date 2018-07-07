@@ -45,9 +45,7 @@ case class Plus(val n : Int) extends InputOp
 case class OutputOp(val preW : Seq[Char], val op : InputOp, val postW : Seq[Char])
 
 
-trait Transducer extends Automaton { }
-
-trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
+trait Transducer {
   /**
    * Calculates regular language that is pre-image of the given regular
    * language.  I.e. Pre_T(aut) for transducer T
@@ -90,7 +88,7 @@ trait AtomicStateTransducer extends AtomicStateAutomaton with Transducer {
   def apply(input : String, internal : String = "") : Option[String]
 }
 
-trait AtomicStateTransducerBuilder[State, TLabel] {
+trait TransducerBuilder[State, TLabel] {
   /**
    * Operations on labels
    */
@@ -120,9 +118,16 @@ trait AtomicStateTransducerBuilder[State, TLabel] {
                     s2 : State) : Unit
 
   /**
+   * Add a e-transition to the transducer
+   */
+  def addETransition(s1 : State,
+                    op : OutputOp,
+                    s2 : State) : Unit
+
+  /**
    * The transducer built.  Builder should not be used after call to
    * this
    */
-  def getTransducer : AtomicStateTransducer
+  def getTransducer : Transducer
 }
 
