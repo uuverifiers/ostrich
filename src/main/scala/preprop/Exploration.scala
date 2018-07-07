@@ -29,7 +29,8 @@ import ap.terfor.substitutions.VariableSubst
 import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
-                                 HashSet => MHashSet, LinkedHashSet}
+                                 HashSet => MHashSet, LinkedHashSet,
+                                 BitSet => MBitSet}
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
@@ -57,10 +58,21 @@ object Exploration {
      */
     def getCompleteContents : List[Automaton]
 
+    /**
+     * Make sure that the exact length abstraction for the intersection of the
+     * stored automata has been pushed to the length prover
+     */
     def ensureCompleteLengthConstraints : Unit
 
+    /**
+     * Produce an arbitrary word accepted by all the stored constraints
+     */
     def getAcceptedWord : Seq[Int]
 
+    /**
+     * Produce a word of length <code>len</code> accepted by all the stored
+     * constraints
+     */
     def getAcceptedWordLen(len : Int) : Seq[Int]
   }
 
@@ -89,9 +101,10 @@ object Exploration {
       comp
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 /**
- * A naive recursive implementation of depth-first exploration of a conjunction
- * of function applications
+ * Depth-first exploration of a conjunction of function applications
  */
 abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
@@ -152,6 +165,46 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       println("     " + op + "(" + (args mkString ", ") + ")")
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+
+  // check whether we have to add further regex constraints to ensure
+  // completeness; otherwise not all pre-images of function applications might
+  // be considered
+  
+  val allInitialConstraints = {
+    val term2Index =
+      (for (((_, t), n) <- sortedFunApps.iterator.zipWithIndex)
+       yield (t -> n)).toMap
+
+    val coveredTerms = new MBitSet
+    for ((t, _) <- initialConstraints)
+      for (ind <- term2Index get t)
+        coveredTerms += ind
+
+    val additionalConstraints = new ArrayBuffer[(Term, Automaton)]
+
+    for (n <- 0 until sortedFunApps.size;
+         if {
+           if (!(coveredTerms contains n)) {
+             coveredTerms += n
+             additionalConstraints +=
+               ((sortedFunApps(n)._2, BricsAutomaton.makeAnyString()))
+           }
+           true
+         };
+         (_, args) <- sortedFunApps(n)._1;
+         arg <- args)
+      for (ind <- term2Index get arg)
+        coveredTerms += ind
+
+    initialConstraints ++ additionalConstraints
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  // set up the length prover with available information about the function
+  // applications
+
   for (p <- lengthProver)
     for ((apps, res) <- sortedFunApps; (op, args) <- apps)
       p addAssertion op.lengthApproximation(args map lengthVars,
@@ -165,7 +218,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     for (t <- allTerms)
       constraintStores.put(t, newStore(t))
 
-    for ((t, aut) <- initialConstraints) {
+    for ((t, aut) <- allInitialConstraints) {
       constraintStores(t).assertConstraint(aut) match {
         case Some(_) => return None
         case None    => // nothing
@@ -173,7 +226,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
 
     for (p <- lengthProver) {
-      for ((t, aut) <- initialConstraints)
+      for ((t, aut) <- allInitialConstraints)
         p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
                                                aut.getLengthAbstraction)
 

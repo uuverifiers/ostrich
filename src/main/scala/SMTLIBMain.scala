@@ -139,6 +139,7 @@ object SMTLIBMain {
       import p._
 
       try {
+        addTheory(StringTheory)
         addConstantsRaw(SymbolCollector constantsSorted intFormula)
         addRelations(for (p <- signature.order.orderedPredicates.toSeq sortBy (_.name);
                           if ((TheoryRegistry lookupSymbol p).isEmpty))

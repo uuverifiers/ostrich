@@ -104,4 +104,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/simple-cvc-smtlib-b.smt2", "unsat", "+eager")
   property("simple-cvc-smtlib-c.smt2 +eager") =
     checkFile("tests/simple-cvc-smtlib-c.smt2", "sat", "+model", "+eager")
+
+  property("no-regexes.smt2") =
+    checkFile("tests/no-regexes.smt2", "unsat")
 }
