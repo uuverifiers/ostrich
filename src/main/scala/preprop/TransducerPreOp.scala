@@ -21,13 +21,13 @@ package strsolver.preprop
 import scala.collection.breakOut
 
 object TransducerPreOp {
-  def apply(t : AtomicStateTransducer) = new TransducerPreOp(t)
+  def apply(t : Transducer) = new TransducerPreOp(t)
 }
 
 /**
 * Representation of x = T(y)
 */
-class TransducerPreOp(t : AtomicStateTransducer) extends PreOp {
+class TransducerPreOp(t : Transducer) extends PreOp {
 
   override def toString = "transducer"
 

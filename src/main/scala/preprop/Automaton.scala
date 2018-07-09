@@ -224,7 +224,7 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Return new automaton builder of compatible type
    */
-  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel]
+  def getTransducerBuilder : TransducerBuilder[State, TLabel]
 
   /**
    * String representation of automaton in full gory detail
@@ -363,7 +363,7 @@ trait AtomicStateAutomaton extends Automaton {
 
       transPreStates
     }
- 
+
     val initialStateInd = state2Index(initialState)
 
     ////////////////////////////////////////////////////////////////////////////

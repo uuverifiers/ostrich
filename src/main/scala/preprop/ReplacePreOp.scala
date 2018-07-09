@@ -73,14 +73,14 @@ object ReplacePreOpWord {
    * Build transducer that identifies first instance of w and replaces it with
    * internal char
    */
-  private def buildWordTransducer(w : Seq[Char]) : AtomicStateTransducer = {
+  private def buildWordTransducer(w : Seq[Char]) : Transducer = {
     val builder = BricsTransducer.getBuilder
 
     val initState = builder.initialState
     val states = initState::(List.fill(w.size - 1)(builder.getNewState))
     val finstates = List.fill(w.size)(builder.getNewState)
     val copyRest = builder.getNewState
-    val delete = OutputOp("", Delete, "")
+    val nop = OutputOp("", NOP, "")
     // TODO: internal
     val internal = OutputOp("", Internal, "")
     val copy = OutputOp("", Plus(0), "")
@@ -93,7 +93,7 @@ object ReplacePreOpWord {
     // recognise word
     // deliberately miss last element
     for (i <- 0 until w.size - 1) {
-      builder.addTransition(states(i), (w(i), w(i)), delete, states(i+1))
+      builder.addTransition(states(i), (w(i), w(i)), nop, states(i+1))
     }
     builder.addTransition(states(end), (w(end), w(end)), internal, copyRest)
 
@@ -143,7 +143,7 @@ object ReplacePreOpRegEx {
    * Builds transducer that identifies leftmost and longest match of
    * regex by rewriting matches to internalChar
    */
-  private def buildTransducer(c : Term, context : PredConj) : AtomicStateTransducer =
+  private def buildTransducer(c : Term, context : PredConj) : Transducer =
     buildTransducer(BricsAutomaton(c, context))
 
   /**
@@ -152,7 +152,7 @@ object ReplacePreOpRegEx {
    *
    * TODO: currently does not handle empty matches
    */
-  private def buildTransducer(aut : AtomicStateAutomaton) : AtomicStateTransducer = {
+  private def buildTransducer(aut : AtomicStateAutomaton) : Transducer = {
     abstract class Mode
     // not matching
     case object NotMatching extends Mode
@@ -165,7 +165,7 @@ object ReplacePreOpRegEx {
 
     val labels = aut.labelEnumerator.enumDisjointLabelsComplete
     val builder = aut.getTransducerBuilder
-    val delete = OutputOp("", Delete, "")
+    val nop = OutputOp("", NOP, "")
     val copy = OutputOp("", Plus(0), "")
     val internal = OutputOp("", Internal, "")
 
@@ -225,7 +225,7 @@ object ReplacePreOpRegEx {
 
             if (!initImg.isEmpty) {
               val newMatch = getState(Matching(initImg), noreachImg)
-              builder.addTransition(ts, lbl, delete, newMatch)
+              builder.addTransition(ts, lbl, nop, newMatch)
             }
 
             if (initImg.exists(aut.isAccept(_))) {
@@ -241,7 +241,7 @@ object ReplacePreOpRegEx {
 
             if (!frontImg.isEmpty) {
               val contMatch = getState(Matching(frontImg), noreachImg)
-              builder.addTransition(ts, lbl, delete, contMatch)
+              builder.addTransition(ts, lbl, nop, contMatch)
             }
 
             if (frontImg.exists(aut.isAccept(_))) {
@@ -281,7 +281,7 @@ object ReplacePreOpRegEx {
  * internalChar.  Build with companion object ReplacePreOpWord or
  * ReplacePreOpTran
  */
-class ReplacePreOpTran(tran : AtomicStateTransducer) extends PreOp {
+class ReplacePreOpTran(tran : Transducer) extends PreOp {
 
   override def toString = "replace-tran"
 

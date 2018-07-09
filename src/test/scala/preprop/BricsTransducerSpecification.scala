@@ -14,95 +14,128 @@ object BricsTransducerSpecification
 
   val simplePrePostTran = {
     // Transducer q0 -- [a-c], ("zz", +0, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
+    builder.setAccept(qf, true)
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Plus(0), "adb"))
-    q0.addTransition(t)
+    val op = OutputOp("zz", Plus(0), "adb")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    new BricsTransducer(tran, operations.toMap)
+    builder.setInitialState(q0)
+
+    builder.getTransducer
   }
 
   val simplePrePostDel = {
     // Transducer q0 -- [a-c], ("zz", delete, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Delete, "adb"))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", NOP, "adb")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+
+    builder.getTransducer
   }
 
   val simplePrePostInternal = {
     // Transducer q0 -- [a-c], ("zz", internal, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Internal, "adb"))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", Internal, "adb")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+
+    builder.getTransducer
+  }
+
+  val epsilonTrans = {
+    // Transducer q0 -- epsilon, ("zz", delete, "adb") --> q1
+    //            q1 -- a, ("", copy, "") --> qf
+    val builder = BricsTransducer.getBuilder
+
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+    val qf = builder.getNewState
+
+    val op1 = OutputOp("zz", NOP, "adb")
+    val op2 = OutputOp("", Plus(0), "")
+
+    builder.setAccept(qf, true)
+    builder.addETransition(q0, op1, q1)
+    builder.addTransition(q1, ('a', 'a'), op2, qf)
+    builder.setInitialState(q0)
+
+    builder.getTransducer
+  }
+
+  val onlyEpsilonTrans = {
+    // Transducer q0 -- epsilon, ("zz", delete, "adb") --> q1
+    //            q1 -- epsilon, ("", delete, "") --> qf
+    val builder = BricsTransducer.getBuilder
+
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+    val qf = builder.getNewState
+
+    val op1 = OutputOp("zz", NOP, "adb")
+    val op2 = OutputOp("", NOP, "")
+
+    builder.setAccept(qf, true)
+    builder.addETransition(q0, op1, q1)
+    builder.addETransition(q1, op2, qf)
+    builder.setInitialState(q0)
+
+    builder.getTransducer
   }
 
   val nonDeterministicTran = {
-    val q0 = new IDState(0)
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    q2.setAccept(true)
-    q4.setAccept(true)
-    val t1 = new Transition('a', 'a', q1)
-    q0.addTransition(t1)
-    val t2 = new Transition('b', 'b', q2)
-    q1.addTransition(t2)
-    val t3 = new Transition('a', 'a', q3)
-    q0.addTransition(t3)
-    val t4 = new Transition('c', 'c', q4)
-    q3.addTransition(t4)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    operations += (q0, t1) -> new OutputOp("x", Delete, "y")
-    operations += (q1, t2) -> new OutputOp("", Plus(1), "")
-    operations += (q0, t3) -> new OutputOp("", Internal, "y")
-    operations += (q3, t4) -> new OutputOp("", Plus(0), "z")
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+    val q2 = builder.getNewState
+    val q3 = builder.getNewState
+    val q4 = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
+    builder.setAccept(q2, true)
+    builder.setAccept(q4, true)
 
-    new BricsTransducer(tran, operations.toMap)
+    val op1 = OutputOp("x", NOP, "y")
+    val op2 = OutputOp("", Plus(1), "")
+    val op3 = OutputOp("", Internal, "y")
+    val op4 = OutputOp("", Plus(0), "z")
+
+    builder.addTransition(q0, ('a', 'a'), op1, q1)
+    builder.addTransition(q1, ('b', 'b'), op2, q2)
+    builder.addTransition(q0, ('a', 'a'), op3, q3)
+    builder.addTransition(q3, ('c', 'c'), op4, q4)
+
+    builder.setInitialState(q0)
+
+    builder.getTransducer
   }
 
   property("Simple Pre +3") = {
     // Transducer q0 -- [a-c], +3 --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("", Plus(3), ""))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("", Plus(3), "")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+    val btran = builder.getTransducer
 
     // Automaton q1 -[d]-> q2
     val q1 = new IDState(1)
@@ -120,18 +153,16 @@ object BricsTransducerSpecification
 
   property("Simple Pre With Pre") = {
     // Transducer q0 -- [a-c], ("zz", +0, "") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Plus(0), ""))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", Plus(0), "")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+    val btran = builder.getTransducer
 
     // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4
     val q1 = new IDState(1)
@@ -173,18 +204,16 @@ object BricsTransducerSpecification
 
   property("Simple Pre With Pre and Post Should fail") = {
     // Transducer q0 -- [a-c], ("zz", +0, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Plus(0), "ad"))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", Plus(0), "ad")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+    val btran = builder.getTransducer
 
     // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
     val q1 = new IDState(1)
@@ -205,20 +234,19 @@ object BricsTransducerSpecification
     !pre(List('b')) && !pre(List('a')) && !pre(List('d'))
   }
 
-  property("Simple Pre With Pre and Post and Delete") = {
+  property("Simple Pre With Pre and Post and NOP") = {
     // Transducer q0 -- [a-c], ("zz", delete, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Delete, "badb"))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = new OutputOp("zz", NOP, "badb")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+
+    val btran = builder.getTransducer
 
     // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
     val q1 = new IDState(1)
@@ -239,20 +267,33 @@ object BricsTransducerSpecification
     pre(List('b')) && pre(List('a')) && !pre(List('d', 'e'))
   }
 
+  property("Simple Pre With Epsilon") = {
+    val baut = BricsAutomaton.fromString("zzadba")
+    val pre = epsilonTrans.preImage(baut)
+
+    pre(List('a')) && !pre(List('b'))
+  }
+
+property("Simple Pre With Only Epsilon") = {
+  val baut = BricsAutomaton.fromString("zzadb")
+  val pre = onlyEpsilonTrans.preImage(baut)
+
+  pre(List()) && !pre(List('b'))
+}
+
   property("Simple Post +3") = {
     // Transducer q0 -- [a-c], +3 --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("", Plus(3), ""))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("", Plus(3), "")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+
+    val btran = builder.getTransducer
 
     // Automaton q1 -[c]-> q2
     val q1 = new IDState(1)
@@ -270,18 +311,16 @@ object BricsTransducerSpecification
 
   property("Simple Post With Pre") = {
     // Transducer q0 -- [a-c], ("zz", +0, "") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Plus(0), ""))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", Plus(0), "")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+    val btran = builder.getTransducer
 
     // Automaton q1 -[c]-> q2
     val q1 = new IDState(1)
@@ -299,18 +338,17 @@ object BricsTransducerSpecification
 
   property("Simple Post With Pre and Post") = {
     // Transducer q0 -- [a-c], ("zz", +0, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Plus(0), "adb"))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", Plus(0), "adb")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+
+    val btran = builder.getTransducer
 
     // Automaton q1 -[c]-> q2
     val q1 = new IDState(1)
@@ -328,18 +366,17 @@ object BricsTransducerSpecification
 
   property("Simple Post With Pre and Post Should fail") = {
     // Transducer q0 -- [a-c], ("zz", +0, "adb") --> qf
-    val q0 = new IDState(0)
-    val qf = new IDState(1)
-    qf.setAccept(true)
+    val builder = BricsTransducer.getBuilder
 
-    val operations = new HashMap[(State, Transition), OutputOp]
-    val t = new Transition('a', 'c', qf)
-    operations += ((q0, t) -> new OutputOp("zz", Plus(0), "ad"))
-    q0.addTransition(t)
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
 
-    val tran = new BAutomaton
-    tran.setInitialState(q0)
-    val btran = new BricsTransducer(tran, operations.toMap)
+    builder.setAccept(qf, true)
+    val op = OutputOp("zz", Plus(0), "ad")
+    builder.addTransition(q0, ('a', 'c'), op, qf)
+    builder.setInitialState(q0)
+
+    val btran = builder.getTransducer
 
     // Automaton q1 -[d]-> q2
     val q1 = new IDState(1)
@@ -355,7 +392,7 @@ object BricsTransducerSpecification
     !post(List('b')) && !post(List('a')) && !post(List('d'))
   }
 
-  property("Simple Post With Pre and Post and Delete") = {
+  property("Simple Post With Pre and Post and NOP") = {
     // Automaton q1 -[c]-> q2
     val q1 = new IDState(1)
     val q2 = new IDState(2)
@@ -368,6 +405,20 @@ object BricsTransducerSpecification
     val post = simplePrePostDel.postImage(baut)
 
     post(seq("zzadb")) && !post(seq("aadb")) && !post(seq("d"))
+  }
+
+  property("Simple Post With Epsilon") = {
+    val baut = BricsAutomaton.fromString("a")
+    val post = epsilonTrans.postImage(baut)
+
+    post(seq("zzadba")) && !post(seq("a"))
+  }
+
+  property("Simple Post With Only Epsilon") = {
+    val baut = BricsAutomaton.fromString("")
+    val post = onlyEpsilonTrans.postImage(baut)
+
+    post(seq("zzadb")) && !post(seq("a"))
   }
 
   property("Apply simple pre and post to input word") = {
@@ -404,5 +455,13 @@ object BricsTransducerSpecification
     val tran = builder.getTransducer
 
     tran("") == Some("")
+  }
+
+  property("Epsilon Apply") = {
+    epsilonTrans("a") == Some("zzadba")
+  }
+
+  property("Only Epsilon Apply") = {
+    onlyEpsilonTrans("") == Some("zzadb")
   }
 }
