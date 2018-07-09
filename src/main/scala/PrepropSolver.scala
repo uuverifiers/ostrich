@@ -22,7 +22,7 @@ import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
                           ConcatPreOp, ReplaceAllPreOp, ReplacePreOp,
                           ReversePreOp,
                           RRFunsToTransducer, TransducerPreOp,
-                          AtomicStateTransducer, AtomicStateAutomaton}
+                          Transducer, AtomicStateAutomaton}
 
 import ap.SimpleAPI
 import ap.terfor.{Term, TerForConvenience}
@@ -121,8 +121,7 @@ class PrepropSolver {
       case FunPred(f) if rexOps contains f =>
         // nothing
       case pred if (RRFunsToTransducer get pred).isDefined =>
-        funApps += ((TransducerPreOp(RRFunsToTransducer.get(pred)
-                                      .get.asInstanceOf[AtomicStateTransducer]),
+        funApps += ((TransducerPreOp(RRFunsToTransducer.get(pred).get),
                      List(a(0)), a(1)))
       case p if (StringTheory.predicates contains p) =>
         Console.err.println("Warning: ignoring " + a)

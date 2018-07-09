@@ -73,7 +73,7 @@ object ReplacePreOpWord {
    * Build transducer that identifies first instance of w and replaces it with
    * internal char
    */
-  private def buildWordTransducer(w : Seq[Char]) : AtomicStateTransducer = {
+  private def buildWordTransducer(w : Seq[Char]) : Transducer = {
     val builder = BricsTransducer.getBuilder
 
     val initState = builder.initialState
@@ -143,7 +143,7 @@ object ReplacePreOpRegEx {
    * Builds transducer that identifies leftmost and longest match of
    * regex by rewriting matches to internalChar
    */
-  private def buildTransducer(c : Term, context : PredConj) : AtomicStateTransducer =
+  private def buildTransducer(c : Term, context : PredConj) : Transducer =
     buildTransducer(BricsAutomaton(c, context))
 
   /**
@@ -152,7 +152,7 @@ object ReplacePreOpRegEx {
    *
    * TODO: currently does not handle empty matches
    */
-  private def buildTransducer(aut : AtomicStateAutomaton) : AtomicStateTransducer = {
+  private def buildTransducer(aut : AtomicStateAutomaton) : Transducer = {
     abstract class Mode
     // not matching
     case object NotMatching extends Mode
@@ -281,7 +281,7 @@ object ReplacePreOpRegEx {
  * internalChar.  Build with companion object ReplacePreOpWord or
  * ReplacePreOpTran
  */
-class ReplacePreOpTran(tran : AtomicStateTransducer) extends PreOp {
+class ReplacePreOpTran(tran : Transducer) extends PreOp {
 
   override def toString = "replace-tran"
 

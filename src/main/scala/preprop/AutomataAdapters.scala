@@ -120,7 +120,7 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
     builder.getAutomaton
   }
 
-  def getTransducerBuilder : AtomicStateTransducerBuilder[State, TLabel] =
+  def getTransducerBuilder : TransducerBuilder[State, TLabel] =
     underlying.getTransducerBuilder
 
   def getBuilder : AtomicStateAutomatonBuilder[State, TLabel] =
@@ -248,7 +248,7 @@ case class _ProductAutomaton(auts : Seq[AtomicStateAutomaton])
  * Case class representation of tran.preImage(aut, internal)
  */
 case class PreImageAutomaton[A <: AtomicStateAutomaton]
-                            (tran : AtomicStateTransducer,
+                            (tran : Transducer,
                              targ : A,
                              internal : Iterable[(A#State, A#State)])
     extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
@@ -260,7 +260,7 @@ case class PreImageAutomaton[A <: AtomicStateAutomaton]
  */
 case class PostImageAutomaton[A <: AtomicStateAutomaton]
                              (inAut : A,
-                              tran : AtomicStateTransducer,
+                              tran : Transducer,
                               internalAut : Option[A] = None)
     extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](
       tran.postImage(inAut, internalAut)
