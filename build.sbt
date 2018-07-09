@@ -1,11 +1,14 @@
 lazy val commonSettings = Seq(
-  name := "sloth",
+  name := "ostrich",
+  organization := "uuverifiers",
   version := "1.0",
   scalaVersion := "2.11.8",
+  crossScalaVersions := Seq("2.11.8", "2.12.6"),
+  publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) ),
   scalacOptions += "-deprecation",
-  resolvers += "uuverifiers" at "http://logicrunch.it.uu.se:4096/~wv/maven/",
-//  libraryDependencies += "uuverifiers" %% "princess" % "2018-05-25",
-  libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+  resolvers += "uuverifiers" at "http://logicrunch.research.it.uu.se/maven/",
+  libraryDependencies += "uuverifiers" %% "princess" % "2018-07-09",
+//  libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
   libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
   libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
 )

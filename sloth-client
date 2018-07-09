@@ -1,6 +1,6 @@
 #!/bin/sh
 
-dotfilebase="/tmp/.norn"
+dotfilebase="/tmp/.ostrich"
 
 JAVA=java
 
@@ -33,7 +33,7 @@ startDaemon() {
         touch "$lockfile"
 
         BASEDIR=`dirname $($pathCmd $0)`
-        TARGET=`echo $BASEDIR/target/scala-*/sloth-assembly*.jar`
+        TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
 
         tempportfile=`mktemp`
         touch "$tempportfile"
@@ -42,11 +42,11 @@ startDaemon() {
         export JAVA_OPTS="-Xss20000k -Xmx1500m"
 	$JAVA -cp $TARGET strsolver.ServerMain >"$tempportfile" &
 
-        nornId=$!
+        ostrichId=$!
 
         sleep 1
         while [ `wc -l "$tempportfile" | awk '{ printf $1 }'` -lt 2 ]; do
-	    if ps -p $nornId >/dev/null; then
+	    if ps -p $ostrichId >/dev/null; then
 		sleep 1
 	    else
 		echo "Could not start server"
