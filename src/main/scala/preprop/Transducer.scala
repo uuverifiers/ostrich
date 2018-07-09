@@ -23,9 +23,9 @@ package strsolver.preprop
  */
 abstract class InputOp
 /**
- * Delete input character
+ * Don't do anything with input character
  */
-case object Delete extends InputOp
+case object NOP extends InputOp
 /**
  * Replace input char with a special "internal symbol"
  */

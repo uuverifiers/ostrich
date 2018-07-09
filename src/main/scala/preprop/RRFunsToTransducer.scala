@@ -117,7 +117,7 @@ object RRFunsToTransducer {
               while (??? == ProverStatus.Sat) {
                 val out = eval(outputC)
 
-                val op = OutputOp(out.intValueSafe.toChar.toString, Delete, "")
+                val op = OutputOp(out.intValueSafe.toChar.toString, NOP, "")
 
                 println(f.name +
                         "- <eps> -> " +
@@ -130,7 +130,7 @@ object RRFunsToTransducer {
 
             case EqZ(IFunApp(targetFun,
                              Seq(IVariable(1), IVariable(0)))) => {
-              val op = OutputOp("", Delete, "")
+              val op = OutputOp("", NOP, "")
 
               println(f.name +
                       "- <eps> -> " +
@@ -162,7 +162,7 @@ object RRFunsToTransducer {
                 case EqLit(Difference(`outputC`, `inputC`), offset) =>
                   inputOp = Some(Plus(offset.intValueSafe))
                 case EqLit(`outputC`, value) => {
-                  inputOp = Some(Delete)
+                  inputOp = Some(NOP)
                   outputChars = List(value.intValueSafe.toChar)
                 }
                 case Geq(`inputC`, IIntLit(bound)) =>
@@ -183,7 +183,7 @@ object RRFunsToTransducer {
 
               if (outPat == IVariable(0))
                 // this means no output is produced
-                inputOp = Some(Delete)
+                inputOp = Some(NOP)
 
               val op = OutputOp("", inputOp.get, outputChars)
 

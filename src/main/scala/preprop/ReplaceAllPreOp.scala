@@ -149,7 +149,7 @@ object ReplaceAllPreOpWord {
     val initState = builder.initialState
     val states = initState::(List.fill(w.size - 1)(builder.getNewState))
     val finstates = List.fill(w.size)(builder.getNewState)
-    val delete = OutputOp("", Delete, "")
+    val nop = OutputOp("", NOP, "")
     val internal = OutputOp("", Internal, "")
     val end = w.size - 1
 
@@ -159,7 +159,7 @@ object ReplaceAllPreOpWord {
     // recognise word
     // deliberately miss last element
     for (i <- 0 until w.size - 1) {
-      builder.addTransition(states(i), (w(i), w(i)), delete, states(i+1))
+      builder.addTransition(states(i), (w(i), w(i)), nop, states(i+1))
     }
     builder.addTransition(states(end), (w(end), w(end)), internal, states(0))
 
@@ -226,7 +226,7 @@ object ReplaceAllPreOpRegEx {
 
     val labels = aut.labelEnumerator.enumDisjointLabelsComplete
     val builder = aut.getTransducerBuilder
-    val delete = OutputOp("", Delete, "")
+    val nop = OutputOp("", NOP, "")
     val copy = OutputOp("", Plus(0), "")
     val internal = OutputOp("", Internal, "")
 
@@ -285,7 +285,7 @@ object ReplaceAllPreOpRegEx {
 
             if (!initImg.isEmpty) {
               val newMatch = getState(Matching(initImg), noreachImg)
-              builder.addTransition(ts, lbl, delete, newMatch)
+              builder.addTransition(ts, lbl, nop, newMatch)
             }
 
             if (initImg.exists(aut.isAccept(_))) {
@@ -301,7 +301,7 @@ object ReplaceAllPreOpRegEx {
 
             if (!frontImg.isEmpty) {
               val contMatch = getState(Matching(frontImg), noreachImg)
-              builder.addTransition(ts, lbl, delete, contMatch)
+              builder.addTransition(ts, lbl, nop, contMatch)
             }
 
             if (frontImg.exists(aut.isAccept(_))) {
@@ -321,7 +321,7 @@ object ReplaceAllPreOpRegEx {
 
             if (!initImg.isEmpty) {
               val newMatch = getState(Matching(initImg), frontImg ++ noreachImg)
-              builder.addTransition(ts, lbl, delete, newMatch)
+              builder.addTransition(ts, lbl, nop, newMatch)
             }
 
             if (initImg.exists(aut.isAccept(_))) {

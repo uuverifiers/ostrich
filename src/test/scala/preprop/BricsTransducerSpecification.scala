@@ -35,7 +35,7 @@ object BricsTransducerSpecification
     val qf = builder.getNewState
 
     builder.setAccept(qf, true)
-    val op = OutputOp("zz", Delete, "adb")
+    val op = OutputOp("zz", NOP, "adb")
     builder.addTransition(q0, ('a', 'c'), op, qf)
     builder.setInitialState(q0)
 
@@ -66,7 +66,7 @@ object BricsTransducerSpecification
     val q1 = builder.getNewState
     val qf = builder.getNewState
 
-    val op1 = OutputOp("zz", Delete, "adb")
+    val op1 = OutputOp("zz", NOP, "adb")
     val op2 = OutputOp("", Plus(0), "")
 
     builder.setAccept(qf, true)
@@ -86,8 +86,8 @@ object BricsTransducerSpecification
     val q1 = builder.getNewState
     val qf = builder.getNewState
 
-    val op1 = OutputOp("zz", Delete, "adb")
-    val op2 = OutputOp("", Delete, "")
+    val op1 = OutputOp("zz", NOP, "adb")
+    val op2 = OutputOp("", NOP, "")
 
     builder.setAccept(qf, true)
     builder.addETransition(q0, op1, q1)
@@ -109,7 +109,7 @@ object BricsTransducerSpecification
     builder.setAccept(q2, true)
     builder.setAccept(q4, true)
 
-    val op1 = OutputOp("x", Delete, "y")
+    val op1 = OutputOp("x", NOP, "y")
     val op2 = OutputOp("", Plus(1), "")
     val op3 = OutputOp("", Internal, "y")
     val op4 = OutputOp("", Plus(0), "z")
@@ -234,7 +234,7 @@ object BricsTransducerSpecification
     !pre(List('b')) && !pre(List('a')) && !pre(List('d'))
   }
 
-  property("Simple Pre With Pre and Post and Delete") = {
+  property("Simple Pre With Pre and Post and NOP") = {
     // Transducer q0 -- [a-c], ("zz", delete, "adb") --> qf
     val builder = BricsTransducer.getBuilder
 
@@ -242,7 +242,7 @@ object BricsTransducerSpecification
     val qf = builder.getNewState
 
     builder.setAccept(qf, true)
-    val op = new OutputOp("zz", Delete, "badb")
+    val op = new OutputOp("zz", NOP, "badb")
     builder.addTransition(q0, ('a', 'c'), op, qf)
     builder.setInitialState(q0)
 
@@ -392,7 +392,7 @@ property("Simple Pre With Only Epsilon") = {
     !post(List('b')) && !post(List('a')) && !post(List('d'))
   }
 
-  property("Simple Post With Pre and Post and Delete") = {
+  property("Simple Post With Pre and Post and NOP") = {
     // Automaton q1 -[c]-> q2
     val q1 = new IDState(1)
     val q2 = new IDState(2)

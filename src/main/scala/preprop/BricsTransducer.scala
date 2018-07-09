@@ -213,7 +213,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
               val (min, max) = label(lblTran)
               val tlbl = aut.LabelOps.interval(min, max)
               tOp.op match {
-                case Delete => {
+                case NOP => {
                   addWork(ps, ts, t, as, Post(tOp.postW, tlbl))
                 }
                 case Internal => {
@@ -236,7 +236,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
             case Right(eTran) => {
               val tOp = operation(eTran)
               tOp.op match {
-                case Delete => {
+                case NOP => {
                   // deleting an e-label means doing nothing
                   addWork(ps, ts, t, as, EPost(tOp.postW))
                 }
@@ -369,7 +369,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
         val psNext = getState(dest(t), asNext)
         val tOp = operation(t)
         tOp.op match {
-          case Delete => {
+          case NOP => {
             if (tOp.preW.isEmpty && tOp.postW.isEmpty) {
               silentTransitions.addBinding(ps, psNext)
             } else if (tOp.postW.isEmpty) {
@@ -420,7 +420,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
         }
 
         tOp.op match {
-          case Delete => handleNoOut(tOp)
+          case NOP => handleNoOut(tOp)
           case Internal => {
             if (internalAut.isEmpty) {
               throw new IllegalArgumentException("Post image of a transducer with internal transitions needs and internalAut")
@@ -482,7 +482,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
           if (LabelOps.labelContains(a, lbl) && !seenlist.contains((snext, pnext))) {
             val tOp = operation(t)
             val opOut = tOp.op match {
-              case Delete => ""
+              case NOP => ""
               case Internal => internal
               case Plus(n) => (a + n).toChar.toString
             }
@@ -500,7 +500,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
         if (!seenlist.contains((snext, pnext))) {
           val tOp = operation(t)
           val opOut = tOp.op match {
-            case Delete => ""
+            case NOP => ""
             case Internal => internal
             // treat as delete
             case Plus(_) => ""
