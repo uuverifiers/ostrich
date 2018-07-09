@@ -18,6 +18,8 @@
 
 package strsolver.preprop
 
+import strsolver.UserFunctions
+
 /**
  * Pre-image computation for the reverse operator.
  */
@@ -50,3 +52,4 @@ object ReversePreOp extends PreOp {
   override def toString = "reverse"
 
 }
+

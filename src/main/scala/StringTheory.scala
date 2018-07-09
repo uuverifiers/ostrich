@@ -146,7 +146,8 @@ object StringTheory extends Theory {
   val functions = List(wordEps, wordCat, wordChar, wordLen, wordSlice,
                        rexEmpty, rexEps, rexSigma, rexCat, rexChar,
                        rexUnion, rexStar, rexNeg, rexRange, replaceall,
-                       replaceallre, replace, reverse)
+                       replaceallre, replace, reverse) ++
+                  UserFunctionRegistry.stringTheoryFuns
 
   // TODO: have different theory objects for the different solvers
   val iAxioms = if (Flags.enabledSolvers contains Flags.Solver.afa_mc) {
