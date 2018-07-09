@@ -9,7 +9,7 @@ else
 fi
 
 BASEDIR=`dirname $($pathCmd $0)`
-TARGET=`echo $BASEDIR/target/scala-*/sloth-assembly*.jar`
+TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
 LIBDIR=$BASEDIR/lib
 SCALA=scala
 JAVA=java
