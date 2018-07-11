@@ -366,6 +366,11 @@ class SMTLIBStringParser(_env : SMTLIBStringParser.Env,
     case PlainSymbol(n@("seq-reverse" | "str.reverse")) =>
       translateFun(n, SMTLIBStringTheory.seq_reverse, args, (_.head))
 
+    case PlainSymbol(n) if UserFunctionRegistry.isUserDefinedSMTLIBFun(n) => {
+      val f = UserFunctionRegistry.getSMTLIBStringTheoryFun(n).get
+      translateFun(n, f, args, (_.head))
+    }
+
     case _ =>
       super.symApp(sym, args, polarity)
   }

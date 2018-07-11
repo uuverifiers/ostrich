@@ -368,6 +368,14 @@ class StringTheoryTranslator private (constraint : IFormula,
     case IAtom(SMTLIBPred(`seq_reverse`), _) =>
       IAtom(toPred(StringTheory.reverse), toTermSeq(subres))
 
+    case IAtom(SMTLIBPred(f), _)
+        if (UserFunctionRegistry.isUserDefinedSMTLIBFun(f.name)) => {
+
+      val strequiv = UserFunctionRegistry.getStringTheoryName(f.name).get
+      val strfun = UserFunctionRegistry.getStringTheoryFun(strequiv).get
+      IAtom(toPred(strfun), toTermSeq(subres))
+    }
+
     ////////////////////////////////////////////////////////////////////////////
 
     case t =>

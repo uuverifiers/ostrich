@@ -120,6 +120,8 @@ class PrepropSolver {
         funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
         // nothing
+      case FunPred(f) if UserFunctionRegistry.isUserDefinedStringTheoryFun(f.name) =>
+        funApps += ((UserFunctionRegistry.getPreOp(f.name).get, a.take(f.arity), a(f.arity)))
       case pred if (RRFunsToTransducer get pred).isDefined =>
         funApps += ((TransducerPreOp(RRFunsToTransducer.get(pred).get),
                      List(a(0)), a(1)))
