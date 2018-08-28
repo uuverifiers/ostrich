@@ -1,3 +1,4 @@
+
 /*
  * This file is part of Sloth, an SMT solver for strings.
  * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
@@ -16,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package strsolver.preprop
+package ostrich
 
 import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
                                  Stack => MStack, HashMap => MHashMap,

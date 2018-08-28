@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package strsolver.preprop
+package ostrich
 
 import ap.terfor.{Term, Formula, TermOrder}
 import ap.terfor.conjunctions.Conjunction

@@ -29,6 +29,6 @@ object UserFunctions {
    *   (<name> , <arity>, <PreOp object>)
    */
   val functions = List(
-    ("user_reverse", 1, strsolver.preprop.ReversePreOp)
+    ("user_reverse", 1, ostrich.ReversePreOp)
   )
 }

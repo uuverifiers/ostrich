@@ -25,7 +25,7 @@ import ap.util.CmdlParser
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryRegistry
 
-import strsolver.preprop.RRFunsToTransducer
+import ostrich.RRFunsToTransducer
 
 object SMTLIBMain {
 

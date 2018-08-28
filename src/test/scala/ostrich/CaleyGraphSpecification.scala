@@ -1,4 +1,4 @@
-package strsolver.preprop
+package ostrich
 
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._

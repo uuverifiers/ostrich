@@ -22,7 +22,7 @@ import scala.collection.mutable.{HashMap => MHashMap}
 
 import ap.parser._
 
-import preprop.PreOp
+import ostrich.PreOp
 
 /**
  * Object to manage simpler definitions of "user" functions

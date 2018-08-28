@@ -26,7 +26,7 @@ import ap.terfor.preds.Predicate
 import ap.theories._
 import scala.collection.mutable.{HashSet => MHashSet}
 
-import strsolver.preprop.RRFunsToTransducer
+import ostrich.RRFunsToTransducer
 
 object SMTLIBStringParser {
 

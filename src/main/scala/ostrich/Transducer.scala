@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package strsolver.preprop
+package ostrich
 
 /**
  * Symbolic operations on input

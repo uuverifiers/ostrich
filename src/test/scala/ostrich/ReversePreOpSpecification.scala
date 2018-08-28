@@ -1,5 +1,5 @@
 
-package strsolver.preprop
+package ostrich
 
 import org.scalacheck.Properties
 import org.scalacheck.Prop._

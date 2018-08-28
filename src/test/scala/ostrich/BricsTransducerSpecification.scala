@@ -1,4 +1,4 @@
-package strsolver.preprop
+package ostrich
 
 import scala.collection.mutable.HashMap
 

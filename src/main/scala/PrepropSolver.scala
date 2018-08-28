@@ -18,7 +18,7 @@
 
 package strsolver
 
-import strsolver.preprop.{PreOp, Exploration, Automaton, BricsAutomaton,
+import ostrich.{PreOp, Exploration, Automaton, BricsAutomaton,
                           ConcatPreOp, ReplaceAllPreOp, ReplacePreOp,
                           ReversePreOp,
                           RRFunsToTransducer, TransducerPreOp,

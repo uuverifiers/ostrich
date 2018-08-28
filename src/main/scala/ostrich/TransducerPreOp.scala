@@ -16,29 +16,36 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package strsolver.preprop
+package ostrich
 
-import strsolver.UserFunctions
+import scala.collection.breakOut
+
+object TransducerPreOp {
+  def apply(t : Transducer) = new TransducerPreOp(t)
+}
 
 /**
- * Pre-image computation for the reverse operator.
- */
-object ReversePreOp extends PreOp {
+* Representation of x = T(y)
+*/
+class TransducerPreOp(t : Transducer) extends PreOp {
+
+  override def toString = "transducer"
+
+  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] = {
+    assert (arguments.size == 1)
+    val arg = arguments(0).map(_.toChar).mkString
+    for (s <- t(arg)) yield s.toSeq.map(_.toInt)
+  }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
-          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) =
-    resultConstraint match {
-      case resultConstraint : AtomicStateAutomaton =>
-        // TODO: what should the second element be?
-        (Iterator(Seq(ReverseAutomaton(resultConstraint))), List())
-
-      case _ =>
-        throw new IllegalArgumentException
+          : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
+    val rc : AtomicStateAutomaton = resultConstraint match {
+      case resCon : AtomicStateAutomaton => resCon
+      case _ => throw new IllegalArgumentException("TransducerPreOp needs an AtomicStateAutomaton")
     }
-
-  def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] =
-    Some(arguments(0).reverse)
+    (Iterator(Seq(t.preImage(rc))), List())
+  }
 
   override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
     val cons = argumentConstraints(0).map(_ match {
@@ -46,10 +53,6 @@ object ReversePreOp extends PreOp {
         case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
     })
     val prod = ProductAutomaton(cons)
-    ReverseAutomaton(prod)
+    PostImageAutomaton(prod, t)
   }
-
-  override def toString = "reverse"
-
 }
-
