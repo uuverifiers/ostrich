@@ -106,7 +106,7 @@ object CaleyGraph {
    */
   def apply[A <: AtomicStateAutomaton]
            (aut : A,
-            wordBounds : Seq[AtomicStateAutomaton] = Seq()) : CaleyGraph[A] = Exploration.measure("build caley graph") {
+            wordBounds : Seq[AtomicStateAutomaton] = Seq()) : CaleyGraph[A] = /* Exploration.measure("build caley graph") */ {
     val boundAut = AutomataUtils.product(wordBounds)
     val graphBuilder = aut.getBuilder
     graphBuilder.setMinimize(false)

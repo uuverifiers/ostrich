@@ -18,7 +18,7 @@
 
 package ostrich
 
-import strsolver.Regex2AFA
+// import strsolver.Regex2AFA
 
 import ap.terfor.Term
 import ap.terfor.preds.PredConj
@@ -47,8 +47,9 @@ object BricsAutomaton {
   }
 
   def apply(c : Term, context : PredConj) : BricsAutomaton = {
-    val converter = new Regex2AFA(context)
-    new BricsAutomaton(converter.buildBricsAut(c))
+//    val converter = new Regex2AFA(context)
+//    new BricsAutomaton(converter.buildBricsAut(c))
+    throw new UnsupportedOperationException
   }
 
   def apply() : BricsAutomaton = new BricsAutomaton(new BAutomaton)

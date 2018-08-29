@@ -18,7 +18,7 @@
 
 package ostrich
 
-import strsolver.UserFunctions
+//import strsolver.UserFunctions
 
 /**
  * Pre-image computation for the reverse operator.

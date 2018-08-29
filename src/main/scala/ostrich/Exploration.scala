@@ -18,8 +18,6 @@
 
 package ostrich
 
-import strsolver.Flags
-
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
@@ -80,25 +78,21 @@ object Exploration {
                initialConstraints : Seq[(Term, Automaton)],
                lengthProver : Option[SimpleAPI],
                lengthVars : Map[Term, Term],
-               strictLengths : Boolean) : Exploration =
+               strictLengths : Boolean,
+               flags : OFlags) : Exploration =
     new EagerExploration(funApps, initialConstraints,
-                         lengthProver, lengthVars, strictLengths)
+                         lengthProver, lengthVars, strictLengths, flags)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
               lengthProver : Option[SimpleAPI],
               lengthVars : Map[Term, Term],
-              strictLengths : Boolean) : Exploration =
+              strictLengths : Boolean,
+              flags : OFlags) : Exploration =
     new LazyExploration(funApps, initialConstraints,
-                        lengthProver, lengthVars, strictLengths)
+                        lengthProver, lengthVars, strictLengths, flags)
 
   private case class FoundModel(model : Map[Term, Seq[Int]]) extends Exception
-
-  def measure[A](op : String)(comp : => A) : A =
-    if (Flags.measureTimes)
-      ap.util.Timer.measure(op)(comp)
-    else
-      comp
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -110,9 +104,16 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
                            lengthProver : Option[SimpleAPI],
                            lengthVars : Map[Term, Term],
-                           strictLengths : Boolean) {
+                           strictLengths : Boolean,
+                           flags : OFlags) {
 
   import Exploration._
+
+  def measure[A](op : String)(comp : => A) : A =
+    if (flags.measureTimes)
+      ap.util.Timer.measure(op)(comp)
+    else
+      comp
 
   println
   println("Running preprop solver")
@@ -234,7 +235,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         return None
     }
 
-    if (Flags.forwardApprox)
+    if (flags.forwardApprox)
       addForwardConstraints
 
     val funAppList =
@@ -485,9 +486,10 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _initialConstraints : Seq[(Term, Automaton)],
                        _lengthProver : Option[SimpleAPI],
                        _lengthVars : Map[Term, Term],
-                       _strictLengths : Boolean)
+                       _strictLengths : Boolean,
+                       _flags : OFlags)
       extends Exploration(_funApps, _initialConstraints,
-                          _lengthProver, _lengthVars, _strictLengths) {
+                          _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
 
@@ -568,9 +570,10 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _initialConstraints : Seq[(Term, Automaton)],
                       _lengthProver : Option[SimpleAPI],
                       _lengthVars : Map[Term, Term],
-                      _strictLengths : Boolean)
+                      _strictLengths : Boolean,
+                      _flags : OFlags)
       extends Exploration(_funApps, _initialConstraints,
-                          _lengthProver, _lengthVars, _strictLengths) {
+                          _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
 

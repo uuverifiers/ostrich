@@ -79,7 +79,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
               (aut : A,
                internal : Iterable[(A#State, A#State)]
                  = Iterable[(A#State, A#State)]()) : AtomicStateAutomaton =
-  Exploration.measure("transducer pre-op") {
+  /* Exploration.measure("transducer pre-op") */ {
 
     val preBuilder = aut.getBuilder
 

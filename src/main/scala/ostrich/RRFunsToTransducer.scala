@@ -25,7 +25,7 @@ import ap.theories.ModuloArithmetic
 import IExpression.Predicate
 import SMTParser2InputAbsy.SMTType
 
-import strsolver.SMTLIBStringTheory
+//import strsolver.SMTLIBStringTheory
 
 import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState, Transition => BTransition}
@@ -48,6 +48,7 @@ object RRFunsToTransducer {
 
   def registerRecFunctionsPreProp(funs : Seq[(IFunction, IFormula)],
                                   bitwidth : Int) : Unit = {
+/*
     import IExpression._
 
     val stateFuns = funs map (_._1)
@@ -211,8 +212,9 @@ object RRFunsToTransducer {
     val btran = builder.getTransducer
 
     addFun2Transducer(stateFuns.head, btran)
-  }}
+  } */ }
 
+/*
   private class SeqHeadReplacer(headTerms : IndexedSeq[ITerm])
                 extends ContextAwareVisitor[Unit, IExpression] {
     def postVisit(t : IExpression, ctxt : Context[Unit],
@@ -238,5 +240,5 @@ object RRFunsToTransducer {
         case s =>                     s
       }
   }
-
+*/
 }
