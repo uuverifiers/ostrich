@@ -116,7 +116,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       comp
 
   println
-  println("Running preprop solver")
+  println("Running OSTRICH")
 
   // topological sorting of the function applications
   private val (allTerms, sortedFunApps)

@@ -18,11 +18,6 @@
 
 package ostrich
 
-// import strsolver.Regex2AFA
-
-import ap.terfor.Term
-import ap.terfor.preds.PredConj
-
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
                            Automaton => BAutomaton, State => BState}
 
@@ -44,12 +39,6 @@ object BricsAutomaton {
       toBAutomaton(that.internalise)
     case _ =>
       throw new IllegalArgumentException
-  }
-
-  def apply(c : Term, context : PredConj) : BricsAutomaton = {
-//    val converter = new Regex2AFA(context)
-//    new BricsAutomaton(converter.buildBricsAut(c))
-    throw new UnsupportedOperationException
   }
 
   def apply() : BricsAutomaton = new BricsAutomaton(new BAutomaton)

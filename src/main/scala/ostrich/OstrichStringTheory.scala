@@ -26,6 +26,8 @@ import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry}
 import ap.types.{Sort, MonoSortedIFunction}
 import ap.terfor.conjunctions.Conjunction
+import ap.proof.theoryPlugins.Plugin
+import ap.proof.goal.Goal
 
 /**
  * The entry class of the Ostrich string solver.
@@ -53,7 +55,7 @@ class OstrichStringTheory extends {
 
   val functions = predefFunctions
 
-  val (funPredicates, axioms, _, funPredMap) =
+  val (funPredicates, axioms, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions)
   val predicates = predefPredicates ++ funPredicates
 
@@ -65,13 +67,40 @@ class OstrichStringTheory extends {
 
   override val dependencies : Iterable[Theory] = List(ModuloArithmetic)
 
-  val _str_empty = funPredMap(str_empty)
-  val _str_cons  = funPredMap(str_cons)
-  val _str_++    = funPredMap(str_++)
+  val _str_empty = functionPredicateMap(str_empty)
+  val _str_cons  = functionPredicateMap(str_cons)
+  val _str_++    = functionPredicateMap(str_++)
+
+  private val predFunMap =
+    (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
+
+  object FunPred {
+    def unapply(p : Predicate) : Option[IFunction] = predFunMap get p
+  }
 
   //////////////////////////////////////////////////////////////////////////////
 
-  def plugin = None
+  private val ostrichSolver = new OstrichSolver (this, new OFlags)
+
+  def plugin = Some(new Plugin {
+    // not used
+    def generateAxioms(goal : Goal)
+          : Option[(Conjunction, Conjunction)] = None
+
+    override def handleGoal(goal : Goal)
+                       : Seq[Plugin.Action] = goalState(goal) match {
+
+      case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
+        ostrichSolver.findStringModel(goal) match {
+          case Some(m) => println(m); List()
+          case None => List(Plugin.AddFormula(Conjunction.TRUE))
+        }
+      }
+
+      case _ => List()
+    }
+    
+  })
 
   //////////////////////////////////////////////////////////////////////////////
 

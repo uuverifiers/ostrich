@@ -28,19 +28,6 @@ import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
 object ReplaceAllPreOp {
   def apply(a : Char) : PreOp = new ReplaceAllPreOpChar(a)
 
-  /**
-   * preop for a replaceall(_, w, _) for whatever we get out of
-   * PrepropSolver.
-   */
-  def apply(w : List[Either[Int,Term]]) : PreOp = {
-    val charw = w.map(_ match {
-      case Left(c) => c.toChar
-      case _ =>
-        throw new IllegalArgumentException("ReplaceAllPreOp only supports word or character replacement, got " + w)
-    })
-    ReplaceAllPreOp(charw)
-  }
-
   def apply(w : Seq[Char]) : PreOp = {
     if (w.size == 1) {
       new ReplaceAllPreOpChar(w(0))
@@ -54,8 +41,8 @@ object ReplaceAllPreOp {
   /**
    * PreOp for x = replaceall(y, e, z) for regex e
    */
-  def apply(c : Term, context : PredConj) : PreOp =
-    ReplaceAllPreOpRegEx(c, context)
+//  def apply(c : Term, context : PredConj) : PreOp =
+//    ReplaceAllPreOpRegEx(c, context)
 
   /**
    * PreOp for x = replaceall(y, e, z) for regex e represented as
@@ -189,10 +176,10 @@ object ReplaceAllPreOpRegEx {
   /**
    * Build preop from c and context giving regex to be replaced
    */
-  def apply(c : Term, context : PredConj) : PreOp = {
-    val tran = buildTransducer(c, context)
-    new ReplaceAllPreOpTran(tran)
-  }
+//  def apply(c : Term, context : PredConj) : PreOp = {
+//    val tran = buildTransducer(c, context)
+//    new ReplaceAllPreOpTran(tran)
+//  }
 
   /**
    * Build preop from aut giving regex to be replaced
@@ -206,8 +193,8 @@ object ReplaceAllPreOpRegEx {
    * Builds transducer that identifies leftmost and longest matches of
    * regex by rewriting matches to internalChar
    */
-  private def buildTransducer(c : Term, context : PredConj) : Transducer =
-    buildTransducer(BricsAutomaton(c, context))
+//  private def buildTransducer(c : Term, context : PredConj) : Transducer =
+//    buildTransducer(BricsAutomaton(c, context))
 
   /**
    * Builds transducer that identifies leftmost and longest matches of
