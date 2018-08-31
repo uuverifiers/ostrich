@@ -15,4 +15,4 @@ SCALA=scala
 JAVA=java
 export JAVA_OPTS="-Xss20000k -Xmx1500m"
 
-exec $JAVA -cp $TARGET strsolver.SMTLIBMain "$@"
+exec $JAVA -cp $TARGET ap.CmdlMain -stringSolver=ostrich.OstrichStringTheory "$@"

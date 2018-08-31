@@ -40,7 +40,7 @@ startDaemon() {
         chmod go-rwx "$tempportfile"
 
         export JAVA_OPTS="-Xss20000k -Xmx1500m"
-	$JAVA -cp $TARGET strsolver.ServerMain >"$tempportfile" &
+	$JAVA -cp $TARGET ap.ServerMain >"$tempportfile" &
 
         ostrichId=$!
 
@@ -82,6 +82,8 @@ until [ $success -eq 0 ]; do
     (
         # send the ticket
         tail -n1 "$portfile"
+
+        echo "-stringSolver=ostrich.OstrichStringTheory"
 
         # command line arguments
         for var; do
