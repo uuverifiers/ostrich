@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
-    mainClass in Compile := Some("strsolver.SMTLIBMain"),
+    mainClass in Compile := Some("ap.CmdlMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala"
   )
 

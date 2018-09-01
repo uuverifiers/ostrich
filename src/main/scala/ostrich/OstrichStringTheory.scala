@@ -25,9 +25,13 @@ import IExpression.Predicate
 import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry}
 import ap.types.{Sort, MonoSortedIFunction}
+import ap.terfor.Term
 import ap.terfor.conjunctions.Conjunction
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
+import ap.util.Seqs
+
+import scala.collection.mutable.{HashMap => MHashMap}
 
 /**
  * The entry class of the Ostrich string solver.
@@ -87,19 +91,32 @@ class OstrichStringTheory extends {
     def generateAxioms(goal : Goal)
           : Option[(Conjunction, Conjunction)] = None
 
+    private val modelCache =
+      new ap.util.LRUCache[Conjunction, Option[Map[Term, List[Int]]]](3)
+
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
-        ostrichSolver.findStringModel(goal) match {
-          case Some(m) => println(m); List()
+        modelCache(goal.facts) { ostrichSolver.findStringModel(goal) } match {
+          case Some(m) => List()
           case None => List(Plugin.AddFormula(Conjunction.TRUE))
         }
       }
 
       case _ => List()
     }
-    
+
+    override def generateModel(goal : Goal) : Option[Conjunction] =
+      if (Seqs.disjointSeq(goal.facts.predicates, predicates))
+        None
+      else
+        Some(assignStringValues(goal.facts,
+                                (modelCache(goal.facts) {
+                                  ostrichSolver.findStringModel(goal)
+                                }).get,
+                                goal.order))
+
   })
 
   //////////////////////////////////////////////////////////////////////////////
