@@ -59,13 +59,14 @@ class OstrichStringTheory extends {
 
   val functions = predefFunctions
 
-  val (funPredicates, axioms, _, functionPredicateMap) =
+  val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions)
   val predicates = predefPredicates ++ funPredicates
 
   val functionPredicateMapping = functions zip funPredicates
   val functionalPredicates = funPredicates.toSet
   val predicateMatchConfig : Signature.PredicateMatchConfig = Map()
+  val axioms = Conjunction.TRUE
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
@@ -98,9 +99,15 @@ class OstrichStringTheory extends {
                        : Seq[Plugin.Action] = goalState(goal) match {
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
-        modelCache(goal.facts) { ostrichSolver.findStringModel(goal) } match {
-          case Some(m) => List()
-          case None => List(Plugin.AddFormula(Conjunction.TRUE))
+        breakCyclicEquations(goal) match {
+          case Some(actions) =>
+            actions
+          case None =>
+            modelCache(goal.facts) {
+              ostrichSolver.findStringModel(goal) } match {
+              case Some(m) => List()
+              case None => List(Plugin.AddFormula(Conjunction.TRUE))
+            }
         }
       }
 
