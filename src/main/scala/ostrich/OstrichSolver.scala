@@ -114,12 +114,12 @@ class OstrichSolver(theory : OstrichStringTheory,
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
       }
-//      case FunPred(`reverse`) =>
-//        funApps += ((ReversePreOp, List(a(0)), a(1)))
       case FunPred(f) if rexOps contains f =>
         // nothing
-//      case FunPred(f) if UserFunctionRegistry.isUserDefinedStringTheoryFun(f.name) =>
-//        funApps += ((UserFunctionRegistry.getPreOp(f.name).get, a.take(f.arity), a(f.arity)))
+      case FunPred(f) if theory.extraFunctionPreOps contains f => {
+        val (op, argSelector, resSelector) = theory.extraFunctionPreOps(f)
+        funApps += ((op, argSelector(a), resSelector(a)))
+      }
       case pred if (RRFunsToTransducer get pred).isDefined =>
         funApps += ((TransducerPreOp(RRFunsToTransducer.get(pred).get),
                      List(a(0)), a(1)))

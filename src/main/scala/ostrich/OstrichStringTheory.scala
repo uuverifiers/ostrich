@@ -27,6 +27,7 @@ import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry}
 import ap.types.{Sort, MonoSortedIFunction}
 import ap.terfor.Term
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
 import ap.util.Seqs
@@ -53,11 +54,29 @@ class OstrichStringTheory extends {
 
   def char2Int(t : ITerm) : ITerm = t
 
-  val relations : Map[String, Predicate] = Map() // TODO
+  //////////////////////////////////////////////////////////////////////////////
+
+  val str_reverse =
+    MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
+
+  // List of user-defined functions that can be extended
+  val extraFunctions : Seq[(String, IFunction, PreOp,
+                            Atom => Seq[Term], Atom => Term)] =
+    List(("str.reverse", str_reverse, ostrich.ReversePreOp,
+          a => List(a(0)), a => a(1)))
+
+  val extraFunctionPreOps =
+    (for ((_, f, op, argSelector, resSelector) <- extraFunctions.iterator)
+     yield (f, (op, argSelector, resSelector))).toMap
+
+  // Map used by the parser
+  val extraOps : Map[String, Either[IFunction, Predicate]] =
+    (for ((name, f, _, _, _) <- extraFunctions.iterator)
+     yield (name, Left(f))).toMap
 
   //////////////////////////////////////////////////////////////////////////////
 
-  val functions = predefFunctions
+  val functions = predefFunctions ++ (extraFunctions map (_._2))
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions)
