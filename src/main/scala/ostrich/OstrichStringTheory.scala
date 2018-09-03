@@ -34,10 +34,30 @@ import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
+object OstrichStringTheory {
+
+  /**
+   * Transition of a transducer. The constraint is a formula over
+   * variables <code>_0, _1, ...</code> representing the head symbols of the
+   * transducer tracks.
+   */
+  case class TransducerTransition(fromState : Int,
+                                  toState : Int,
+                                  epsilons : Seq[Boolean],
+                                  constraint : IFormula)
+
+  case class SymTransducer(transitions : Seq[TransducerTransition],
+                           accepting : Set[Int])
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /**
  * The entry class of the Ostrich string solver.
  */
-class OstrichStringTheory extends {
+class OstrichStringTheory(
+   symTransducers : Seq[(String, OstrichStringTheory.SymTransducer)]) extends {
 
   val bitWidth   = 16
   val CharSort   = ModuloArithmetic.UnsignedBVSort(bitWidth) // just use intervals?
@@ -53,6 +73,16 @@ class OstrichStringTheory extends {
     ModuloArithmetic.cast2UnsignedBV(bitWidth, t)
 
   def char2Int(t : ITerm) : ITerm = t
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  val transducers : Seq[(String, IFunction, Transducer)] =
+    for ((name, transducer) <- symTransducers) yield {
+      println("Translating transducer " + name + " ...")
+      val aut = TransducerTranslator.toBricsTransducer(transducer, bitWidth)
+      val f = MonoSortedIFunction(name, List(SSo), SSo, true, false)
+      (name, f, aut)
+    }
 
   //////////////////////////////////////////////////////////////////////////////
 

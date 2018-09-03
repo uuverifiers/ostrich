@@ -30,6 +30,19 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setBitWidth(w : Int) : Unit = ()
 
-  lazy val theory = new OstrichStringTheory
+  import OstrichStringTheory._
+  import ap.parser._
+  import IExpression._
+
+  lazy val theory = new OstrichStringTheory (List(
+    ("prefix",
+     SymTransducer(List(TransducerTransition(0, 0, List(false, false),
+                                             (v(0) === v(1)) & (v(0) =/= 65)),
+                        TransducerTransition(0, 1, List(false, true),
+                                             v(0) === 65),
+                        TransducerTransition(1, 1, List(false, true),
+                                             true)),
+                   Set(0, 1)))
+  ))
 
 }
