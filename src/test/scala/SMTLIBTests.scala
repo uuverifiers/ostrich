@@ -20,12 +20,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
-    true /*
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=10000", filename) ++ extractOpts).toArray,
+      CmdlMain.doMain((List("+assert", "-timeout=10000",
+                            "-stringSolver=ostrich.OstrichStringTheory",
+                            filename) ++ extractOpts).toArray,
                         false)
     }
-    */
 
   property("concat-regex.smt2") =
     checkFile("tests/concat-regex.smt2", "sat")
@@ -36,6 +36,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
 
+/*
   property("concat-regex.smt2 eager") =
     checkFile("tests/concat-regex.smt2", "sat", "+eager")
   property("concat-regex2.smt2 eager") =
@@ -44,6 +45,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex3.smt2", "sat", "+eager")
   property("concat-regex4.smt2 eager") =
     checkFile("tests/concat-regex4.smt2", "sat", "+eager")
+*/
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
@@ -60,13 +62,17 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("test-replace-word2.smt2") =
     checkFile("tests/test-replace-word2.smt2", "unsat")
 
+/*
   property("test-replace-regex.smt2") =
     checkFile("tests/test-replace-regex.smt2", "sat")
   property("test-replace-regex2.smt2") =
     checkFile("tests/test-replace-regex2.smt2", "unsat")
+*/
 
+/*
   property("membership_427.smt2") =
     checkFile("tests/membership_427.smt2", "unsat")
+*/
 
   property("test-reverse.smt2") =
     checkFile("tests/test-reverse.smt2", "sat")
@@ -75,6 +81,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("transducer1.smt2") =
     checkFile("tests/transducer1.smt2", "sat")
+/*
   property("transducer2.smt2") =
     checkFile("tests/transducer2.smt2", "unsat")
   property("transducer2b.smt2") =
@@ -83,16 +90,19 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/transducer2c.smt2", "unsat")
   property("transducer2d.smt2") =
     checkFile("tests/transducer2d.smt2", "sat")
+*/
 
   property("1234.corecstrs.readable.smt2") =
     checkFile("tests/1234.corecstrs.readable.smt2", "sat")
 
+/*
   property("extract-1.smt2") =
     checkFile("tests/extract-1.smt2", "unsat")
   property("extract-1b.smt2") =
     checkFile("tests/extract-1b.smt2", "unsat")
   property("extract-1c.smt2") =
     checkFile("tests/extract-1c.smt2", "sat")
+*/
 
   property("simple-cvc-smtlib.smt2") =
     checkFile("tests/simple-cvc-smtlib.smt2", "sat", "+model")
@@ -101,13 +111,17 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("simple-cvc-smtlib-c.smt2") =
     checkFile("tests/simple-cvc-smtlib-c.smt2", "sat", "+model")
 
+/*
   property("simple-cvc-smtlib.smt2 +eager") =
     checkFile("tests/simple-cvc-smtlib.smt2", "sat", "+model", "+eager")
   property("simple-cvc-smtlib-b.smt2 +eager") =
     checkFile("tests/simple-cvc-smtlib-b.smt2", "unsat", "+eager")
   property("simple-cvc-smtlib-c.smt2 +eager") =
     checkFile("tests/simple-cvc-smtlib-c.smt2", "sat", "+model", "+eager")
+*/
 
+/*
   property("no-regexes.smt2") =
     checkFile("tests/no-regexes.smt2", "unsat")
+*/
 }
