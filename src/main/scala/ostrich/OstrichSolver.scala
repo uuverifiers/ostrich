@@ -120,9 +120,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         val (op, argSelector, resSelector) = theory.extraFunctionPreOps(f)
         funApps += ((op, argSelector(a), resSelector(a)))
       }
-      case pred if (RRFunsToTransducer get pred).isDefined =>
-        funApps += ((TransducerPreOp(RRFunsToTransducer.get(pred).get),
-                     List(a(0)), a(1)))
+      case pred if theory.transducerPreOps contains pred =>
+        funApps += ((theory.transducerPreOps(pred), List(a(0)), a(1)))
       case p if (theory.predicates contains p) =>
         Console.err.println("Warning: ignoring " + a)
       case _ =>
@@ -135,6 +134,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         val aut = regex2Aut buildAut regex
         regexes += ((a.head, !aut))
       }
+      case pred if theory.transducerPreOps contains pred =>
+        throw new Exception ("Cannot handle negated transducer constraint " + a)
       case p if (theory.predicates contains p) =>
         Console.err.println("Warning: ignoring !" + a)
       case _ =>

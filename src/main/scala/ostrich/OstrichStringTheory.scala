@@ -24,7 +24,7 @@ import ap.parser.{ITerm, IFormula, IExpression, IFunction}
 import IExpression.Predicate
 import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry}
-import ap.types.{Sort, MonoSortedIFunction}
+import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate}
 import ap.terfor.Term
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
@@ -36,18 +36,7 @@ import scala.collection.mutable.{HashMap => MHashMap}
 
 object OstrichStringTheory {
 
-  /**
-   * Transition of a transducer. The constraint is a formula over
-   * variables <code>_0, _1, ...</code> representing the head symbols of the
-   * transducer tracks.
-   */
-  case class TransducerTransition(fromState : Int,
-                                  toState : Int,
-                                  epsilons : Seq[Boolean],
-                                  constraint : IFormula)
-
-  case class SymTransducer(transitions : Seq[TransducerTransition],
-                           accepting : Set[Int])
+  val bitWidth = 16
 
 }
 
@@ -56,10 +45,9 @@ object OstrichStringTheory {
 /**
  * The entry class of the Ostrich string solver.
  */
-class OstrichStringTheory(
-   symTransducers : Seq[(String, OstrichStringTheory.SymTransducer)]) extends {
+class OstrichStringTheory(transducers : Seq[(String, Transducer)]) extends {
 
-  val bitWidth   = 16
+  val bitWidth   = OstrichStringTheory.bitWidth
   val CharSort   = ModuloArithmetic.UnsignedBVSort(bitWidth) // just use intervals?
   val RegexSort  = new Sort.InfUninterpreted("RegLan")
 
@@ -76,16 +64,6 @@ class OstrichStringTheory(
 
   //////////////////////////////////////////////////////////////////////////////
 
-  val transducers : Seq[(String, IFunction, Transducer)] =
-    for ((name, transducer) <- symTransducers) yield {
-      println("Translating transducer " + name + " ...")
-      val aut = TransducerTranslator.toBricsTransducer(transducer, bitWidth)
-      val f = MonoSortedIFunction(name, List(SSo), SSo, true, false)
-      (name, f, aut)
-    }
-
-  //////////////////////////////////////////////////////////////////////////////
-
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
 
@@ -99,18 +77,30 @@ class OstrichStringTheory(
     (for ((_, f, op, argSelector, resSelector) <- extraFunctions.iterator)
      yield (f, (op, argSelector, resSelector))).toMap
 
+  val transducersWithPreds : Seq[(String, Predicate, Transducer)] =
+    for ((name, transducer) <- transducers)
+    yield (name, MonoSortedPredicate(name, List(SSo, SSo)), transducer)
+
+  val transducerPreOps =
+    (for ((_, p, transducer) <- transducersWithPreds.iterator)
+     yield (p, TransducerPreOp(transducer))).toMap
+
   // Map used by the parser
   val extraOps : Map[String, Either[IFunction, Predicate]] =
-    (for ((name, f, _, _, _) <- extraFunctions.iterator)
-     yield (name, Left(f))).toMap
+    ((for ((name, f, _, _, _) <- extraFunctions.iterator)
+      yield (name, Left(f))) ++
+     (for ((name, p, _) <- transducersWithPreds.iterator)
+      yield (name, Right(p)))).toMap
 
   //////////////////////////////////////////////////////////////////////////////
 
-  val functions = predefFunctions ++ (extraFunctions map (_._2))
+  val functions =
+    predefFunctions ++ (extraFunctions map (_._2))
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions)
-  val predicates = predefPredicates ++ funPredicates
+  val predicates =
+    predefPredicates ++ funPredicates ++ (transducersWithPreds map (_._2))
 
   val functionPredicateMapping = functions zip funPredicates
   val functionalPredicates = funPredicates.toSet

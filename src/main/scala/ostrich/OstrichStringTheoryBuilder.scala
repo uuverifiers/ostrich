@@ -19,7 +19,9 @@
 
 package ostrich
 
-import ap.theories.strings.StringTheoryBuilder
+import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * The entry class of the Ostrich string solver.
@@ -30,19 +32,34 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setBitWidth(w : Int) : Unit = ()
 
-  import OstrichStringTheory._
+  import StringTheoryBuilder._
   import ap.parser._
   import IExpression._
 
-  lazy val theory = new OstrichStringTheory (List(
-    ("prefix",
-     SymTransducer(List(TransducerTransition(0, 0, List(false, false),
-                                             (v(0) === v(1)) & (v(0) =/= 65)),
-                        TransducerTransition(0, 1, List(false, true),
-                                             v(0) === 65),
-                        TransducerTransition(1, 1, List(false, true),
-                                             true)),
-                   Set(0, 1)))
-  ))
+  lazy val getTransducerTheory : Option[StringTheory] =
+    Some(SeqStringTheory(OstrichStringTheory.bitWidth))
+
+  private val transducers = new ArrayBuffer[(String, SymTransducer)]
+
+  def addTransducer(name : String, transducer : SymTransducer) : Unit = {
+    assert(!createdTheory)
+    transducers += ((name, transducer))
+  }
+
+  private var createdTheory = false
+
+  lazy val theory = {
+    createdTheory = true
+
+    val symTransducers =
+      for ((name, transducer) <- transducers) yield {
+        println("Translating transducer " + name + " ...")
+        val aut = TransducerTranslator.toBricsTransducer(
+                    transducer, OstrichStringTheory.bitWidth)
+        (name, aut)
+      }
+
+    new OstrichStringTheory (symTransducers)
+  }
 
 }

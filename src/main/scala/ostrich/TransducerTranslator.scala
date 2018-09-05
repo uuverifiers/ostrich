@@ -24,6 +24,7 @@ import IExpression._
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.theories.ModuloArithmetic
+import ap.theories.strings.StringTheoryBuilder
 
 /**
  * Helper methods to translate transducers in symbolic representation
@@ -32,7 +33,7 @@ import ap.theories.ModuloArithmetic
  */
 object TransducerTranslator {
 
-  import OstrichStringTheory._
+  import StringTheoryBuilder._
 
   def toBricsTransducer(transducer : SymTransducer,
                         bitwidth : Int) : Transducer = {
