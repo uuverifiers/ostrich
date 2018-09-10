@@ -2,14 +2,17 @@
 
 ; to-uppercase transducer
 
+(set-option :parse-transducers true)
+
 (define-fun-rec toUpper ((x String) (y String)) Bool
   (or (and (= x "") (= y ""))
-      (and (= (seq-head y)
-              (ite (and (bvule (_ bv97 8) (seq-head x))   ; 'a'
-                        (bvule (seq-head x) (_ bv122 8))) ; 'z'
-                   (bvsub (seq-head x) (_ bv32 8))        ; 'a' -> 'A', etc.
-                   (seq-head x)))
-           (toUpper (seq-tail x) (seq-tail y))))
+      (and (not (= x "")) (not (= y ""))
+           (= (char.code (str.head y))
+              (ite (and (<= 97 (char.code (str.head x)))   ; 'a'
+                        (<= (char.code (str.head x)) 122)) ; 'z'
+                   (- (char.code (str.head x)) 32)         ; 'a' -> 'A', etc.
+                   (char.code (str.head x))))
+           (toUpper (str.tail x) (str.tail y))))
 )
 
 (declare-fun x () String)
