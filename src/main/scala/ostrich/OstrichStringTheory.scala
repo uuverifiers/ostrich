@@ -23,9 +23,9 @@ import ap.Signature
 import ap.parser.{ITerm, IFormula, IExpression, IFunction}
 import IExpression.Predicate
 import ap.theories.strings._
-import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry}
+import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
 import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate}
-import ap.terfor.Term
+import ap.terfor.{Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
@@ -122,6 +122,22 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)]) extends {
     def unapply(p : Predicate) : Option[IFunction] = predFunMap get p
   }
 
+  // Set of the predicates that are fully supported at this point
+  private val supportedPreds : Set[Predicate] =
+    Set(str_in_re) ++
+    (for (f <- Set(str_empty, str_cons,
+                   str_++, str_len, str_replace, str_replaceall,
+                   str_replacere, str_replaceallre, str_to_re,
+                   re_none, re_eps, re_all, re_allchar, re_charrange,
+                   re_++, re_union, re_inter, re_*, re_+, re_opt))
+     yield functionPredicateMap(f)) ++
+    (for ((_, e) <- extraOps.iterator) yield e match {
+       case Left(f) => functionPredicateMap(f)
+       case Right(p) => p
+     })
+
+  private val unsupportedPreds = predicates.toSet -- supportedPreds
+
   //////////////////////////////////////////////////////////////////////////////
 
   private val ostrichSolver = new OstrichSolver (this, new OFlags)
@@ -170,7 +186,17 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)]) extends {
   override def isSoundForSat(
                  theories : Seq[Theory],
                  config : Theory.SatSoundnessConfig.Value) : Boolean =
-    config == Theory.SatSoundnessConfig.Existential
+    config match {
+      case Theory.SatSoundnessConfig.Elementary  => true
+      case Theory.SatSoundnessConfig.Existential => true
+      case _                                     => false
+    }
+
+  override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
+    if (!Seqs.disjoint(f.predicates, unsupportedPreds))
+      Incompleteness.set
+    f
+  }
 
   TheoryRegistry register this
   StringTheory register this
