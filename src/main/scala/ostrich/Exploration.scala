@@ -119,8 +119,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     else
       comp
 
-  println
-  println("Running OSTRICH")
+  Console.err.println
+  Console.err.println("Running OSTRICH")
 
   // topological sorting of the function applications
   private val (allTerms, sortedFunApps)
@@ -163,11 +163,13 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
 
-  println("   Considered function applications:")
-  for ((apps, res) <- sortedFunApps) {
-    println("   " + res + " =")
-    for ((op, args) <- apps)
-      println("     " + op + "(" + (args mkString ", ") + ")")
+  Console.withOut(Console.err) {
+    println("   Considered function applications:")
+    for ((apps, res) <- sortedFunApps) {
+      println("   " + res + " =")
+      for ((op, args) <- apps)
+        println("     " + op + "(" + (args mkString ", ") + ")")
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////

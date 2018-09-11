@@ -77,7 +77,8 @@ object TransducerTranslator {
 
               val op = OutputOp(out.intValueSafe.toChar.toString, NOP, "")
 
-              println("" + fromState + "- <eps> -> " + toState + ": \t" + op)
+              Console.err.println("" + fromState + "- <eps> -> " +
+                                  toState + ": \t" + op)
 
               builder.addETransition(states2Brics(fromState), op,
                                      states2Brics(toState))
@@ -88,9 +89,9 @@ object TransducerTranslator {
           case Seq(true, true) => {
             val op = OutputOp("", NOP, "")
 
-            println("" + fromState +
-                    "- <eps> -> " +
-                    "" + toState + ": \t" + op)
+            Console.err.println("" + fromState +
+                                "- <eps> -> " +
+                                "" + toState + ": \t" + op)
 
             builder.addETransition(states2Brics(fromState), op,
                                    states2Brics(toState))
@@ -138,9 +139,9 @@ object TransducerTranslator {
 
               val op = OutputOp("", inputOp.get, outputChars)
 
-              println("" + fromState +
-                      "-  [" + lb + ", " + ub + "] -> " +
-                      toState + ": \t" + op)
+              Console.err.println("" + fromState +
+                                  "-  [" + lb + ", " + ub + "] -> " +
+                                  toState + ": \t" + op)
 
               builder.addTransition(states2Brics(fromState),
                                     (lb, ub), op,

@@ -20,6 +20,7 @@
 package ostrich
 
 import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
+import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -39,6 +40,19 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   }
 
   def setBitWidth(w : Int) : Unit = ()
+
+  private var eager, useLen, forward = false
+
+  override def parseParameter(str : String) : Unit = str match {
+    case CmdlParser.Opt("eager", value) =>
+      eager = value
+    case CmdlParser.Opt("length", value) =>
+      useLen = value
+    case CmdlParser.Opt("forward", value) =>
+      forward = value
+    case str =>
+      super.parseParameter(str)
+  }
 
   import StringTheoryBuilder._
   import ap.parser._
@@ -61,13 +75,16 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
     val symTransducers =
       for ((name, transducer) <- transducers) yield {
-        println("Translating transducer " + name + " ...")
+        Console.err.println("Translating transducer " + name + " ...")
         val aut = TransducerTranslator.toBricsTransducer(
                     transducer, OstrichStringTheory.bitWidth)
         (name, aut)
       }
 
-    new OstrichStringTheory (symTransducers)
+    new OstrichStringTheory (symTransducers,
+                             OFlags(eagerAutomataOperations = eager,
+                                    useLength = useLen,
+                                    forwardApprox = forward))
   }
 
 }

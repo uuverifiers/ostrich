@@ -83,11 +83,18 @@ until [ $success -eq 0 ]; do
         # send the ticket
         tail -n1 "$portfile"
 
-        echo "-stringSolver=ostrich.OstrichStringTheory"
-
         # command line arguments
+        ostrichParams=""
+
         for var; do
 	    case "$var" in
+                [+-]eager | [+-]forward | [+-]length)
+                    if [ x"$ostrichParams" = x"" ]; then
+                        ostrichParams=$p
+                    else
+                        ostrichParams=$ostrichParams,$p
+                    fi
+                    ;;
 		-*|+*)
 		    echo "$var"
 		    ;;
@@ -96,6 +103,8 @@ until [ $success -eq 0 ]; do
 		    ;;
 	    esac
         done
+
+        echo "-stringSolver=ostrich.OstrichStringTheory:$ostrichParams"
 
         echo "PROVE_AND_EXIT"
 

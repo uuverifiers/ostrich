@@ -45,7 +45,8 @@ object OstrichStringTheory {
 /**
  * The entry class of the Ostrich string solver.
  */
-class OstrichStringTheory(transducers : Seq[(String, Transducer)]) extends {
+class OstrichStringTheory(transducers : Seq[(String, Transducer)],
+                          flags : OFlags) extends {
 
   val bitWidth   = OstrichStringTheory.bitWidth
   val CharSort   = ModuloArithmetic.UnsignedBVSort(bitWidth) // just use intervals?
@@ -140,7 +141,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)]) extends {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  private val ostrichSolver = new OstrichSolver (this, new OFlags)
+  private val ostrichSolver = new OstrichSolver (this, flags)
 
   def plugin = Some(new Plugin {
     // not used

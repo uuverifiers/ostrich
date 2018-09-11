@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ $(uname) = "Linux" ]; then
     pathCmd="readlink -f"
@@ -15,4 +15,24 @@ SCALA=scala
 JAVA=java
 export JAVA_OPTS="-Xss20000k -Xmx1500m"
 
-exec $JAVA -cp $TARGET ap.CmdlMain -stringSolver=ostrich.OstrichStringTheory "$@"
+princessParams=()
+ostrichParams=""
+
+for p; do
+    case "$p" in
+        [+-]eager | [+-]forward | [+-]length)
+            if [ x"$ostrichParams" = x"" ]; then
+                ostrichParams=$p
+            else
+                ostrichParams=$ostrichParams,$p
+            fi
+            ;;
+        *)
+            princessParams+=("$p")
+            ;;
+    esac
+done
+
+exec $JAVA -cp $TARGET \
+     ap.CmdlMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+     "${princessParams[@]}"
