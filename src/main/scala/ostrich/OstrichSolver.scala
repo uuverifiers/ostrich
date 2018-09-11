@@ -63,7 +63,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     val regexExtractor = theory.RegexExtractor(goal)
     val regex2Aut = new Regex2Aut(theory)
 
-    println(atoms)
+//    Console.err.println(atoms)
 
     val concreteWords = new MHashMap[Term, Seq[Int]]
     findConcreteWords(atoms) match {
@@ -203,16 +203,6 @@ class OstrichSolver(theory : OstrichStringTheory,
        (for ((_, args, res) <- funApps.iterator;
              t <- args.iterator ++ Iterator(res)) yield t)).toSet
 
-    for (t <- interestingTerms)
-      (concreteWords get t) match {
-        case Some(w) => {
-          val str : String = w.map(i => i.toChar)(breakOut)
-          regexes += ((t, BricsAutomaton fromString str))
-        }
-        case None =>
-          // nothing
-      }
-
     ////////////////////////////////////////////////////////////////////////////
 
     SimpleAPI.withProver { lengthProver =>
@@ -234,10 +224,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps, regexes,
+          Exploration.eagerExp(funApps, regexes, concreteWords.toMap,
                                lProver, lengthVars.toMap, containsLength, flags)
         else
-          Exploration.lazyExp(funApps, regexes,
+          Exploration.lazyExp(funApps, regexes, concreteWords.toMap,
                               lProver, lengthVars.toMap, containsLength, flags)
 
       exploration.findModel match {

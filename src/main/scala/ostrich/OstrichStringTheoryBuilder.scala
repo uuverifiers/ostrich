@@ -28,7 +28,15 @@ import scala.collection.mutable.ArrayBuffer
  */
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
-  val name = "Ostrich"
+  val name = "OSTRICH"
+
+  Console.withOut(Console.err) {
+    println
+    println("Loading " + name + ", a solver for string constraints")
+    println("(c) Matthew Hague, Philipp Rümmer, 2018")
+    println("For more information, see https://github.com/pruemmer/ostrich")
+    println
+  }
 
   def setBitWidth(w : Int) : Unit = ()
 

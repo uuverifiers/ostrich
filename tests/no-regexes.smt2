@@ -1,11 +1,14 @@
 
     (set-logic QF_S)
 
+    (set-option :parse-transducers true)
+
     (define-funs-rec ((isempty ((x String) (y String)) Bool)) (
                      ; def isempty
-                     (and (= (seq-head x) (_ bv48 8)) ; '0'
-                          (= (seq-head y) (_ bv49 8)) ; '1'
-                          (isempty (seq-tail x) (seq-tail y)))
+                     (and (not (= x "")) (not (= y ""))
+                          (= (str.head x) (char.from-int 48)) ; '0'
+                          (= (str.head y) (char.from-int 49)) ; '1'
+                          (isempty (str.tail x) (str.tail y)))
                     ))
 
     (declare-fun x () String)

@@ -26,6 +26,7 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
 import ap.util.Seqs
 
+import scala.collection.breakOut
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
                                  BitSet => MBitSet}
@@ -76,20 +77,22 @@ object Exploration {
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
+               concreteValues : Map[Term, Seq[Int]],
                lengthProver : Option[SimpleAPI],
                lengthVars : Map[Term, Term],
                strictLengths : Boolean,
                flags : OFlags) : Exploration =
-    new EagerExploration(funApps, initialConstraints,
+    new EagerExploration(funApps, initialConstraints, concreteValues,
                          lengthProver, lengthVars, strictLengths, flags)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
+              concreteValues : Map[Term, Seq[Int]],
               lengthProver : Option[SimpleAPI],
               lengthVars : Map[Term, Term],
               strictLengths : Boolean,
               flags : OFlags) : Exploration =
-    new LazyExploration(funApps, initialConstraints,
+    new LazyExploration(funApps, initialConstraints, concreteValues,
                         lengthProver, lengthVars, strictLengths, flags)
 
   private case class FoundModel(model : Map[Term, Seq[Int]]) extends Exception
@@ -102,6 +105,7 @@ object Exploration {
  */
 abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
+                           concreteValues : Map[Term, Seq[Int]],
                            lengthProver : Option[SimpleAPI],
                            lengthVars : Map[Term, Term],
                            strictLengths : Boolean,
@@ -154,7 +158,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   }
 
   for ((ops, t) <- sortedFunApps)
-    if (ops.size > 1)
+    if (ops.size > 1 && !(concreteValues contains t))
       throw new Exception("Multiple definitions found for " + t)
 
   val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
@@ -183,6 +187,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         coveredTerms += ind
 
     val additionalConstraints = new ArrayBuffer[(Term, Automaton)]
+
+    // check whether any of the terms have concrete definitions
+    for (t <- allTerms)
+      for (w <- concreteValues get t) {
+        val str : String = w.map(i => i.toChar)(breakOut)
+        additionalConstraints += ((t, BricsAutomaton fromString str))
+        for (ind <- term2Index get t)
+          coveredTerms += ind
+      }
 
     for (n <- 0 until sortedFunApps.size;
          if {
@@ -484,11 +497,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _initialConstraints : Seq[(Term, Automaton)],
+                       _concreteValues : Map[Term, Seq[Int]],
                        _lengthProver : Option[SimpleAPI],
                        _lengthVars : Map[Term, Term],
                        _strictLengths : Boolean,
                        _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints,
+      extends Exploration(_funApps, _initialConstraints, _concreteValues,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
@@ -568,11 +582,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _initialConstraints : Seq[(Term, Automaton)],
+                      _concreteValues : Map[Term, Seq[Int]],
                       _lengthProver : Option[SimpleAPI],
                       _lengthVars : Map[Term, Term],
                       _strictLengths : Boolean,
                       _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints,
+      extends Exploration(_funApps, _initialConstraints, _concreteValues,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
