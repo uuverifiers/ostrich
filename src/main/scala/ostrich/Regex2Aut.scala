@@ -41,7 +41,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       "."
     case IFunApp(`re_charrange`,
                  Seq(IIntLit(IdealInt(a)), IIntLit(IdealInt(b)))) =>
-      "[\\" + a + "-" + "\\" + b + "]"
+      "[\\" + numToUnicode(a) + "-" + "\\" + numToUnicode(b) + "]"
     case IFunApp(`re_++`, Seq(a, b)) =>
       buildBricsRegex(a) + buildBricsRegex(b)
     case IFunApp(`re_union`, Seq(a, b)) =>

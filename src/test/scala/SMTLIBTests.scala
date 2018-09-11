@@ -27,6 +27,16 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  def checkFileOpts(filename : String, result : String, ostrichOpts : String,
+                    extractOpts : String*) : Boolean =
+    expectResult(result) {
+      CmdlMain.doMain((List("+assert", "-timeout=10000",
+                            "-stringSolver=ostrich.OstrichStringTheory:" +
+                               ostrichOpts,
+                            filename) ++ extractOpts).toArray,
+                        false)
+    }
+
   property("concat-regex.smt2") =
     checkFile("tests/concat-regex.smt2", "sat")
   property("concat-regex2.smt2") =
@@ -36,16 +46,14 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
 
-/*
   property("concat-regex.smt2 eager") =
-    checkFile("tests/concat-regex.smt2", "sat", "+eager")
+    checkFileOpts("tests/concat-regex.smt2", "sat", "+eager")
   property("concat-regex2.smt2 eager") =
-    checkFile("tests/concat-regex2.smt2", "unsat", "+eager")
+    checkFileOpts("tests/concat-regex2.smt2", "unsat", "+eager")
   property("concat-regex3.smt2 eager") =
-    checkFile("tests/concat-regex3.smt2", "sat", "+eager")
+    checkFileOpts("tests/concat-regex3.smt2", "sat", "+eager")
   property("concat-regex4.smt2 eager") =
-    checkFile("tests/concat-regex4.smt2", "sat", "+eager")
-*/
+    checkFileOpts("tests/concat-regex4.smt2", "sat", "+eager")
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
@@ -62,12 +70,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("test-replace-word2.smt2") =
     checkFile("tests/test-replace-word2.smt2", "unsat")
 
-/*
   property("test-replace-regex.smt2") =
     checkFile("tests/test-replace-regex.smt2", "sat")
   property("test-replace-regex2.smt2") =
     checkFile("tests/test-replace-regex2.smt2", "unsat")
-*/
 
 /*
   property("membership_427.smt2") =
@@ -93,14 +99,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("1234.corecstrs.readable.smt2") =
     checkFile("tests/1234.corecstrs.readable.smt2", "sat")
 
-/*
   property("extract-1.smt2") =
     checkFile("tests/extract-1.smt2", "unsat")
   property("extract-1b.smt2") =
     checkFile("tests/extract-1b.smt2", "unsat")
   property("extract-1c.smt2") =
     checkFile("tests/extract-1c.smt2", "sat")
-*/
 
   property("simple-cvc-smtlib.smt2") =
     checkFile("tests/simple-cvc-smtlib.smt2", "sat", "+model")
