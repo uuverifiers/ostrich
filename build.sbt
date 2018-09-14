@@ -10,7 +10,8 @@ lazy val commonSettings = Seq(
   libraryDependencies += "uuverifiers" %% "princess" % "strings-SNAPSHOT",
 //  libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
   libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
-  libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+  libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
+  libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8"
 )
 
 lazy val root = (project in file(".")).
