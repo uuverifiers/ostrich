@@ -20,6 +20,7 @@
 package ostrich
 
 import ap.Signature
+import ap.basetypes.IdealInt
 import ap.parser.{ITerm, IFormula, IExpression, IFunction}
 import IExpression.Predicate
 import ap.theories.strings._
@@ -36,7 +37,7 @@ import scala.collection.mutable.{HashMap => MHashMap}
 
 object OstrichStringTheory {
 
-  val bitWidth = 16
+  val alphabetSize = 1 << 16
 
 }
 
@@ -48,8 +49,9 @@ object OstrichStringTheory {
 class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                           flags : OFlags) extends {
 
-  val bitWidth   = OstrichStringTheory.bitWidth
-  val CharSort   = ModuloArithmetic.UnsignedBVSort(bitWidth) // just use intervals?
+  val alphabetSize = OstrichStringTheory.alphabetSize
+  val upperBound = IdealInt(alphabetSize - 1)
+  val CharSort   = ModuloArithmetic.ModSort(IdealInt.ZERO, upperBound)
   val RegexSort  = new Sort.InfUninterpreted("RegLan")
 
 } with AbstractStringTheoryWithSort {
@@ -59,7 +61,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val RSo = RegexSort
 
   def int2Char(t : ITerm) : ITerm =
-    ModuloArithmetic.cast2UnsignedBV(bitWidth, t)
+    ModuloArithmetic.cast2Interval(IdealInt.ZERO, upperBound, t)
 
   def char2Int(t : ITerm) : ITerm = t
 

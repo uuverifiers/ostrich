@@ -22,6 +22,7 @@ package ostrich
 import ap.parser._
 import IExpression._
 import ap.SimpleAPI
+import ap.basetypes.IdealInt
 import SimpleAPI.ProverStatus
 import ap.theories.ModuloArithmetic
 import ap.theories.strings.StringTheoryBuilder
@@ -36,7 +37,7 @@ object TransducerTranslator {
   import StringTheoryBuilder._
 
   def toBricsTransducer(transducer : SymTransducer,
-                        bitwidth : Int) : Transducer = {
+                        alphabetSize : Int) : Transducer = {
     val SymTransducer(transitions, accepting) = transducer
     val states =
       (for (TransducerTransition(from, to, _, _) <- transitions.iterator;
@@ -60,7 +61,8 @@ object TransducerTranslator {
     SimpleAPI.withProver { p =>
 
       val inputC, outputC =
-        p.createConstant(ModuloArithmetic.UnsignedBVSort(bitwidth))
+        p.createConstant(ModuloArithmetic.ModSort(IdealInt.ZERO,
+                                                  IdealInt(alphabetSize - 1)))
 
       for (TransducerTransition(fromState, toState, epsilons, constraint) <-
              transitions) {

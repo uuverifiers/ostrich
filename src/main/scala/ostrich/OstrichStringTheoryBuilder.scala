@@ -39,7 +39,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
   }
 
-  def setBitWidth(w : Int) : Unit = ()
+  def setAlphabetSize(w : Int) : Unit = ()
 
   private var eager, useLen, forward = false
 
@@ -59,7 +59,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   import IExpression._
 
   lazy val getTransducerTheory : Option[StringTheory] =
-    Some(SeqStringTheory(OstrichStringTheory.bitWidth))
+    Some(SeqStringTheory(OstrichStringTheory.alphabetSize))
 
   private val transducers = new ArrayBuffer[(String, SymTransducer)]
 
@@ -77,7 +77,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       for ((name, transducer) <- transducers) yield {
         Console.err.println("Translating transducer " + name + " ...")
         val aut = TransducerTranslator.toBricsTransducer(
-                    transducer, OstrichStringTheory.bitWidth)
+                    transducer, OstrichStringTheory.alphabetSize)
         (name, aut)
       }
 
