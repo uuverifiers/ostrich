@@ -33,6 +33,8 @@ for p; do
     esac
 done
 
+princessParams+=("-logo")
+
 exec $JAVA -cp $TARGET \
      ap.CmdlMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
      "${princessParams[@]}"
