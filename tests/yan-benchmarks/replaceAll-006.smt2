@@ -6,8 +6,8 @@
 
 
 
-(assert (= x (str.replaceall-re y (str.to.re "0") z)))
-(assert (= y (str.replaceall-re w (str.to.re "1") v)))
+(assert (= x (str.replaceallre y (str.to.re "0") z)))
+(assert (= y (str.replaceallre w (str.to.re "1") v)))
 
 (assert 
 (str.in.re x 

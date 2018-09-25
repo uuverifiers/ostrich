@@ -55,7 +55,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
     case IFunApp(`re_opt`, Seq(a)) =>
       "(" + buildBricsRegex(a) + ")?"
     case IFunApp(`str_to_re`, Seq(a)) =>
-      (for (v <- StringTheory.term2List(a); c <- numToUnicode(v))
+      (for (v <- StringTheory.term2List(a);
+            c <- "[\\" + numToUnicode(v) + "]")
        yield c).mkString
     case _ =>
       throw new IllegalArgumentException

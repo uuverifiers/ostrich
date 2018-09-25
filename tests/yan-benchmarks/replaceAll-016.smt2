@@ -10,7 +10,7 @@
 (assert (str.in.re w (re.++ (str.to.re "01") (re.* (str.to.re "01")))))
 (assert (str.in.re v (str.to.re "c")))
 
-(assert (= z (str.replaceall-re x (str.to.re "abab") y)))
-(assert (= y (str.replaceall-re w (str.to.re "01") v)))
+(assert (= z (str.replaceallre x (str.to.re "abab") y)))
+(assert (= y (str.replaceallre w (str.to.re "01") v)))
 
 (check-sat)

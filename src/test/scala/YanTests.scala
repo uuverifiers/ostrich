@@ -21,11 +21,12 @@ object YanTests extends Properties("YanTests") {
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=10000", filename) ++ extractOpts).toArray,
+      CmdlMain.doMain((List("+assert", "-timeout=10000",
+                            "-stringSolver=ostrich.OstrichStringTheory",
+                            filename) ++ extractOpts).toArray,
                         false)
     }
 
-/*
   property("tests/yan-benchmarks/concat-001.smt2") =
     checkFile("tests/yan-benchmarks/concat-001.smt2", "sat")
   property("tests/yan-benchmarks/concat-002.smt2") =
@@ -112,5 +113,5 @@ object YanTests extends Properties("YanTests") {
     checkFile("tests/yan-benchmarks/replaceAll-024.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-025.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-025.smt2", "sat")
-*/
+
 }
