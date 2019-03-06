@@ -1,5 +1,5 @@
 /*
- * This file is part of Sloth, an SMT solver for strings.
+ * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
