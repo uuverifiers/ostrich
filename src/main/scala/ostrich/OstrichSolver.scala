@@ -218,8 +218,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         println("Checking whether length constraints are monadic")
         println("===============================================")
 
-//        println(goal.facts)
-//        println(lengthVars)
+        println(goal.facts.arithConj)
+        println(lengthVars)
 //        println(concreteWords)
 
         import TerForConvenience._
@@ -248,7 +248,7 @@ class OstrichSolver(theory : OstrichStringTheory,
           case ProverStatus.Sat   => ap.parser.IBoolLit(true)
         }
 
-//        println(lengthConstraint1)
+        println(lengthConstraint1)
 
         println
         (new modec.Modec(lengthConstraint1)).result match {
@@ -271,10 +271,10 @@ class OstrichSolver(theory : OstrichStringTheory,
               case ProverStatus.Sat   => ap.parser.IBoolLit(true)
             }
 
-//            println(lengthConstraint2)
+            println(lengthConstraint2)
 
             println
-            (new modec.Modec(lengthConstraint1)).result match {
+            (new modec.Modec(lengthConstraint2)).result match {
               case Some(d) =>
                 println("Monadic decomposition succeeded: " + pp(d))
               case None =>
