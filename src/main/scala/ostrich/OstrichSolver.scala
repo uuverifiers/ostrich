@@ -236,6 +236,8 @@ class OstrichSolver(theory : OstrichStringTheory,
             c
           }
 
+        println("Relevant length variables: " + (lengthConstants mkString ", "))
+
         import lengthProver._
 
         // project the length constraints to the string length variables first
@@ -244,18 +246,22 @@ class OstrichSolver(theory : OstrichStringTheory,
         setMostGeneralConstraints(true)
 
         val lengthConstraint1 = ??? match {
-          case ProverStatus.Unsat => ~getConstraint
+          case ProverStatus.Unsat => ap.parser.Transform2NNF(~getConstraint)
           case ProverStatus.Sat   => ap.parser.IBoolLit(true)
         }
 
-        println(lengthConstraint1)
+        println(pp(lengthConstraint1))
 
         println
         (new modec.Modec(lengthConstraint1)).result match {
           case Some(d) =>
-            println("Monadic decomposition succeeded: " + pp(d))
+            println("Monadic decomposition succeeded (1): " + pp(d))
           case None => {
             println("Monadic decomposition failed, adding concrete-word and regex constraints ...")
+
+            for (t <- interestingTerms)
+              lengthVars.getOrElseUpdate(
+                t, createConstantRaw("" + t + "_len", Sort.Nat))
 
             implicit val order = lengthProver.order
 
@@ -267,18 +273,40 @@ class OstrichSolver(theory : OstrichStringTheory,
               addAssertion(l(t_len) === str.size)
 
             val lengthConstraint2 = ??? match {
-              case ProverStatus.Unsat => ~getConstraint
+              case ProverStatus.Unsat => ap.parser.Transform2NNF(~getConstraint)
               case ProverStatus.Sat   => ap.parser.IBoolLit(true)
             }
 
-            println(lengthConstraint2)
+            println(pp(lengthConstraint2))
 
             println
             (new modec.Modec(lengthConstraint2)).result match {
               case Some(d) =>
-                println("Monadic decomposition succeeded: " + pp(d))
-              case None =>
-                throw new Exception("Monadic decomposition failed")
+                println("Monadic decomposition succeeded (2): " + pp(d))
+              case None => {
+                println("Monadic decomposition failed, adding constraints implied by functions ...")
+
+                implicit val order = lengthProver.order
+
+                for ((op, args, res) <- funApps)
+                  addAssertion(op.lengthApproximation(args map lengthVars,
+                                                      lengthVars(res), order))
+
+                val lengthConstraint3 = ??? match {
+                  case ProverStatus.Unsat => ap.parser.Transform2NNF(~getConstraint)
+                  case ProverStatus.Sat   => ap.parser.IBoolLit(true)
+                }
+
+                println(pp(lengthConstraint3))
+
+                println
+                (new modec.Modec(lengthConstraint3)).result match {
+                  case Some(d) =>
+                    println("Monadic decomposition succeeded (3): " + pp(d))
+                  case None =>
+                    throw new Exception("Monadic decomposition failed")
+                }
+              }
             }
           }
         }
