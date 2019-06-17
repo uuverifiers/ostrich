@@ -24,6 +24,7 @@ case class OFlags(
   eagerAutomataOperations : Boolean = false,
   measureTimes : Boolean = false,
   useLength : Boolean = false,
-  forwardApprox : Boolean = false
+  forwardApprox : Boolean = false,
+  tryMonadicDecomp : Boolean = false
 
 )

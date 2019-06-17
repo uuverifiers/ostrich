@@ -19,9 +19,12 @@
 package ostrich
 
 import ap.SimpleAPI
+import SimpleAPI.ProverStatus
 import ap.parser.IFunction
-import ap.terfor.{Term, TerForConvenience}
+import ap.terfor.{Term, ConstantTerm, TerForConvenience}
 import ap.terfor.preds.PredConj
+import ap.terfor.linearcombination.LinearCombination
+import ap.terfor.substitutions.VariableSubst
 import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.basetypes.IdealInt
@@ -68,7 +71,10 @@ class OstrichSolver(theory : OstrichStringTheory,
     val concreteWords = new MHashMap[Term, Seq[Int]]
     findConcreteWords(atoms) match {
       case Some(w) => concreteWords ++= w
-      case None => return None
+      case None => {
+        println("Immediately inconsistent")
+        return None
+      }
     }
 
     // extract regex constraints and function applications from the
@@ -206,6 +212,81 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
 
     SimpleAPI.withProver { lengthProver =>
+      if (flags.tryMonadicDecomp) {
+      if (useLength) {
+        println
+        println("Checking whether length constraints are monadic")
+        println("===============================================")
+
+//        println(goal.facts)
+//        println(lengthVars)
+//        println(concreteWords)
+
+        import TerForConvenience._
+
+        lengthProver.addConstantsRaw(order sort order.orderedConstants)
+        lengthProver.addAssertion(goal.facts.arithConj)
+
+        val lengthConstants =
+          for ((w, t) <- lengthVars) yield {
+            val c = lengthProver.createConstantRaw("" + w + "_len")
+            implicit val order = lengthProver.order
+            lengthProver.addAssertion(c >= 0)
+            lengthProver.addAssertion(t === c)
+            c
+          }
+
+        import lengthProver._
+
+        // project the length constraints to the string length variables first
+
+        makeExistentialRaw(lengthConstants)
+        setMostGeneralConstraints(true)
+
+        val lengthConstraint1 = ??? match {
+          case ProverStatus.Unsat => ~getConstraint
+          case ProverStatus.Sat   => ap.parser.IBoolLit(true)
+        }
+
+//        println(lengthConstraint1)
+
+        println
+        (new modec.Modec(lengthConstraint1)).result match {
+          case Some(d) =>
+            println("Monadic decomposition succeeded: " + pp(d))
+          case None => {
+            println("Monadic decomposition failed, adding concrete-word and regex constraints ...")
+
+            implicit val order = lengthProver.order
+
+            for ((t, aut) <- regexes; t_len <- lengthVars get t)
+              addAssertion(VariableSubst(0, List(t_len), lengthProver.order)
+                                        (aut.getLengthAbstraction))
+
+            for ((t, str) <- concreteWords; t_len <- lengthVars get t)
+              addAssertion(l(t_len) === str.size)
+
+            val lengthConstraint2 = ??? match {
+              case ProverStatus.Unsat => ~getConstraint
+              case ProverStatus.Sat   => ap.parser.IBoolLit(true)
+            }
+
+//            println(lengthConstraint2)
+
+            println
+            (new modec.Modec(lengthConstraint1)).result match {
+              case Some(d) =>
+                println("Monadic decomposition succeeded: " + pp(d))
+              case None =>
+                throw new Exception("Monadic decomposition failed")
+            }
+          }
+        }
+      }
+
+      None
+      } else {
+
       val lProver =
         if (useLength) {
           lengthProver setConstructProofs true
@@ -234,6 +315,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         case Some(model) => Some((model mapValues (_.toList)) ++
                                  (concreteWords mapValues (_.toList)))
         case None        => None
+      }
       }
     }
   }

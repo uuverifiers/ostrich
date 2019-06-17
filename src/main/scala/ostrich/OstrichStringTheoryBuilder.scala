@@ -40,7 +40,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, useLen, forward = false
+  private var eager, useLen, forward, monadicDecomp = false
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -49,6 +49,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = value
     case CmdlParser.Opt("forward", value) =>
       forward = value
+    case CmdlParser.Opt("monadicDecomp", value) =>
+      monadicDecomp = value
     case str =>
       super.parseParameter(str)
   }
@@ -83,7 +85,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     new OstrichStringTheory (symTransducers,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength = useLen,
-                                    forwardApprox = forward))
+                                    forwardApprox = forward,
+                                    tryMonadicDecomp = monadicDecomp))
   }
 
 }
