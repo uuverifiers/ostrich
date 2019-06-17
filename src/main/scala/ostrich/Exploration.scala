@@ -159,7 +159,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   for ((ops, t) <- sortedFunApps)
     if (ops.size > 1 && !(concreteValues contains t))
-      throw new Exception("Multiple definitions found for " + t)
+      throw new Exception("Multiple definitions found for " + t +
+                          ", input is not straightline")
 
   val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
 
