@@ -88,7 +88,7 @@ until [ $success -eq 0 ]; do
 
         for var; do
 	    case "$var" in
-                [+-]eager | [+-]forward | [+-]length)
+                [+-]eager | [+-]forward | [+-]length | [+-]monadicDecomp)
                     if [ x"$ostrichParams" = x"" ]; then
                         ostrichParams=$p
                     else
