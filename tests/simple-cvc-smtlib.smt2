@@ -1,5 +1,3 @@
-; This example is currently beyond the scope of our tool, since
-; it contains length constraints and integer variables
 
 (set-logic QF_S)
 

@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2019  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -164,14 +164,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
 
-  Console.withOut(Console.err) {
-    println("   Considered function applications:")
-    for ((apps, res) <- sortedFunApps) {
-      println("   " + res + " =")
-      for ((op, args) <- apps)
-        println("     " + op + "(" + (args mkString ", ") + ")")
+  if (!sortedFunApps.isEmpty)
+    Console.withOut(Console.err) {
+      println("   Considered function applications:")
+      for ((apps, res) <- sortedFunApps) {
+        println("   " + res + " =")
+        for ((op, args) <- apps)
+          println("     " + op + "(" + (args mkString ", ") + ")")
+      }
     }
-  }
 
   //////////////////////////////////////////////////////////////////////////////
 

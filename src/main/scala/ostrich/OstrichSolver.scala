@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2019  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
   def findStringModel(goal : Goal) : Option[Map[Term, List[Int]]] = {
     val atoms = goal.facts.predConj
-    implicit val order = goal.order
+    val order = goal.order
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
@@ -144,6 +144,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     {
       import TerForConvenience._
+      implicit val o = order
 
       val lengthConstants =
         (for (t <- lengthVars.values.iterator;
@@ -216,6 +217,12 @@ class OstrichSolver(theory : OstrichStringTheory,
           for (t <- interestingTerms)
             lengthVars.getOrElseUpdate(
               t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
+
+          import TerForConvenience._
+          implicit val o = lengthProver.order
+
+          for ((strVar, lenTerm) <- lengthVars; str <- concreteWords get strVar)
+            lengthProver addAssertion (lenTerm === str.size)
 
           Some(lengthProver)
         } else {
