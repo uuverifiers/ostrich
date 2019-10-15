@@ -47,7 +47,8 @@ class OstrichSolver(theory : OstrichStringTheory,
 
   private val p = theory.functionPredicateMap
 
-  def findStringModel(goal : Goal) : Option[Map[Term, List[Int]]] = {
+  def findStringModel(goal : Goal)
+                    : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
     val order = goal.order
 
@@ -238,9 +239,10 @@ class OstrichSolver(theory : OstrichStringTheory,
                               lProver, lengthVars.toMap, containsLength, flags)
 
       exploration.findModel match {
-        case Some(model) => Some((model mapValues (_.toList)) ++
-                                 (concreteWords mapValues (_.toList)))
-        case None        => None
+        case Some(model) =>
+          Some(model ++ (for ((v, w) <- concreteWords) yield (v, Right(w))))
+        case None =>
+          None
       }
     }
   }

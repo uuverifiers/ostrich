@@ -25,7 +25,7 @@ import IExpression.Predicate
 import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
 import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate}
-import ap.terfor.{Term, TermOrder}
+import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
@@ -150,7 +150,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           : Option[(Conjunction, Conjunction)] = None
 
     private val modelCache =
-      new ap.util.LRUCache[Conjunction, Option[Map[Term, List[Int]]]](3)
+      new ap.util.LRUCache[Conjunction,
+                           Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
@@ -172,14 +173,27 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     }
 
     override def generateModel(goal : Goal) : Option[Conjunction] =
-      if (Seqs.disjointSeq(goal.facts.predicates, predicates))
+      if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
         None
-      else
-        Some(assignStringValues(goal.facts,
-                                (modelCache(goal.facts) {
-                                  ostrichSolver.findStringModel(goal)
-                                }).get,
-                                goal.order))
+      } else {
+        val model = (modelCache(goal.facts) {
+          ostrichSolver.findStringModel(goal)
+        }).get
+        implicit val order = goal.order
+
+        val stringAssignments =
+          assignStringValues(goal.facts,
+                             for ((x, Right(w)) <- model) yield (x, w),
+                             order)
+
+        import TerForConvenience._
+        val lenAssignments =
+          eqZ(for ((x, Left(len)) <- model;
+                if x.constants subsetOf order.orderedConstants)
+              yield l(x - len))
+
+        Some(stringAssignments & lenAssignments)
+      }
 
   })
 
