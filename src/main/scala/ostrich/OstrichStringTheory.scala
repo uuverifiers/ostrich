@@ -214,6 +214,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     f
   }
 
+  override def iPreprocess(f : IFormula, signature : Signature)
+                          : (IFormula, Signature) = {
+    val visitor = new OstrichPreprocessor (this)
+    (visitor(f), signature)
+  }
+
   TheoryRegistry register this
   StringTheory register this
 
