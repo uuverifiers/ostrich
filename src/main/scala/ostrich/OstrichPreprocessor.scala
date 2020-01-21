@@ -96,14 +96,41 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val containingOrSuffix =
         reUnion(List(containingStr) ++ forbiddenSuffixREs : _*)
 
-      val res = eps(StringSort.ex(StringSort.ex(
+      eps(StringSort.ex(StringSort.ex(
         (ind === -1 & !str_in_re(shBigStr3, containingStr)) |
         (ind === str_len(v(0)) &
            strCat(v(0), subStr, v(1)) === shBigStr3 &
            !str_in_re(v(0), containingOrSuffix))
       )))
+    }
 
-      res
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
+      val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
+      val shBegin3  = VariableShiftVisitor(begin, 0, 3)
+      val shLen3    = VariableShiftVisitor(len, 0, 3)
+
+      eps(StringSort.ex(StringSort.ex(
+        strCat(v(1), v(2), v(0)) === shBigStr3 &
+        str_len(v(1)) === shBegin3 &
+        str_len(v(2)) === shLen3     // TODO: what should happen when
+                                     // extracting more characters than
+                                     // a string contains?
+      )))
+    }
+
+    case (IFunApp(`str_at`, _),
+          Seq(bigStr : ITerm, index : ITerm)) => {
+      val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
+      val shIndex3  = VariableShiftVisitor(index, 0, 3)
+
+      eps(StringSort.ex(StringSort.ex(
+        strCat(v(1), v(2), v(0)) === shBigStr3 &
+        str_len(v(1)) === shIndex3 &
+        str_in_re(v(2), re_allchar()) // TODO: what should happen when
+                                      // extracting a character outside of the
+                                      // string range?
+      )))
     }
 
     case (t, _) =>
