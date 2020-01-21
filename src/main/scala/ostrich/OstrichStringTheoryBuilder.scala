@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2019  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2019-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   Console.withOut(Console.err) {
     println
     println("Loading " + name + ", a solver for string constraints")
-    println("(c) Matthew Hague, Philipp Rümmer, 2019")
+    println("(c) Matthew Hague, Philipp Rümmer, 2018-2020")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
