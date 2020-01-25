@@ -213,6 +213,13 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     ////////////////////////////////////////////////////////////////////////////
 
+    def printTime[A](msg : String)(comp : => A) : A = {
+      val startTime = System.currentTimeMillis
+      val res : A = comp
+      println(msg + " (ms): " + (System.currentTimeMillis - startTime))
+      res
+    }
+
     SimpleAPI.withProver { lengthProver =>
       if (flags.tryMonadicDecomp) {
       if (useLength) {
@@ -238,7 +245,7 @@ class OstrichSolver(theory : OstrichStringTheory,
             c
           }
 
-        println("Relevant length variables: " + (lengthConstants mkString ", "))
+        println("Relevant length variables (" + lengthConstants.size + "): " + (lengthConstants mkString ", "))
 
         import lengthProver._
 
@@ -255,7 +262,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         println(pp(lengthConstraint1))
 
         println
-        (new modec.Modec(lengthConstraint1)).result match {
+        printTime("modec1") { (new modec.Modec(lengthConstraint1)).result } match {
           case Some(d) =>
             println("Monadic decomposition succeeded (1): " + pp(d))
           case None => {
@@ -282,7 +289,7 @@ class OstrichSolver(theory : OstrichStringTheory,
             println(pp(lengthConstraint2))
 
             println
-            (new modec.Modec(lengthConstraint2)).result match {
+            printTime("modec2") { (new modec.Modec(lengthConstraint2)).result } match {
               case Some(d) =>
                 println("Monadic decomposition succeeded (2): " + pp(d))
               case None => {
@@ -302,7 +309,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                 println(pp(lengthConstraint3))
 
                 println
-                (new modec.Modec(lengthConstraint3)).result match {
+                printTime("modec3") { (new modec.Modec(lengthConstraint3)).result } match {
                   case Some(d) =>
                     println("Monadic decomposition succeeded (3): " + pp(d))
                   case None =>
