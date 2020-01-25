@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2019  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,9 +50,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
   private val p = theory.functionPredicateMap
 
-  def findStringModel(goal : Goal) : Option[Map[Term, List[Int]]] = {
+  def findStringModel(goal : Goal)
+                    : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
-    implicit val order = goal.order
+    val order = goal.order
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
@@ -150,6 +151,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     {
       import TerForConvenience._
+      implicit val o = order
 
       val lengthConstants =
         (for (t <- lengthVars.values.iterator;
@@ -326,6 +328,12 @@ class OstrichSolver(theory : OstrichStringTheory,
             lengthVars.getOrElseUpdate(
               t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
 
+          import TerForConvenience._
+          implicit val o = lengthProver.order
+
+          for ((strVar, lenTerm) <- lengthVars; str <- concreteWords get strVar)
+            lengthProver addAssertion (lenTerm === str.size)
+
           Some(lengthProver)
         } else {
           None
@@ -340,9 +348,10 @@ class OstrichSolver(theory : OstrichStringTheory,
                               lProver, lengthVars.toMap, containsLength, flags)
 
       exploration.findModel match {
-        case Some(model) => Some((model mapValues (_.toList)) ++
-                                 (concreteWords mapValues (_.toList)))
-        case None        => None
+        case Some(model) =>
+          Some(model ++ (for ((v, w) <- concreteWords) yield (v, Right(w))))
+        case None =>
+          None
       }
       }
     }

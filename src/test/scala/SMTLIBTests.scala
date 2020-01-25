@@ -135,4 +135,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("escapeSequences-1b.smt2") =
     checkFile("tests/escapeSequences-1b.smt2", "sat")
 
+  property("len-bug.smt2") =
+    checkFile("tests/len-bug.smt2", "unsat")
+
 }

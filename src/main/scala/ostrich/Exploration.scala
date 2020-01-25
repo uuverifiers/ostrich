@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2019  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,7 +95,8 @@ object Exploration {
     new LazyExploration(funApps, initialConstraints, concreteValues,
                         lengthProver, lengthVars, strictLengths, flags)
 
-  private case class FoundModel(model : Map[Term, Seq[Int]]) extends Exception
+  private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
+          extends Exception
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -159,18 +160,20 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   for ((ops, t) <- sortedFunApps)
     if (ops.size > 1 && !(concreteValues contains t))
-      throw new Exception("Multiple definitions found for " + t)
+      throw new Exception("Multiple definitions found for " + t +
+                          ", input is not straightline")
 
   val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
 
-  Console.withOut(Console.err) {
-    println("   Considered function applications:")
-    for ((apps, res) <- sortedFunApps) {
-      println("   " + res + " =")
-      for ((op, args) <- apps)
-        println("     " + op + "(" + (args mkString ", ") + ")")
+  if (!sortedFunApps.isEmpty)
+    Console.withOut(Console.err) {
+      println("   Considered function applications:")
+      for ((apps, res) <- sortedFunApps) {
+        println("   " + res + " =")
+        for ((op, args) <- apps)
+          println("     " + op + "(" + (args mkString ", ") + ")")
+      }
     }
-  }
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -230,7 +233,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   private val constraintStores = new MHashMap[Term, ConstraintStore]
 
-  def findModel : Option[Map[Term, Seq[Int]]] = {
+  /**
+   * Check for existence of a model. A model maps each integer variable
+   * to an integer, and each string variable to a list of characters.
+   */
+  def findModel : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     for (t <- allTerms)
       constraintStores.put(t, newStore(t))
 
@@ -300,7 +307,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     case List() => {
       // we are finished and just have to construct a model
-      val model = new MHashMap[Term, Seq[Int]]
+      val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
 
       val lengthModel =
         if (strictLengths) {
@@ -319,32 +326,47 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
              tlen <- evalTerm(lengthVar)(lModel))
         yield tlen
 
+      // values for string variables
       for (t <- leafTerms) {
         val store = constraintStores(t)
         model.put(t,
-                  (for (tlen <- getVarLength(t))
-                   yield store.getAcceptedWordLen(tlen.intValueSafe))
-                  .getOrElse(store.getAcceptedWord))
+                  Right((for (tlen <- getVarLength(t))
+                         yield store.getAcceptedWordLen(tlen.intValueSafe))
+                        .getOrElse(store.getAcceptedWord)))
       }
 
+      // values for integer variables
+      for (lModel <- lengthModel;
+           (_, c) <- lengthVars;
+           if c.constants.size == 1;
+           cVal <- evalTerm(c)(lModel))
+        model.put(c, Left(cVal))
+
       for ((ops, res) <- sortedFunApps.reverseIterator;
-           (op, args) <- ops.iterator) {
-        val resValue = op.eval(args map model) match {
+           (op, args) <- ops.iterator;
+           argValues = args map model) {
+        if (argValues exists (_.isLeft))
+          throw new Exception(
+            "Model extraction failed: " + op +
+            " is only defined for string arguments")
+
+        val argStrings : Seq[Seq[Int]] = argValues map (_.right.get)
+
+        val resValue = Right(op.eval(argStrings) match {
           case Some(v) => v
           case None =>
             throw new Exception(
               "Model extraction failed: " + op + " is not defined for " +
-              (args map model).mkString(", "))
-        }
+              argStrings.mkString(", "))
+        })
 
         for (oldValue <- model get res)
           if (resValue != oldValue)
             throw new Exception("Model extraction failed: " +
-                                (oldValue mkString ", ") + " != " +
-                                (resValue mkString ", "))
+                                oldValue + " != " + resValue)
 
         for (resLen <- getVarLength(res))
-          if (resValue.size != resLen.intValueSafe)
+          if (resValue.right.get.size != resLen.intValueSafe)
             throw new Exception(
               "Could not satisfy length constraints for " + res)
 
