@@ -700,6 +700,14 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
         measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints, aut) } match {
           case Some(core) => {
+            if (_flags.autCertificates) {
+              println("=====================================================")
+              println("The following " + core.size  + " automata have empty intersection:")
+              for ((aut, n) <- core.iterator.zipWithIndex) {
+                println("Automaton " + (n+1) + ":")
+                AutomataUtils outputAutomaton aut
+              }
+            }
             addIncAutomata(core)
             Some(for (a <- core.toList) yield TermConstraint(t, a))
           }

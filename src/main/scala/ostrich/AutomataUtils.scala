@@ -547,4 +547,7 @@ object AutomataUtils {
       }
     }
   }
+
+  def outputAutomaton(aut : Automaton) : Unit =
+    println(AtomicStateAutomatonAdapter intern aut)
 }
