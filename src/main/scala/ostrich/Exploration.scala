@@ -698,7 +698,16 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           potentialConflicts = potentialConflicts.tail
         }
 
-        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints, aut) } match {
+        measure("AutomataUtils.findUnsatCore") {
+            if (!constraints.isEmpty && _flags.autCertificates) {
+              println("=====================================================")
+              println("Checking whether the following " + constraints.size  + " automata have empty intersection:")
+              for ((aut, n) <- constraints.iterator.zipWithIndex) {
+                println("Automaton " + (n+1) + ":")
+                AutomataUtils outputAutomaton aut
+              }
+            }
+          AutomataUtils.findUnsatCore(constraints, aut) } match {
           case Some(core) => {
             if (_flags.autCertificates) {
               println("=====================================================")
