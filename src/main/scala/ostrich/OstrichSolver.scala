@@ -62,7 +62,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     if (containsLength)
       Console.err.println(
-        "Warning: using +length to handle length constraints")
+        "Warning: assuming -length=on to handle length constraints")
 
     val wordExtractor = theory.WordExtractor(goal)
     val regexExtractor = theory.RegexExtractor(goal)
