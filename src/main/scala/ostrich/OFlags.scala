@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,20 @@
 
 package ostrich
 
+object OFlags {
+
+  object LengthOptions extends Enumeration {
+    val Off, On, Auto = Value
+  }
+
+}
+
 case class OFlags(
 
   // Pre-image specific options
   eagerAutomataOperations : Boolean = false,
   measureTimes : Boolean = false,
-  useLength : Boolean = false,
+  useLength : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto,
   forwardApprox : Boolean = false
 
 )

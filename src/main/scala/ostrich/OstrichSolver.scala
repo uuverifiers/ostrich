@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018-2019  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,7 +54,11 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
-    val useLength = containsLength || flags.useLength
+    val useLength = flags.useLength match {
+      case OFlags.LengthOptions.Off  => false
+      case OFlags.LengthOptions.On   => true
+      case OFlags.LengthOptions.Auto => containsLength
+    }
 
     if (containsLength)
       Console.err.println(
