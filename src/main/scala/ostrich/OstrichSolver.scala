@@ -54,19 +54,26 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
+
     val useLength = flags.useLength match {
-      case OFlags.LengthOptions.Off  =>
+
+      case OFlags.LengthOptions.Off  => {
+        if (containsLength)
+          Console.err.println(
+            "Warning: problem uses the string length operator, but -length=off")
         false
+      }
+
       case OFlags.LengthOptions.On   =>
         true
-      case OFlags.LengthOptions.Auto =>
-        if (containsLength) {
+
+      case OFlags.LengthOptions.Auto => {
+        if (containsLength)
           Console.err.println(
             "Warning: assuming -length=on to handle length constraints")
-          true
-        } else {
-          false
-        }
+        containsLength
+      }
+
     }
 
     val wordExtractor = theory.WordExtractor(goal)
