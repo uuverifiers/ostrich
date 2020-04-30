@@ -55,14 +55,19 @@ class OstrichSolver(theory : OstrichStringTheory,
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
     val useLength = flags.useLength match {
-      case OFlags.LengthOptions.Off  => false
-      case OFlags.LengthOptions.On   => true
-      case OFlags.LengthOptions.Auto => containsLength
+      case OFlags.LengthOptions.Off  =>
+        false
+      case OFlags.LengthOptions.On   =>
+        true
+      case OFlags.LengthOptions.Auto =>
+        if (containsLength) {
+          Console.err.println(
+            "Warning: assuming -length=on to handle length constraints")
+          true
+        } else {
+          false
+        }
     }
-
-    if (containsLength)
-      Console.err.println(
-        "Warning: assuming -length=on to handle length constraints")
 
     val wordExtractor = theory.WordExtractor(goal)
     val regexExtractor = theory.RegexExtractor(goal)
@@ -237,10 +242,10 @@ class OstrichSolver(theory : OstrichStringTheory,
       val exploration =
         if (eagerMode)
           Exploration.eagerExp(funApps, regexes, concreteWords.toMap,
-                               lProver, lengthVars.toMap, containsLength, flags)
+                               lProver, lengthVars.toMap, useLength, flags)
         else
           Exploration.lazyExp(funApps, regexes, concreteWords.toMap,
-                              lProver, lengthVars.toMap, containsLength, flags)
+                              lProver, lengthVars.toMap, useLength, flags)
 
       exploration.findModel match {
         case Some(model) =>

@@ -128,10 +128,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val supportedPreds : Set[Predicate] =
     Set(str_in_re) ++
     (for (f <- Set(str_empty, str_cons,
-                   str_++, str_len, str_replace, str_replaceall,
+                   str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_to_re,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_*, re_+, re_opt))
+     yield functionPredicateMap(f)) ++
+    (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++
     (for ((_, e) <- extraOps.iterator) yield e match {
        case Left(f) => functionPredicateMap(f)
