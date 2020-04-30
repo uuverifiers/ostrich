@@ -90,9 +90,9 @@ until [ $success -eq 0 ]; do
 	    case "$var" in
                 [+-]eager | [+-]forward | -length=*)
                     if [ x"$ostrichParams" = x"" ]; then
-                        ostrichParams=$p
+                        ostrichParams=$var
                     else
-                        ostrichParams=$ostrichParams,$p
+                        ostrichParams=$ostrichParams,$var
                     fi
                     ;;
 		-*|+*)
