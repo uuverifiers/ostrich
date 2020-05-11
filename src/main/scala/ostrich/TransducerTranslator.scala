@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import ap.SimpleAPI
 import ap.basetypes.IdealInt
 import SimpleAPI.ProverStatus
 import ap.theories.ModuloArithmetic
-import ap.theories.strings.StringTheoryBuilder
+import ap.theories.strings.{StringTheory, StringTheoryBuilder}
 
 /**
  * Helper methods to translate transducers in symbolic representation
@@ -36,7 +36,8 @@ object TransducerTranslator {
   import StringTheoryBuilder._
 
   def toBricsTransducer(transducer : SymTransducer,
-                        alphabetSize : Int) : Transducer = {
+                        alphabetSize : Int,
+                        transducerStringTheory : StringTheory) : Transducer = {
     val SymTransducer(transitions, accepting) = transducer
     val states =
       (for (TransducerTransition(from, to, _, _) <- transitions.iterator;
@@ -58,6 +59,8 @@ object TransducerTranslator {
       builder.setAccept(states2Brics(s), true)
 
     SimpleAPI.withProver { p =>
+
+      p.addTheory(transducerStringTheory)
 
       val inputC, outputC =
         p.createConstant(ModuloArithmetic.ModSort(IdealInt.ZERO,
@@ -100,6 +103,10 @@ object TransducerTranslator {
 
           case Seq(false, outEps) => {
             val presLabel = p.simplify(bvLabel)
+            if (!ContainsSymbol.isPresburger(presLabel))
+              throw new Exception(
+                "Could not translate constraint: " + p.pp(constraint))
+
             val splitLabel = NegEqSplitter(Transform2NNF(presLabel))
             
             for (disjunct <- DNFConverter mbDNF splitLabel) {

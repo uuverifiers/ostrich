@@ -81,7 +81,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       for ((name, transducer) <- transducers) yield {
         Console.err.println("Translating transducer " + name + " ...")
         val aut = TransducerTranslator.toBricsTransducer(
-                    transducer, OstrichStringTheory.alphabetSize)
+                    transducer, OstrichStringTheory.alphabetSize,
+                    getTransducerTheory.get)
         (name, aut)
       }
 

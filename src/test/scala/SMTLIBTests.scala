@@ -87,6 +87,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("transducer1.smt2") =
     checkFile("tests/transducer1.smt2", "sat")
+  property("transducer1b.smt2") =
+    checkFile("tests/transducer1b.smt2", "sat")
+  property("transducer1c.smt2") =
+    checkFile("tests/transducer1c.smt2", "sat")
   property("transducer2.smt2") =
     checkFile("tests/transducer2.smt2", "unsat")
   property("transducer2b.smt2") =
