@@ -32,18 +32,18 @@
 
 package ostrich
 
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
-                           Automaton => BAutomaton, State => BState}
+import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, Automaton => BAutomaton, State => BState}
 
-import scala.collection.JavaConversions.{asScalaIterator,
-                                         iterableAsScalaIterable}
-import scala.collection.mutable.{HashMap => MHashMap,
-                                 HashSet => MHashSet,
-                                 LinkedHashSet => MLinkedHashSet,
-                                 Stack => MStack,
-                                 TreeSet => MTreeSet,
-                                 MultiMap => MMultiMap,
-                                 Set => MSet}
+import scala.collection.JavaConversions.{asScalaIterator, iterableAsScalaIterable}
+import scala.collection.mutable.
+  {HashMap => MHashMap,
+    HashSet => MHashSet,
+    LinkedHashSet => MLinkedHashSet,
+    Stack => MStack,
+    TreeSet => MTreeSet,
+    MultiMap => MMultiMap,
+  Set => MSet
+}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -311,9 +311,12 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
 }
 
 /**
- * Wrapper for the BRICS automaton class
- */
-class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
+  * Wrapper for the BRICS automaton class
+  */
+class BricsAutomaton(val underlying: BAutomaton)
+    extends AtomicStateAutomaton
+    with Graphable[BState, (Char, Char)]
+    with RichGraph[BState, (Char, Char)] {
 
   import BricsAutomaton.toBAutomaton
 
@@ -321,6 +324,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   type State = BState
   type TLabel = (Char, Char)
+  type FromLabelTo = (State, TLabel, State)
 
   override val LabelOps = BricsTLabelOps
 
@@ -459,8 +463,28 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
-}
 
+  // BEGIN GRAPH TRAIT IMPLEMENTATION
+  def allNodes() = states.to
+  def edges() = transitions.to
+  def transitionsFrom(node: State) =
+    outgoingTransitions(node).map(t => (node, t._2, t._1)).toSeq
+  // FIXME this is ugly
+  def subgraph(selectedNodes: Set[State]): RichGraph[State, TLabel] =
+    this.dropEdges(Set()).subgraph(selectedNodes)
+  def dropEdges(edgesToDrop: Set[(State, TLabel, State)]) = {
+    new MapGraph(edges.toSet &~ edgesToDrop)
+  }
+
+  def addEdges(edgesToAdd: Iterable[(State, TLabel, State)]) = {
+    val selectedEdges: Set[(State, TLabel, State)] = this
+      .edges()
+      .toSet ++ edgesToAdd
+    new MapGraph(selectedEdges.toSeq)
+  }
+  // END GRAPH TRAIT IMPLEMENTATION
+
+}
 
 /**
  * For constructing manually (immutable) BricsAutomaton objects
