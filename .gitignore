@@ -1,0 +1,7 @@
+/project/build.properties
+/.bloop
+/.metals
+/project/metals.sbt
+/target
+/project/project
+/project/target
