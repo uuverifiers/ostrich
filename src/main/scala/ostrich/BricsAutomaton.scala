@@ -107,7 +107,7 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    */
   def intersectLabels(l1 : (Char, Char),
                       l2 : (Char, Char)) : Option[(Char, Char)] = {
-    Option(l1._1 max l2._1, l1._2 min l2._2).filter(isNonEmptyLabel(_))
+    Option((l1._1 max l2._1, l1._2 min l2._2)).filter(isNonEmptyLabel(_))
   }
 
   /**
@@ -243,7 +243,7 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
     new BricsTLabelEnumerator(disjointLabels.iterator ++ Iterator((a, a)))
 
   private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
-    var disjoint = new MTreeSet[(Char, Char)]()
+    val disjoint = new MTreeSet[(Char, Char)]()
 
     val mins = new MTreeSet[Char]
     val maxes = new MTreeSet[Char]
@@ -377,8 +377,6 @@ class BricsAutomaton(val underlying: BAutomaton)
 
     while(!worklist.isEmpty) {
       val s = worklist.pop
-
-      val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
       for ((to, _) <- outgoingTransitions(s)) {
         if (!seenstates.contains(to)) {
