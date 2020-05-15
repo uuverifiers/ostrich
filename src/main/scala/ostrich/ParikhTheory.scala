@@ -74,7 +74,7 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
   // length counting. We *should* design a better trait and use a mixin to add
   // registers.
   private implicit class DummyRegisterAutomata(
-      private val aut: BricsAutomaton
+      private val a: aut.type
   ) {
     def transitionIncrement(t: aut.FromLabelTo)(_regId: Int): IdealInt =
       IdealInt.ONE
@@ -82,29 +82,6 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
   }
 
   private val cycles = trace("cycles")(aut.simpleCycles)
-
-  private val cutAndCycle = cycles.flatMap { cycle =>
-    trace("cycle head")(cycle.last)
-    val cycleMerged = aut.mergeNodes(cycle)
-    val initialState = cycleMerged equivalentNode aut.initialState
-    val cycleState = cycleMerged equivalentNode cycle.last
-    if (initialState == cycleState) List()
-    else {
-      val connectingEdges = trace("connectingEdges") {
-        cycleMerged
-          .minCut(
-            initialState,
-            cycleState
-          )
-          .flatMap { case (_, realEdges, _) => realEdges }
-      }
-
-      if (connectingEdges.isEmpty) List() else List((connectingEdges, cycle))
-    }
-
-  }.toIndexedSeq
-
-  trace("cutAndCycle")(cutAndCycle)
 
   // This describes the status of a transition in the current model
   protected sealed trait TransitionSelected {
@@ -261,7 +238,7 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
             .map(asStateFlowSum)
             .map {
               case (state, flowSum) =>
-                if (state.isAccept) flowSum >= 0 else flowSum === 0
+                if (aut isAccept state) flowSum >= 0 else flowSum === 0
             }
         )
       }
@@ -297,7 +274,7 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
           registerValuesReachable(registerVars, transitionAndVar)
         )
 
-        val maybeAtom = if (cutAndCycle.isEmpty) List() else List(atom)
+        val maybeAtom = if (cycles.isEmpty) List() else List(atom)
 
         trace(s"Rewriting predicate ${atom} => \n") {
           Conjunction.conj(maybeAtom ++ constraints, order)
