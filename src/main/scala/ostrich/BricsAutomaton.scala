@@ -43,7 +43,15 @@ import scala.collection.mutable.
     TreeSet => MTreeSet,
     MultiMap => MMultiMap,
   Set => MSet
+  }
+
+import ap.{SimpleAPI}
+import ap.parser.{IExpression}
+import ap.terfor.{
+TerForConvenience, Formula
 }
+import ap.terfor.conjunctions.Conjunction
+import ap.terfor.substitutions.ConstantSubst
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -482,6 +490,31 @@ class BricsAutomaton(val underlying: BAutomaton)
   }
   // END GRAPH TRAIT IMPLEMENTATION
 
+
+  // FIXME: just return a theory predicate formula!
+  override lazy val getLengthAbstraction: Formula =  {
+      import TerForConvenience._
+      import IExpression.or
+      val parikhTheory = new ParikhTheory(this)
+      SimpleAPI.withProver { p =>
+        import p._
+
+        val length = createConstantRaw("length")
+        addAssertion(parikhTheory allowsRegisterValues Seq(length))
+
+        setMostGeneralConstraints(true)
+        makeExistential(Seq(length))
+
+        println("result: " + ???)
+        if (getConstraint.isTrue) {
+          Conjunction.TRUE
+        } else {
+          println("parikh image from theory:" + pp(~getConstraint))
+          ConstantSubst(length, v(0), p.order)(Conjunction.negate(getConstraintRaw, p.order))
+        }
+      }
+    }
+
 }
 
 /**
@@ -554,6 +587,7 @@ class BricsAutomatonBuilder
       baut.minimize
     new BricsAutomaton(baut)
   }
+
 }
 
 
