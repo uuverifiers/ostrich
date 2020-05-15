@@ -133,6 +133,11 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       )))
     }
 
+    case (IFunApp(`re_range`, _),
+          Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
+              IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
+      re_charrange(lower, upper)
+
     case (t, _) =>
       t update subres
   }
