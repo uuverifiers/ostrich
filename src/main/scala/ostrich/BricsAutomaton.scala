@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,7 +150,7 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
     extends TLabelEnumerator[(Char, Char)] {
   /**
    * Keep track of disjoint labels for fast range lookups in
-   * enumLabelOverlap.  Access with getDisjointLabels.
+   * enumLabelOverlap.  Access with enumDisjointlabels.
    */
   private lazy val disjointLabels : MTreeSet[(Char, Char)] =
     calculateDisjointLabels

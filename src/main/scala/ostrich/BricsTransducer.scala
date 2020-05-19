@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,10 +37,10 @@ object BricsTransducer {
 
   def getBuilder : BricsTransducerBuilder =
     new BricsTransducerBuilder
-}
 
-class TransducerState extends BState {
-  override def toString = "q" + hashCode
+  class TransducerState extends BState {
+    override def toString = "q" + hashCode
+  }
 }
 
 /**
@@ -56,6 +56,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
                                       Set[BricsTransducer#TETransition]],
                       val acceptingStates : Set[BricsAutomaton#State])
     extends Transducer {
+  import BricsTransducer.TransducerState
 
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
@@ -539,7 +540,7 @@ class BricsTransducerBuilder
         MLinkedHashSet.empty[BricsTransducer#TETransition]
     }
 
-  def getNewState : BricsAutomaton#State = new TransducerState
+  def getNewState : BricsAutomaton#State = new BricsTransducer.TransducerState
 
   def setInitialState(s : BricsAutomaton#State) = {
     initialState = s
