@@ -29,9 +29,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 str_to_re}
-
-  // TODO: directly encode re.^, re.loop, BRICS supports them!
+                 re_loop, str_to_re}
 
   def buildBricsRegex(t : ITerm) : String = t match {
     case IFunApp(`re_none`, _) =>
@@ -59,6 +57,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
       "(" + buildBricsRegex(a) + ")?"
     case IFunApp(`re_comp`, Seq(a)) =>
       "~(" + buildBricsRegex(a) + ")"
+    case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) =>
+      "(" + buildBricsRegex(a) + "){" + n1 + "," + n2 + "}"
     case IFunApp(`str_to_re`, Seq(a)) =>
       StringTheory.term2List(a) match {
         case Seq() =>

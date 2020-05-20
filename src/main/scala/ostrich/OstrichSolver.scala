@@ -39,11 +39,11 @@ class OstrichSolver(theory : OstrichStringTheory,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 FunPred}
+                 re_loop, FunPred}
 
   val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
-        re_*, re_+, re_opt, re_comp, str_to_re)
+        re_*, re_+, re_opt, re_comp, re_loop, str_to_re)
 
   private val p = theory.functionPredicateMap
 
