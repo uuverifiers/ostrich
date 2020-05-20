@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Philipp Ruemmer
+ * Copyright (C) 2018-2020  Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,8 @@ import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
 class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
-                 re_++, re_union, re_inter, re_*, re_+, re_opt, str_to_re}
+                 re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
+                 re_loop, str_to_re}
 
   def buildBricsRegex(t : ITerm) : String = t match {
     case IFunApp(`re_none`, _) =>
@@ -54,10 +55,19 @@ class Regex2Aut(theory : OstrichStringTheory) {
       "(" + buildBricsRegex(a) + ")+"
     case IFunApp(`re_opt`, Seq(a)) =>
       "(" + buildBricsRegex(a) + ")?"
+    case IFunApp(`re_comp`, Seq(a)) =>
+      "~(" + buildBricsRegex(a) + ")"
+    case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) =>
+      "(" + buildBricsRegex(a) + "){" + n1 + "," + n2 + "}"
     case IFunApp(`str_to_re`, Seq(a)) =>
-      (for (v <- StringTheory.term2List(a);
-            c <- "[\\" + numToUnicode(v) + "]")
-       yield c).mkString
+      StringTheory.term2List(a) match {
+        case Seq() =>
+          "()"
+        case str => 
+          (for (v <- str;
+                c <- "[\\" + numToUnicode(v) + "]")
+           yield c).mkString
+      }
     case _ =>
       throw new IllegalArgumentException
   }

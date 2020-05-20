@@ -45,6 +45,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex3.smt2", "sat")
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
+  property("empty-union.smt2") =
+    checkFile("tests/empty-union.smt2", "sat")
 
   property("concat-regex.smt2 eager") =
     checkFileOpts("tests/concat-regex.smt2", "sat", "+eager")
@@ -54,6 +56,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/concat-regex3.smt2", "sat", "+eager")
   property("concat-regex4.smt2 eager") =
     checkFileOpts("tests/concat-regex4.smt2", "sat", "+eager")
+
+  property("loop.smt2") =
+    checkFile("tests/loop.smt2", "sat")
+  property("loop2.smt2") =
+    checkFile("tests/loop2.smt2", "unsat")
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
@@ -146,6 +153,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/prefix.smt2", "sat")
   property("prefix2.smt2") =
     checkFile("tests/prefix2.smt2", "unsat")
+  property("prefix3.smt2") =
+    checkFile("tests/prefix3.smt2", "sat")
 
   property("indexof.smt2") =
     checkFile("tests/indexof.smt2", "sat")
