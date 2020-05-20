@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,6 +98,11 @@ trait TransducerBuilder[State, TLabel] {
    * Initial state of transducer being built
    */
   def initialState : State
+
+  /**
+   * Set the initial state of the transducer being built
+   */
+  def setInitialState(s : State) : Unit
 
   /**
    * A fresh state that can be added to the transducer

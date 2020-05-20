@@ -64,6 +64,11 @@ object Exploration {
     def ensureCompleteLengthConstraints : Unit
 
     /**
+     * Check whether some word is accepted by all the stored constraints
+     */
+    def isAcceptedWord(w : Seq[Int]) : Boolean
+
+    /**
      * Produce an arbitrary word accepted by all the stored constraints
      */
     def getAcceptedWord : Seq[Int]
@@ -352,18 +357,26 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
         val argStrings : Seq[Seq[Int]] = argValues map (_.right.get)
 
-        val resValue = Right(op.eval(argStrings) match {
-          case Some(v) => v
-          case None =>
-            throw new Exception(
-              "Model extraction failed: " + op + " is not defined for " +
-              argStrings.mkString(", "))
-        })
+        val resString =
+          op.eval(argStrings) match {
+            case Some(v) => v
+            case None =>
+              throw new Exception(
+                "Model extraction failed: " + op + " is not defined for " +
+                argStrings.mkString(", "))
+          }
+
+        val resValue : Either[IdealInt, Seq[Int]] = Right(resString)
 
         for (oldValue <- model get res)
           if (resValue != oldValue)
             throw new Exception("Model extraction failed: " +
                                 oldValue + " != " + resValue)
+
+        if (!(constraintStores(res) isAcceptedWord resString))
+          throw new Exception(
+            "Could not satisfy regex constraints for " + res +
+            ", maybe the problems involves non-functional transducers?")
 
         for (resLen <- getVarLength(res))
           if (resValue.right.get.size != resLen.intValueSafe)
@@ -583,6 +596,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def ensureCompleteLengthConstraints : Unit = ()
 
+    def isAcceptedWord(w : Seq[Int]) : Boolean =
+      currentConstraint match {
+        case Some(aut) => aut(w)
+        case None      => true
+      }
+
     def getAcceptedWord : Seq[Int] =
       currentConstraint match {
         case Some(aut) => aut.getAcceptedWord.get
@@ -729,6 +748,9 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                               for (a <- constraints)
                               yield TermConstraint(t, a))
       }
+
+    def isAcceptedWord(w : Seq[Int]) : Boolean =
+      constraints forall (_(w))
 
     def getAcceptedWord : Seq[Int] =
       constraints match {

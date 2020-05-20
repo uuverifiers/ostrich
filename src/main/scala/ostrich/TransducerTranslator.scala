@@ -26,10 +26,15 @@ import SimpleAPI.ProverStatus
 import ap.theories.ModuloArithmetic
 import ap.theories.strings.{StringTheory, StringTheoryBuilder}
 
+import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet,
+                                 ArrayBuffer}
+
 /**
  * Helper methods to translate transducers in symbolic representation
  * (an arbitrary formula associated with each transition) to the
  * Brics representation.
+ * 
+ * TODO: check that transducers are deterministic!
  */
 object TransducerTranslator {
 
@@ -40,23 +45,32 @@ object TransducerTranslator {
                         transducerStringTheory : StringTheory) : Transducer = {
     val SymTransducer(transitions, accepting) = transducer
     val states =
-      (for (TransducerTransition(from, to, _, _) <- transitions.iterator;
+      (for (TransducerTransition(from, to, _, _, _) <- transitions.iterator;
             s <- Iterator(from, to))
        yield s).toSet ++ accepting ++ List(0)
 
     if (!(transitions forall {
-            case TransducerTransition(_, _, epsilons, _) => epsilons.size == 2
+            case TransducerTransition(_, _, epsilons, _,_) => epsilons.size == 2
           }))
       throw new Exception(
         "Can only handle 2-track transducers")
 
-    val builder = BricsTransducer.getBuilder
+    val usePriorities =
+      transducer.transitions exists { t => !t.blockedTransitions.isEmpty }
+    val builder =
+      if (usePriorities)
+        BricsPrioTransducer.getBuilder
+      else
+        BricsTransducer.getBuilder
 
     val states2Brics =
       (for (s <- states.toList.sorted) yield (s -> builder.getNewState)).toMap
 
     for (s <- accepting)
       builder.setAccept(states2Brics(s), true)
+
+    val epsTransitions =
+      new MHashMap[Int, ArrayBuffer[TransducerTransition]]
 
     SimpleAPI.withProver { p =>
 
@@ -66,14 +80,19 @@ object TransducerTranslator {
         p.createConstant(ModuloArithmetic.ModSort(IdealInt.ZERO,
                                                   IdealInt(alphabetSize - 1)))
 
-      for (TransducerTransition(fromState, toState, epsilons, constraint) <-
-             transitions) {
+      for (transition@
+             TransducerTransition(fromState, toState, epsilons, constraint,
+                                blockedTransitions) <- transitions) {
 
         val bvLabel =
           VariableSubstVisitor(constraint, (List(inputC, outputC), 0))
 
         epsilons match {
           case Seq(true, false) => p.scope {
+            if (!blockedTransitions.isEmpty)
+              throw new Exception(
+                "Priorities can only be use for epsilon-transitions")
+
             import p._
             !! (bvLabel)
             while (??? == ProverStatus.Sat) {
@@ -90,18 +109,15 @@ object TransducerTranslator {
             }
           }
 
-          case Seq(true, true) => {
-            val op = OutputOp("", NOP, "")
-
-            Console.err.println("" + fromState +
-                                "- <eps> -> " +
-                                "" + toState + ": \t" + op)
-
-            builder.addETransition(states2Brics(fromState), op,
-                                   states2Brics(toState))
-          }
+          case Seq(true, true) =>
+            epsTransitions.getOrElseUpdate(fromState, new ArrayBuffer) +=
+              transition
 
           case Seq(false, outEps) => {
+            if (!blockedTransitions.isEmpty)
+              throw new Exception(
+                "Priorities can only be use for epsilon-transitions")
+
             val presLabel = p.simplify(bvLabel)
             if (!ContainsSymbol.isPresburger(presLabel))
               throw new Exception(
@@ -159,6 +175,65 @@ object TransducerTranslator {
         }
       }
 
+    }
+
+    val nop = OutputOp("", NOP, "")
+
+    for (fromState <- epsTransitions.keys.toVector.sorted) {
+      val transitions = epsTransitions(fromState)
+
+      if (transitions exists {
+            case TransducerTransition(_, _, _, _, blocked) =>
+              blocked exists {
+                case BlockedTransition(_, Seq(false, true)) => false
+                case _ => true
+              }
+          })
+        throw new Exception (
+          "Priority guards can only quantify the second track of a transducer")
+
+      val allTransitions =
+        for (TransducerTransition(_, toState, _, _, blockedTransitions) <-
+               transitions) yield {
+          val blockedStates =
+            for (BlockedTransition(s, _) <- blockedTransitions) yield s
+          (toState, blockedStates.toSet)
+        }
+
+      var remTransitions = allTransitions
+      val finishedStates = new MHashSet[Int]
+      var curPriority = 10
+
+      while (!remTransitions.isEmpty) {
+        val (chosen, rem) = remTransitions partition {
+          case (_, blocked) => blocked == finishedStates
+        }
+
+        if (chosen.isEmpty)
+          throw new Exception(
+            "Epsilon transitions are not correctly prioritised")
+
+        remTransitions = rem
+        for ((toState, _) <- chosen) {
+          if (usePriorities) {
+            builder.asInstanceOf[BricsPrioTransducerBuilder]
+                   .addETransition(states2Brics(fromState), nop, curPriority,
+                                   states2Brics(toState))
+            Console.err.println("" + fromState +
+                                "- <eps-" + curPriority + "> -> " +
+                                "" + toState + ": \t" + nop)
+          } else {
+            builder.addETransition(states2Brics(fromState), nop,
+                                   states2Brics(toState))
+            Console.err.println("" + fromState +
+                                "- <eps> -> " +
+                                "" + toState + ": \t" + nop)
+          }
+          finishedStates += toState
+        }
+
+        curPriority = curPriority - 1
+      }
     }
 
     builder setInitialState states2Brics(0)
