@@ -40,12 +40,12 @@ object TransducerTranslator {
                         transducerStringTheory : StringTheory) : Transducer = {
     val SymTransducer(transitions, accepting) = transducer
     val states =
-      (for (TransducerTransition(from, to, _, _) <- transitions.iterator;
+      (for (TransducerTransition(from, to, _, _, _) <- transitions.iterator;
             s <- Iterator(from, to))
        yield s).toSet ++ accepting ++ List(0)
 
     if (!(transitions forall {
-            case TransducerTransition(_, _, epsilons, _) => epsilons.size == 2
+            case TransducerTransition(_, _, epsilons, _,_) => epsilons.size == 2
           }))
       throw new Exception(
         "Can only handle 2-track transducers")
@@ -66,7 +66,7 @@ object TransducerTranslator {
         p.createConstant(ModuloArithmetic.ModSort(IdealInt.ZERO,
                                                   IdealInt(alphabetSize - 1)))
 
-      for (TransducerTransition(fromState, toState, epsilons, constraint) <-
+      for (TransducerTransition(fromState, toState, epsilons, constraint, _) <-
              transitions) {
 
         val bvLabel =
