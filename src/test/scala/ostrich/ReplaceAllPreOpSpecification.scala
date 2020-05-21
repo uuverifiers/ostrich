@@ -16,6 +16,7 @@ object ReplaceAllPreOpSpecification
   val abdAut = BricsAutomaton.fromString("abd")
   val dbaAut = BricsAutomaton.fromString("dba")
   val dAut = BricsAutomaton.fromString("d")
+  val eAut = BricsAutomaton.fromString("")
 
   def seq(s : String) = s.map(_.toInt)
 
@@ -196,5 +197,36 @@ object ReplaceAllPreOpSpecification
       !post(seq("hworldo")) &&
       !post(seq("hworldllo"))
   }
+
+  property("Bug from Philipp 20 May 2020") = {
+    val scscriptriptAut = BricsAutomaton.fromString("scscriptript")
+    val tAut = BricsAutomaton.fromString("")
+
+    !ReplaceAllPreOp("scr")(Seq(Seq(), Seq(eAut)),
+                           scscriptriptAut)._1.exists(cons => {
+      cons(0)(seq("scscriptript"))
+    })
+  }
+
+  property("Transducer over cycling word") = {
+    val aabaabAut = BricsAutomaton.fromString("aabaab")
+    val tAut = BricsAutomaton.fromString("")
+
+    !ReplaceAllPreOp("aabaab")(Seq(Seq(), Seq(eAut)),
+                               aabaabAut)._1.exists(cons => {
+      cons(0)(seq("aabaab"))
+    })
+  }
+
+  property("Pre-image over a non replaced word contains original word") = {
+    val aabaabAut = BricsAutomaton.fromString("ccc")
+    val tAut = BricsAutomaton.fromString("")
+
+    ReplaceAllPreOp("aabaab")(Seq(Seq(), Seq(eAut)),
+                               aabaabAut)._1.exists(cons => {
+      cons(0)(seq("ccc"))
+    })
+  }
+
 }
 

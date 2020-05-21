@@ -131,6 +131,30 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
     }
   }
 
+  def subtractLetters(as : Iterable[Char],
+                      lbl : (Char, Char)) : Iterable[(Char, Char)] = {
+    val (min, max) = lbl
+    var curMax = max
+    var res = List[(Char, Char)]()
+
+    // reverse order for list pushing
+    val revSortedChars : List[Char] = as.toList.sortWith(_ > _)
+
+    for (a <- revSortedChars) {
+      if (a < min)
+        return (min, curMax)::res
+
+      if (a < curMax)
+        res = ((a+1).toChar, curMax)::res
+
+      curMax = (a-1).toChar
+      if (curMax < min)
+        return res
+    }
+
+    return (min, curMax)::res
+  }
+
   /**
    * Shift characters by n, do not wrap.  E.g. [1,2].shift 3 = [4,5]
    */
