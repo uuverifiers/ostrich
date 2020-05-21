@@ -86,6 +86,14 @@ trait Transducer {
    * or None
    */
   def apply(input : String, internal : String = "") : Option[String]
+
+  /**
+   * Return a dot representation of the transducer (may not be
+   * implemented)
+   */
+  def toDot : String = {
+    return "Dot output not implemented."
+  }
 }
 
 trait TransducerBuilder[State, TLabel] {

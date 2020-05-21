@@ -31,6 +31,8 @@ import dk.brics.automaton.{Automaton => BAutomaton,
 
 import scala.collection.JavaConversions.{iterableAsScalaIterable,asJavaCollection}
 
+import java.lang.StringBuilder
+
 object BricsTransducer {
   def apply() : BricsTransducer =
     getBuilder.getTransducer
@@ -514,6 +516,37 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     }
 
     return None
+  }
+
+  override def toDot() : String = {
+    val sb = new StringBuilder()
+    sb.append("digraph transducer {\n")
+
+    sb.append(initialState + "[shape=square];\n")
+    for (f <- acceptingStates)
+        sb.append(f + "[peripheries=2];\n")
+
+    for (trans <- lblTrans) {
+      val (state, arrows) = trans
+      for (arrow <- arrows) {
+        val (lbl, op, dest) = arrow
+        sb.append(state + " -> " + dest);
+        sb.append("[label=\"" + lbl + "/" + op + "\"];\n")
+      }
+    }
+
+    for (trans <- eTrans) {
+      val (state, arrows) = trans
+      for (arrow <- arrows) {
+        val (op, dest) = arrow
+        sb.append(state + " -> " + dest);
+        sb.append("[label=\"epsilon /" + op + "\"];\n")
+      }
+    }
+
+    sb.append("}\n")
+
+    return sb.toString()
   }
 }
 
