@@ -123,6 +123,12 @@ trait TLabelOps[TLabel] {
   def subtractLetter(a : Char, l : TLabel) : Iterable[TLabel]
 
   /**
+   * Remove a given character from the label.  E.g. [1,10] - 5 is
+   * [1,4],[6,10]
+   */
+  def subtractLetters(as : Iterable[Char], l : TLabel) : Iterable[TLabel]
+
+  /**
    * Shift characters by n, do not wrap.  E.g. [1,2].shift 3 = [4,5]
    */
   def shift(lbl : TLabel, n : Int) : TLabel
