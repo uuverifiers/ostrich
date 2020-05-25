@@ -63,12 +63,13 @@ trait PredicateHandlingProcedure extends TheoryProcedure {
       .flatMap(handlePredicateInstance(goal))
 }
 
-class ParikhTheory(private[this] val aut: BricsAutomaton)
+class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
     extends Theory
     with NoFunctions
     with NoAxioms
     with Tracing
     with Complete {
+  private val autGraph = aut.toGraph
 
   // FIXME: this is a temporary shim which introduces a single register for
   // length counting. We *should* design a better trait and use a mixin to add
@@ -76,12 +77,12 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
   private implicit class DummyRegisterAutomata(
       private val a: aut.type
   ) {
-    def transitionIncrement(t: aut.FromLabelTo)(_regId: Int): IdealInt =
+    def transitionIncrement(t: autGraph.Edge)(_regId: Int): IdealInt =
       IdealInt.ONE
     val nrRegisters = 1
   }
 
-  private val cycles = trace("cycles")(aut.simpleCycles)
+  private val cycles = trace("cycles")(autGraph.simpleCycles)
 
   // This describes the status of a transition in the current model
   protected sealed trait TransitionSelected {
@@ -181,11 +182,11 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
 
         val unreachableConstraints =
           conj(
-            aut
+            autGraph
               .dropEdges(deadTransitions)
               .unreachableFrom(aut.initialState)
               .flatMap(
-                aut.transitionsFrom(_).map(transitionToTerm(_) === 0)
+                autGraph.transitionsFrom(_).map(transitionToTerm(_) === 0)
               )
           )
 
@@ -201,7 +202,10 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
   // FIXME: name the predicate!
   // FIXME: add back the registers
   private val predicate =
-    new Predicate(s"pa-${aut.hashCode}", aut.edges.size + aut.nrRegisters.size)
+    new Predicate(
+      s"pa-${aut.hashCode}",
+      autGraph.edges.size + aut.nrRegisters.size
+    )
 
   val predicates: Seq[ap.parser.IExpression.Predicate] = List(predicate)
 
@@ -209,7 +213,7 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
     implicit val newOrder = order
 
     def asManyIncomingAsOutgoing(
-        transitionAndVar: Seq[(aut.FromLabelTo, LinearCombination)]
+        transitionAndVar: Seq[(autGraph.Edge, LinearCombination)]
     ): Formula = {
       def asStateFlowSum(
           stateTerms: Seq[(aut.State, (IdealInt, LinearCombination))]
@@ -246,7 +250,7 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
 
     def registerValuesReachable(
         registerVars: Seq[LinearCombination],
-        transitionAndVar: Seq[(aut.FromLabelTo, LinearCombination)]
+        transitionAndVar: Seq[(autGraph.Edge, LinearCombination)]
     ): Formula = {
       trace("Register equations") {
         conj(registerVars.zipWithIndex.map {
@@ -315,8 +319,8 @@ class ParikhTheory(private[this] val aut: BricsAutomaton)
     **/
   def allowsRegisterValues(registerValues: Seq[ITerm]): IFormula = {
     import IExpression._
-    val transitionTermSorts = List.fill(aut.edges.size)(Sort.Integer) //
-    val transitionTerms = aut.edges.indices.map(v)
+    val transitionTermSorts = List.fill(autGraph.edges.size)(Sort.Integer) //
+    val transitionTerms = autGraph.edges.indices.map(v)
     ex(
       transitionTermSorts,
       this.predicate(transitionTerms ++ registerValues: _*)

@@ -14,73 +14,73 @@ import scala.collection.mutable.{
 import scala.language.implicitConversions
 import scala.math.min
 
-class BFSVisitor[N, L](val graph: RichGraph[N, L], val startNode: N)
-    extends Iterator[N] {
-
-  private val nodeUnseen = MSet(graph.allNodes: _*)
-  private val toVisit = MQueue[N](startNode)
-  private val connectingEdge = MHashMap[N, Option[(N, L, N)]](startNode -> None)
-
-  nodeUnseen -= startNode
-
-  override def hasNext = !toVisit.isEmpty
-
-  override def next() = {
-    val thisNode = toVisit.dequeue
-
-    for (edge @ (_, label, neighbour) <- graph.transitionsFrom(thisNode)
-         if nodeUnseen contains neighbour) {
-      nodeUnseen -= neighbour
-      toVisit enqueue neighbour
-      connectingEdge(neighbour) = Some(edge)
-    }
-
-    thisNode
-  }
-  def unvisited() = nodeUnseen.to[Set]
-  def nodeVisited(node: N) = !(nodeUnseen contains node)
-  def pathTo(endNode: N): Option[Seq[(N, L, N)]] = {
-    if (!(graph hasNode endNode)) {
-      return None
-    }
-    this.takeWhile(endNode.!=).foreach(identity)
-    if (nodeVisited(endNode)) {
-
-      @tailrec
-      def walkBackwards(
-          currentNode: N,
-          path: List[(N, L, N)]
-      ): List[(N, L, N)] = connectingEdge(currentNode) match {
-        case None                      => path
-        case Some(edge @ (from, _, _)) => walkBackwards(from, (edge :: path))
-      }
-
-      Some(walkBackwards(endNode, List()))
-    } else {
-      None
-    }
-  }
-  def visitAll() = {
-    this.foreach(identity)
-    this
-  }
-}
-
 trait Graphable[Node, Label] {
   def transitionsFrom(node: Node): Seq[(Node, Label, Node)]
   def allNodes(): Seq[Node]
   def edges(): Seq[(Node, Label, Node)]
-  def subgraph(selectedNodes: Set[Node]): RichGraph[Node, Label]
+  def subgraph(selectedNodes: Set[Node]): Graphable[Node, Label]
   def hasNode(node: Node): Boolean = allNodes contains node
-  def dropEdges(edges: Set[(Node, Label, Node)]): RichGraph[Node, Label]
-  def addEdges(edges: Iterable[(Node, Label, Node)]): RichGraph[Node, Label]
-}
+  def dropEdges(edges: Set[(Node, Label, Node)]): Graphable[Node, Label]
+  def addEdges(edges: Iterable[(Node, Label, Node)]): Graphable[Node, Label]
 
-trait RichGraph[Node, Label] extends Graphable[Node, Label] {
+  /// Derived methods
   type Cycle = Set[Node]
+  type Edge = (Node, Label, Node)
+
+  class BFSVisitor(val graph: Graphable[Node, Label], val startNode: Node)
+      extends Iterator[Node] {
+
+    private val nodeUnseen = MSet(graph.allNodes: _*)
+    private val toVisit = MQueue[Node](startNode)
+    private val connectingEdge = MHashMap[Node, Option[Edge]](startNode -> None)
+
+    nodeUnseen -= startNode
+
+    override def hasNext = !toVisit.isEmpty
+
+    override def next() = {
+      val thisNode = toVisit.dequeue
+
+      for (edge @ (_, label, neighbour) <- graph.transitionsFrom(thisNode)
+           if nodeUnseen contains neighbour) {
+        nodeUnseen -= neighbour
+        toVisit enqueue neighbour
+        connectingEdge(neighbour) = Some(edge)
+      }
+
+      thisNode
+    }
+    def unvisited() = nodeUnseen.to[Set]
+    def nodeVisited(node: Node) = !(nodeUnseen contains node)
+    def pathTo(endNode: Node): Option[Seq[Edge]] = {
+      if (!(graph hasNode endNode)) {
+        return None
+      }
+      this.takeWhile(endNode.!=).foreach(identity)
+      if (nodeVisited(endNode)) {
+
+        @tailrec
+        def walkBackwards(
+            currentNode: Node,
+            path: List[Edge]
+        ): List[Edge] = connectingEdge(currentNode) match {
+          case None                      => path
+          case Some(edge @ (from, _, _)) => walkBackwards(from, (edge :: path))
+        }
+
+        Some(walkBackwards(endNode, List()))
+      } else {
+        None
+      }
+    }
+    def visitAll() = {
+      this.foreach(identity)
+      this
+    }
+  }
 
   def startBFSFrom(startNode: Node) =
-    new BFSVisitor[Node, Label](this, startNode)
+    new BFSVisitor(this, startNode)
 
   def neighbours(node: Node): Seq[Node] = transitionsFrom(node).map(_.to)
 
@@ -299,8 +299,7 @@ trait RichGraph[Node, Label] extends Graphable[Node, Label] {
 }
 
 class MapGraph[N, L](val underlying: Map[N, List[(N, L)]])
-    extends Graphable[N, L]
-    with RichGraph[N, L] {
+    extends Graphable[N, L] {
 
   def this(edges: Traversable[(N, L, N)]) {
     this(
@@ -394,7 +393,7 @@ object CompositeNode {
 }
 
 object CompositeGraph {
-  def apply[N, L](graphToMerge: RichGraph[N, L], equivalentNodes: Set[N]) = {
+  def apply[N, L](graphToMerge: Graphable[N, L], equivalentNodes: Set[N]) = {
     val mergedClass = new CompositeNode.MultiNode(equivalentNodes)
     val nodeToEqClass: Map[N, CompositeNode[N]] = graphToMerge.allNodes
       .map(
@@ -409,7 +408,7 @@ object CompositeGraph {
       .toMap
 
     // Now, merge the redundant edges
-    val underlying: RichGraph[CompositeNode[N], Set[(N, L, N)]] =
+    val underlying: Graphable[CompositeNode[N], Set[(N, L, N)]] =
       MapGraph.mapToGraph(
         graphToMerge.edges
           .map {
@@ -435,23 +434,22 @@ object CompositeGraph {
 // the equivalent nodes. This means that e.g. transitionsFrom(n) might return
 // edges not actually starting in n!
 class CompositeGraph[N, L](
-    private val underlying: RichGraph[CompositeNode[N], Set[(N, L, N)]],
+    private val underlying: Graphable[CompositeNode[N], Set[(N, L, N)]],
     private val nodeToEqClass: Map[N, CompositeNode[N]]
-) extends Graphable[CompositeNode[N], Set[(N, L, N)]]
-    with RichGraph[CompositeNode[N], Set[(N, L, N)]] {
+) extends Graphable[CompositeNode[N], Set[(N, L, N)]] {
 
   implicit def equivalentNode(node: N): CompositeNode[N] = nodeToEqClass(node)
 
   // FIXME; these should actually return proper CompositeGraph:s
   def addEdges(
       edges: Iterable[(CompositeNode[N], Set[(N, L, N)], CompositeNode[N])]
-  ): RichGraph[CompositeNode[N], Set[(N, L, N)]] = underlying.addEdges(edges)
+  ): Graphable[CompositeNode[N], Set[(N, L, N)]] = underlying.addEdges(edges)
   def dropEdges(
       edges: Set[(CompositeNode[N], Set[(N, L, N)], CompositeNode[N])]
-  ): RichGraph[CompositeNode[N], Set[(N, L, N)]] = underlying.dropEdges(edges)
+  ): Graphable[CompositeNode[N], Set[(N, L, N)]] = underlying.dropEdges(edges)
   def subgraph(
       selectedNodes: Set[CompositeNode[N]]
-  ): RichGraph[CompositeNode[N], Set[(N, L, N)]] =
+  ): Graphable[CompositeNode[N], Set[(N, L, N)]] =
     underlying.subgraph(selectedNodes)
   def transitionsFrom(
       node: CompositeNode[N]
@@ -483,7 +481,7 @@ class CompositeGraph[N, L](
 
     // do the standard merging of nodes!
 
-    val underlying: RichGraph[CompositeNode[N], Set[(N, L, N)]] =
+    val underlying: Graphable[CompositeNode[N], Set[(N, L, N)]] =
       MapGraph.mapToGraph(
         this.edges
           .map {

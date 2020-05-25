@@ -321,10 +321,7 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
 /**
   * Wrapper for the BRICS automaton class
   */
-class BricsAutomaton(val underlying: BAutomaton)
-    extends AtomicStateAutomaton
-    with Graphable[BState, (Char, Char)]
-    with RichGraph[BState, (Char, Char)] {
+class BricsAutomaton(val underlying: BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
 
@@ -469,51 +466,6 @@ class BricsAutomaton(val underlying: BAutomaton)
   def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
-
-  // BEGIN GRAPH TRAIT IMPLEMENTATION
-  def allNodes() = states.to
-  def edges() = transitions.to
-  def transitionsFrom(node: State) =
-    outgoingTransitions(node).map(t => (node, t._2, t._1)).toSeq
-  // FIXME this is ugly
-  def subgraph(selectedNodes: Set[State]): RichGraph[State, TLabel] =
-    this.dropEdges(Set()).subgraph(selectedNodes)
-  def dropEdges(edgesToDrop: Set[(State, TLabel, State)]) = {
-    new MapGraph(edges.toSet &~ edgesToDrop)
-  }
-
-  def addEdges(edgesToAdd: Iterable[(State, TLabel, State)]) = {
-    val selectedEdges: Set[(State, TLabel, State)] = this
-      .edges()
-      .toSet ++ edgesToAdd
-    new MapGraph(selectedEdges.toSeq)
-  }
-  // END GRAPH TRAIT IMPLEMENTATION
-
-
-  // FIXME: just return a theory predicate formula!
-  override lazy val getLengthAbstraction: Formula =  {
-      import TerForConvenience._
-      import IExpression.or
-      val parikhTheory = new ParikhTheory(this)
-      SimpleAPI.withProver { p =>
-        import p._
-
-        val length = createConstantRaw("length")
-        addAssertion(parikhTheory allowsRegisterValues Seq(length))
-
-        setMostGeneralConstraints(true)
-        makeExistential(Seq(length))
-
-        println("result: " + ???)
-        if (getConstraint.isTrue) {
-          Conjunction.TRUE
-        } else {
-          println("parikh image from theory:" + pp(~getConstraint))
-          ConstantSubst(length, v(0), p.order)(Conjunction.negate(getConstraintRaw, p.order))
-        }
-      }
-    }
 
 }
 

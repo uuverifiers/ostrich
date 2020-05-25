@@ -38,9 +38,15 @@ import ap.terfor.{Formula, Term, TerForConvenience, TermOrder, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
 
-import scala.collection.mutable.{BitSet => MBitSet,
-                                 HashMap => MHashMap, HashSet => MHashSet,
-                                 ArrayStack}
+import scala.collection.mutable.{
+  BitSet => MBitSet,
+  HashMap => MHashMap, HashSet => MHashSet,
+  ArrayStack}
+
+import ap.{SimpleAPI}
+import ap.parser.{IExpression}
+import ap.terfor.{ TerForConvenience, Formula}
+import ap.terfor.substitutions.ConstantSubst
 
 /**
  * Interface for different implementations of finite-state automata.
@@ -254,6 +260,29 @@ trait AtomicStateAutomaton extends Automaton {
   //////////////////////////////////////////////////////////////////////////
   // Derived methods
 
+  class AutomatonGraph(val aut: AtomicStateAutomaton) extends Graphable[State, TLabel] {
+
+  def allNodes() = states.to
+  def edges() = transitions.to
+  def transitionsFrom(node: State) =
+    outgoingTransitions(node).map(t => (node, t._2, t._1)).toSeq
+  // FIXME this is ugly we should *not* change type
+  def subgraph(selectedNodes: Set[State]): Graphable[State, TLabel] =
+    this.dropEdges(Set()).subgraph(selectedNodes)
+  def dropEdges(edgesToDrop: Set[(State, TLabel, State)]) = {
+    new MapGraph(edges.toSet &~ edgesToDrop)
+  }
+
+    def addEdges(edgesToAdd: Iterable[(State, TLabel, State)]) = {
+      val selectedEdges: Set[(State, TLabel, State)] = this
+        .edges()
+        .toSet ++ edgesToAdd
+      new MapGraph(selectedEdges.toSeq)
+    }
+  }
+
+  lazy val toGraph = new AutomatonGraph(this)
+
   /**
    * Iterate over all transitions
    */
@@ -337,150 +366,30 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Compute the length abstraction of this automaton. Special case of
    * Parikh images, following the procedure in Verma et al, CADE 2005
-   */
-  lazy val getLengthAbstraction : Formula = /* Exploration.measure("length abstraction") */ {
-    import TerForConvenience._
-    implicit val order = TermOrder.EMPTY
+    */
+  // FIXME: just return a theory predicate formula!
+  lazy val getLengthAbstraction: Formula =  {
+      import TerForConvenience._
+      import IExpression.or
+      val parikhTheory = new ParikhTheory(this)
+      SimpleAPI.withProver { p =>
+        import p._
 
-    val stateSeq = states.toIndexedSeq
-    val state2Index = stateSeq.iterator.zipWithIndex.toMap
+        val length = createConstantRaw("length")
+        addAssertion(parikhTheory allowsRegisterValues Seq(length))
 
-    lazy val preStates = {
-      val preStates = Array.fill(stateSeq.size)(new MBitSet)
+        setMostGeneralConstraints(true)
+        makeExistential(Seq(length))
 
-      for ((from, _, to) <- transitions)
-        preStates(state2Index(to)) += state2Index(from)
-
-      preStates
-    }
-
-    lazy val transPreStates = {
-      val transPreStates = Array.fill(stateSeq.size)(new MBitSet)
-
-      for ((s1, s2) <- preStates.iterator zip transPreStates.iterator)
-        s2 ++= s1
-
-      for ((s, n) <- transPreStates.iterator.zipWithIndex)
-        s += n
-
-      // fixed-point iterator, to find transitively referenced states
-      var changed = true
-      while (changed) {
-        changed = false
-
-        for (i <- 0 until transPreStates.size) {
-          val set = transPreStates(i)
-
-          val oldSize = set.size
-          for (j <- 0 until transPreStates.size)
-            if (set contains j)
-              set |= transPreStates(j)
-
-          if (set.size > oldSize)
-            changed = true
+        println("result: " + ???)
+        if (getConstraint.isTrue) {
+          Conjunction.TRUE
+        } else {
+          println("parikh image from theory:" + pp(~getConstraint))
+          ConstantSubst(length, v(0), p.order)(Conjunction.negate(getConstraintRaw, p.order))
         }
       }
-
-      transPreStates
     }
-
-    val initialStateInd = state2Index(initialState)
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    disjFor(for (finalState <- acceptingStates)
-            yield (uniqueLengthStates get finalState) match {
-
-    case Some(len) =>
-      v(0) === len
-
-    case None => {
-      val finalStateInd = state2Index(finalState)
-      val refStates = transPreStates(finalStateInd)
-
-      val productions : List[(Int, Option[Int])] =
-        (if (refStates contains initialStateInd)
-           List((initialStateInd, None))
-         else List()) :::
-        (for (state <- refStates.iterator;
-              preState <- preStates(state).iterator)
-         yield (state, Some(preState))).toList
-
-      val (prodVars, zVars, sizeVar) = {
-        val prodVars = for ((_, num) <- productions.zipWithIndex) yield v(num)
-        var nextVar = prodVars.size
-        val zVars = (for (state <- refStates.iterator) yield {
-          val ind = nextVar
-          nextVar = nextVar + 1
-          state -> v(ind)
-        }).toMap
-        (prodVars, zVars, v(nextVar))
-      }
-
-      // equations relating the production counters
-      val prodEqs =
-        (for (state <- refStates.iterator) yield {
-          LinearCombination(
-             (if (state == finalStateInd)
-                Iterator((IdealInt.ONE, OneTerm))
-              else
-                Iterator.empty) ++
-             (for (((source, targets), prodVar) <-
-                      productions.iterator zip prodVars.iterator;
-                    mult = (if (targets contains state) 1 else 0) -
-                           (if (source == state) 1 else 0))
-              yield (IdealInt(mult), prodVar)),
-             order)
-        }).toList
-
-      val sizeEq =
-        LinearCombination(
-          (for (((_, Some(_)), v) <- productions.iterator zip prodVars.iterator)
-           yield (IdealInt.ONE, v)) ++
-          Iterator((IdealInt.MINUS_ONE, sizeVar)),
-          order)
-
-      val entryZEq =
-        zVars(finalStateInd) - 1
-
-      val allEqs = eqZ(entryZEq :: sizeEq :: prodEqs)
-
-      val prodNonNeg =
-        prodVars >= 0
-
-      val prodImps =
-        (for (((source, _), prodVar) <-
-                productions.iterator zip prodVars.iterator;
-              if source != finalStateInd)
-         yield ((prodVar === 0) | (zVars(source) > 0))).toList
-
-      val zImps =
-        (for (state <- refStates.iterator; if state != finalStateInd) yield {
-           disjFor(Iterator(zVars(state) === 0) ++
-                   (for (((source, targets), prodVar) <-
-                           productions.iterator zip prodVars.iterator;
-                         if targets contains state)
-                    yield conj(zVars(state) === zVars(source) + 1,
-                               geqZ(List(prodVar - 1, zVars(source) - 1)))))
-         }).toList
-
-      val matrix =
-        conj(allEqs :: prodNonNeg :: prodImps ::: zImps)
-      val rawConstraint =
-        exists(prodVars.size + zVars.size, matrix)
-
-      val constraint =
-        ap.util.Timeout.withTimeoutMillis(1000) {
-          // best-effort attempt to get a quantifier-free version of the
-          // length abstraction
-          PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
-        } {
-          ReduceWithConjunction(Conjunction.TRUE, order)(rawConstraint)
-        }
-
-      constraint
-    }})
-  }
 }
 
 trait AtomicStateAutomatonBuilder[State, TLabel] {
