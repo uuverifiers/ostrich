@@ -40,12 +40,14 @@ import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
 
 import scala.collection.mutable.{
   BitSet => MBitSet,
-  HashMap => MHashMap, HashSet => MHashSet,
-  ArrayStack}
+  HashMap => MHashMap,
+  HashSet => MHashSet,
+  ArrayStack
+}
 
 import ap.{SimpleAPI}
 import ap.parser.{IExpression}
-import ap.terfor.{ TerForConvenience, Formula}
+import ap.terfor.{TerForConvenience, Formula}
 import ap.terfor.substitutions.ConstantSubst
 
 /**
@@ -260,18 +262,19 @@ trait AtomicStateAutomaton extends Automaton {
   //////////////////////////////////////////////////////////////////////////
   // Derived methods
 
-  class AutomatonGraph(val aut: AtomicStateAutomaton) extends Graphable[State, TLabel] {
+  class AutomatonGraph(val aut: AtomicStateAutomaton)
+      extends Graphable[State, TLabel] {
 
-  def allNodes() = states.to
-  def edges() = transitions.to
-  def transitionsFrom(node: State) =
-    outgoingTransitions(node).map(t => (node, t._2, t._1)).toSeq
-  // FIXME this is ugly we should *not* change type
-  def subgraph(selectedNodes: Set[State]): Graphable[State, TLabel] =
-    this.dropEdges(Set()).subgraph(selectedNodes)
-  def dropEdges(edgesToDrop: Set[(State, TLabel, State)]) = {
-    new MapGraph(edges.toSet &~ edgesToDrop)
-  }
+    def allNodes() = states.to
+    def edges() = transitions.to
+    def transitionsFrom(node: State) =
+      outgoingTransitions(node).map(t => (node, t._2, t._1)).toSeq
+    // FIXME this is ugly we should *not* change type
+    def subgraph(selectedNodes: Set[State]): Graphable[State, TLabel] =
+      this.dropEdges(Set()).subgraph(selectedNodes)
+    def dropEdges(edgesToDrop: Set[(State, TLabel, State)]) = {
+      new MapGraph(edges.toSet &~ edgesToDrop)
+    }
 
     def addEdges(edgesToAdd: Iterable[(State, TLabel, State)]) = {
       val selectedEdges: Set[(State, TLabel, State)] = this
@@ -366,30 +369,32 @@ trait AtomicStateAutomaton extends Automaton {
   /**
    * Compute the length abstraction of this automaton. Special case of
    * Parikh images, following the procedure in Verma et al, CADE 2005
-    */
+   */
   // FIXME: just return a theory predicate formula!
-  lazy val getLengthAbstraction: Formula =  {
-      import TerForConvenience._
-      import IExpression.or
-      val parikhTheory = new ParikhTheory(this)
-      SimpleAPI.withProver { p =>
-        import p._
+  lazy val getLengthAbstraction: Formula = {
+    import TerForConvenience._
+    import IExpression.or
+    val parikhTheory = new ParikhTheory(this)
+    SimpleAPI.withProver { p =>
+      import p._
 
-        val length = createConstantRaw("length")
-        addAssertion(parikhTheory allowsRegisterValues Seq(length))
+      val length = createConstantRaw("length")
+      addAssertion(parikhTheory allowsRegisterValues Seq(length))
 
-        setMostGeneralConstraints(true)
-        makeExistential(Seq(length))
+      setMostGeneralConstraints(true)
+      makeExistential(Seq(length))
 
-        println("result: " + ???)
-        if (getConstraint.isTrue) {
-          Conjunction.TRUE
-        } else {
-          println("parikh image from theory:" + pp(~getConstraint))
-          ConstantSubst(length, v(0), p.order)(Conjunction.negate(getConstraintRaw, p.order))
-        }
+      println("result: " + ???)
+      if (getConstraint.isTrue) {
+        Conjunction.TRUE
+      } else {
+        println("parikh image from theory:" + pp(~getConstraint))
+        ConstantSubst(length, v(0), p.order)(
+          Conjunction.negate(getConstraintRaw, p.order)
+        )
       }
     }
+  }
 }
 
 trait AtomicStateAutomatonBuilder[State, TLabel] {

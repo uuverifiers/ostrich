@@ -313,9 +313,9 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
   def plugin: Option[Plugin] = Some(ConnectednessPropagator)
 
   /**
-    * Generate a quantified formula that is satisfiable iff the provided
-    * register values are possible by any legal path through the automaton.
-    *
+   * Generate a quantified formula that is satisfiable iff the provided
+   * register values are possible by any legal path through the automaton.
+   *
     **/
   def allowsRegisterValues(registerValues: Seq[ITerm]): IFormula = {
     import IExpression._
