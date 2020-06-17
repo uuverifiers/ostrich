@@ -29,7 +29,7 @@ trait NoAxioms {
 
 trait Tracing {
   protected def trace[T](message: String)(something: T): T = {
-    println(s"trace::${message}(${something})")
+    System.err.println(s"trace::${message}(${something})")
     something
   }
 }
@@ -50,7 +50,8 @@ trait NoAxiomGeneration {
 }
 
 // Provide a function to handle a predicate, automatically become a theory
-// procedure.
+// procedure handling the first instance of that predicate under the assumption
+// that instances will be handled and eliminated one by one.
 trait PredicateHandlingProcedure extends TheoryProcedure {
   val procedurePredicate: IExpression.Predicate
   def handlePredicateInstance(goal: Goal)(
@@ -60,6 +61,7 @@ trait PredicateHandlingProcedure extends TheoryProcedure {
   override def handleGoal(goal: Goal): Seq[Plugin.Action] =
     goal.facts.predConj
       .positiveLitsWithPred(procedurePredicate)
+      .take(1)
       .flatMap(handlePredicateInstance(goal))
 }
 
@@ -119,10 +121,12 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
 
       trace("unknownActions") {
         def transitionToSplit(transitionTerm: LinearCombination) =
-          Plugin.AxiomSplit(Seq(),
+          Plugin.AxiomSplit(
+            Seq(),
             Seq(transitionTerm <= 0, transitionTerm > 0)
               .map(eq => (conj(eq), Seq())),
-                            ParikhTheory.this)
+            ParikhTheory.this
+          )
 
         val splittingActions = trace("splittingActions") {
           unknownTransitions
@@ -145,59 +149,78 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
     override val procedurePredicate = predicate
     override def handlePredicateInstance(
         goal: Goal
-    )(predicateAtom: Atom): Seq[Plugin.Action] = trace("ConnectednessPropagator") {
-      implicit val _ = goal.order
+    )(predicateAtom: Atom): Seq[Plugin.Action] =
+      trace("ConnectednessPropagator") {
+        implicit val _ = goal.order
 
-      // try { throw new Exception() } catch {case e => e.printStackTrace}
+        // try { throw new Exception() } catch {case e => e.printStackTrace}
 
-      val transitionTerms = predicateAtom.take(aut.transitions.size)
+        val transitionTerms = predicateAtom.take(aut.transitions.size)
 
-      val transitionToTerm =
-        trace("transitionToTerm")(aut.transitions.to.zip(transitionTerms).toMap)
-
-      val splittingActions = trace("splittingActions") {
-        goalState(goal) match {
-          case Plugin.GoalState.Final => TransitionSplitter.handleGoal(goal)
-          case _                      => List(Plugin.ScheduleTask(TransitionSplitter, 0))
-        }
-      }
-
-      // TODO check if we are subsumed (= if there are no unknown transitions);
-      // then generate a Plugin.RemoveFacts with the generated atoms. Should
-      // amount to checking if unknown transitions is None.
-
-      // TODO: we don't care about splitting edges that cannot possibly cause a
-      // disconnect; i.e. *we only care* about critical edges on the path to
-      // some cycle that can still appear (i.e. wose edges are not
-      // known-deselected).
-
-      // constrain any terms associated with a transition from a
-      // *known* unreachable state to be = 0 ("not used").
-      val unreachableActions = trace("unreachableActions") {
-        val deadTransitions = trace("deadTransitions") {
-          aut.transitions
-            .filter(
-              t => termMeansDefinitelyAbsent(goal, transitionToTerm(t))
-            )
-            .to[Set]
-        }
-
-        val unreachableConstraints =
-          conj(
-            autGraph
-              .dropEdges(deadTransitions)
-              .unreachableFrom(aut.initialState)
-              .flatMap(
-                autGraph.transitionsFrom(_).map(transitionToTerm(_) === 0)
-              )
+        val transitionToTerm =
+          trace("transitionToTerm")(
+            aut.transitions.to.zip(transitionTerms).toMap
           )
 
-        if (unreachableConstraints.isTrue) Seq()
-        else Seq(Plugin.AddFormula(!unreachableConstraints))
-      }
+        // FIXME this is highly inefficient repeat work and should be factored
+        // out.
+        val isSubsumed = trace("isSubsumed") {
+          !(transitionTerms exists (
+              t => transitionStatusFromTerm(goal, t).isUnknown
+          ))
 
-      unreachableActions ++ splittingActions
-    }
+        }
+
+        if (isSubsumed) {
+          return Seq(Plugin.RemoveFacts(predicateAtom))
+        }
+
+        val splittingActions = trace("splittingActions") {
+          goalState(goal) match {
+            case Plugin.GoalState.Final => TransitionSplitter.handleGoal(goal)
+            case _                      => List(Plugin.ScheduleTask(TransitionSplitter, 0))
+          }
+        }
+
+        // TODO: we don't care about splitting edges that cannot possibly cause a
+        // disconnect; i.e. *we only care* about critical edges on the path to
+        // some cycle that can still appear (i.e. wose edges are not
+        // known-deselected).
+
+        // constrain any terms associated with a transition from a
+        // *known* unreachable state to be = 0 ("not used").
+        val unreachableActions = trace("unreachableActions") {
+          val deadTransitions = trace("deadTransitions") {
+            aut.transitions
+              .filter(
+                t => termMeansDefinitelyAbsent(goal, transitionToTerm(t))
+              )
+              .to[Set]
+          }
+
+          val unreachableConstraints =
+            conj(
+              autGraph
+                .dropEdges(deadTransitions)
+                .unreachableFrom(aut.initialState)
+                .flatMap(
+                  autGraph.transitionsFrom(_).map(transitionToTerm(_) === 0)
+                )
+            )
+
+          if (unreachableConstraints.isTrue) Seq()
+          else
+            Seq(
+              Plugin.AddAxiom(
+                Seq(predicateAtom),
+                !unreachableConstraints,
+                ParikhTheory.this
+              )
+            )
+        }
+
+        unreachableActions ++ splittingActions
+      }
   }
 
   // FIXME: total deterministisk ordning på edges!
