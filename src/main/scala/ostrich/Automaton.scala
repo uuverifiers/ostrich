@@ -46,7 +46,7 @@ import scala.collection.mutable.{
 }
 
 import ap.{SimpleAPI}
-import ap.parser.{IExpression}
+import ap.parser.{IExpression, IFormula}
 import ap.terfor.{TerForConvenience, Formula}
 import ap.terfor.substitutions.ConstantSubst
 
@@ -88,7 +88,7 @@ trait Automaton {
   /**
    * Compute the length abstraction of this automaton.
    */
-  def getLengthAbstraction : Formula
+  def getLengthAbstraction : IFormula
 
 }
 
@@ -367,33 +367,11 @@ trait AtomicStateAutomaton extends Automaton {
   }
 
   /**
-   * Compute the length abstraction of this automaton. Special case of
-   * Parikh images, following the procedure in Verma et al, CADE 2005
+   * Compute the length abstraction of this automaton.
    */
-  // FIXME: just return a theory predicate formula!
-  lazy val getLengthAbstraction: Formula = {
-    import TerForConvenience._
-    import IExpression.or
-    val parikhTheory = new ParikhTheory(this)
-    SimpleAPI.withProver { p =>
-      import p._
-
-      val length = createConstantRaw("length")
-      addAssertion(parikhTheory allowsRegisterValues Seq(length))
-
-      setMostGeneralConstraints(true)
-      makeExistential(Seq(length))
-
-      println("result: " + ???)
-      if (getConstraint.isTrue) {
-        Conjunction.TRUE
-      } else {
-        println("parikh image from theory:" + pp(~getConstraint))
-        ConstantSubst(length, v(0), p.order)(
-          Conjunction.negate(getConstraintRaw, p.order)
-        )
-      }
-    }
+  lazy val getLengthAbstraction: IFormula = {
+    val length = IExpression.v(0)
+    (new ParikhTheory(this)) allowsRegisterValues Seq(length)
   }
 }
 

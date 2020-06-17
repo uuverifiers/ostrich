@@ -191,7 +191,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
       sMapRev.getOrElse((ts, as), {
         val ps = preBuilder.getNewState
         sMapRev += ((ts, as) -> ps)
-        sMap += (ps -> (ts, as))
+        sMap += (ps -> ((ts, as)))
         ps
       })
     }
@@ -405,7 +405,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
         if (isAccept(ts) && aut.isAccept(as))
           builder.setAccept(ps, true)
         sMapRev += ((ts, as) -> ps)
-        sMap += (ps -> (ts, as))
+        sMap += (ps -> ((ts, as)))
         worklist.push(ps)
         ps
       })

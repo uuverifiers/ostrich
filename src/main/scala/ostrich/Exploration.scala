@@ -33,6 +33,7 @@
 package ostrich
 
 import ap.SimpleAPI
+import ap.parser.{VariableSubstVisitor, Internal2InputAbsy}
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
 import ap.terfor.{Term, ConstantTerm, OneTerm}
@@ -264,8 +265,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     for (p <- lengthProver) {
       for ((t, aut) <- allInitialConstraints)
-        p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                               aut.getLengthAbstraction)
+        p addAssertion VariableSubstVisitor(aut.getLengthAbstraction, (List(Internal2InputAbsy(lengthVars(t))), 0))
 
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
@@ -497,8 +497,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       lengthPartitions += sources
       p setPartitionNumber lengthPartitions.size
       val TermConstraint(t, aut) = constraint
-      p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                                  aut.getLengthAbstraction)
+      p addAssertion VariableSubstVisitor(aut.getLengthAbstraction,
+                                          (List(Internal2InputAbsy(lengthVars(t))), 0))
     }
 
   private def checkLengthConsistency : Option[Seq[TermConstraint]] =
@@ -557,7 +557,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     private val constraintStack = new ArrayStack[(Int, Option[Automaton])]
 
     def push : Unit =
-      constraintStack push (constraints.size, currentConstraint)
+      constraintStack push ((constraints.size, currentConstraint))
 
     def pop : Unit = {
       val (oldSize, lastCC) = constraintStack.pop

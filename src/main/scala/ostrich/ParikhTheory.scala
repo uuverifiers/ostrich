@@ -29,7 +29,7 @@ trait NoAxioms {
 
 trait Tracing {
   protected def trace[T](message: String)(something: T): T = {
-    // println(s"trace::${message}(${something})")
+    println(s"trace::${message}(${something})")
     something
   }
 }
@@ -104,7 +104,7 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
     override val procedurePredicate = predicate
     override def handlePredicateInstance(
         goal: Goal
-    )(predicateAtom: Atom): Seq[Plugin.Action] = {
+    )(predicateAtom: Atom): Seq[Plugin.Action] = trace("TransitionSplitter") {
       implicit val _ = goal.order
 
       val transitionTerms = trace("transitionTerms") {
@@ -119,18 +119,18 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
 
       trace("unknownActions") {
         def transitionToSplit(transitionTerm: LinearCombination) =
-          Plugin.SplitGoal(
-            Seq(transitionTerm === 0, transitionTerm > 0)
-              .map(eq => Seq(Plugin.AddFormula(conj(eq))))
-          )
+          Plugin.AxiomSplit(Seq(),
+            Seq(transitionTerm <= 0, transitionTerm > 0)
+              .map(eq => (conj(eq), Seq())),
+                            ParikhTheory.this)
 
         val splittingActions = trace("splittingActions") {
           unknownTransitions
             .map(transitionToSplit(_))
-            .toList
+            .toSeq
         }
 
-        splittingActions
+        Seq(splittingActions.head)
 
       }
     }
@@ -145,8 +145,10 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
     override val procedurePredicate = predicate
     override def handlePredicateInstance(
         goal: Goal
-    )(predicateAtom: Atom): Seq[Plugin.Action] = {
+    )(predicateAtom: Atom): Seq[Plugin.Action] = trace("ConnectednessPropagator") {
       implicit val _ = goal.order
+
+      // try { throw new Exception() } catch {case e => e.printStackTrace}
 
       val transitionTerms = predicateAtom.take(aut.transitions.size)
 
