@@ -108,7 +108,11 @@ class BricsPrioTransducer(val initialState : BricsAutomaton#State,
 
       (lblTrans get oriState) match {
         case Some(transitions) => {      // input transitions
-          assert(!(eTrans contains oriState))
+          if (eTrans contains oriState)
+            throw new Exception(
+              "Cannot have both normal transitions and epsilon transitions " +
+              "from state " + oriState)
+
           //println("lbl: " + transitions)
 
           for ((label, op, nextState) <- transitions) {
