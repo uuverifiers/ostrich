@@ -29,7 +29,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 re_loop, str_to_re}
+                 re_loop, str_to_re, re_from_str}
 
   def buildBricsRegex(t : ITerm) : String = t match {
     case IFunApp(`re_none`, _) =>
@@ -59,6 +59,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       "~(" + buildBricsRegex(a) + ")"
     case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) =>
       "(" + buildBricsRegex(a) + "){" + n1 + "," + n2 + "}"
+
     case IFunApp(`str_to_re`, Seq(a)) =>
       StringTheory.term2List(a) match {
         case Seq() =>
@@ -68,8 +69,44 @@ class Regex2Aut(theory : OstrichStringTheory) {
                 c <- "[\\" + numToUnicode(v) + "]")
            yield c).mkString
       }
+
+    case IFunApp(`re_from_str`, Seq(a)) => {
+      // TODO: this translation has to be checked more carefully, there might
+      // be problems due to escaping
+      val str = StringTheory.term2String(a)
+
+      // BRICS cannot handle anchors, so currently we are just removing them
+      // TODO: find a better solution for this
+
+      var begin = 0
+      while (begin < str.size && str(begin) == '^') {
+        Console.err.println("Warning: ignoring anchor ^")
+        begin = begin + 1
+      }
+
+      var end = str.size
+      while (end > 0 && str(end - 1) == '$') {
+        Console.err.println("Warning: ignoring anchor $")
+        end = end - 1
+      }
+
+      val str2 = str.slice(begin, end)
+
+      // handle some of the PCRE sequences
+      // TODO: do this more systematically
+      val str3 = str2.replaceAll("""\\w""", "[A-Za-z0-9_]")
+                     .replaceAll("""\\W""", "[^A-Za-z0-9_]")
+                     .replaceAll("""\\s""", "[ ]")
+                     .replaceAll("""\\S""", "[^ ]")
+                     .replaceAll("""\\d""", "[0-9]")
+                     .replaceAll("""\\D""", "[^0-9]")
+                     
+      str3
+    }
+
     case _ =>
-      throw new IllegalArgumentException
+      throw new IllegalArgumentException(
+        "could not translate " + t + " to an automaton")
   }
 
   def buildBricsAut(t : ITerm) : BAutomaton =
