@@ -72,7 +72,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
     case IFunApp(`re_from_str`, Seq(a)) => {
       // TODO: this translation has to be checked more carefully, there might
-      // be problems due to escaping
+      // be problems due to escaping. The processing of regexes can also
+      // only be done correctly within a proper regex parser.
+
       val str = StringTheory.term2String(a)
 
       // BRICS cannot handle anchors, so currently we are just removing them
@@ -100,7 +102,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
                      .replaceAll("""\\S""", "[^ ]")
                      .replaceAll("""\\d""", "[0-9]")
                      .replaceAll("""\\D""", "[^0-9]")
-                     
+                     .replaceAll("""\(\?:""", "(")
+
       str3
     }
 
