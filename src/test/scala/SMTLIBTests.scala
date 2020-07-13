@@ -37,6 +37,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("chars.smt2") =
+    checkFile("tests/chars.smt2", "sat")
+
   property("concat-regex.smt2") =
     checkFile("tests/concat-regex.smt2", "sat")
   property("concat-regex2.smt2") =
