@@ -102,7 +102,7 @@ object TransducerTranslator {
           }
 
           case Seq(false, outEps) => {
-            val presLabel = p.simplify(bvLabel)
+            val presLabel = PartialEvaluator(p.simplify(bvLabel))
             if (!ContainsSymbol.isPresburger(presLabel))
               throw new Exception(
                 "Could not translate constraint: " + p.pp(constraint))
@@ -126,9 +126,9 @@ object TransducerTranslator {
                   inputOp = Some(NOP)
                   outputChars = List(value.intValueSafe.toChar)
                 }
-                case Geq(`inputC`, IIntLit(bound)) =>
+                case Geq(`inputC`, Const(bound)) =>
                   lBound = Some(bound.intValueSafe.toChar)
-                case Geq(IIntLit(bound), `inputC`) =>
+                case Geq(Const(bound), `inputC`) =>
                   uBound = Some(bound.intValueSafe.toChar)
                 case EqLit(`inputC`, value) => {
                   lBound = Some(value.intValueSafe.toChar)
