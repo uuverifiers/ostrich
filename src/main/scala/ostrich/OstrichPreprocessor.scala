@@ -133,6 +133,12 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       )))
     }
 
+    case (IFunApp(`str_from_code`, _), Seq(Const(code))) =>
+      if (code >= 0 & code < theory.alphabetSize)
+        str_cons(code, str_empty())
+      else
+        str_empty()
+
     case (IFunApp(`str_from_code`, _), Seq(code : ITerm)) =>
       ite(code >= 0 & code < theory.alphabetSize,
           str_cons(code, str_empty()),
