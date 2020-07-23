@@ -37,6 +37,13 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("chars.smt2") =
+    checkFile("tests/chars.smt2", "sat")
+  property("chars2.smt2") =
+    checkFile("tests/chars2.smt2", "sat")
+  property("chars3.smt2") =
+    checkFile("tests/chars3.smt2", "sat")
+
   property("concat-regex.smt2") =
     checkFile("tests/concat-regex.smt2", "sat")
   property("concat-regex2.smt2") =
@@ -174,6 +181,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-regex.smt2", "sat")
   property("parse-regex2.smt2") =
     checkFile("tests/parse-regex2.smt2", "sat")
+  property("parse-regex3.smt2") =
+    checkFile("tests/parse-regex3.smt2", "unsat")
   property("parse-regex2b.smt2") =
     checkFile("tests/parse-regex2b.smt2", "unsat")
   property("parse-regex4.smt2") =

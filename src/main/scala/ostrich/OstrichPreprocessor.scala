@@ -44,6 +44,12 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case ts    => ts reduceLeft (str_++(_, _))
   }
 
+  // TODO: move this to Princess
+  private def str2term(str : String) : ITerm = str match {
+    case ""  => str_empty()
+    case str => str_cons(str.head, str2term(str.substring(1)))
+  }
+
   def apply(f : IFormula) : IFormula =
     this.visit(f, Context(())).asInstanceOf[IFormula]
 
@@ -132,6 +138,21 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
                                       // string range?
       )))
     }
+
+    case (IFunApp(`str_++`, _),
+          Seq(ConcreteString(str1), ConcreteString(str2))) =>
+      str2term(str1 + str2)
+
+    case (IFunApp(`str_from_code`, _), Seq(Const(code))) =>
+      if (code >= 0 & code < theory.alphabetSize)
+        str_cons(code, str_empty())
+      else
+        str_empty()
+
+    case (IFunApp(`str_from_code`, _), Seq(code : ITerm)) =>
+      ite(code >= 0 & code < theory.alphabetSize,
+          str_cons(code, str_empty()),
+          str_empty())
 
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
