@@ -29,7 +29,7 @@ trait NoAxioms {
 
 trait Tracing {
   protected def trace[T](message: String)(something: T): T = {
-    System.err.println(s"trace::${message}(${something})")
+    // System.err.println(s"trace::${message}(${something})")
     something
   }
 }
@@ -213,7 +213,7 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
             Seq(
               Plugin.AddAxiom(
                 Seq(predicateAtom),
-                !unreachableConstraints,
+                unreachableConstraints,
                 ParikhTheory.this
               )
             )
@@ -346,9 +346,14 @@ class ParikhTheory(private[this] val aut: AtomicStateAutomaton)
     import IExpression._
     val transitionTermSorts = List.fill(autGraph.edges.size)(Sort.Integer) //
     val transitionTerms = autGraph.edges.indices.map(v)
+
+    // need to prevent variable capture by the quantifiers added below
+    val shiftedRegisterValues =
+      registerValues map (VariableShiftVisitor(_, 0, transitionTermSorts.size))
+
     ex(
       transitionTermSorts,
-      this.predicate(transitionTerms ++ registerValues: _*)
+      this.predicate(transitionTerms ++ shiftedRegisterValues: _*)
     )
   }
 
