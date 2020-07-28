@@ -2,8 +2,8 @@ lazy val commonSettings = Seq(
   name := "ostrich",
   organization := "uuverifiers",
   version := "1.0",
-  scalaVersion := "2.11.8",
-  crossScalaVersions := Seq("2.11.8", "2.12.6"),
+  scalaVersion := "2.11.12",
+  crossScalaVersions := Seq("2.11.12", "2.12.10"),
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) ),
   scalacOptions += "-deprecation",
   resolvers += "uuverifiers" at "http://logicrunch.research.it.uu.se/maven/",
@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
-    mainClass in Compile := Some("ap.CmdlMain"),
+    mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala"
   )
 
