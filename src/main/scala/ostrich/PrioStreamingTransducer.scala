@@ -50,6 +50,9 @@ case class Constant(val c: Char) extends UpdateOp
 // Refer to the current value of a string variable
 case class RefVariable(val v: Int) extends UpdateOp
 
+// Append an 'internal' character
+case object InternalOp extends UpdateOp
+
 /**
  * Implementation of prioritised streaming transducers
  * all transitions have priority, and no epsilon-transition is allowed
@@ -76,7 +79,6 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
   private def priority(t : Transition) = t._3
   private def dest(t : Transition) : BricsAutomaton#State = t._4
 
-  // NOTE: internal character is not implemented yet. It is not used by unary replaceAll
   def apply(input: String, internal: String = ""): Option[String] = {
     if (input.size == 0 && isAccept(initialState))
       return Some("")
@@ -94,6 +96,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
         (res, op) => op match {
           case Constant(c) => res + c.toString
           case RefVariable(n) => res + oldv(n)
+          case InternalOp => res + internal
         }
       }
     }
@@ -143,6 +146,12 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     type trace = Seq[Set[(aut.State,aut.State)]]
     val preBuilder = aut.getBuilder
 
+    // just a cast:
+    val internal2 =
+      (for ((s1, s2) <- internal)
+        yield ((s1.asInstanceOf[aut.State],
+          s2.asInstanceOf[aut.State])))
+
     val sMapRev = new MHashMap[(State, trace, Set[State]), aut.State]
 
     val defaultSet = (for (s <- aut.states) yield (s, s)).toSet
@@ -161,6 +170,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
                      yield (s, target)).toSet
             }
             case RefVariable(v) => tr(v)
+            case InternalOp => internal2
           }
           (for ((fst, snd) <- S;
             (fst2, snd2) <- T;
