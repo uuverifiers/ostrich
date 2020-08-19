@@ -134,10 +134,13 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     return None
   }
 
-  // TODO
+  // Note: the post-image of a PSST/NSST is not guaranteed to be regular, 
+  // thus it's impossible to be represented by an FA.
   def postImage[A <: ostrich.AtomicStateAutomaton]
                (aut: A,
-                internalApprox: Option[A]): ostrich.AtomicStateAutomaton = ???
+                internalApprox: Option[A]): ostrich.AtomicStateAutomaton = {
+                  throw new Exception("postImage of PSST is not computable")
+                }
 
   def preImage[A <: AtomicStateAutomaton]
               (aut: A,
