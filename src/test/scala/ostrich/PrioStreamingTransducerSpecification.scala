@@ -71,6 +71,32 @@ object PrioStreamingTransducerSpecification
     builder.getTransducer
   }
 
+  val abcStar = {
+    // PSST that replaces (b + a)*(c + a)* with \2\1 
+
+    val builder = PrioStreamingTransducer.getBuilder(2)
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+
+    def updatex(c : Char) = List(List(RefVariable(0), Constant(c)), List(RefVariable(1)))
+    def updatey(c : Char) = List(List(RefVariable(0)), List(RefVariable(1), Constant(c)))
+
+    builder.addTransition(q0, BricsTLabelOps.singleton('b'), updatex('b'), 1, q0)
+    builder.addTransition(q0, BricsTLabelOps.singleton('a'), updatex('a'), 1, q0)
+
+    builder.addTransition(q0, BricsTLabelOps.singleton('a'), updatey('a'), 0, q1)
+    builder.addTransition(q0, BricsTLabelOps.singleton('c'), updatey('c'), 0, q1)
+
+    builder.addTransition(q1, BricsTLabelOps.singleton('a'), updatey('a'), 1, q1)
+    builder.addTransition(q1, BricsTLabelOps.singleton('c'), updatey('c'), 1, q1)
+
+    builder.setInitialState(q0)
+    builder.setAccept(q0, true, List(RefVariable(1), RefVariable(0)))
+    builder.setAccept(q1, true, List(RefVariable(1), RefVariable(0)))
+
+    builder.getTransducer
+  }
+
   property("Simple Pre With Pre and Post") = {
     // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
     val q1 = new IDState(1)
@@ -107,6 +133,26 @@ object PrioStreamingTransducerSpecification
     val pre = copyPSST.preImage(baut)
 
     !pre(List('b', 'a', 'b', 'b')) &&
-    pre(List('b', 'a', 'b')) && !pre(List('a', 'b', 'b'))
+    pre(List('b', 'a', 'b')) && !pre(List('a', 'b', 'b')) && 
+    pre(List('a', 'b'))
+  }
+
+  property("replace (b + a)*(c + a)* to \\2a\\2 result caa") = {
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    val q3 = new IDState(3)
+    val q4 = new IDState(4)
+    q4.setAccept(true)
+    q1.addTransition(new Transition('c', 'c', q2))
+    q2.addTransition(new Transition('a', 'a', q3))
+    q3.addTransition(new Transition('a', 'a', q4))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = abcStar.preImage(baut)
+
+    pre(List('a', 'a', 'c')) &&
+    pre(List('a', 'c', 'a')) && pre(List('c', 'a', 'a')) && !pre(List('a', 'a', 'a'))
   }
 }
