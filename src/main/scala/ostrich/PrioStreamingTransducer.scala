@@ -31,40 +31,28 @@ import dk.brics.automaton.{Automaton => BAutomaton,
 
 object PrioStreamingTransducer {
   def apply() : PrioStreamingTransducer =
-    getBuilder.getTransducer
+    getBuilder(0).getTransducer
 
-  def getBuilder : PrioStreamingTransducerBuilder =
-    new PrioStreamingTransducerBuilder
+  def getBuilder(numvars: Int) : PrioStreamingTransducerBuilder =
+    new PrioStreamingTransducerBuilder(numvars)
 
   class TransducerState extends BState {
     override def toString = "q" + hashCode
   }
 }
 
-// operators which update the values of string variables in PSST
-abstract class UpdateOp
-
-// Append a constant character
-case class Constant(val c: Char) extends UpdateOp
-
-// Refer to the current value of a string variable
-case class RefVariable(val v: Int) extends UpdateOp
-
-// Append an 'internal' character
-case object InternalOp extends UpdateOp
-
 /**
  * Implementation of prioritised streaming transducers
  * all transitions have priority, and no epsilon-transition is allowed
- * 'vars' is the number of string variables, which are labeled by indexes 0 .. vars - 1
+ * 'numvars' is the number of string variables, which are labeled by indexes 0 .. numvars - 1
  * Note that PSST is intrinsically functional
  */
 class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
-                          val vars : Int,
+                          val numvars : Int,
                           val lblTrans: Map[PrioStreamingTransducer#State,
                                         Set[PrioStreamingTransducer#Transition]],
                           val acceptingStates : Map[PrioStreamingTransducer#State, Seq[UpdateOp]])
-    extends Transducer {
+    extends StreamingTransducer {
 
   type State = BricsAutomaton#State
   type TLabel = BricsAutomaton#TLabel
@@ -87,7 +75,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     val worklist = new MStack[(State, Int, Seq[String])]
     val seenlist = new MHashSet[(State, Int)]
 
-    val emptyVal = (for (i <- 0 until vars) yield "").toSeq
+    val emptyVal = (for (i <- 0 until numvars) yield "").toSeq
 
     worklist.push((initialState, 0, emptyVal))
 
@@ -102,7 +90,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     }
 
     def getNewVal(oldv: Seq[String], ops: Seq[Seq[UpdateOp]]) : Seq[String] = 
-      (for (i <- 0 until vars) yield evalUpdateOps(oldv, ops(i))).toSeq
+      (for (i <- 0 until numvars) yield evalUpdateOps(oldv, ops(i))).toSeq
 
     def sortTransitions(trans: Set[Transition]) : Seq[Transition] = {
       trans.toSeq.sortWith((ta, tb) => priority(ta) < priority(tb))
@@ -134,14 +122,6 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     return None
   }
 
-  // Note: the post-image of a PSST/NSST is not guaranteed to be regular, 
-  // thus it's impossible to be represented by an FA.
-  def postImage[A <: ostrich.AtomicStateAutomaton]
-               (aut: A,
-                internalApprox: Option[A]): ostrich.AtomicStateAutomaton = {
-                  throw new Exception("postImage of PSST is not computable")
-                }
-
   def preImage[A <: AtomicStateAutomaton]
               (aut: A,
                internal: Iterable[(A#State, A#State)]): AtomicStateAutomaton = {
@@ -158,7 +138,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     val sMapRev = new MHashMap[(State, trace, Set[State]), aut.State]
 
     val defaultSet = (for (s <- aut.states) yield (s, s)).toSet
-    val emptyTrace = (for (v <- 0 until vars) yield defaultSet).toSeq
+    val emptyTrace = (for (v <- 0 until numvars) yield defaultSet).toSeq
 
     val initAutState = aut.initialState
 
@@ -182,7 +162,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       }
     }
     def getNewTrace(tr: trace, ops : Seq[Seq[UpdateOp]]) : trace =
-      (for (i <- 0 until vars) yield evalUpdateOps(tr, ops(i))).toSeq
+      (for (i <- 0 until numvars) yield evalUpdateOps(tr, ops(i))).toSeq
 
     def isAcceptingState(ts : State, tr : trace, s : Set[State]) = {
       lazy val traceValid = {
@@ -280,55 +260,48 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
   }
 }
 
-class PrioStreamingTransducerBuilder
-    extends TransducerBuilder[PrioStreamingTransducer#State,
+class PrioStreamingTransducerBuilder(val numvars : Int)
+    extends StreamingTransducerBuilder[PrioStreamingTransducer#State,
                               PrioStreamingTransducer#TLabel] {
-  val LabelOps : TLabelOps[PrioStreamingTransducer#TLabel] = BricsTLabelOps
 
-  var numvars = 0
-  var initialState : PrioStreamingTransducer#State = getNewState
+  val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+
+  var initialState : State = getNewState
   val acceptingStates
-    = new MHashMap[PrioStreamingTransducer#State, Seq[UpdateOp]]
+    = new MHashMap[State, Seq[UpdateOp]]
 
   val lblTrans
-    = new MHashMap[PrioStreamingTransducer#State, MSet[PrioStreamingTransducer#Transition]]
-      with MMultiMap[PrioStreamingTransducer#State, PrioStreamingTransducer#Transition] {
-      override def default(q : PrioStreamingTransducer#State) : MSet[PrioStreamingTransducer#Transition] =
+    = new MHashMap[State, MSet[PrioStreamingTransducer#Transition]]
+      with MMultiMap[State, PrioStreamingTransducer#Transition] {
+      override def default(q : State) : MSet[PrioStreamingTransducer#Transition] =
         MLinkedHashSet.empty[PrioStreamingTransducer#Transition]
     }
 
-  def getNewState : PrioStreamingTransducer#State = new PrioStreamingTransducer.TransducerState
+  def getNewState : State = new PrioStreamingTransducer.TransducerState
 
-  def setInitialState(s : PrioStreamingTransducer#State) = {
+  def setInitialState(s : State) = {
     initialState = s
   }
 
-  def setVarNum(v : Int) = {
-    numvars = v
-  }
+  def isAccept(s : State) = acceptingStates.contains(s)
 
-  def isAccept(s : PrioStreamingTransducer#State) = acceptingStates.contains(s)
-
-  def setAccept(s : PrioStreamingTransducer#State, isAccept : Boolean) =
-    setAccept(s, isAccept, Seq.empty[UpdateOp])
-
-  def setAccept(s : PrioStreamingTransducer#State, isAccept : Boolean, ops: Seq[UpdateOp]) =
+  def setAccept(s : State, isAccept : Boolean, ops: Seq[UpdateOp]) =
     if (isAccept)
       acceptingStates.+=((s, ops))
     else
       acceptingStates -= s
 
-  // dummy, DO NOT USE!
-  def addTransition(s1 : PrioStreamingTransducer#State,
-                    lbl : PrioStreamingTransducer#TLabel,
-                    op : OutputOp,
-                    s2 : PrioStreamingTransducer#State) : Unit = ()
+  def addTransition(s1 : State,
+                    lbl : TLabel,
+                    ops : Seq[Seq[UpdateOp]],
+                    s2 : State) =
+      addTransition(s1, lbl, ops, 0, s2)
 
-  def addTransition(s1 : PrioStreamingTransducer#State,
-                    lbl : PrioStreamingTransducer#TLabel,
+  def addTransition(s1 : State,
+                    lbl : TLabel,
                     ops : Seq[Seq[UpdateOp]],
                     priority : Int,
-                    s2 : PrioStreamingTransducer#State) =
+                    s2 : State) =
     if (LabelOps.isNonEmptyLabel(lbl))
       lblTrans.addBinding(s1, (lbl, ops, priority, s2))
 
@@ -339,10 +312,5 @@ class PrioStreamingTransducerBuilder
                             lblTrans.toMap.mapValues(_.toSet),
                             acceptingStates.toMap)
   }
-
-  // dummy, DO NOT USE!
-  def addETransition(s1 : PrioStreamingTransducer#State,
-                    op : OutputOp,
-                    s2 : PrioStreamingTransducer#State) : Unit = () 
 
 }
