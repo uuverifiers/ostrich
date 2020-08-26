@@ -82,6 +82,18 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       StringSort.ex(str_++(s, v(0)) === t)
     }
 
+    case (IAtom(`str_suffixof`, _),
+          Seq(subStr@ConcreteString(_), bigStr : ITerm)) => {
+      val asRE = re_++(re_all(), str_to_re(subStr))
+      str_in_re(bigStr, asRE)
+    }
+    case (IAtom(`str_suffixof`, _),
+          Seq(subStr : ITerm, bigStr : ITerm)) if ctxt.polarity < 0 => {
+      val s = VariableShiftVisitor(subStr, 0, 1)
+      val t = VariableShiftVisitor(bigStr, 0, 1)
+      StringSort.ex(str_++(v(0), s) === t)
+    }
+
     case (IFunApp(`str_indexof`, _),
           Seq(bigStr : ITerm, subStr@ConcreteString(subStrStr),
               IIntLit(IdealInt.ZERO) /* startIndex : ITerm */ )) => {

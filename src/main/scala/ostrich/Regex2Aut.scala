@@ -103,6 +103,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
                      .replaceAll("""\\d""", "[0-9]")
                      .replaceAll("""\\D""", "[^0-9]")
                      .replaceAll("""\(\?:""", "(")
+                     .replaceAll("""@""", "\\\\@")
 
       str3
     }
