@@ -25,11 +25,18 @@ import ap.theories.strings.StringTheory
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
                            Automaton => BAutomaton}
 
+object Regex2Aut {
+
+  private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
+
+}
+
 class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
                  re_loop, str_to_re, re_from_str}
+  import Regex2Aut._
 
   def buildBricsRegex(t : ITerm) : String = t match {
     case IFunApp(`re_none`, _) =>
@@ -94,9 +101,31 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
       val str2 = str.slice(begin, end)
 
-      // handle some of the PCRE sequences
+      // handle some of the PCRE sequences, inside character classes
       // TODO: do this more systematically
-      val str3 = str2.replaceAll("""\\w""", "[A-Za-z0-9_]")
+      val str3 = {
+        var curStr = str2
+        var cont = true
+        while (cont)
+          RegexClassSpecialChar.findFirstMatchIn(curStr) match {
+            case Some(m) => {
+              val repl = m.group(1) match {
+                case "\\w" => "A-Za-z0-9_"
+                case "\\s" => " "
+                case "\\d" => "0-9"
+              }
+              curStr =
+                curStr.take(m.start(1)) + repl + curStr.drop(m.end(1))
+            }
+            case None =>
+              cont = false
+          }
+        curStr
+      }
+
+      // handle some of the PCRE sequences, outside of character classes
+      // TODO: do this more systematically
+      val str4 = str3.replaceAll("""\\w""", "[A-Za-z0-9_]")
                      .replaceAll("""\\W""", "[^A-Za-z0-9_]")
                      .replaceAll("""\\s""", "[ ]")
                      .replaceAll("""\\S""", "[^ ]")
@@ -105,7 +134,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
                      .replaceAll("""\(\?:""", "(")
                      .replaceAll("""@""", "\\\\@")
 
-      str3
+      str4
     }
 
     case _ =>
