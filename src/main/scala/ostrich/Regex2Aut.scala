@@ -133,12 +133,13 @@ class Regex2Aut(theory : OstrichStringTheory) {
                      .replaceAll("""\\D""", "[^0-9]")
                      .replaceAll("""\(\?:""", "(")
                      .replaceAll("""@""", "\\\\@")
+                     .replaceAll("""<""", "\\\\<")
 
       if ((str4 contains "(?=") || (str4 contains "(?!"))
         Console.err.println("Warning: look-ahead in regular expression not handled")
       if (str4 contains "(?<")
         Console.err.println("Warning: look-behind in regular expression not handled")
-
+println(str4)
       str4
     }
 

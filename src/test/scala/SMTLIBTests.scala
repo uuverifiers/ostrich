@@ -167,6 +167,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/email-regex.smt2", "sat")
   property("name-regex.smt2") =
     checkFile("tests/name-regex.smt2", "unsat")
+  property("brackets-regex.smt2") =
+    checkFile("tests/brackets-regex.smt2", "sat")
 
   property("indexof.smt2") =
     checkFile("tests/indexof.smt2", "sat")
