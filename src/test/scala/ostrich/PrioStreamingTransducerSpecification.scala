@@ -49,6 +49,26 @@ object PrioStreamingTransducerSpecification
     builder.getTransducer
   }
 
+  property("Simple Pre With Pre and Post PreImage") = {
+    // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    val q3 = new IDState(3)
+    val q4 = new IDState(4)
+    q4.setAccept(true)
+    q1.addTransition(new Transition('z', 'z', q2))
+    q2.addTransition(new Transition('a', 'z', q3))
+    q3.addTransition(new Transition('b', 'b', q4))
+    q4.addTransition(new Transition('a', 'a', q2))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = simplePrePostTran.preImage(baut)
+
+    pre(List('b')) && !pre(List('a')) && !pre(List('d'))
+  }
+
   val copyPSST = {
     // PSST that replaces (b*)a(b*) with \2a\2, which cannot be modeled 
     // by one-way FT since the relation is not even regular.
@@ -69,6 +89,26 @@ object PrioStreamingTransducerSpecification
     builder.setAccept(qf, true, List(RefVariable(0), Constant('a'), RefVariable(0)))
 
     builder.getTransducer
+  }
+
+  property("replace (b*)a(b*) to \\2a\\2 PreImage") = {
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    val q3 = new IDState(3)
+    val q4 = new IDState(4)
+    q4.setAccept(true)
+    q1.addTransition(new Transition('b', 'b', q2))
+    q2.addTransition(new Transition('a', 'a', q3))
+    q3.addTransition(new Transition('b', 'b', q4))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = copyPSST.preImage(baut)
+
+    !pre(List('b', 'a', 'b', 'b')) &&
+    pre(List('b', 'a', 'b')) && !pre(List('a', 'b', 'b')) && 
+    pre(List('a', 'b'))
   }
 
   val abcStar = {
@@ -97,47 +137,7 @@ object PrioStreamingTransducerSpecification
     builder.getTransducer
   }
 
-  property("Simple Pre With Pre and Post") = {
-    // Automaton q1 -[z]-> q2 -[a-z]-> q3 -[b]-> q4 -- [a] --> q2
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    q4.setAccept(true)
-    q1.addTransition(new Transition('z', 'z', q2))
-    q2.addTransition(new Transition('a', 'z', q3))
-    q3.addTransition(new Transition('b', 'b', q4))
-    q4.addTransition(new Transition('a', 'a', q2))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    val baut = new BricsAutomaton(aut)
-
-    val pre = simplePrePostTran.preImage(baut)
-
-    pre(List('b')) && !pre(List('a')) && !pre(List('d'))
-  }
-
-  property("replace (b*)a(b*) to \\2a\\2 result bab") = {
-    val q1 = new IDState(1)
-    val q2 = new IDState(2)
-    val q3 = new IDState(3)
-    val q4 = new IDState(4)
-    q4.setAccept(true)
-    q1.addTransition(new Transition('b', 'b', q2))
-    q2.addTransition(new Transition('a', 'a', q3))
-    q3.addTransition(new Transition('b', 'b', q4))
-    val aut = new BAutomaton
-    aut.setInitialState(q1)
-    val baut = new BricsAutomaton(aut)
-
-    val pre = copyPSST.preImage(baut)
-
-    !pre(List('b', 'a', 'b', 'b')) &&
-    pre(List('b', 'a', 'b')) && !pre(List('a', 'b', 'b')) && 
-    pre(List('a', 'b'))
-  }
-
-  property("replace (b + a)*(c + a)* to \\2a\\2 result caa") = {
+  property("replace (b + a)*(c + a)* to \\2a\\2 PreImage") = {
     val q1 = new IDState(1)
     val q2 = new IDState(2)
     val q3 = new IDState(3)
@@ -155,4 +155,54 @@ object PrioStreamingTransducerSpecification
     pre(List('a', 'a', 'c')) &&
     pre(List('a', 'c', 'a')) && pre(List('c', 'a', 'a')) && !pre(List('a', 'a', 'a'))
   }
+
+  val aStarPSST = {
+    // PSST that replaces (a*)a* with \1 
+
+    val builder = PrioStreamingTransducer.getBuilder(1)
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+    val qf = builder.getNewState
+
+    val nop = List(List(RefVariable(0)))
+    val update = List(List(RefVariable(0), Constant('a')))
+
+    builder.addTransition(q0, ('a', 'a'), update, q1)
+    builder.addTransition(qf, ('a', 'a'), nop, qf)
+    builder.addETransition(q1, nop, 0, qf)
+    builder.addETransition(q1, nop, 1, q0) // this is the prioritised transition
+
+    builder.setInitialState(q0)
+    builder.setAccept(qf, true, List(RefVariable(0)))
+
+    builder.getTransducer
+  }
+
+  property("PSST with epsilon PreImage") = {
+    val q1 = new IDState(1)
+    val q2 = new IDState(2)
+    val q3 = new IDState(3)
+    val q4 = new IDState(4)
+    val q5 = new IDState(5)
+    q5.setAccept(true)
+    q1.addTransition(new Transition('a', 'a', q2))
+    q2.addTransition(new Transition('a', 'a', q3))
+    q3.addTransition(new Transition('a', 'a', q4))
+    q4.addTransition(new Transition('a', 'a', q5))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = aStarPSST.preImage(baut)
+
+    pre(List('a', 'a', 'a', 'a')) &&
+    !pre(List('a', 'a', 'a')) && !pre(List('a', 'a', 'a', 'a', 'a'))
+  }
+
+  property("PSST concrete evaluation correct") = {
+    (copyPSST("bbbbbabb").get == "bbabb") &&
+    (abcStar("bababbbaaaaca").get == "cabababbbaaaa") &&
+    (aStarPSST("aaaaa").get == "aaaaa")
+  }
+
 }
