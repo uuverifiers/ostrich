@@ -30,6 +30,8 @@ case class RefVariable(val v: Int) extends UpdateOp
 // Append an 'internal' character
 case object InternalOp extends UpdateOp
 
+// A copyful SST is more expressive than 2FT, and
+// encodes a non-regular relation
 trait StreamingTransducer {
   /**
    * Calculates regular language that is pre-image of the given regular
@@ -105,6 +107,13 @@ trait StreamingTransducerBuilder[S, T] {
    */
   def addTransition(s1 : State,
                     lbl : TLabel,
+                    ops : Seq[Seq[UpdateOp]],
+                    s2 : State) : Unit
+
+  /**
+   * Add a e-transition to the transducer
+   */
+  def addETransition(s1 : State,
                     ops : Seq[Seq[UpdateOp]],
                     s2 : State) : Unit
 

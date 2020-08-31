@@ -43,9 +43,10 @@ object PrioStreamingTransducer {
 
 /**
  * Implementation of prioritised streaming transducers
- * all transitions have priority. Epsilon transitions are allowed, but are always of lower priority.
+ * all transitions have priority. And states with both input transitions and epsilon transitions
+ * are not allowed.
  * 'numvars' is the number of string variables, which are labeled by indexes 0 .. numvars - 1
- * Note that PSST is intrinsically functional
+ * Note that PSST is intrinsically functional, on the condition that there is no epsilon-circle
  */
 class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
                           val numvars : Int,
@@ -379,6 +380,17 @@ class PrioStreamingTransducerBuilder(val numvars : Int)
                     s2 : State) =
     if (LabelOps.isNonEmptyLabel(lbl))
       lblTrans.addBinding(s1, (lbl, ops, priority, s2))
+
+  def addETransition(s1 : State,
+                     ops : Seq[Seq[UpdateOp]],
+                     s2 : State) =
+    addETransition(s1, ops, 0, s2)
+
+  def addETransition(s1 : State,
+                     ops : Seq[Seq[UpdateOp]],
+                     priority : Int,
+                     s2 : State) =
+    eTrans.addBinding(s1, (ops, priority, s2))
 
   def getTransducer = {
     // TODO: restrict to live reachable states
