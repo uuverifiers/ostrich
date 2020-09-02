@@ -29,7 +29,7 @@ object PrioStreamingTransducerSpecification
 
   def seq(s : String) = s.map(_.toInt)
 
-  def toConstants(s : String) = s.map((c) => Constant(c))
+  def toConstants(s : String) : Seq[UpdateOp] = s.map((c) => Constant(c))
 
   // a trivial PSST which simulate the normal prioritised transducer
   // q0 -- [a-c], ("zz", +0, "adb") --> qf
@@ -40,9 +40,7 @@ object PrioStreamingTransducerSpecification
     val qf = builder.getNewState
     builder.setAccept(qf, true, List(RefVariable(0)))
 
-    builder.addTransition(q0, BricsTLabelOps.singleton('a'), List(toConstants("zzaadb")), qf)
-    builder.addTransition(q0, BricsTLabelOps.singleton('b'), List(toConstants("zzbadb")), qf)
-    builder.addTransition(q0, BricsTLabelOps.singleton('c'), List(toConstants("zzcadb")), qf)
+    builder.addTransition(q0, ('a', 'c'), List(toConstants("zz") ++ List(Offset(0)) ++ toConstants("adb")), qf)
 
     builder.setInitialState(q0)
 
@@ -118,17 +116,16 @@ object PrioStreamingTransducerSpecification
     val q0 = builder.getNewState
     val q1 = builder.getNewState
 
-    def updatex(c : Char) = List(List(RefVariable(0), Constant(c)), List(RefVariable(1)))
-    def updatey(c : Char) = List(List(RefVariable(0)), List(RefVariable(1), Constant(c)))
+    val updatex = List(List(RefVariable(0), Offset(0)), List(RefVariable(1)))
+    val updatey = List(List(RefVariable(0)), List(RefVariable(1), Offset(0)))
 
-    builder.addTransition(q0, BricsTLabelOps.singleton('b'), updatex('b'), 1, q0)
-    builder.addTransition(q0, BricsTLabelOps.singleton('a'), updatex('a'), 1, q0)
+    builder.addTransition(q0, ('a', 'b'), updatex, 1, q0)
 
-    builder.addTransition(q0, BricsTLabelOps.singleton('a'), updatey('a'), 0, q1)
-    builder.addTransition(q0, BricsTLabelOps.singleton('c'), updatey('c'), 0, q1)
+    builder.addTransition(q0, BricsTLabelOps.singleton('a'), updatey, 0, q1)
+    builder.addTransition(q0, BricsTLabelOps.singleton('c'), updatey, 0, q1)
 
-    builder.addTransition(q1, BricsTLabelOps.singleton('a'), updatey('a'), 1, q1)
-    builder.addTransition(q1, BricsTLabelOps.singleton('c'), updatey('c'), 1, q1)
+    builder.addTransition(q1, BricsTLabelOps.singleton('a'), updatey, 1, q1)
+    builder.addTransition(q1, BricsTLabelOps.singleton('c'), updatey, 1, q1)
 
     builder.setInitialState(q0)
     builder.setAccept(q0, true, List(RefVariable(1), RefVariable(0)))

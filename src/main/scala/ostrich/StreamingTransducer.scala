@@ -24,6 +24,9 @@ abstract class UpdateOp
 // Append a constant character
 case class Constant(val c: Char) extends UpdateOp
 
+// Append a character by adding offset to the input character
+case class Offset(val o: Int) extends UpdateOp
+
 // Refer to the current value of a string variable
 case class RefVariable(val v: Int) extends UpdateOp
 
@@ -39,7 +42,7 @@ trait StreamingTransducer {
    *
    * Convenience method for when there are no internal transitions
    */
-  def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton =
+  def preImage(aut : BricsAutomaton) : AtomicStateAutomaton =
     preImage(aut, Iterable.empty[(aut.State, aut.State)])
 
   /**
@@ -50,7 +53,7 @@ trait StreamingTransducer {
    * have an Internal character between them.  I.e. map(s) contains s'
    * if there is an internal transition between s and s'
    */
-  def preImage[A <: AtomicStateAutomaton]
+  def preImage[A <: BricsAutomaton]
               (aut : A,
                internal : Iterable[(A#State, A#State)]) : AtomicStateAutomaton
 
