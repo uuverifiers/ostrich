@@ -11,7 +11,8 @@ import ap.terfor.{Formula, TermOrder}
 import ap.theories._
 import EdgeWrapper._
 import ap.parser.IExpression.Predicate
-import ap.terfor.ConstantTerm
+import scala.annotation.elidable
+import scala.annotation.elidable.FINE
 
 trait NoFunctions {
   val functionPredicateMapping
@@ -28,8 +29,12 @@ trait NoAxioms {
 }
 
 trait Tracing {
+  @elidable(FINE)
+  protected def logInfo(message: String) = System.err.println(message)
+
   protected def trace[T](message: String)(something: T): T = {
-    // System.err.println(s"trace::${message}(${something})")
+    logInfo(s"trace::${message}(${something})")
+
     something
   }
 }
