@@ -139,7 +139,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
         Console.err.println("Warning: look-ahead in regular expression not handled")
       if (str4 contains "(?<")
         Console.err.println("Warning: look-behind in regular expression not handled")
-println(str4)
+
       str4
     }
 
