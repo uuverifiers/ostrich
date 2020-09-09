@@ -21,6 +21,7 @@ package ostrich
 import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
+import ap.theories.ModuloArithmetic
 
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
                            Automaton => BAutomaton}
@@ -28,6 +29,19 @@ import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
 object Regex2Aut {
 
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
+
+  private object SmartConst {
+    import IExpression._
+    def unapply(t : ITerm) : Option[IdealInt] = t match {
+      case Const(value) =>
+        Some(value)
+      case IFunApp(ModuloArithmetic.mod_cast,
+                   Seq(Const(lower), Const(upper), SmartConst(value))) =>
+        Some(ModuloArithmetic.evalModCast(lower, upper, value))
+      case _ =>
+        None
+    }
+  }
 
 }
 
@@ -48,7 +62,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     case IFunApp(`re_allchar`, _) =>
       "."
     case IFunApp(`re_charrange`,
-                 Seq(IIntLit(IdealInt(a)), IIntLit(IdealInt(b)))) =>
+                 Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       "[\\" + numToUnicode(a) + "-" + "\\" + numToUnicode(b) + "]"
     case IFunApp(`re_++`, Seq(a, b)) =>
       buildBricsRegex(a) + buildBricsRegex(b)
@@ -136,10 +150,12 @@ class Regex2Aut(theory : OstrichStringTheory) {
                      .replaceAll("""<""", "\\\\<")
 
       if ((str4 contains "(?=") || (str4 contains "(?!"))
-        Console.err.println("Warning: look-ahead in regular expression not handled")
+        Console.err.println(
+          "Warning: look-ahead in regular expression not handled")
       if (str4 contains "(?<")
-        Console.err.println("Warning: look-behind in regular expression not handled")
-println(str4)
+        Console.err.println(
+          "Warning: look-behind in regular expression not handled")
+
       str4
     }
 
