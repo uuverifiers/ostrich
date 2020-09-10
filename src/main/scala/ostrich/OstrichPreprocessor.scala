@@ -22,6 +22,9 @@ import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
 
+/**
+ * Pre-processor for reducing some operators to more basic ones.
+ */
 class OstrichPreprocessor(theory : OstrichStringTheory)
       extends ContextAwareVisitor[Unit, IExpression] {
 
@@ -42,12 +45,6 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
   private def strCat(ts : ITerm*) : ITerm = ts match {
     case Seq() => str_empty()
     case ts    => ts reduceLeft (str_++(_, _))
-  }
-
-  // TODO: move this to Princess
-  private def str2term(str : String) : ITerm = str match {
-    case ""  => str_empty()
-    case str => str_cons(str.head, str2term(str.substring(1)))
   }
 
   def apply(f : IFormula) : IFormula =
@@ -153,7 +150,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
     case (IFunApp(`str_++`, _),
           Seq(ConcreteString(str1), ConcreteString(str2))) =>
-      str2term(str1 + str2)
+      string2Term(str1 + str2)
 
     case (IFunApp(`str_from_code`, _), Seq(Const(code))) =>
       if (code >= 0 & code < theory.alphabetSize)
@@ -172,6 +169,35 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       re_charrange(lower, upper)
 
     case (t, _) =>
+      t update subres
+  }
+
+}
+
+
+/**
+ * Pre-processor for replacing regular expressions with just numeric ids,
+ * which streamlines the translation to automata.
+ */
+class OstrichRegexEncoder(theory : OstrichStringTheory)
+      extends ContextAwareVisitor[Unit, IExpression] {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula =
+    this.visit(f, Context(())).asInstanceOf[IFormula]
+
+  def postVisit(t : IExpression,
+                ctxt : Context[Unit],
+                subres : Seq[IExpression]) : IExpression = (t, subres) match {
+    case (IAtom(`str_in_re`, _),
+          Seq(s : ITerm, ConcreteRegex(regex))) =>
+      str_in_re_id(s, theory.autDatabase.regex2Id(regex))
+    case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
+      println("Warning: could not encode as id: " + subres)
+      t update subres
+    }
+    case _ =>
       t update subres
   }
 

@@ -96,16 +96,26 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  val autDatabase = new AutDatabase(this)
+
+  val str_in_re_id =
+    MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
+
+  //////////////////////////////////////////////////////////////////////////////
+
   val functions =
     predefFunctions ++ (extraFunctions map (_._2))
 
   val (funPredicates, _, _, functionPredicateMap) =
-    Theory.genAxioms(theoryFunctions = functions)
+    Theory.genAxioms(theoryFunctions = functions,
+                     extraPredicates = List(str_in_re_id))
   val predicates =
     predefPredicates ++ funPredicates ++ (transducersWithPreds map (_._2))
 
-  val functionPredicateMapping = functions zip funPredicates
-  val functionalPredicates = funPredicates.toSet
+  val functionPredicateMapping =
+    for (f <- functions) yield (f, functionPredicateMap(f))
+  val functionalPredicates =
+    (for (f <- functions) yield functionPredicateMap(f)).toSet
   val predicateMatchConfig : Signature.PredicateMatchConfig = Map()
   val axioms = Conjunction.TRUE
   val totalityAxioms = Conjunction.TRUE
@@ -126,7 +136,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re) ++
+    Set(str_in_re, str_in_re_id) ++
     (for (f <- Set(str_empty, str_cons,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_to_re,
@@ -160,6 +170,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                        : Seq[Plugin.Action] = goalState(goal) match {
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
+
         breakCyclicEquations(goal) match {
           case Some(actions) =>
             actions
@@ -219,8 +230,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
-    val visitor = new OstrichPreprocessor (this)
-    (visitor(f), signature)
+    val visitor1 = new OstrichPreprocessor (this)
+    val visitor2 = new OstrichRegexEncoder (this)
+    (visitor2(visitor1(f)), signature)
   }
 
   TheoryRegistry register this

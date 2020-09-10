@@ -21,7 +21,8 @@ package ostrich
 import ap.SimpleAPI
 import ap.parser.IFunction
 import ap.terfor.{Term, TerForConvenience}
-import ap.terfor.preds.PredConj
+import ap.terfor.preds.{PredConj, Atom}
+import ap.terfor.linearcombination.LinearCombination
 import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.basetypes.IdealInt
@@ -35,7 +36,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
 
   import theory.{str, str_len, str_empty, str_cons, str_++, str_in_re,
-                 str_to_re, re_from_str,
+                 str_in_re_id, str_to_re, re_from_str,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
@@ -47,6 +48,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         re_capture, re_reference)
 
   private val p = theory.functionPredicateMap
+
+  private val autDatabase = theory.autDatabase
 
   def findStringModel(goal : Goal)
                     : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
@@ -79,7 +82,6 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     val wordExtractor = theory.WordExtractor(goal)
     val regexExtractor = theory.RegexExtractor(goal)
-    val regex2Aut = new Regex2Aut(theory)
 
 //    Console.err.println(atoms)
 
@@ -95,6 +97,29 @@ class OstrichSolver(theory : OstrichStringTheory,
     val regexes = new ArrayBuffer[(Term, Automaton)]
     val lengthVars = new MHashMap[Term, Term]
 
+    ////////////////////////////////////////////////////////////////////////////
+
+    def decodeRegexId(a : Atom, complemented : Boolean) : Unit = a(1) match {
+      case LinearCombination.Constant(id) => {
+        val autOption =
+          if (complemented)
+            autDatabase.id2ComplementedAutomaton(id.intValueSafe)
+          else
+            autDatabase.id2Automaton(id.intValueSafe)
+
+        autOption match {
+          case Some(aut) =>
+            regexes += ((a.head, aut))
+          case None =>
+            Console.err.println("Warning: could not decode regex id " + a(1))
+        }
+      }
+      case lc =>
+        Console.err.println("Warning: could not decode regex id " + lc)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+
     for (a <- atoms.positiveLits) a.pred match {
       case FunPred(`str` | `str_cons` | `str_empty`)
         if concreteWords contains a.last =>
@@ -104,9 +129,11 @@ class OstrichSolver(theory : OstrichStringTheory,
         // nothing, can be ignored
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = regex2Aut buildAut regex
+        val aut = autDatabase.regex2Automaton(regex)
         regexes += ((a.head, aut))
       }
+      case `str_in_re_id` =>
+        decodeRegexId(a, false)
       case FunPred(`str_++`) =>
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
       case FunPred(`str_replaceall`) => {
@@ -119,12 +146,12 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
       case FunPred(`str_replaceallre`) => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = regex2Aut buildAut regex
+        val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
         funApps += ((ReplaceAllPreOp(aut), List(a(0), a(2)), a(3)))
       }
       case FunPred(`str_replacere`) => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = regex2Aut buildAut regex
+        val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
         funApps += ((ReplacePreOp(aut), List(a(0), a(2)), a(3)))
       }
       case FunPred(`str_len`) => {
@@ -146,12 +173,16 @@ class OstrichSolver(theory : OstrichStringTheory,
         // nothing
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+
     for (a <- atoms.negativeLits) a.pred match {
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = regex2Aut buildAut regex
-        regexes += ((a.head, !aut))
+        val aut = autDatabase.regex2ComplementedAutomaton(regex)
+        regexes += ((a.head, aut))
       }
+      case `str_in_re_id` =>
+        decodeRegexId(a, true)
       case pred if theory.transducerPreOps contains pred =>
         throw new Exception ("Cannot handle negated transducer constraint " + a)
       case p if (theory.predicates contains p) =>
@@ -159,6 +190,8 @@ class OstrichSolver(theory : OstrichStringTheory,
       case _ =>
         // nothing
     }
+
+    ////////////////////////////////////////////////////////////////////////////
 
     {
       import TerForConvenience._
