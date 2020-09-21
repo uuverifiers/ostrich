@@ -79,6 +79,8 @@ object TransducerTranslator {
       val inputC, outputC =
         p.createConstant(ModuloArithmetic.ModSort(IdealInt.ZERO,
                                                   IdealInt(alphabetSize - 1)))
+      val OutputInputOffsetEq =
+        OffsetEq(outputC, inputC)
 
       for (transition@
              TransducerTransition(fromState, toState, epsilons, constraint,
@@ -118,7 +120,8 @@ object TransducerTranslator {
               throw new Exception(
                 "Priorities can only be use for epsilon-transitions")
 
-            val presLabel = PartialEvaluator(p.simplify(bvLabel))
+            val presLabel =
+              IntCastEliminator(PartialEvaluator(p.simplify(bvLabel)))
 
             if (!ContainsSymbol.isPresburger(presLabel))
               throw new Exception(
@@ -135,9 +138,7 @@ object TransducerTranslator {
               for (c <- LineariseVisitor(disjunct, IBinJunctor.And)) c match {
                 case IBoolLit(true) =>
                   // nothing
-                case EqLit(Difference(`inputC`, `outputC`), offset) =>
-                  inputOp = Some(Plus(-offset.intValueSafe))
-                case EqLit(Difference(`outputC`, `inputC`), offset) =>
+                case OutputInputOffsetEq(offset) =>
                   inputOp = Some(Plus(offset.intValueSafe))
                 case EqLit(`outputC`, value) => {
                   inputOp = Some(NOP)
@@ -242,6 +243,9 @@ object TransducerTranslator {
     builder.getTransducer
   }
 
+  /**
+   * Visitor that splits negated equations into two inequalities.
+   */
   private object NegEqSplitter extends CollectingVisitor[Unit, IExpression] {
     import IExpression._
 
@@ -253,6 +257,41 @@ object TransducerTranslator {
         case INot(EqLit(t, value)) => t <= (value-1) | t >= (value+1)
         case s =>                     s
       }
+  }
+
+  /**
+   * Visitor that eliminates the <code>ModuloArithmetic.int_cast</code>
+   * function.
+   */
+  private object IntCastEliminator extends CollectingVisitor[Unit, IExpression]{
+    def apply(f : IFormula) : IFormula =
+      visit(f, ()).asInstanceOf[IFormula]
+    def postVisit(t : IExpression, arg : Unit,
+                  subres : Seq[IExpression]) : IExpression =
+      t match {
+        case IFunApp(ModuloArithmetic.int_cast, _) => subres.head
+        case _ => t update subres
+      }
+  }
+
+  /**
+   * Extractor that matches equations equivalent to
+   * <code>sym1 = sym2 + offset</code>.
+   */
+  private case class OffsetEq(sym1 : ITerm, sym2 : ITerm) {
+    private val Sym1Eq  = SymbolEquation(sym1)
+    private val Sym2Sum = SymbolSum(sym2)
+
+    def unapply(f : IFormula) : Option[IdealInt] = f match {
+      case Sym1Eq(sym1Coeff, Sym2Sum(sym2Coeff, Const(offset))) =>
+        (sym1Coeff, sym2Coeff) match {
+          case (IdealInt.ONE, IdealInt.ONE)             => Some(offset)
+          case (IdealInt.MINUS_ONE, IdealInt.MINUS_ONE) => Some(-offset)
+          case _                                        => None
+        }
+      case _ =>
+        None
+    }
   }
 
 }
