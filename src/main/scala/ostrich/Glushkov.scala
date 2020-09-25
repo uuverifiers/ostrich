@@ -201,10 +201,9 @@ class Regex2PFA(theory : OstrichStringTheory) {
     // map from star to the capture groups within
   type completeInfo = (GlushkovPFA, Int, Int, Map[State, Set[Int]], Map[(State, State), Set[Int]], Map[Int, Set[Int]])
   
-  def buildAll(t : ITerm) : completeInfo = {
+  def buildAll(pat : ITerm) : completeInfo = {
     var numCapture : Int = 0
     var numStar : Int = 0
-    //val seen_captures = new MHashSet[Int]
 
     val capState = 
       new MHashMap[Int, MSet[State]] 
@@ -214,7 +213,12 @@ class Regex2PFA(theory : OstrichStringTheory) {
     val starInfo = 
       new MHashMap[Int, (Set[State], Set[State], Set[Int])] 
 
-    def buildImpl(t : ITerm) : (GlushkovPFA, Set[Int]) = {
+    // this is the map from literal numbering to inter numbering of 
+    // capture groups. It is for translating the replacement string.
+    val capNumTransform = 
+      new MHashMap[Int, Int]
+
+    def buildPatternImpl(t : ITerm) : (GlushkovPFA, Set[Int]) = {
       t match {
         case IFunApp(`re_none`, _) =>
           (GlushkovPFA.none, Set())
@@ -253,8 +257,8 @@ class Regex2PFA(theory : OstrichStringTheory) {
         case IFunApp(`re_*`, Seq(a)) => {
           val (autA, capA) = buildImpl(a)
 
-          numStar += 1
           val localStarNum = numStar
+          numStar += 1
           starInfo(localStarNum) = (autA.start, autA.end, capA)
 
           (GlushkovPFA.star(autA), capA)
@@ -262,8 +266,8 @@ class Regex2PFA(theory : OstrichStringTheory) {
         case IFunApp(`re_+`, Seq(a)) => {
           val (autA, capA) = buildImpl(a)
 
-          numStar += 1 // plus is regarded as a star
           val localStarNum = numStar
+          numStar += 1 // plus is regarded as a star
           starInfo(localStarNum) = (autA.start, autA.end, capA)
 
           (GlushkovPFA.star(autA), capA)
@@ -280,9 +284,17 @@ class Regex2PFA(theory : OstrichStringTheory) {
           throw new IllegalArgumentException(
             "regex with capture groups does not support loop (yet!) " + t)
         }
-        case IFunApp(`re_capture`, Seq(_, a)) => {
-          numCapture += 1
+        case IFunApp(`re_capture`, Seq(IIntLit(litCaptureNum), a)) => {
           val localCaptureNum = numCapture
+          numCapture += 1 // capture group is numbered from 0 to numCapture - 1
+
+          (capNumTransform get litCaptureNum) match {
+            case None => { capNumTransform += ((litCaptureNum, localCaptureNum))}
+            case Some(_) => {
+              throw new IllegalArgumentException(
+                "Duplicate capture group index " + litCaptureNum)
+            }
+          }
 
           val (autA, capA) = buildImpl(a)
 
@@ -302,12 +314,12 @@ class Regex2PFA(theory : OstrichStringTheory) {
       }
     }
 
-    val (aut, _) = buildImpl(t)
+    val (aut, _) = buildPatternImpl(pat)
     val state2Capture_mut = new MHashMap[State, MSet[Int]] with MMultiMap[State, Int]
 
     for ((cap, states) <- capState;
          s <- states) {
-           state2Capture_mut.addBinding(s, cap)
+        state2Capture_mut.addBinding(s, cap)
     }
 
     val state2Capture = (for ((s, caps) <- state2Capture_mut) 
