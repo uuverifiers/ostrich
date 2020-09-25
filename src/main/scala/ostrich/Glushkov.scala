@@ -280,11 +280,12 @@ class Regex2PFA(theory : OstrichStringTheory) {
           throw new IllegalArgumentException(
             "regex with capture groups does not support loop (yet!) " + t)
         }
-        case IFunApp(`re_capture`, Seq(a)) => {
-          val (autA, capA) = buildImpl(a)
-
+        case IFunApp(`re_capture`, Seq(_, a)) => {
           numCapture += 1
           val localCaptureNum = numCapture
+
+          val (autA, capA) = buildImpl(a)
+
           for ((s, trans) <- autA.trans; (lbl, tgt) <- trans) {
             capState.addBinding(localCaptureNum, tgt)
           }
