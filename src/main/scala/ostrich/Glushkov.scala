@@ -35,17 +35,26 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  Set => MSet,
                                  Map => MMap}
 
-case class GlushkovPFA (initialTrans : Seq[GlushkovPFA.Transition], 
-  trans: MMap[GlushkovPFA.State, Seq[GlushkovPFA.Transition]], 
-  start: Set[GlushkovPFA.State], 
-  end: Set[GlushkovPFA.State], 
-  empty: Boolean) // if q0 is accepting, or if N accepts \epsilon
+case class GlushkovPFA (val initialTrans : Seq[GlushkovPFA.Transition], 
+  val trans: MMap[GlushkovPFA.State, Seq[GlushkovPFA.Transition]], 
+  val start: Set[GlushkovPFA.State], 
+  val end: Set[GlushkovPFA.State], 
+  val empty: Boolean) // if q0 is accepting, or if N accepts \epsilon
 
 object GlushkovPFA {
+
   type State = BricsAutomaton#State
   type TLabel = BricsAutomaton#TLabel
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
   type Transition = (TLabel, State)
+
+  // the automaton, 
+  // number of capture groups, 
+  // number of stars,
+  // map from state to the capture groups it's in,
+  // map from state pair to stars which it resets
+  // map from star to the capture groups within
+  type completeInfo = (GlushkovPFA, Int, Int, Map[State, Set[Int]], Map[(State, State), Set[Int]], Map[Int, Set[Int]])
 
   private class GState extends BState {
     override def toString = "q" + hashCode
@@ -115,7 +124,7 @@ object GlushkovPFA {
         for (es1 <- e1) { // bridge aut1 and aut2
           (trans get es1) match {
             case None => {
-              trans += ((es1, init2)) 
+              trans += (es1 -> init2) 
             }
             case Some(tgts) => {
               trans(es1) = tgts ++ init2 // prefer to stay in aut1
@@ -139,7 +148,7 @@ object GlushkovPFA {
         for (es <- e1) {
           (trans get es) match {
             case None => {
-              trans += ((es, init1))
+              trans += (es -> init1)
             }
             case Some(tgts) => {
               trans(es) = tgts ++ init1 // prefer to match longer substring in an iteration
@@ -160,7 +169,7 @@ object GlushkovPFA {
         for (es <- e1) {
           (trans get es) match {
             case None => {
-              trans += ((es, init1))
+              trans += (es -> init1)
             }
             case Some(tgts) => {
               trans(es) = tgts ++ init1 // prefer to match longer substring in an iteration
@@ -184,6 +193,8 @@ object GlushkovPFA {
 
 class Regex2PFA(theory : OstrichStringTheory) {
 
+  import GlushkovPFA.completeInfo
+
   type State = GlushkovPFA.State
   type TLabel = GlushkovPFA.TLabel
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
@@ -193,14 +204,6 @@ class Regex2PFA(theory : OstrichStringTheory) {
     re_loop, str_to_re, re_from_str, 
     re_capture, re_reference}
 
-    // the automaton, 
-    // number of capture groups, 
-    // number of stars,
-    // map from state to the capture groups it's in,
-    // map from state pair to stars which it resets
-    // map from star to the capture groups within
-  type completeInfo = (GlushkovPFA, Int, Int, Map[State, Set[Int]], Map[(State, State), Set[Int]], Map[Int, Set[Int]])
-  
   def buildAll(pat : ITerm) : completeInfo = {
     var numCapture : Int = 0
     var numStar : Int = 0
@@ -237,13 +240,13 @@ class Regex2PFA(theory : OstrichStringTheory) {
             (GlushkovPFA.single(lbl), Set())
         }
         case IFunApp(`re_++`, Seq(a, b)) => {
-          val (autA, capA) = buildImpl(a)
-          val (autB, capB) = buildImpl(b)
+          val (autA, capA) = buildPatternImpl(a)
+          val (autB, capB) = buildPatternImpl(b)
           (GlushkovPFA.concat(autA, autB), capA ++ capB)
         }
         case IFunApp(`re_union`, Seq(a, b)) => {
-          val (autA, capA) = buildImpl(a)
-          val (autB, capB) = buildImpl(b)
+          val (autA, capA) = buildPatternImpl(a)
+          val (autB, capB) = buildPatternImpl(b)
           (GlushkovPFA.alternate(autA, autB), capA ++ capB)
         }
         case IFunApp(`re_inter`, Seq(a, b)) => {
@@ -255,7 +258,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
             "regex with capture groups does not support complement " + t)
         }
         case IFunApp(`re_*`, Seq(a)) => {
-          val (autA, capA) = buildImpl(a)
+          val (autA, capA) = buildPatternImpl(a)
 
           val localStarNum = numStar
           numStar += 1
@@ -264,7 +267,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
           (GlushkovPFA.star(autA), capA)
         }
         case IFunApp(`re_+`, Seq(a)) => {
-          val (autA, capA) = buildImpl(a)
+          val (autA, capA) = buildPatternImpl(a)
 
           val localStarNum = numStar
           numStar += 1 // plus is regarded as a star
@@ -273,7 +276,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
           (GlushkovPFA.star(autA), capA)
         }
         case IFunApp(`re_opt`, Seq(a)) => {
-          val (autA, capA) = buildImpl(a)
+          val (autA, capA) = buildPatternImpl(a)
           (GlushkovPFA.optional(autA), capA)
         }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
@@ -284,19 +287,19 @@ class Regex2PFA(theory : OstrichStringTheory) {
           throw new IllegalArgumentException(
             "regex with capture groups does not support loop (yet!) " + t)
         }
-        case IFunApp(`re_capture`, Seq(IIntLit(litCaptureNum), a)) => {
+        case IFunApp(`re_capture`, Seq(IIntLit(IdealInt(litCaptureNum)), a)) => {
           val localCaptureNum = numCapture
           numCapture += 1 // capture group is numbered from 0 to numCapture - 1
 
           (capNumTransform get litCaptureNum) match {
-            case None => { capNumTransform += ((litCaptureNum, localCaptureNum))}
+            case None => { capNumTransform += (litCaptureNum -> localCaptureNum)}
             case Some(_) => {
               throw new IllegalArgumentException(
                 "Duplicate capture group index " + litCaptureNum)
             }
           }
 
-          val (autA, capA) = buildImpl(a)
+          val (autA, capA) = buildPatternImpl(a)
 
           for ((s, trans) <- autA.trans; (lbl, tgt) <- trans) {
             capState.addBinding(localCaptureNum, tgt)
