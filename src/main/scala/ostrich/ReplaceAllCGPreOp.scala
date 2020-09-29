@@ -206,11 +206,10 @@ object ReplaceAllCGPreOp {
               // we have to consider which Klenne Stars are reset
               // and how variables are thus updated
               val caps_activated = state2Caps.getOrElse(next, Set())
-              val caps_in_stars : Set[Int] = {
-                val stars_reset = states2Stars.getOrElse((frontier, next), Set.empty[Int])
+              val stars_reset : Set[Int] = states2Stars.getOrElse((frontier, next), Set.empty[Int])
+              val caps_in_stars : Set[Int] = 
                 (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
                   cap <- starcaps) yield cap).toSet
-              }
 
               val ops : Seq[Seq[UpdateOp]] = updateWithIndex { 
                 index => {
@@ -231,11 +230,11 @@ object ReplaceAllCGPreOp {
             for (next <- frontImg; if isAccept (next)) {
               val stopMatch = getState(NotMatching, noreachImg + next)
               lazy val caps_activated = state2Caps.getOrElse(next, Set())
-              lazy val caps_in_stars : Set[Int] = {
-                val stars_reset = states2Stars.getOrElse((frontier, next), Set())
+              lazy val stars_reset : Set[Int] = states2Stars.getOrElse((frontier, next), Set.empty[Int])
+              lazy val caps_in_stars : Set[Int] = 
                 (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
                   cap <- starcaps) yield cap).toSet
-              }
+
 
               val op : Seq[UpdateOp] = RefVariable(numCap) +: rep.flatMap {
                 case RefVariable(index) => {
