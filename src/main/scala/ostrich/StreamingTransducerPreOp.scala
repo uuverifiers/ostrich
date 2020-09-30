@@ -29,7 +29,7 @@ object StreamingTransducerPreOp {
 */
 class StreamingTransducerPreOp(t : StreamingTransducer) extends PreOp {
 
-  override def toString = "transducer"
+  override def toString = t.toDot
 
   def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] = {
     assert (arguments.size == 1)

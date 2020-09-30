@@ -30,6 +30,8 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            Transition => BTransition}
 import Function.unlift
 
+import java.lang.StringBuilder
+
 object PrioStreamingTransducer {
   def apply() : PrioStreamingTransducer =
     getBuilder(0).getTransducer
@@ -355,6 +357,37 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     }
 
     res.toSet
+  }
+
+  override def toDot() : String = {
+    val sb = new StringBuilder()
+    sb.append("digraph PSST" + numvars + " {\n")
+
+    sb.append(initialState + "[shape=square];\n")
+    for ((f, op) <- acceptingStates)
+        sb.append(f + "[peripheries=2];\n")
+
+    for (trans <- lblTrans) {
+      val (state, arrows) = trans
+      for (arrow <- arrows) {
+        val (lbl, op, prio, dest) = arrow
+        sb.append(state + " -> " + dest);
+        sb.append("[label=\"" + lbl + "/" + prio + "\"];\n")
+      }
+    }
+
+    for (trans <- eTrans) {
+      val (state, arrows) = trans
+      for (arrow <- arrows) {
+        val (op, prio, dest) = arrow
+        sb.append(state + " -> " + dest);
+        sb.append("[label=\"epsilon /" + prio + "\"];\n")
+      }
+    }
+
+    sb.append("}\n")
+
+    return sb.toString()
   }
 }
 

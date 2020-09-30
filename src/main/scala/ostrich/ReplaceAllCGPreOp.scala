@@ -37,6 +37,8 @@ object ReplaceAllCGPreOp {
     StreamingTransducerPreOp(buildPSST(pat, rep))
 
   def buildPSST(pat : completeInfo, rep : Seq[UpdateOp]) : PrioStreamingTransducer = {
+    GlushkovPFA.printInfo(pat)
+
     val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = pat
 
     // for each capture group, we have a string variable.
@@ -81,6 +83,11 @@ object ReplaceAllCGPreOp {
     case object NotMatching extends Mode
     // matching (long), word read so far leads to state 'frontier'
     case class Matching(val frontier : autState) extends Mode
+    // last transition finished a match and reached frontier
+    // 'EndMatch' behaves just like in left mode, 
+    // the only difference is the way prohibition set is regarded
+    case class EndMatch(val frontier : autState) extends Mode
+
 
     // a state of PSST consists of mode, and a set of states
     // that should not be reached, a.k.a. prohibition set
@@ -105,8 +112,11 @@ object ReplaceAllCGPreOp {
         val s = builder.getNewState
         mapState(s, (m, noreach))
         val goodNoreach = !noreach.exists(isAccept(_))
+        println("new state:" + s + " -> (" + m + " , " + noreach + ")")
+        println("goodNoreach:" + goodNoreach)
         builder.setAccept(s, m match {
           case NotMatching => goodNoreach
+          case EndMatch(_) => goodNoreach
           case Matching(_) => false
         }, output)
       if (goodNoreach)
@@ -123,14 +133,17 @@ object ReplaceAllCGPreOp {
 
     // the returned image is sorted by priority
     def getImage(s: autState, lbl : TLabel) : Seq[autState] = {
-      for ((lbl2, s2) <- aut.trans(s);
-           if LabelOps.labelsOverlap(lbl, lbl2)) yield s2
+      (for (t <- aut.trans.get(s).iterator;
+        (lbl2, s2) <- t;
+        if LabelOps.labelsOverlap(lbl, lbl2)) 
+          yield s2).toSeq
     }
     def getImageAll(states : Set[autState], lbl : TLabel) : Set[autState] = {
       for (s1 <- states;
-           (lbl2, s2) <- aut.trans(s1);
+           t <- aut.trans.get(s1).iterator;
+           (lbl2, s2) <- t;
            if LabelOps.labelsOverlap(lbl, lbl2))
-        yield s2
+             yield s2
     }
     def getInitImage(lbl : TLabel) : Seq[autState] = {
       for ((lbl2, s) <- aut.initialTrans;
@@ -175,7 +188,7 @@ object ReplaceAllCGPreOp {
 
             // accept and go back to left mode directly
             for (next <- initImg; if isAccept (next)) {
-              val oneCharMatch = getState(NotMatching, noreachImg + next)
+              val oneCharMatch = getState(EndMatch(next), noreachImg)
               // since we have not went into long mode
               // all the variables are empty except 'res'
               // just keep their values and we only need to update 'res' here
@@ -228,7 +241,7 @@ object ReplaceAllCGPreOp {
             }
 
             for (next <- frontImg; if isAccept (next)) {
-              val stopMatch = getState(NotMatching, noreachImg + next)
+              val stopMatch = getState(EndMatch(next), noreachImg)
               lazy val caps_activated = state2Caps.getOrElse(next, Set())
               lazy val stars_reset : Set[Int] = states2Stars.getOrElse((frontier, next), Set.empty[Int])
               lazy val caps_in_stars : Set[Int] = 
@@ -259,6 +272,57 @@ object ReplaceAllCGPreOp {
                 }
               }
               builder.addTransition(ts, lbl, ops, priority, stopMatch)
+              priority -= 1
+            }
+          }
+        }
+        case EndMatch(frontier) => {
+          for (lbl <- labels) {
+            val initImg = getInitImage(lbl)
+            val frontImg = getImage(frontier, lbl).toSet
+            val noreachImg = getImageAll(noreach, lbl) ++ frontImg
+
+            val dontMatch = getState(NotMatching, noreachImg ++ initImg.toSet)
+            builder.addTransition(ts, lbl, only(numCap, append_after(numCap)), dontMatch)
+
+            var priority = Int.MaxValue
+            for (next <- initImg; if !(noreachImg contains next)) {
+              val newMatch = getState(Matching(next), noreachImg)
+              // update the correpsonding variables for 
+              // capture groups that are relevant
+              // (for now we don't need to care about stars)
+              val caps = state2Caps.getOrElse(next, Set())
+              var ops : Seq[Seq[UpdateOp]] = updateWithIndex {
+                i => {
+                  if (caps contains i) {
+                    single
+                  } else {
+                    nochange(i)
+                  }
+                }
+              }
+              builder.addTransition(ts, lbl, ops, priority, newMatch)
+              priority -= 1
+            }
+
+            // accept and go back to left mode directly
+            for (next <- initImg; if isAccept (next)) {
+              val oneCharMatch = getState(EndMatch(next), noreachImg)
+              // since we have not went into long mode
+              // all the variables are empty except 'res'
+              // just keep their values and we only need to update 'res' here
+              lazy val caps = state2Caps.getOrElse(next, Set())
+              val op = RefVariable(numCap) +: rep.flatMap({ 
+                case RefVariable(n) => {
+                  if (caps contains n) {
+                    single
+                  } else {
+                    List()
+                  }
+                }
+                case o => List(o)
+              })
+              builder.addTransition(ts, lbl, only(numCap, op), priority, oneCharMatch)
               priority -= 1
             }
           }

@@ -35,6 +35,8 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  Set => MSet,
                                  Map => MMap}
 
+import java.lang.StringBuilder
+
 case class GlushkovPFA (val initialTrans : Seq[GlushkovPFA.Transition], 
   val trans: MMap[GlushkovPFA.State, Seq[GlushkovPFA.Transition]], 
   val start: Set[GlushkovPFA.State], 
@@ -57,7 +59,7 @@ object GlushkovPFA {
   type completeInfo = (GlushkovPFA, Int, Int, Map[State, Set[Int]], Map[(State, State), Set[Int]], Map[Int, Set[Int]])
 
   private class GState extends BState {
-    override def toString = "q" + hashCode
+    override def toString = "qG" + hashCode
   }
 
   private def getNewState : State = new GState
@@ -189,6 +191,61 @@ object GlushkovPFA {
       }
     }
   }
+
+  def toDot(aut: GlushkovPFA) : String = {
+    val sb = new StringBuilder()
+    sb.append("digraph GlushkovPFA {\n")
+
+    sb.append("q0[shape=square];\n")
+    if (aut.empty)
+        sb.append("q0[peripheries=2];\n")
+
+    for (f  <- aut.end)
+        sb.append(f + "[peripheries=2];\n")
+
+    var priority = Int.MaxValue
+    for (tran <- aut.trans) {
+      val (state, arrows) = tran
+      for (arrow <- arrows) {
+        val (lbl, dest) = arrow
+        sb.append(state + " -> " + dest);
+        sb.append("[label=\"" + lbl + "/" + priority + "\"];\n")
+        priority -= 1
+      }
+    }
+
+    priority = Int.MaxValue
+    for (arrow <- aut.initialTrans) {
+      val (lbl, dest) = arrow
+      sb.append("q0 -> " + dest);
+      sb.append("[label=\"" + lbl + "/" + priority + "\"];\n")
+      priority -= 1
+    }
+
+    sb.append("}\n")
+
+    return sb.toString()
+  }
+
+  def printInfo(info : completeInfo) = {
+    val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = info
+    Console.withOut(Console.err) {
+      println("   Generated Glushkov PNFA with " + numCap + " capture groups and " + numStar + " Klenne stars:")
+      println(GlushkovPFA.toDot(aut))
+      println("   State to Capture Groups:")
+      for ((s, caps) <- state2Caps) {
+        println(s + " -> { " + caps + " }")
+      }
+      println("   States to Kleene Stars:")
+      for ((s, stars) <- states2Stars) {
+        println(s + " -> { " + stars + " }")
+      }
+      println("   Star to Capture Groups:")
+      for ((star, caps) <- star2Caps) {
+        println(star + " -> { " + caps + " }")
+      }
+    }
+  }
 }
 
 class Regex2PFA(theory : OstrichStringTheory) {
@@ -232,6 +289,10 @@ class Regex2PFA(theory : OstrichStringTheory) {
         case IFunApp(`re_all`, _) => {
           val aut_allchar = GlushkovPFA.single(LabelOps.sigmaLabel)
           val aut_all = GlushkovPFA.star(aut_allchar)
+          val localStarNum = numStar // considered as star?
+          numStar += 1
+
+          starInfo(localStarNum) = (aut_allchar.start, aut_allchar.end, Set.empty[Int])
           (aut_all, Set())
         }
         case IFunApp(`re_charrange`,
@@ -308,7 +369,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
             capState.addBinding(localCaptureNum, s)
           }
 
-          (GlushkovPFA.star(autA), capA + localCaptureNum)
+          (autA, capA + localCaptureNum)
         }
         case _ =>
           throw new IllegalArgumentException(
