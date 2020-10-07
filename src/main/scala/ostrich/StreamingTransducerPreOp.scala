@@ -29,7 +29,7 @@ object StreamingTransducerPreOp {
 */
 class StreamingTransducerPreOp(t : StreamingTransducer) extends PreOp {
 
-  override def toString = t.toDot
+  override def toString = "SST"
 
   def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]] = {
     assert (arguments.size == 1)
@@ -42,7 +42,7 @@ class StreamingTransducerPreOp(t : StreamingTransducer) extends PreOp {
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : BricsAutomaton = resultConstraint match {
       case resCon : BricsAutomaton => resCon
-      case _ => throw new IllegalArgumentException("StreamingTransducerPreOp needs an BricsAutomaton")
+      case _ => throw new IllegalArgumentException("StreamingTransducerPreOp needs a BricsAutomaton")
     }
     (Iterator(Seq(t.preImage(rc))), List())
   }

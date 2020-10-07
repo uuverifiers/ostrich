@@ -37,8 +37,6 @@ object ReplaceAllCGPreOp {
     StreamingTransducerPreOp(buildPSST(pat, rep))
 
   def buildPSST(pat : completeInfo, rep : Seq[UpdateOp]) : PrioStreamingTransducer = {
-    GlushkovPFA.printInfo(pat)
-
     val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = pat
 
     // for each capture group, we have a string variable.
@@ -112,8 +110,6 @@ object ReplaceAllCGPreOp {
         val s = builder.getNewState
         mapState(s, (m, noreach))
         val goodNoreach = !noreach.exists(isAccept(_))
-        println("new state:" + s + " -> (" + m + " , " + noreach + ")")
-        println("goodNoreach:" + goodNoreach)
         builder.setAccept(s, m match {
           case NotMatching => goodNoreach
           case EndMatch(_) => goodNoreach
