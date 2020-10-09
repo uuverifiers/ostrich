@@ -55,6 +55,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("empty-union.smt2") =
     checkFile("tests/empty-union.smt2", "sat")
 
+  property("regex_cg.smt2") =
+    checkFile("tests/regex_cg.smt2", "sat")
+  property("regex_cg_2.smt2") =
+    checkFile("tests/regex_cg_2.smt2", "unsat")
+
   property("concat-regex.smt2 eager") =
     checkFileOpts("tests/concat-regex.smt2", "sat", "+eager")
   property("concat-regex2.smt2 eager") =
