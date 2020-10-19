@@ -150,7 +150,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     return None
   }
 
-  def preImage[A <: BricsAutomaton]
+  def preImage[A <: AtomicStateAutomaton]
               (aut: A,
                internal: Iterable[(A#State, A#State)]): AtomicStateAutomaton = {
 
@@ -249,7 +249,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       yield intLabel) ++
       (for (o <- offset;
         albl <- autLabels;
-        shiftLbl = aut.LabelOps.shift(albl, -o);
+        shiftLbl = aut.LabelOps.shift(albl, -o).asInstanceOf[TLabel];
         intLabel <- LabelOps.intersectLabels(shiftLbl, tlabel).iterator)
       yield intLabel)
 
@@ -284,12 +284,12 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
                 (for (s <- aut.states;
                       (target, lbl) <- aut.outgoingTransitions(s);
                       shiftLbl = aut.LabelOps.shift(lbl, -o);
-                      if aut.LabelOps.labelsOverlap(shiftLbl, nlbl))
+                      if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
                       yield (s, target)).toSet
               })
               val newBlocked = postStates(blocked, nlbl, priority, transitions)
               preBuilder.addTransition(ps,
-                                    nlbl,
+                                    nlbl.asInstanceOf[aut.TLabel],
                                     getState(nextState, newTrace, newBlocked))
             }
           }
