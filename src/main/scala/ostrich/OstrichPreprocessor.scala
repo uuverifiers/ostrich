@@ -194,7 +194,8 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
           Seq(s : ITerm, ConcreteRegex(regex))) =>
       str_in_re_id(s, theory.autDatabase.regex2Id(regex))
     case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
-      println("Warning: could not encode as id: " + subres)
+      println("Warning: could not encode regular expression right away," +
+                " post-poning: " + subres)
       t update subres
     }
     case _ =>
