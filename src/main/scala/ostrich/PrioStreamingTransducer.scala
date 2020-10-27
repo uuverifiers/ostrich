@@ -372,7 +372,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       for (arrow <- arrows) {
         val (lbl, op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
-        sb.append("[label=\"" + lbl + "/" + prio + "\"];\n")
+        sb.append("[label=\"" + lbl + "/" + prio + "/" + op + "\"];\n")
       }
     }
 
