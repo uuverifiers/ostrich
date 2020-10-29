@@ -84,6 +84,17 @@ object GlushkovPFA {
     }
   }
 
+  def constant(str: Seq[Int]) : GlushkovPFA = {
+    if (str.isEmpty) {
+      epsilon
+    } else {
+      val h = str.head
+      val t = str.tail
+      val haut = single(LabelOps.interval(h.toChar, h.toChar))
+      concat(haut, constant(t))
+    }
+  }
+
   def alternate(aut1 : GlushkovPFA, aut2 : GlushkovPFA) : GlushkovPFA = {
     (aut1, aut2) match {
       case (GlushkovPFA(init1, t1, s1, e1, empty1), GlushkovPFA(init2, t2, s2, e2, empty2)) => {
@@ -370,6 +381,9 @@ class Regex2PFA(theory : OstrichStringTheory) {
           }
 
           (autA, capA + localCaptureNum)
+        }
+        case IFunApp(`str_to_re`, Seq(a)) => {
+          (GlushkovPFA.constant(StringTheory.term2List(a)), Set())
         }
         case _ =>
           throw new IllegalArgumentException(

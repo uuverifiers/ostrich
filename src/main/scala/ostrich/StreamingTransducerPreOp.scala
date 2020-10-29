@@ -40,9 +40,9 @@ class StreamingTransducerPreOp(t : StreamingTransducer) extends PreOp {
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val rc : BricsAutomaton = resultConstraint match {
-      case resCon : BricsAutomaton => resCon
-      case _ => throw new IllegalArgumentException("StreamingTransducerPreOp needs a BricsAutomaton")
+    val rc : AtomicStateAutomaton  = resultConstraint match {
+      case resCon : AtomicStateAutomaton  => resCon
+      case _ => throw new IllegalArgumentException("StreamingTransducerPreOp needs an AtomicStateAutomaton")
     }
     (Iterator(Seq(t.preImage(rc))), List())
   }

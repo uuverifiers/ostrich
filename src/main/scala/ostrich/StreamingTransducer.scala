@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2020  Zhilei Han
+ * Copyright (C) 2020 Zhilei Han
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ trait StreamingTransducer {
    *
    * Convenience method for when there are no internal transitions
    */
-  def preImage(aut : BricsAutomaton) : AtomicStateAutomaton =
+  def preImage(aut : AtomicStateAutomaton) : AtomicStateAutomaton =
     preImage(aut, Iterable.empty[(aut.State, aut.State)])
 
   /**
@@ -53,7 +53,7 @@ trait StreamingTransducer {
    * have an Internal character between them.  I.e. map(s) contains s'
    * if there is an internal transition between s and s'
    */
-  def preImage[A <: BricsAutomaton]
+  def preImage[A <: AtomicStateAutomaton]
               (aut : A,
                internal : Iterable[(A#State, A#State)]) : AtomicStateAutomaton
 

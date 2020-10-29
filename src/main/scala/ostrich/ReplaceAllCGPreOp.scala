@@ -70,7 +70,7 @@ object ReplaceAllCGPreOp {
         if (o == index) {
           op
         } else {
-          nochange(index)
+          nochange(o)
         }
       })
 
