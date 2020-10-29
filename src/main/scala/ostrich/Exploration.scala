@@ -381,7 +381,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         for (resLen <- getVarLength(res))
           if (resValue.right.get.size != resLen.intValueSafe)
             throw new Exception(
-              "Could not satisfy length constraints for " + res)
+              "Could not satisfy length constraints for " + res +
+                " with solution " +
+                resValue.right.get.map(i => i.toChar)(breakOut))
 
         model.put(res, resValue)
       }
