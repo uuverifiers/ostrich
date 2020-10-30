@@ -44,6 +44,8 @@ object ExtractPreOp {
     val builder = PrioStreamingTransducer.getBuilder(1)
     type tranState = PrioStreamingTransducer#State
     type autState = GlushkovPFA.State
+    type TLabel = PrioStreamingTransducer#TLabel
+    val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
     // some common update operations
     def nochange : Seq[UpdateOp] = List(RefVariable(0))
@@ -73,10 +75,8 @@ object ExtractPreOp {
         val s = builder.getNewState
         mapState(s, as)
 
-        // Here, every state is accepting.
-        // For those PSST states which corresponds to non-accepted states
-        // in pNFA, the output is empty 
-        // (It's UB in this case actually)
+        // Here, every state is accepting. For those PSST states which corresponds to non-accepted states in pNFA, the output is empty (It's UB in this case actually). For others, output the string variable directly.
+        // Note that it is possible the run of pNFA get stuck, so there should also be a 'dead state', which is handled specially
         val output = {
           if (isAccept(as)) {
             List(RefVariable(0))
@@ -94,7 +94,15 @@ object ExtractPreOp {
     val tranInit = builder.initialState
     builder.setAccept(tranInit, true, List()) // if the string is empty, then the output must also be empty
 
-    // Handle the initial transition first
+    // dead state is important for correct semantics.
+    // every state should have a transition to this state,
+    // which should be of lowest priority so that failing
+    // a match is considered last.
+    val deadState = builder.getNewState
+    builder.setAccept(deadState, true, List())
+    builder.addTransition(deadState, LabelOps.sigmaLabel, List(clear), Int.MinValue, deadState)
+
+    // Handle the initial transition
     var priority = Int.MaxValue
     for ((lbl, s) <- aut.initialTrans) {
       val ts = getState(s)
@@ -104,6 +112,7 @@ object ExtractPreOp {
         builder.addTransition(tranInit, lbl, List(append_after), priority, ts) // append
       else
         builder.addTransition(tranInit, lbl, List(nochange), priority, ts) // keep unchanged
+      builder.addTransition(ts, LabelOps.sigmaLabel, List(clear), Int.MinValue, deadState)
       priority -= 1
     }
 
@@ -136,6 +145,7 @@ object ExtractPreOp {
         }
 
         builder.addTransition(ts, lbl, List(ops), priority, tnext)
+        builder.addTransition(ts, LabelOps.sigmaLabel, List(clear), Int.MinValue, deadState)
         priority -= 1
       }
     }
