@@ -272,7 +272,13 @@ class Regex2PFA(theory : OstrichStringTheory) {
     re_loop, str_to_re, re_from_str, 
     re_capture, re_reference}
 
-  def buildAll(pat : ITerm, rep: ITerm) : (completeInfo, Seq[UpdateOp]) = {
+  // this is the map from literal numbering to internal numbering of 
+  // capture groups. It is for translating the replacement string.
+  private val capNumTransform = 
+    new MHashMap[Int, Int]
+
+  private def buildPatternRegex(pat : ITerm) : completeInfo = {
+
     var numCapture : Int = 0
     var numStar : Int = 0
 
@@ -283,11 +289,6 @@ class Regex2PFA(theory : OstrichStringTheory) {
     // the set of Start, End, and capture groups within
     val starInfo =
       new MHashMap[Int, (Set[State], Set[State], Set[Int])]
-
-    // this is the map from literal numbering to internal numbering of 
-    // capture groups. It is for translating the replacement string.
-    val capNumTransform = 
-      new MHashMap[Int, Int]
 
     def buildPatternImpl(t : ITerm) : (GlushkovPFA, Set[Int]) = {
       t match {
@@ -392,34 +393,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
       }
     }
 
-    def buildReplacementImpl(t : ITerm) : Seq[UpdateOp] = {
-      t match {
-        case IFunApp(`re_eps`, _) => Seq.empty[UpdateOp]
-        case IFunApp(`re_++`, Seq(a, b)) => {
-          val opsa = buildReplacementImpl(a)
-          val opsb = buildReplacementImpl(b)
-          opsa ++ opsb
-        }
-        case IFunApp(`re_reference`, Seq(IIntLit(IdealInt(litCaptureNum)))) => {
-          (capNumTransform get litCaptureNum) match {
-            case None =>
-              throw new IllegalArgumentException("Undefined capture group referenced: " + litCaptureNum)
-            case Some(localCaptureNum) => List(RefVariable(localCaptureNum))
-          }
-        }
-        case IFunApp(`str_to_re`, Seq(a)) => {
-          val str = StringTheory.term2List(a)
-          (for (v <- str)
-            yield Constant(v.toChar)).toSeq
-        }
-        case _ =>
-          throw new IllegalArgumentException(
-            "could not use " + t + " in the replacement string")
-      }
-    }
-
     val (aut, _) = buildPatternImpl(pat)
-    val ops = buildReplacementImpl(rep)
     val state2Capture_mut = new MHashMap[State, MSet[Int]] with MMultiMap[State, Int]
 
     for ((cap, states) <- capState;
@@ -442,7 +416,55 @@ class Regex2PFA(theory : OstrichStringTheory) {
     val states2Star = (for ((s, star) <- states2Star_mut) 
       yield (s, star.toSet)).toMap
 
-    ((aut, numCapture, numStar, state2Capture, states2Star, star2Capture), ops)
+    (aut, numCapture, numStar, state2Capture, states2Star, star2Capture)
+  }
+
+  private def buildReplacementRegex(t : ITerm) : Seq[UpdateOp] = {
+    t match {
+      case IFunApp(`re_eps`, _) => Seq.empty[UpdateOp]
+      case IFunApp(`re_++`, Seq(a, b)) => {
+        val opsa = buildReplacementRegex(a)
+        val opsb = buildReplacementRegex(b)
+        opsa ++ opsb
+      }
+      case IFunApp(`re_reference`, Seq(IIntLit(IdealInt(litCaptureNum)))) => {
+        (capNumTransform get litCaptureNum) match {
+          case None =>
+            throw new IllegalArgumentException("Undefined capture group referenced: " + litCaptureNum)
+          case Some(localCaptureNum) => List(RefVariable(localCaptureNum))
+        }
+      }
+      case IFunApp(`str_to_re`, Seq(a)) => {
+        val str = StringTheory.term2List(a)
+        (for (v <- str)
+          yield Constant(v.toChar)).toSeq
+      }
+      case _ =>
+        throw new IllegalArgumentException(
+          "could not use " + t + " in the replacement string")
+    }
+  }
+
+  def buildReplaceInfo(pat : ITerm, rep: ITerm) : (completeInfo, Seq[UpdateOp]) = {
+    capNumTransform.clear
+    val info = buildPatternRegex(pat)
+    val ops = buildReplacementRegex(rep)
+
+    (info, ops)
+  }
+
+  def buildExtractInfo(index: Int, pat: ITerm) : (Int, completeInfo) = {
+    capNumTransform.clear
+
+    val info = buildPatternRegex(pat)
+    val localindex = 
+      (capNumTransform get index) match {
+        case None =>
+          throw new IllegalArgumentException("Undefined capture group referenced: " + index)
+        case Some(l) => l
+      }
+
+    (localindex, info)
   }
 
 }
