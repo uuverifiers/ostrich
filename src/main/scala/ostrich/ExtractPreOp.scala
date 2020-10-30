@@ -112,7 +112,7 @@ object ExtractPreOp {
         builder.addTransition(tranInit, lbl, List(append_after), priority, ts) // append
       else
         builder.addTransition(tranInit, lbl, List(nochange), priority, ts) // keep unchanged
-      builder.addTransition(ts, LabelOps.sigmaLabel, List(clear), Int.MinValue, deadState)
+      builder.addTransition(tranInit, LabelOps.sigmaLabel, List(clear), Int.MinValue, deadState)
       priority -= 1
     }
 
