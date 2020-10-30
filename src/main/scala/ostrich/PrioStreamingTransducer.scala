@@ -117,6 +117,8 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     // configuration with highest priority is pushed last thus processed first
     while (!worklist.isEmpty) {
       val (s, pos, values) = worklist.pop
+      if (pos >= input.length && isAccept(s))
+        return Some(evalUpdateOps(values, acceptingStates.get(s).get, (o) => ""))
 
       if (pos < input.size) {
         val inc = input(pos)
@@ -127,8 +129,6 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
           if (LabelOps.labelContains(inc, lbl) && !seenlist.contains((snext, pnext))) {
             val tOps = operation(t)
             val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
-            if (pnext >= input.length && isAccept(snext))
-              return Some(evalUpdateOps(valueNext, acceptingStates.get(snext).get, (o) => ""))
             worklist.push((snext, pnext, valueNext))
           }
         }
@@ -140,8 +140,6 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
         if (!seenlist.contains((snext, pnext))) {
           val tOps = operation(t)
           val valueNext = getNewVal(values, tOps, (o) => "")
-          if (pnext >= input.length && isAccept(snext))
-            return Some(evalUpdateOps(valueNext, acceptingStates.get(snext).get, (o) => ""))
           worklist.push((snext, pnext, valueNext))
         }
       }
