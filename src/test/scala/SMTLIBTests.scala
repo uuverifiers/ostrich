@@ -63,8 +63,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/regex_cg_3.smt2", "sat")
   property("regex_cg_4.smt2") =
     checkFile("tests/regex_cg_4.smt2", "unsat")
-  property("regex_cg_5.smt2") =
-    checkFile("tests/regex_cg_5.smt2", "unsat")
+//  property("regex_cg_5.smt2") =
+//    checkFile("tests/regex_cg_5.smt2", "unsat")
   property("regex_cg_ref.smt2") =
     checkFile("tests/regex_cg_ref.smt2", "sat")
   property("regex_cg_ref2.smt2") =
