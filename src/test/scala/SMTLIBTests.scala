@@ -67,6 +67,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/regex_cg_5.smt2", "unsat")
   property("regex_cg_ref.smt2") =
     checkFile("tests/regex_cg_ref.smt2", "sat")
+  property("regex_cg_ref2.smt2") =
+    checkFile("tests/regex_cg_ref2.smt2", "sat")
+  property("regex_cg_ref3.smt2") =
+    checkFile("tests/regex_cg_ref3.smt2", "sat")
 
   property("concat-regex.smt2 eager") =
     checkFileOpts("tests/concat-regex.smt2", "sat", "+eager")
@@ -145,6 +149,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/extract-1b.smt2", "unsat")
   property("extract-1c.smt2") =
     checkFile("tests/extract-1c.smt2", "sat")
+
+  property("extract-cg.smt2") =
+    checkFile("tests/extract-cg.smt2", "sat")
 
   property("simple-cvc-smtlib.smt2") =
     checkFile("tests/simple-cvc-smtlib.smt2", "sat", "+model")
