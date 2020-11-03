@@ -186,4 +186,17 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("parse-regex4.smt2") =
     checkFile("tests/parse-regex4.smt2", "sat")
 
+  property("parse-regex-lookahead.smt2") =
+    checkFile("tests/parse-regex-lookahead.smt2", "sat")
+  property("parse-regex-lookahead2.smt2") =
+    checkFile("tests/parse-regex-lookahead2.smt2", "sat")
+  property("parse-regex-lookahead2b.smt2") =
+    checkFile("tests/parse-regex-lookahead2b.smt2", "unsat")
+  property("parse-regex-lookahead3.smt2") =
+    checkFile("tests/parse-regex-lookahead3.smt2", "sat")
+  property("parse-regex-lookahead3b.smt2") =
+    checkFile("tests/parse-regex-lookahead3b.smt2", "unsat")
+  property("parse-regex-lookahead4.smt2") =
+    checkFile("tests/parse-regex-lookahead4.smt2", "sat")
+
 }

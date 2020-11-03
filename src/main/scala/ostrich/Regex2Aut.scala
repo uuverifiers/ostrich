@@ -26,9 +26,12 @@ import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
                            Automaton => BAutomaton}
 
+import scala.collection.mutable.ArrayBuffer
+
 object Regex2Aut {
 
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
+  private val LookAheadBehind = """\(\?[=!<]""".r
 
   private object SmartConst {
     import IExpression._
@@ -149,19 +152,109 @@ class Regex2Aut(theory : OstrichStringTheory) {
                      .replaceAll("""@""", "\\\\@")
                      .replaceAll("""<""", "\\\\<")
 
-      if ((str4 contains "(?=") || (str4 contains "(?!"))
-        Console.err.println(
-          "Warning: look-ahead in regular expression not handled")
-      if (str4 contains "(?<")
-        Console.err.println(
-          "Warning: look-behind in regular expression not handled")
+      // encode some simple cases of look-aheads, and eliminate the more
+      // complicated cases
+      val str5 = {
+        val curStr = str4
+        val lookAheads = new ArrayBuffer[String]
+        var curInd = 0
 
-      str4
+        var cont = true
+        while (cont) {
+          curStr.substring(curInd, (curInd + 3) min curStr.size) match {
+            case "(?=" => { // positive look-ahead
+              val endInd = findRegexClosingParen(curStr, curInd)
+              lookAheads += "(" + curStr.substring(curInd + 3, endInd) + "@)"
+              curInd = endInd + 1
+            }
+            case "(?!" => { // negative look-ahead
+              val endInd = findRegexClosingParen(curStr, curInd)
+              lookAheads += "~(" + curStr.substring(curInd + 3, endInd) + "@)"
+              curInd = endInd + 1
+            }
+            case _ =>
+              cont = false
+          }
+          if (curInd >= curStr.size)
+            cont = false
+        }
+
+        if (!lookAheads.isEmpty)
+          lookAheads.mkString("&") + "&(" + curStr.substring(curInd) + ")"
+        else
+          curStr
+      }
+
+      // eliminate the more complicated cases of look-ahead/behind
+      val str6 = {
+        var curStr = str5
+        var cont = true
+
+        while (cont)
+          LookAheadBehind.findFirstMatchIn(curStr) match {
+            case Some(m) => {
+              val ind = m.start
+              curStr =
+                curStr.take(ind) +
+                  curStr.drop(findRegexClosingParen(curStr, ind) + 1)
+              Console.err.println(
+                "Warning: ignoring look-ahead/behind in regular expression")
+            }
+            case None =>
+              cont = false
+          }
+
+        curStr
+      }
+
+      str6
     }
 
     case _ =>
       throw new IllegalArgumentException(
         "could not translate " + t + " to an automaton")
+  }
+
+  /**
+   * Given an opening parenthesis at index <code>openInd</code> in a
+   * regex string, find the matching closing parenthesis.
+   */
+  private def findRegexClosingParen(str : String, openInd : Int) : Int = {
+    val N = str.size
+    var nesting = 1
+    var curInd = openInd
+    var state = 0
+
+    while (nesting > 0 && curInd < N - 1) {
+      curInd = curInd + 1
+
+      (str(curInd), state) match {
+        case ('(', 0) =>            // opening paren
+          nesting = nesting + 1
+        case (')', 0) =>            // closing paren
+          nesting = nesting - 1
+        case ('[', 0) =>            // start of a character class
+          state = 10
+        case (']', 10) =>           // end of a character class
+          state = 0
+        case ('\\', 0) =>           // start of an escaped character
+          state = 1
+        case ('x', 1) =>            // pair of hex characters
+          state = 4
+        case ('u', 1) =>            // quadruple of hex characters
+          state = 2
+        case (_, 1) =>              // single escaped character
+          state = 0
+        case (_, n) if 2<=n && n<=4 => // hex characters
+          state = n + 1
+        case (_, 5) =>              // hex characters
+          state = 0
+        case _ =>
+          // nothing
+      }
+    }
+
+    curInd
   }
 
   def buildBricsAut(t : ITerm) : BAutomaton =
