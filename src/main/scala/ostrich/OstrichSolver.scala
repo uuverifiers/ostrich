@@ -38,7 +38,7 @@ class OstrichSolver(theory : OstrichStringTheory,
   import theory.{str, str_len, str_empty, str_cons, str_++, str_in_re,
                  str_in_re_id, str_to_re, re_from_str,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
-                 str_replaceallcg, str_extract,
+                 str_replacecg, str_replaceallcg, str_extract,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
                  re_loop, re_capture, re_reference, FunPred}
@@ -156,6 +156,12 @@ class OstrichSolver(theory : OstrichStringTheory,
         val rep = regexExtractor regexAsTerm a(2)
         val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
         funApps += ((ReplaceAllCGPreOp(info, repStr), List(a(0)), a(3)))
+      }
+      case FunPred(`str_replacecg`) => {
+        val pat = regexExtractor regexAsTerm a(1)
+        val rep = regexExtractor regexAsTerm a(2)
+        val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
+        funApps += ((ReplaceCGPreOp(info, repStr), List(a(0)), a(3)))
       }
       case FunPred(`str_replacere`) => {
         val regex = regexExtractor regexAsTerm a(3)
