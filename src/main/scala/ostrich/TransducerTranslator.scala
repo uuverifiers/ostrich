@@ -76,11 +76,8 @@ object TransducerTranslator {
 
         epsilons match {
           case Seq(true, false) => p.scope {
-            import p._
-            !! (bvLabel)
-            while (??? == ProverStatus.Sat) {
-              val out = eval(outputC)
-
+            for (out <- enumLabelSolutions(bvLabel, outputC,
+                                           p, transducerStringTheory)) {
               val op = OutputOp(out.intValueSafe.toChar.toString, NOP, "")
 
               Console.err.println("" + fromState + "- <eps> -> " +
@@ -88,7 +85,6 @@ object TransducerTranslator {
 
               builder.addETransition(states2Brics(fromState), op,
                                      states2Brics(toState))
-              !! (outputC =/= out)
             }
           }
 
@@ -105,7 +101,9 @@ object TransducerTranslator {
 
           case Seq(false, outEps) => {
             val presLabel =
-              IntCastEliminator(PartialEvaluator(p.simplify(bvLabel)))
+              IntCastEliminator(
+                PartialEvaluator(
+                  simplifyLabel(bvLabel, p, transducerStringTheory)))
 
             if (!ContainsSymbol.isPresburger(presLabel))
               throw new Exception(
@@ -166,6 +164,69 @@ object TransducerTranslator {
     builder setInitialState states2Brics(0)
 
     builder.getTransducer
+  }
+
+  /**
+   * Enumerate the solutions of a label that contains <code>outputC</code>
+   * as the only variable.
+   */
+  private def enumLabelSolutions(f       : IFormula,
+                                 outputC : ITerm,
+                                 p       : SimpleAPI,
+                                 tdST    : StringTheory) : Iterator[IdealInt] ={
+    import IExpression._
+    import tdST._
+    f match {
+      case Eq(`outputC`,
+              IFunApp(`str_to_code`,
+                      Seq(IFunApp(`str_cons`,
+                                  Seq(IFunApp(ModuloArithmetic.mod_cast,
+                                              Seq(IIntLit(lower),IIntLit(upper),
+                                                  Const(value))),
+                                      IFunApp(`str_empty`, Seq())))))) =>
+        Iterator single ModuloArithmetic.evalModCast(lower, upper, value)
+      case f => {
+        import p._
+        !! (f)
+        new Iterator[IdealInt] {
+          def hasNext : Boolean =
+            (??? == ProverStatus.Sat)
+          def next : IdealInt = {
+            ???
+            val res = eval(outputC)
+            !! (outputC =/= res)
+            res
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Simplify the label of a transition, with some optimisations for
+   * simple/common labels.
+   */
+  private def simplifyLabel(f    : IFormula,
+                            p    : SimpleAPI,
+                            tdST : StringTheory) : IFormula = {
+    import IExpression._
+    import tdST._
+    f match {
+      case f : IBoolLit =>
+        f
+      case f @ Eq(_ : IConstant, _ : IConstant) =>
+        f
+      case Eq(c : IConstant,
+              IFunApp(`str_to_code`,
+                      Seq(IFunApp(`str_cons`,
+                                  Seq(IFunApp(ModuloArithmetic.mod_cast,
+                                              Seq(IIntLit(lower),IIntLit(upper),
+                                                  Const(value))),
+                                      IFunApp(`str_empty`, Seq())))))) =>
+        c === ModuloArithmetic.evalModCast(lower, upper, value)
+      case f =>
+        p.simplify(f)
+    }
   }
 
   /**
