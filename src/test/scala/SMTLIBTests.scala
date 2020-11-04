@@ -8,6 +8,8 @@ import org.scalacheck.Prop._
 
 object SMTLIBTests extends Properties("SMTLIBTests") {
 
+  val timeout = 20000
+
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
       Console.withErr(ap.CmdlMain.NullStream) {
@@ -21,7 +23,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=10000",
+      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
                             "-stringSolver=ostrich.OstrichStringTheory",
                             filename) ++ extractOpts).toArray,
                         false)
@@ -30,7 +32,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   def checkFileOpts(filename : String, result : String, ostrichOpts : String,
                     extractOpts : String*) : Boolean =
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=10000",
+      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
                             "-stringSolver=ostrich.OstrichStringTheory:" +
                                ostrichOpts,
                             filename) ++ extractOpts).toArray,
@@ -63,8 +65,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/regex_cg_3.smt2", "sat")
   property("regex_cg_4.smt2") =
     checkFile("tests/regex_cg_4.smt2", "unsat")
-//  property("regex_cg_5.smt2") =
-//    checkFile("tests/regex_cg_5.smt2", "unsat")
+  property("regex_cg_5.smt2") =
+    checkFile("tests/regex_cg_5.smt2", "unsat")
   property("regex_cg_ref.smt2") =
     checkFile("tests/regex_cg_ref.smt2", "sat")
   property("regex_cg_ref2.smt2") =
