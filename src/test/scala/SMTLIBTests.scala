@@ -73,6 +73,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/regex_cg_ref2.smt2", "sat")
   property("regex_cg_ref3.smt2") =
     checkFile("tests/regex_cg_ref3.smt2", "sat")
+  property("regex_cg_ref4.smt2") =
+    checkFile("tests/regex_cg_ref4.smt2", "sat")
 
   property("concat-regex.smt2 eager") =
     checkFileOpts("tests/concat-regex.smt2", "sat", "+eager")
