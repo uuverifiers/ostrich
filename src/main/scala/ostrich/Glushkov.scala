@@ -346,7 +346,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
           numStar += 1 // plus is regarded as a star
           starInfo(localStarNum) = (autA.start, autA.end, capA)
 
-          (GlushkovPFA.star(autA), capA)
+          (GlushkovPFA.plus(autA), capA)
         }
         case IFunApp(`re_opt`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
