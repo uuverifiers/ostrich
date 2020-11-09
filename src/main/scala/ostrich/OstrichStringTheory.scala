@@ -143,8 +143,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replacecg, str_to_re,
                    str_extract,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
-                   re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                   re_loop, re_from_str, re_capture, re_reference))
+                   re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
+                   re_comp, re_loop, re_from_str, re_capture, re_reference))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++

@@ -51,8 +51,8 @@ object Regex2Aut {
 class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
-                 re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 re_loop, str_to_re, re_from_str}
+                 re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
+                 re_comp, re_loop, str_to_re, re_from_str}
   import Regex2Aut._
 
   def buildBricsRegex(t : ITerm) : String =
@@ -220,9 +220,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
         "(" + subres(0) + "|" + subres(1) + ")"
       case IFunApp(`re_inter`, _) =>
         "(" + subres(0) + "&" + subres(1) + ")"
-      case IFunApp(`re_*`, _) =>
+      case IFunApp(`re_*` | `re_*?`, _) =>
         "(" + subres(0) + ")*"
-      case IFunApp(`re_+`, _) =>
+      case IFunApp(`re_+` | `re_+?`, _) =>
         "(" + subres(0) + ")+"
       case IFunApp(`re_opt`, _) =>
         "(" + subres(0) + ")?"
