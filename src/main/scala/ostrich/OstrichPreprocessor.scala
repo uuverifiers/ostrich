@@ -169,6 +169,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       re_charrange(lower, upper)
 
     case (t, _) =>
+      // TODO: generalise
       (t update subres) match {
         case Geq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound <= 1000 =>
           // encode an upper bound using a regular expression
@@ -204,7 +205,7 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
       str_in_re_id(s, theory.autDatabase.regex2Id(regex))
     case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
       println("Warning: could not encode regular expression right away," +
-                " post-poning: " + subres)
+                " post-poning: " + regex)
       t update subres
     }
     case _ =>
