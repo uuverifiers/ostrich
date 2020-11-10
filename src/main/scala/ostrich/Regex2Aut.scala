@@ -52,7 +52,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
-                 re_comp, re_loop, str_to_re, re_from_str}
+                 re_comp, re_loop, str_to_re, re_from_str, re_capture}
   import Regex2Aut._
 
   def buildBricsRegex(t : ITerm) : String =
@@ -230,6 +230,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
         "~(" + subres(0) + ")"
       case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), _)) =>
         "(" + subres(2) + "){" + n1 + "," + n2 + "}"
+      case IFunApp(`re_capture`, _) => // ignored here
+        subres(1)
 
     case _ =>
       throw new IllegalArgumentException(
