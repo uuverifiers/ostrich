@@ -164,7 +164,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         funApps += ((ReplaceCGPreOp(info, repStr), List(a(0)), a(3)))
       }
       case FunPred(`str_replacere`) => {
-        val regex = regexExtractor regexAsTerm a(3)
+        val regex = regexExtractor regexAsTerm a(1)
         val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
         funApps += ((ReplacePreOp(aut), List(a(0), a(2)), a(3)))
       }
