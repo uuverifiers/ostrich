@@ -35,7 +35,7 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
 
-  import theory.{str, str_len, str_empty, str_cons, str_++, str_in_re,
+  import theory.{str, str_len, str_empty, str_cons, str_at, str_++, str_in_re,
                  str_in_re_id, str_to_re, re_from_str,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  str_replacecg, str_replaceallcg, str_extract,
@@ -181,6 +181,12 @@ class OstrichSolver(theory : OstrichStringTheory,
         lengthVars.put(a(0), a(1))
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
+      }
+      case FunPred(`str_at`) => {
+        val LinearCombination.Constant(IdealInt(ind)) = a(1)
+        funApps +=
+          ((TransducerPreOp(BricsTransducer.getStrAtTransducer(ind)),
+            List(a(0)), a(2)))
       }
       case FunPred(f) if rexOps contains f =>
         // nothing

@@ -39,6 +39,7 @@ import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet,
 object TransducerTranslator {
 
   import StringTheoryBuilder._
+  import Transducer._
 
   def toBricsTransducer(transducer : SymTransducer,
                         alphabetSize : Int,

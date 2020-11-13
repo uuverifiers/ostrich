@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@ import dk.brics.automaton.RegExp
 import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
 
 object ReplacePreOp {
+  import Transducer._
+
   def apply(a : Char) : PreOp = ReplacePreOpWord(Seq(a))
 
   def apply(w : Seq[Char]) : PreOp = ReplacePreOpWord(w)
@@ -51,6 +53,8 @@ object ReplacePreOp {
  * transducer representation of word
  */
 object ReplacePreOpWord {
+  import Transducer._
+
   def apply(w : Seq[Char]) = {
     val wtran = buildWordTransducer(w)
     new ReplacePreOpTran(wtran)
@@ -110,6 +114,8 @@ object ReplacePreOpWord {
  * z) for a regular expression e.
  */
 object ReplacePreOpRegEx {
+  import Transducer._
+
   /**
    * Build preop from c and context giving regex to be replaced
    */

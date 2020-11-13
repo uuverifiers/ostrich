@@ -26,7 +26,9 @@ import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
                            Automaton => BAutomaton}
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ArrayStack}
+import scala.collection.immutable.VectorBuilder
+import collection.JavaConverters._
 
 object Regex2Aut {
 
@@ -55,8 +57,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  re_comp, re_loop, str_to_re, re_from_str, re_capture}
   import Regex2Aut._
 
-  def buildBricsRegex(t : ITerm) : String =
+  def toBricsRegexString(t : ITerm) : String =
     Regex2BricsVisitor.visit(t, ())
+
+  //////////////////////////////////////////////////////////////////////////////
 
   private object Regex2BricsVisitor extends CollectingVisitor[Unit, String] {
 
@@ -88,115 +92,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
         // be problems due to escaping. The processing of regexes can also
         // only be done correctly within a proper regex parser.
   
-        val str = StringTheory.term2String(a)
-  
-        // BRICS cannot handle anchors, so currently we are just removing them
-        // TODO: find a better solution for this
-  
-        var begin = 0
-        while (begin < str.size && str(begin) == '^') {
-          Console.err.println("Warning: ignoring anchor ^")
-          begin = begin + 1
-        }
-  
-        var end = str.size
-        while (end > 0 && str(end - 1) == '$') {
-          Console.err.println("Warning: ignoring anchor $")
-          end = end - 1
-        }
-  
-        val str2 = str.slice(begin, end)
-  
-        // handle some of the PCRE sequences, inside character classes
-        // TODO: do this more systematically
-        val str3 = {
-          var curStr = str2
-          var cont = true
-          while (cont)
-            RegexClassSpecialChar.findFirstMatchIn(curStr) match {
-              case Some(m) => {
-                val repl = m.group(1) match {
-                  case "\\w" => "A-Za-z0-9_"
-                  case "\\s" => " "
-                  case "\\d" => "0-9"
-                }
-                curStr =
-                  curStr.take(m.start(1)) + repl + curStr.drop(m.end(1))
-              }
-              case None =>
-                cont = false
-            }
-          curStr
-        }
-  
-        // handle some of the PCRE sequences, outside of character classes
-        // TODO: do this more systematically
-        val str4 = str3.replaceAll("""\\w""", "[A-Za-z0-9_]")
-                       .replaceAll("""\\W""", "[^A-Za-z0-9_]")
-                       .replaceAll("""\\s""", "[ ]")
-                       .replaceAll("""\\S""", "[^ ]")
-                       .replaceAll("""\\d""", "[0-9]")
-                       .replaceAll("""\\D""", "[^0-9]")
-                       .replaceAll("""\(\?:""", "(")
-                       .replaceAll("""@""", "\\\\@")
-                       .replaceAll("""<""", "\\\\<")
-  
-        // encode some simple cases of look-aheads, and eliminate the more
-        // complicated cases
-        val str5 = {
-          val curStr = str4
-          val lookAheads = new ArrayBuffer[String]
-          var curInd = 0
-  
-          var cont = true
-          while (cont) {
-            curStr.substring(curInd, (curInd + 3) min curStr.size) match {
-              case "(?=" => { // positive look-ahead
-                val endInd = findRegexClosingParen(curStr, curInd)
-                lookAheads += "(" + curStr.substring(curInd + 3, endInd) + "@)"
-                curInd = endInd + 1
-              }
-              case "(?!" => { // negative look-ahead
-                val endInd = findRegexClosingParen(curStr, curInd)
-                lookAheads += "~(" + curStr.substring(curInd + 3, endInd) + "@)"
-                curInd = endInd + 1
-              }
-              case _ =>
-                cont = false
-            }
-            if (curInd >= curStr.size)
-              cont = false
-          }
-  
-          if (!lookAheads.isEmpty)
-            lookAheads.mkString("&") + "&(" + curStr.substring(curInd) + ")"
-          else
-            curStr
-        }
-  
-        // eliminate the more complicated cases of look-ahead/behind
-        val str6 = {
-          var curStr = str5
-          var cont = true
-  
-          while (cont)
-            LookAheadBehind.findFirstMatchIn(curStr) match {
-              case Some(m) => {
-                val ind = m.start
-                curStr =
-                  curStr.take(ind) +
-                    curStr.drop(findRegexClosingParen(curStr, ind) + 1)
-                Console.err.println(
-                  "Warning: ignoring look-ahead/behind in regular expression")
-              }
-              case None =>
-                cont = false
-            }
-  
-          curStr
-        }
-
-        ShortCutResult(str6)
+        ShortCutResult(jsRegex2BricsRegex(StringTheory.term2String(a)))
       }
 
       case _ =>
@@ -237,6 +133,241 @@ class Regex2Aut(theory : OstrichStringTheory) {
       throw new IllegalArgumentException(
         "could not translate " + t + " to an automaton")
     }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  private def toBAutomaton(t : ITerm,
+                           minimize : Boolean) : BAutomaton = t match {
+    case IFunApp(`re_charrange`,
+                 Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
+      BasicAutomata.makeCharRange(a.toChar, b.toChar)
+
+    case IFunApp(`str_to_re`, Seq(a)) =>
+      BasicAutomata.makeString(StringTheory.term2String(a))
+
+    case IFunApp(`re_from_str`, Seq(a)) => {
+      // TODO: this translation has to be checked more carefully, there might
+      // be problems due to escaping. The processing of regexes can also
+      // only be done correctly within a proper regex parser.
+  
+      val bricsPattern = jsRegex2BricsRegex(StringTheory.term2String(a))
+      new RegExp(bricsPattern).toAutomaton(minimize)
+    }
+
+    case IFunApp(`re_none`, _) =>
+      BasicAutomata.makeEmpty
+    case IFunApp(`re_eps`, _) =>
+      BasicAutomata.makeString("")
+    case IFunApp(`re_all`, _) =>
+      BasicAutomata.makeAnyString
+    case IFunApp(`re_allchar`, _) =>
+      BasicAutomata.makeAnyChar
+
+    case IFunApp(`re_++`, _) =>
+      maybeMin(BasicOperations.concatenate(translateLeaves(t, re_++, minimize)),
+               minimize)
+
+    case IFunApp(`re_union`, _) => {
+      val leaves = collectLeaves(t, re_union)
+      val (singletons, nonSingletons) = leaves partition {
+        case IFunApp(`str_to_re`, _) => true
+        case _                       => false
+      }
+
+      val singletonAuts =
+        if (singletons.isEmpty) {
+          List()
+        } else {
+          val strings =
+            (for (IFunApp(_, Seq(a)) <- singletons)
+             yield StringTheory.term2String(a)).toArray
+          List(BasicAutomata.makeStringUnion(strings : _*))
+        }
+
+      val nonSingletonAuts =
+        for (s <- nonSingletons) yield toBAutomaton(s, minimize)
+
+      (singletonAuts, nonSingletonAuts) match {
+        case (Seq(aut), Seq()) => aut
+        case (Seq(), Seq(aut)) => aut
+        case (auts1, auts2) =>
+          maybeMin(BasicOperations.union((auts1 ++ auts2).asJava), minimize)
+      }
+    }
+
+    case IFunApp(`re_inter`, _) => {
+      val leaves = collectLeaves(t, re_inter)
+      val leaveAuts = for (s <- leaves) yield toBAutomaton(s, minimize)
+      leaveAuts reduceLeft {
+        (aut1, aut2) =>
+        maybeMin(BasicOperations.intersection(aut1, aut2), minimize)
+      }
+    }
+
+    case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
+      maybeMin(toBAutomaton(t, minimize).repeat, minimize)
+    case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
+      maybeMin(toBAutomaton(t, minimize).repeat(1), minimize)
+    case IFunApp(`re_opt`, Seq(t)) =>
+      maybeMin(toBAutomaton(t, minimize).optional, minimize)
+    case IFunApp(`re_comp`, Seq(t)) =>
+      maybeMin(toBAutomaton(t, minimize).complement, minimize)
+    case IFunApp(`re_loop`,
+                 Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)) =>
+      maybeMin(toBAutomaton(t, minimize).repeat(n1, n2), minimize)
+
+  }
+
+  private def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {
+    if (minimize && !BricsAutomaton.neverMinimize(aut))
+      aut.minimize
+    aut
+  }
+
+  private def translateLeaves(t        : ITerm,
+                              op       : IFunction,
+                              minimize : Boolean)
+                            : java.util.List[BAutomaton] = {
+    val leaves = collectLeaves(t, re_++)
+    val leaveAuts = for (s <- leaves) yield toBAutomaton(s, minimize)
+    leaveAuts.asJava
+  }
+
+  private def collectLeaves(t : ITerm, op : IFunction) : Seq[ITerm] = {
+    val todo = new ArrayStack[ITerm]
+    todo push t
+
+    val res = new VectorBuilder[ITerm]
+
+    while (!todo.isEmpty)
+      todo.pop match {
+        case IFunApp(`op`, args) =>
+          for (s <- args.reverseIterator)
+            todo push s
+        case s =>
+          res += s
+      }
+
+    res.result
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Translate a string representing a JavaScript/ECMA regex to a
+   * Brics regex.
+   *  TODO: this translation has to be checked more carefully, there might
+   *  be problems due to escaping. The processing of regexes can also
+   *  only be done correctly within a proper regex parser.
+   */
+  private def jsRegex2BricsRegex(str : String) : String = {
+    // BRICS cannot handle anchors, so currently we are just removing them
+    // TODO: find a better solution for this
+  
+    var begin = 0
+    while (begin < str.size && str(begin) == '^') {
+      Console.err.println("Warning: ignoring anchor ^")
+      begin = begin + 1
+    }
+  
+    var end = str.size
+    while (end > 0 && str(end - 1) == '$') {
+      Console.err.println("Warning: ignoring anchor $")
+      end = end - 1
+    }
+  
+    val str2 = str.slice(begin, end)
+  
+    // handle some of the PCRE sequences, inside character classes
+    // TODO: do this more systematically
+    val str3 = {
+      var curStr = str2
+      var cont = true
+      while (cont)
+        RegexClassSpecialChar.findFirstMatchIn(curStr) match {
+          case Some(m) => {
+            val repl = m.group(1) match {
+              case "\\w" => "A-Za-z0-9_"
+              case "\\s" => " "
+              case "\\d" => "0-9"
+            }
+            curStr = curStr.take(m.start(1)) + repl + curStr.drop(m.end(1))
+          }
+          case None =>
+            cont = false
+        }
+      curStr
+    }
+  
+    // handle some of the PCRE sequences, outside of character classes
+    // TODO: do this more systematically
+    val str4 = str3.replaceAll("""\\w""", "[A-Za-z0-9_]")
+                   .replaceAll("""\\W""", "[^A-Za-z0-9_]")
+                   .replaceAll("""\\s""", "[ ]")
+                   .replaceAll("""\\S""", "[^ ]")
+                   .replaceAll("""\\d""", "[0-9]")
+                   .replaceAll("""\\D""", "[^0-9]")
+                   .replaceAll("""\(\?:""", "(")
+                   .replaceAll("""@""", "\\\\@")
+                   .replaceAll("""<""", "\\\\<")
+  
+    // encode some simple cases of look-aheads, and eliminate the more
+    // complicated cases
+    val str5 = {
+      val curStr = str4
+      val lookAheads = new ArrayBuffer[String]
+      var curInd = 0
+  
+      var cont = true
+      while (cont) {
+        curStr.substring(curInd, (curInd + 3) min curStr.size) match {
+          case "(?=" => { // positive look-ahead
+            val endInd = findRegexClosingParen(curStr, curInd)
+            lookAheads += "(" + curStr.substring(curInd + 3, endInd) + "@)"
+            curInd = endInd + 1
+          }
+          case "(?!" => { // negative look-ahead
+            val endInd = findRegexClosingParen(curStr, curInd)
+            lookAheads += "~(" + curStr.substring(curInd + 3, endInd) + "@)"
+            curInd = endInd + 1
+          }
+          case _ =>
+            cont = false
+        }
+        if (curInd >= curStr.size)
+          cont = false
+      }
+  
+      if (!lookAheads.isEmpty)
+        lookAheads.mkString("&") + "&(" + curStr.substring(curInd) + ")"
+      else
+        curStr
+    }
+  
+    // eliminate the more complicated cases of look-ahead/behind
+    val str6 = {
+      var curStr = str5
+      var cont = true
+  
+      while (cont)
+        LookAheadBehind.findFirstMatchIn(curStr) match {
+          case Some(m) => {
+            val ind = m.start
+            curStr =
+              curStr.take(ind) +
+            curStr.drop(findRegexClosingParen(curStr, ind) + 1)
+            Console.err.println(
+              "Warning: ignoring look-ahead/behind in regular expression")
+          }
+          case None =>
+            cont = false
+        }
+
+      curStr
+    }
+
+    str6
   }
 
   /**
@@ -282,16 +413,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
   }
 
   def buildBricsAut(t : ITerm) : BAutomaton =
-    new RegExp(buildBricsRegex(t)).toAutomaton
+    toBAutomaton(t, true)
 
-  def buildAut(t : ITerm) : AtomicStateAutomaton = try {
-    BricsAutomaton(buildBricsRegex(t))
-  } catch {
-    case e : StackOverflowError => {
-      e.printStackTrace
-      throw e
-    }
-  }
+  def buildAut(t : ITerm) : AtomicStateAutomaton =
+    new BricsAutomaton(toBAutomaton(t, true))
 
   private def numToUnicode(num : Int) : String =
     new String(Character.toChars(num))

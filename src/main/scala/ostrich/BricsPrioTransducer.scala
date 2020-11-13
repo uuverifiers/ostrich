@@ -55,6 +55,7 @@ class BricsPrioTransducer(val initialState : BricsAutomaton#State,
                                         Set[BricsPrioTransducer#TETransition]],
                           val acceptingStates : Set[BricsAutomaton#State])
     extends Transducer {
+  import Transducer._
 
   type State = BricsAutomaton#State
   type TLabel = BricsAutomaton#TLabel
@@ -198,6 +199,7 @@ class BricsPrioTransducer(val initialState : BricsAutomaton#State,
 class BricsPrioTransducerBuilder
     extends TransducerBuilder[BricsAutomaton#State,
                               BricsAutomaton#TLabel] {
+  import Transducer._
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
   var initialState : BricsAutomaton#State = getNewState

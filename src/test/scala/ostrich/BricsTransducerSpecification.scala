@@ -9,6 +9,7 @@ import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 
 object BricsTransducerSpecification
 	extends Properties("BricsTransducer"){
+  import Transducer._
 
   def seq(s : String) = s.map(_.toInt)
 

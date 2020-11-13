@@ -137,7 +137,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
     Set(str_in_re, str_in_re_id) ++
-    (for (f <- Set(str_empty, str_cons,
+    (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_replaceallcg, 
                    str_replacecg, str_to_re,

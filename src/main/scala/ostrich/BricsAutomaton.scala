@@ -60,6 +60,14 @@ object BricsAutomaton {
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
+
+  /**
+   * Check whether we should avoid ever minimising the given automaton.
+   */
+  def neverMinimize(aut : BAutomaton) : Boolean =
+    aut.getSingleton != null || aut.getNumberOfStates > MINIMIZE_LIMIT
+
+  private val MINIMIZE_LIMIT = 100000
 }
 
 object BricsTLabelOps extends TLabelOps[(Char, Char)] {
@@ -295,6 +303,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
 
+//  Console.err.println("Automata states: " + underlying.getNumberOfStates)
+
   type State = BState
   type TLabel = (Char, Char)
 
@@ -504,7 +514,7 @@ class BricsAutomatonBuilder
    */
   def getAutomaton : BricsAutomaton = {
     baut.restoreInvariant
-    if (minimize)
+    if (minimize && !BricsAutomaton.neverMinimize(baut))
       baut.minimize
     new BricsAutomaton(baut)
   }

@@ -18,31 +18,35 @@
 
 package ostrich
 
-/**
- * Symbolic operations on input
- */
-abstract class InputOp
-/**
- * Don't do anything with input character
- */
-case object NOP extends InputOp
-/**
- * Replace input char with a special "internal symbol"
- */
-case object Internal extends InputOp
-/**
- * Change input character by shifting (+0 to copy)
- */
-case class Plus(val n : Int) extends InputOp
+object Transducer {
+  /**
+   * Symbolic operations on input
+   */
+  abstract class InputOp
+  /**
+   * Don't do anything with input character
+   */
+  case object NOP extends InputOp
+  /**
+   * Replace input char with a special "internal symbol"
+   */
+  case object Internal extends InputOp
+  /**
+   * Change input character by shifting (+0 to copy)
+   */
+  case class Plus(val n : Int) extends InputOp
 
-/**
- * Output operations for Brics Transducers: (u, o, v) where u is a
- * string to output first, o is an operation to translate the character
- * being read, and v is a string to output after.
- *
- * o can be +n or del
- */
-case class OutputOp(val preW : Seq[Char], val op : InputOp, val postW : Seq[Char])
+  /**
+   * Output operations for Brics Transducers: (u, o, v) where u is a
+   * string to output first, o is an operation to translate the character
+   * being read, and v is a string to output after.
+   *
+   * o can be +n or del
+   */
+  case class OutputOp(val preW : Seq[Char],
+                      val op : InputOp,
+                      val postW : Seq[Char])
+}
 
 
 trait Transducer {
@@ -97,6 +101,8 @@ trait Transducer {
 }
 
 trait TransducerBuilder[State, TLabel] {
+  import Transducer._
+
   /**
    * Operations on labels
    */
