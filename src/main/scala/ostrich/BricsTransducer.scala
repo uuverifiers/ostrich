@@ -1,6 +1,6 @@
 /*
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
+ * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,64 @@ object BricsTransducer {
 
   def getBuilder : BricsTransducerBuilder =
     new BricsTransducerBuilder
+
+  /**
+   * Construct a transducer that extracts the <code>n</code>th character
+   * of a string.
+   */
+  def getStrAtTransducer(n : Int) : BricsTransducer =
+    synchronized {
+      strAtTransducer.getOrElseUpdate(
+        n, 
+        if (n < 0) {
+          SilentTransducer
+        } else {
+          import Transducer._
+
+          val builder = BricsTransducer.getBuilder
+          val states = for (i <- 0 to (n+1)) yield builder.getNewState
+
+          for (Seq(s1, s2) <- (states.init sliding 2) ++
+                                Iterator(List(states(n+1), states(n+1))))
+            builder.addTransition(s1,
+                                  builder.LabelOps.sigmaLabel,
+                                  OutputOp("", NOP, ""),
+                                  s2)
+
+          builder.addTransition(states(n),
+                                builder.LabelOps.sigmaLabel,
+                                OutputOp("", Plus(0), ""),
+                                states(n+1))
+
+          builder.setInitialState(states(0))
+          for (s <- states)
+            builder.setAccept(s, true)
+
+          builder.getTransducer
+        })
+    }
+
+  /**
+   * Transducer that eats every input and produces no output.
+   */
+  lazy val SilentTransducer : BricsTransducer = {
+    import Transducer._
+
+    val builder = BricsTransducer.getBuilder
+    val state   = builder.getNewState
+
+    builder.setInitialState(state)
+    builder.setAccept(state, true)
+
+    builder.addTransition(state,
+                          builder.LabelOps.sigmaLabel,
+                          OutputOp("", NOP, ""),
+                          state)
+
+    builder.getTransducer
+  }
+
+  private val strAtTransducer = new MHashMap[Int, BricsTransducer]
 }
 
 class TransducerState extends BState {
@@ -58,6 +116,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
                                       Set[BricsTransducer#TETransition]],
                       val acceptingStates : Set[BricsAutomaton#State])
     extends Transducer {
+  import Transducer._
 
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
@@ -553,6 +612,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
 class BricsTransducerBuilder
     extends TransducerBuilder[BricsAutomaton#State,
                               BricsAutomaton#TLabel] {
+  import Transducer._
+
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
 
   var initialState : BricsAutomaton#State = getNewState

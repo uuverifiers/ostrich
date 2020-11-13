@@ -134,6 +134,11 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       )))
     }
 
+    // keep str.at with concrete index, we will later translate it
+    // to a transducer
+    case (IFunApp(`str_at`, _), Seq(bigStr : ITerm, Const(_))) =>
+      t update subres
+
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm, index : ITerm)) => {
       val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)

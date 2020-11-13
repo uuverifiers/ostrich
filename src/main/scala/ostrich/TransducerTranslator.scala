@@ -34,6 +34,7 @@ import ap.theories.strings.{StringTheory, StringTheoryBuilder}
 object TransducerTranslator {
 
   import StringTheoryBuilder._
+  import Transducer._
 
   def toBricsTransducer(transducer : SymTransducer,
                         alphabetSize : Int,
