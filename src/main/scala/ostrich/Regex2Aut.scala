@@ -218,7 +218,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
   }
 
   private def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {
-    if (minimize)
+    if (minimize && !BricsAutomaton.neverMinimize(aut))
       aut.minimize
     aut
   }
