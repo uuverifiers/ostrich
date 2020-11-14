@@ -44,11 +44,7 @@ class StreamingTransducerPreOp(t : StreamingTransducer) extends PreOp {
       case resCon : AtomicStateAutomaton  => resCon
       case _ => throw new IllegalArgumentException("StreamingTransducerPreOp needs an AtomicStateAutomaton")
     }
-    val t0 = System.nanoTime()
-    val result = (Iterator(Seq(t.preImage(rc))), List())
-    val t1 = System.nanoTime()
-    println("StreamingTransducerPreOp uses time: " + (t1 - t0) / 1e9 + "s")
-    result
+    (Iterator(Seq(t.preImage(rc))), List())
   }
 
 }

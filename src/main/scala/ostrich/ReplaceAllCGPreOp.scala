@@ -34,11 +34,7 @@ object ReplaceAllCGPreOp {
   import GlushkovPFA.completeInfo
 
   def apply(pat : completeInfo, rep : Seq[UpdateOp]) : PreOp = {
-    val t0 = System.nanoTime()
-    val result = StreamingTransducerPreOp(buildPSST(pat, rep))
-    val t1 = System.nanoTime()
-    println("ReplaceAllCGPreOp construction uses time: " + (t1 - t0) / 1e9 + "s")
-    result
+    StreamingTransducerPreOp(buildPSST(pat, rep))
   }
 
   def buildPSST(pat : completeInfo, rep : Seq[UpdateOp]) : PrioStreamingTransducer = {
