@@ -388,6 +388,7 @@ class ReplaceAllPreOpTran(tran : Transducer) extends PreOp {
       case _ => throw new IllegalArgumentException("ReplaceAllPreOp can only use AtomicStateAutomaton constraints.")
     })
 
+    val t0 = System.nanoTime()
     // x = replaceall(y, w, z) internally translated to
     // y' = tran(y); x = replaceall(y', w, z)
     val cg = CaleyGraph[rc.type](rc, zcons)
@@ -401,6 +402,8 @@ class ReplaceAllPreOpTran(tran : Transducer) extends PreOp {
       val newZCon = ProductAutomaton(newZCons)
       Seq(newYCon, newZCon)
     }
+    val t1 = System.nanoTime()
+    println("ReplaceAllPreOp construction uses time: " + (t1 - t0) / 1e9 + "s")
 
     (res, argumentConstraints)
   }

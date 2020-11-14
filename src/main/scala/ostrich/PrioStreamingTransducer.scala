@@ -42,6 +42,14 @@ object PrioStreamingTransducer {
   class TransducerState extends BState {
     override def toString = "q" + hashCode
   }
+
+  def time[R](str : String) (block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block    // call-by-name
+    val t1 = System.nanoTime()
+    println(str + (t1 - t0) + "ns")
+    result
+  }
 }
 
 /**
@@ -101,7 +109,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       }
     }
 
-    def getNewVal(oldv: Seq[String], ops: Seq[Seq[UpdateOp]], offsetHandle: Int => String) : Seq[String] = 
+    def getNewVal(oldv: Seq[String], ops: Seq[Seq[UpdateOp]], offsetHandle: Int => String) : Seq[String] =
       (for (i <- 0 until numvars) yield evalUpdateOps(oldv, ops(i), offsetHandle)).toSeq
 
     def sortTransitions(trans: Set[Transition]) : Seq[Transition] = {
@@ -161,6 +169,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
         yield ((s1.asInstanceOf[aut.State],
           s2.asInstanceOf[aut.State])))
 
+    // map rudiments to the preimage aut state
     val sMapRev = new MHashMap[(State, trace, Set[State]), aut.State]
 
     val defaultSet = (for (s <- aut.states) yield (s, s)).toSet
@@ -168,20 +177,28 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
 
     val initAutState = aut.initialState
 
+    // this cache is for constant character.
+    // in replaceall_cg, no such operator is used
+    // so this is only for future possible optimization
+    val constantTraceCache = new MHashMap[Char, Set[(aut.State, aut.State)]]
+
     def evalUpdateOps(tr: trace, ops: Seq[UpdateOp], offsetHandle: Int => Set[(aut.State, aut.State)]) : Set[(aut.State, aut.State)] = {
-      ops.foldLeft (defaultSet) { 
+      ops.foldLeft (defaultSet) {
         (S, op) => {
-          val T = op match { 
+          val T = op match {
             case Constant(c) => {
-              (for (s <- aut.states;
-                    (target, lbl) <- aut.outgoingTransitions(s);
-                   if aut.LabelOps.labelContains(c, lbl))
-                     yield (s, target)).toSet
+              constantTraceCache.getOrElseUpdate(c, {
+                (for (s <- aut.states;
+                      (target, lbl) <- aut.outgoingTransitions(s);
+                    if aut.LabelOps.labelContains(c, lbl))
+                      yield (s, target)).toSet
+              })
             }
             case RefVariable(v) => tr(v)
             case InternalOp => internal2
             case Offset(o) => offsetHandle(o)
           }
+          // SLOW?
           (for ((fst, snd) <- S;
             (fst2, snd2) <- T;
             if snd == fst2) yield (fst, snd2)).toSet
@@ -196,7 +213,9 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       lazy val traceValid = {
         val ops = (acceptingStates get ts).get
         val trans = evalUpdateOps(tr, ops, (o) => defaultSet)
-        trans exists {case (src, tgt) => src == initAutState && (aut isAccept tgt)}
+        trans exists {
+          case (src, tgt) => src == initAutState && (aut isAccept tgt)
+        }
       }
       isAccept(ts) && (s forall { a => !isAccept(a)}) && traceValid
     }
@@ -231,17 +250,17 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
 
     val autLabels = (for (s <- aut.states;
                           (_, lbl) <- aut.outgoingTransitions(s))
-                     yield (lbl)).toSet
+                     yield lbl).toSet
 
     def splitLabels (tlabel : TLabel, offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[Transition]) : Iterable[TLabel] = {
-      val outgoingLabels =
+      val outgoingLabels : Iterator[TLabel] =
         Iterator(tlabel) ++
       (for (s <- blocked.iterator;
         transitions <- (lblTrans get s).iterator;
         (l, _, _, _) <- transitions.iterator;
         intLabel <- LabelOps.intersectLabels(l, tlabel).iterator)
-      yield intLabel) ++ 
-      (for ((l, _, priority2, _) <- trans; 
+      yield intLabel) ++
+      (for ((l, _, priority2, _) <- trans;
         if priority2 > priority;
         intLabel <- LabelOps.intersectLabels(l, tlabel).iterator)
       yield intLabel) ++
@@ -265,6 +284,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       })
     }
 
+    val offsetCache = new MHashMap[(TLabel, Int), Set[(aut.State, aut.State)]]
     while (!worklist.isEmpty) {
       val (ts, tr, blocked, ps) = worklist.pop()
 
@@ -279,11 +299,13 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
           for ((lbl, ops, priority, nextState) <- transitions) {
             for (nlbl <- splitLabels(lbl, findOffset(ops), blocked, priority, transitions)) {
               val newTrace = getNewTrace(tr, ops, (o) => {
-                (for (s <- aut.states;
-                      (target, lbl) <- aut.outgoingTransitions(s);
-                      shiftLbl = aut.LabelOps.shift(lbl, -o);
-                      if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
-                      yield (s, target)).toSet
+                offsetCache.getOrElseUpdate((nlbl, o), {
+                  (for (s <- aut.states;
+                        (target, lbl) <- aut.outgoingTransitions(s);
+                        shiftLbl = aut.LabelOps.shift(lbl, -o);
+                        if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
+                        yield (s, target)).toSet
+                })
               })
               val newBlocked = postStates(blocked, nlbl, priority, transitions)
               preBuilder.addTransition(ps,
@@ -322,17 +344,17 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
   // compute the post image of old blocked states,
   // and add new blocked states which are of higher priority
   private def postStates(states : Iterable[State],
-                         label : TLabel, 
-                         priority: Int, 
+                         label : TLabel,
+                         priority: Int,
                          trans: Iterable[Transition]) : Set[State] = {
       val targetStates =
         (for (s <- states.iterator;
               transitions <- (lblTrans get s).iterator;
               (sLabel, _, _, target) <- transitions.iterator;
               if LabelOps.labelsOverlap(label, sLabel))
-         yield target) ++ 
-        (for ((l, _, priority2, s) <- trans; 
-          if (priority2 > priority) 
+         yield target) ++
+        (for ((l, _, priority2, s) <- trans;
+          if (priority2 > priority)
           && LabelOps.labelsOverlap(l, label))
           yield s)
       (epsClosure(targetStates))
