@@ -172,8 +172,8 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     // map rudiments to the preimage aut state
     val sMapRev = new MHashMap[(State, trace, Set[State]), aut.State]
 
-    val defaultSet = (for (s <- aut.states) yield (s, s)).toSet
-    val emptyTrace = (for (v <- 0 until numvars) yield defaultSet).toSeq
+    val defaultTrace = (for (s <- aut.states) yield (s, s)).toSet
+    val initTrace = (for (v <- 0 until numvars) yield defaultTrace).toSeq
 
     val initAutState = aut.initialState
 
@@ -183,7 +183,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     val constantTraceCache = new MHashMap[Char, Set[(aut.State, aut.State)]]
 
     def evalUpdateOps(tr: trace, ops: Seq[UpdateOp], offsetHandle: Int => Set[(aut.State, aut.State)]) : Set[(aut.State, aut.State)] = {
-      ops.foldLeft (defaultSet) {
+      ops.foldLeft (defaultTrace) {
         (S, op) => {
           val T = op match {
             case Constant(c) => {
@@ -212,7 +212,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     def isAcceptingState(ts : State, tr : trace, s : Set[State]) : Boolean = {
       lazy val traceValid = {
         val ops = (acceptingStates get ts).get
-        val trans = evalUpdateOps(tr, ops, (o) => defaultSet)
+        val trans = evalUpdateOps(tr, ops, (o) => defaultTrace)
         trans exists {
           case (src, tgt) => src == initAutState && (aut isAccept tgt)
         }
@@ -240,7 +240,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       })
     }
 
-    val newInitState = getState(initialState, emptyTrace, Set())
+    val newInitState = getState(initialState, initTrace, Set())
     preBuilder setInitialState newInitState
 
     // collect silent transitions during main loop and eliminate them
@@ -252,8 +252,10 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
                           (_, lbl) <- aut.outgoingTransitions(s))
                      yield lbl).toSet
 
+    val offsetSplitCache = new MHashMap[(TLabel, Int), Iterable[TLabel]]
+
     def splitLabels (tlabel : TLabel, offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[Transition]) : Iterable[TLabel] = {
-      val outgoingLabels : Iterator[TLabel] =
+      var outgoingLabels : Iterator[TLabel] =
         Iterator(tlabel) ++
       (for (s <- blocked.iterator;
         transitions <- (lblTrans get s).iterator;
@@ -263,12 +265,18 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       (for ((l, _, priority2, _) <- trans;
         if priority2 > priority;
         intLabel <- LabelOps.intersectLabels(l, tlabel).iterator)
-      yield intLabel) ++
-      (for (o <- offset;
-        albl <- autLabels;
-        shiftLbl = aut.LabelOps.shift(albl, -o).asInstanceOf[TLabel];
-        intLabel <- LabelOps.intersectLabels(shiftLbl, tlabel).iterator)
       yield intLabel)
+
+      for (o <- offset) {
+        outgoingLabels =
+          outgoingLabels ++
+          offsetSplitCache.getOrElseUpdate((tlabel, o), {
+          for (albl <- autLabels;
+               shiftLbl = aut.LabelOps.shift(albl, -o).asInstanceOf[TLabel];
+               intLabel <- LabelOps.intersectLabels(shiftLbl, tlabel).iterator)
+             yield intLabel
+        })
+      }
 
       val enum =
         new BricsTLabelEnumerator(outgoingLabels)
@@ -276,15 +284,20 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     }
 
     def findOffset(update: Seq[Seq[UpdateOp]]) : Set[Int] = {
-      update.flatten.toSet.collect(unlift {
-        (o : UpdateOp) => o match {
-           case Offset(o) => Some(o)
-           case _ => None
+
+      def select(op: UpdateOp) = {
+        op match {
+          case Offset(o) => (true, o)
+          case _ => (false, 0)
         }
-      })
+      }
+
+      (for
+        (ops <- update; op <- ops; (sel, o) = select(op); if sel)
+        yield o).toSet
     }
 
-    val offsetCache = new MHashMap[(TLabel, Int), Set[(aut.State, aut.State)]]
+    val offsetTraceCache = new MHashMap[(TLabel, Int), Set[(aut.State, aut.State)]]
     while (!worklist.isEmpty) {
       val (ts, tr, blocked, ps) = worklist.pop()
 
@@ -299,7 +312,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
           for ((lbl, ops, priority, nextState) <- transitions) {
             for (nlbl <- splitLabels(lbl, findOffset(ops), blocked, priority, transitions)) {
               val newTrace = getNewTrace(tr, ops, (o) => {
-                offsetCache.getOrElseUpdate((nlbl, o), {
+                offsetTraceCache.getOrElseUpdate((nlbl, o), {
                   (for (s <- aut.states;
                         (target, lbl) <- aut.outgoingTransitions(s);
                         shiftLbl = aut.LabelOps.shift(lbl, -o);
@@ -319,7 +332,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
           (eTrans get ts) match {
             case Some(etransitions) => {
               for ((ops, priority, nextState) <- etransitions) {
-                val newTrace = getNewTrace(tr, ops, (o) => defaultSet)
+                val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
                 val newBlocked = blocked ++ epsClosure(
                   (for ((_, priority2, s) <- etransitions.iterator;
                     if priority2 > priority)
