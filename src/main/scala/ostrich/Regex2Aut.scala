@@ -217,6 +217,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat(n1, n2), minimize)
 
+    case IFunApp(`re_capture`, Seq(_, t)) => // ignored here
+      toBAutomaton(t, minimize)
   }
 
   private def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {
