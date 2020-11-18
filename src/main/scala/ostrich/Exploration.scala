@@ -370,7 +370,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             throw new Exception(
               "Could not satisfy length constraints for " + res +
                 " with solution " +
-                resValue.right.get.map(i => i.toChar)(breakOut))
+                resValue.right.get.map(i => i.toChar)(breakOut) +
+                "; length is " + resValue.right.get.size +
+                " but should be " + resLen)
 
         model.put(res, resValue)
       }
