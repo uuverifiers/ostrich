@@ -110,7 +110,7 @@ object PrioStreamingTransducerSpecification
   }
 
   val abcStar = {
-    // PSST that replaces (b + a)*(c + a)* with \2\1 
+    // PSST that replaces (b + a)*(c + a)* with \2\1
 
     val builder = PrioStreamingTransducer.getBuilder(2)
     val q0 = builder.getNewState
@@ -154,7 +154,7 @@ object PrioStreamingTransducerSpecification
   }
 
   val aStarPSST = {
-    // PSST that replaces (a*)a* with \1 
+    // PSST that replaces (a+)a* with \1
 
     val builder = PrioStreamingTransducer.getBuilder(1)
     val q0 = builder.getNewState
@@ -166,8 +166,8 @@ object PrioStreamingTransducerSpecification
 
     builder.addTransition(q0, ('a', 'a'), update, q1)
     builder.addTransition(qf, ('a', 'a'), nop, qf)
-    builder.addETransition(q1, nop, 0, qf)
-    builder.addETransition(q1, nop, 1, q0) // this is the prioritised transition
+    builder.addPreETransition(q1, nop, 0, qf)
+    builder.addPreETransition(q1, nop, 1, q0) // this is the prioritised transition
 
     builder.setInitialState(q0)
     builder.setAccept(qf, true, List(RefVariable(0)))
