@@ -25,7 +25,7 @@ import org.scalacheck.Prop._
 import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 
 object PrioStreamingTransducerSpecification
-	extends Properties("PrioStreamingTransducer"){
+  extends Properties("PrioStreamingTransducer"){
 
   def seq(s : String) = s.map(_.toInt)
 

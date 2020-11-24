@@ -348,8 +348,8 @@ extends StreamingTransducer {
 
           // sigma transitions
           for ((lbl, ops, priority, nextState) <- transitions) {
-            val preBlock = epsClosure(for ((_, _, s) <- pre.iterator) yield s)
-            for (nlbl <- splitLabels(lbl, findOffset(ops), blocked ++ preBlock, priority, transitions)) {
+            val preBlock = blocked ++ epsClosure(for ((_, _, s) <- pre.iterator) yield s)
+            for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions)) {
               val newTrace = getNewTrace(tr, ops, (o) => {
                 offsetTraceCache.getOrElseUpdate((nlbl, o), {
                   (for (s <- aut.states;
