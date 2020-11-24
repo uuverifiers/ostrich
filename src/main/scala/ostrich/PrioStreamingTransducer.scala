@@ -474,6 +474,8 @@ class PrioStreamingTransducerBuilder(val numvars : Int)
 
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
+  private val states = new MLinkedHashSet[State]
+
   var initialState : State = getNewState
   val acceptingStates
     = new MHashMap[State, Seq[UpdateOp]]
@@ -495,8 +497,6 @@ class PrioStreamingTransducerBuilder(val numvars : Int)
       override def default(q : State) : MSet[PrioStreamingTransducer#ETransition] =
         MLinkedHashSet.empty[PrioStreamingTransducer#ETransition]
     }
-
-  private val states = new MLinkedHashSet[State]
 
   def getNewState : State = {
     val s = new PrioStreamingTransducer.TransducerState

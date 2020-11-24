@@ -193,7 +193,8 @@ object PrioStreamingTransducerSpecification
     val pre = aStarPSST.preImage(baut)
 
     pre(List('a', 'a', 'a', 'a')) &&
-    !pre(List('a', 'a', 'a')) && !pre(List('a', 'a', 'a', 'a', 'a'))
+    !pre(List('a', 'a', 'a')) &&
+    !pre(List('a', 'a', 'a', 'a', 'a'))
   }
 
   property("PSST concrete evaluation correct") = {
