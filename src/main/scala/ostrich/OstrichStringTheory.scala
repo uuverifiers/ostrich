@@ -102,6 +102,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
 
   //////////////////////////////////////////////////////////////////////////////
+  /* Modified by Riccardo */
+  val strDatabase = new StrDatabase(this)
+
+  val ?
+
+  //////////////////////////////////////////////////////////////////////////////
 
   val functions =
     predefFunctions ++ (extraFunctions map (_._2))
@@ -232,6 +238,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                           : (IFormula, Signature) = {
     val visitor1 = new OstrichPreprocessor (this)
     val visitor2 = new OstrichRegexEncoder (this)
+    // Added by Riccardo
+    val visitor3 = new OstrichStringEncorder(this)
+
+
+    // Modified by Riccardo
     (visitor2(visitor1(f)), signature)
   }
 

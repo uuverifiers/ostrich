@@ -212,3 +212,24 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
   }
 
 }
+
+
+
+/* Added by Riccardo */
+class OstrichStringEncoder(theory : OstrichStringTheory)
+  extends ContextAwareVisitor[Unit, IExpression] {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula =
+    this.visit(f, Context(())).asInstanceOf[IFormula]
+
+  def postVisit(t : IExpression,
+                ctxt : Context[Unit],
+                subres : Seq[IExpression]) : IExpression = (t, subres) match {
+
+    case (IFunApp(`str_empty`, _), _ ) =>
+
+    case (IFunApp(`str_cons`, _), _ ))
+  }
+}
