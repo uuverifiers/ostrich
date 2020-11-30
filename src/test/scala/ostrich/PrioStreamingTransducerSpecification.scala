@@ -203,4 +203,52 @@ object PrioStreamingTransducerSpecification
     (aStarPSST("aaaaa").get == "aaaaa")
   }
 
+  val replaceSimul = {
+    // PSST that simulate replaceAll(x, (a+?), b)
+
+    // 1 : result , 0 : capture group
+    val builder = PrioStreamingTransducer.getBuilder(2)
+
+    val trivial = List(
+      List(RefVariable(0)),
+      List(RefVariable(1), Offset(0)))
+    val updateVar = List(
+      List(RefVariable(0), Offset(0)),
+      List(RefVariable(1)))
+    val dump = List(
+      List(),
+      List(RefVariable(1), RefVariable(0)))
+
+    val q0 = builder.getNewState // initial and accepting state
+    val q1 = builder.getNewState // start a+?
+    val q2 = builder.getNewState // have read the first a
+    val q3 = builder.getNewState // read extra a
+    val q4 = builder.getNewState // stop match
+
+    builder.addTransition(q0, BricsTLabelOps.sigmaLabel, trivial, q0)
+    builder.addPreETransition(q0, trivial, q1)
+    builder.addTransition(q1, ('a', 'a'), updateVar, q2)
+    builder.addTransition(q2, ('a', 'a'), updateVar, q3)
+    builder.addPreETransition(q3, updateVar, q2)
+    builder.addPreETransition(q2, updateVar, q4)
+    builder.addPreETransition(q4, dump, 1, q1)
+
+    builder.setInitialState(q0)
+    builder.setAccept(q0, true, List(RefVariable(1)))
+
+    builder.getTransducer
+  }
+
+  property("PSST simulating replaceall") = {
+    val q1 = new IDState(1)
+    q1.setAccept(true)
+    q1.addTransition(new Transition('b', 'c', q1))
+    val aut = new BAutomaton
+    aut.setInitialState(q1)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = replaceSimul.preImage(baut)
+
+    pre(List('a', 'a', 'a', 'a'))
+  }
 }
