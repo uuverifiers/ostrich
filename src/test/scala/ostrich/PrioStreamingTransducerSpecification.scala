@@ -217,7 +217,7 @@ object PrioStreamingTransducerSpecification
       List(RefVariable(1)))
     val dump = List(
       List(),
-      List(RefVariable(1), RefVariable(0)))
+      List(RefVariable(1), Constant('b')))
 
     val q0 = builder.getNewState // initial and accepting state
     val q1 = builder.getNewState // start a+?
@@ -231,7 +231,7 @@ object PrioStreamingTransducerSpecification
     builder.addTransition(q2, ('a', 'a'), updateVar, q3)
     builder.addPreETransition(q3, updateVar, q2)
     builder.addPreETransition(q2, updateVar, q4)
-    builder.addPreETransition(q4, dump, 1, q1)
+    builder.addPreETransition(q4, dump, 1, q0)
 
     builder.setInitialState(q0)
     builder.setAccept(q0, true, List(RefVariable(1)))
@@ -249,6 +249,10 @@ object PrioStreamingTransducerSpecification
 
     val pre = replaceSimul.preImage(baut)
 
-    pre(List('a', 'a', 'a', 'a'))
+    pre(List('a', 'a', 'a', 'a')) &&
+    pre(List('b', 'b')) &&
+    pre(List('c', 'b')) &&
+    !pre(List('b', 'd')) &&
+    pre(List('a', 'b', 'c', 'a'))
   }
 }
