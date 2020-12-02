@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2020 Zhilei Han. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -51,54 +51,68 @@ import scala.collection.mutable.{HashMap => MHashMap,
 
 import java.lang.StringBuilder
 
-case class GlushkovPFA (val initialTrans : Seq[GlushkovPFA.Transition], 
-  val trans: MMap[GlushkovPFA.State, Seq[GlushkovPFA.Transition]], 
-  val start: Set[GlushkovPFA.State], 
-  val end: Set[GlushkovPFA.State], 
-  val empty: Boolean) // if q0 is accepting, or if N accepts \epsilon
+case class PFA(val sTran: MMap[PFA.State, Seq[PFA.SigmaTransition]],
+  val preTran: MMap[PFA.State, Seq[PFA.ETransition]],
+  val postTran: MMap[PFA.State, Seq[PFA.ETransition]],
+  val initial: PFA.State,
+  val accepting: PFA.State)
 
-object GlushkovPFA {
+object PFA {
 
   type State = BricsAutomaton#State
   type TLabel = BricsAutomaton#TLabel
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
-  type Transition = (TLabel, State)
+  type SigmaTransition = (TLabel, State)
+  type ETransition = State
 
-  // the automaton, 
-  // number of capture groups, 
+  // the automaton,
+  // number of capture groups,
   // number of stars,
   // map from state to the capture groups it's in,
   // map from state pair to stars which it resets
   // map from star to the capture groups within
-  type completeInfo = (GlushkovPFA, Int, Int, Map[State, Set[Int]], Map[(State, State), Set[Int]], Map[Int, Set[Int]])
+  type completeInfo = (PFA, Int, Int, Map[State, Set[Int]], Map[(State, State), Set[Int]], Map[Int, Set[Int]])
 
   private class GState extends BState {
-    override def toString = "qG" + hashCode
+    override def toString = "qP" + hashCode
   }
 
   private def getNewState : State = new GState
 
-  def none() : GlushkovPFA = {
-      val trans = new MHashMap[State, Seq[Transition]]
-      GlushkovPFA(Seq(), trans, Set(), Set(), false) 
+  def none() : PFA = {
+      val init = getNewState
+      val end = getNewState
+      val trans = new MHashMap[State, Seq[SigmaTransition]]
+      val pre = new MHashMap[State, Seq[ETransition]]
+      val post = new MHashMap[State, Seq[ETransition]]
+      PFA(trans, pre, post, init, end)
   }
 
-  def epsilon() : GlushkovPFA = {
-      val trans = new MHashMap[State, Seq[Transition]]
-      GlushkovPFA(Seq(), trans, Set(), Set(), true)
+  def epsilon() : PFA = {
+      val init = getNewState
+      val end = getNewState
+      val trans = new MHashMap[State, Seq[SigmaTransition]]
+      val pre = new MHashMap[State, Seq[ETransition]]
+      pre += ((init, Seq(end)))
+      val post = new MHashMap[State, Seq[ETransition]]
+      PFA(trans, pre, post, init, end)
   }
 
-  def single(lbl : TLabel) : GlushkovPFA = {
+  def single(lbl : TLabel) : PFA = {
     if (LabelOps isNonEmptyLabel lbl) {
-      val s = getNewState
-      val trans = new MHashMap[State, Seq[Transition]]
-      GlushkovPFA(Seq((lbl, s)), trans, Set(s), Set(s), false)
+      val init = getNewState
+      val end = getNewState
+      val trans = new MHashMap[State, Seq[SigmaTransition]]
+      trans += ((init, Seq((lbl, end))))
+      val pre = new MHashMap[State, Seq[ETransition]]
+      val post = new MHashMap[State, Seq[ETransition]]
+      PFA(trans, pre, post, init, end)
     } else {
       none
     }
   }
 
-  def constant(str: Seq[Int]) : GlushkovPFA = {
+  def constant(str: Seq[Int]) : PFA = {
     if (str.isEmpty) {
       epsilon
     } else {
@@ -109,127 +123,123 @@ object GlushkovPFA {
     }
   }
 
-  def alternate(aut1 : GlushkovPFA, aut2 : GlushkovPFA) : GlushkovPFA = {
+  def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
     (aut1, aut2) match {
-      case (GlushkovPFA(init1, t1, s1, e1, empty1), GlushkovPFA(init2, t2, s2, e2, empty2)) => {
-        val empty = empty1 || empty2
-        val start = s1 ++ s2
-        val end = e1 ++ e2
-        val init = init1 ++ init2 // aut1 is prioritised
+      case (PFA(t1, pre1, post1, init1, end1), PFA(t2, pre2, post2, init2, end2)) => {
+        val init = getNewState
+        val end = getNewState
+        val trans = t1 ++ t2
+        val pre = pre1 ++ pre2
+        pre += ((init, Seq(init1, init2)))
+        pre += ((end1, Seq(end)))
+        pre += ((end2, Seq(end)))
+        val post = post1 ++ post2
 
-        var trans = t1
-        for (p <- t2) { // states of aut1 and 2 are different
-          trans += p
-        }
-
-        GlushkovPFA(init, trans, start, end, empty)
+        PFA(trans, pre, post, init, end)
       }
     }
   }
 
-  def concat(aut1 : GlushkovPFA, aut2 : GlushkovPFA) : GlushkovPFA = {
+  def concat(aut1 : PFA, aut2 : PFA) : PFA = {
     (aut1, aut2) match {
-      case (GlushkovPFA(init1, t1, s1, e1, empty1), GlushkovPFA(init2, t2, s2, e2, empty2)) => {
-        val empty = empty1 && empty2
+      case (PFA(t1, pre1, post1, init1, end1), PFA(t2, pre2, post2, init2, end2)) => {
+        val trans = t1 ++ t2
+        val pre = pre1 ++ pre2
+        pre += ((end1, Seq(init2)))
+        val post = post1 ++ post2
 
-        var start = s1
-        if (empty1) {
-          start ++= s2
-        }
-
-        var end = e2
-        if (empty2) {
-          end ++= e1
-        }
-
-        var init = init1
-        if (empty1) {
-          init ++= init2 // it is preferred to go aut1 first, if possible
-        }
-
-        var trans = t1
-        for (es1 <- e1) { // bridge aut1 and aut2
-          (trans get es1) match {
-            case None => {
-              trans += (es1 -> init2) 
-            }
-            case Some(tgts) => {
-              trans(es1) = tgts ++ init2 // prefer to stay in aut1
-            }
-          }
-        }
-        for (p <- t2) { // states of aut1 and 2 are different
-          trans += p
-        }
-
-        GlushkovPFA(init, trans, start, end, empty)
+        PFA(trans, pre, post, init1, end2)
       }
     }
   }
 
-  def star(aut : GlushkovPFA) : GlushkovPFA = {
+  def star(aut : PFA) : PFA = {
     aut match {
-      case GlushkovPFA(init1, t1, s1, e1, empty1) => {
+      case PFA(t1, pre1, post1, init1, end1) => {
+        val end = getNewState
+        pre1 += ((end1, Seq(init1)))
 
-        var trans = t1
-        for (es <- e1) {
-          (trans get es) match {
-            case None => {
-              trans += (es -> init1)
-            }
-            case Some(tgts) => {
-              trans(es) = tgts ++ init1 // prefer to match longer substring in an iteration
-            }
+        (post1 get init1) match {
+          case None => {
+            post1 += (init1 -> Seq(end))
+          }
+          case Some(tgts) => {
+            post1(init1) = tgts :+ (end)
           }
         }
 
-        GlushkovPFA(init1, trans, s1, e1, true)
+        PFA(t1, pre1, post1, init1, end)
       }
     }
   }
 
-  def plus(aut : GlushkovPFA) : GlushkovPFA = {
+  def lazystar(aut : PFA) : PFA = {
     aut match {
-      case GlushkovPFA(init1, t1, s1, e1, empty1) => {
+      case PFA(t1, pre1, post1, init1, end1) => {
+        val end = getNewState
+        pre1.+=((end1, Seq(init1)))
 
-        var trans = t1
-        for (es <- e1) {
-          (trans get es) match {
-            case None => {
-              trans += (es -> init1)
-            }
-            case Some(tgts) => {
-              trans(es) = tgts ++ init1 // prefer to match longer substring in an iteration
-            }
+        (pre1 get init1) match {
+          case None => {
+            pre1 += (init1 -> Seq(end))
+          }
+          case Some(tgts) => {
+            pre1(init1) = tgts.+:(end)
           }
         }
 
-        GlushkovPFA(init1, trans, s1, e1, empty1)
+        PFA(t1, pre1, post1, init1, end)
       }
     }
   }
 
-  def optional(aut : GlushkovPFA) : GlushkovPFA = {
+  def plus(aut : PFA) : PFA = {
     aut match {
-      case GlushkovPFA(init1, t1, s1, e1, empty1) => {
-        GlushkovPFA(init1, t1, s1, e1, true)
+      case PFA(t1, pre1, post1, init1, end1) => {
+        val end = getNewState
+        pre1.+=((end1, Seq(init1, end)))
+
+        PFA(t1, pre1, post1, init1, end)
       }
     }
   }
 
-  def toDot(aut: GlushkovPFA) : String = {
+  def lazyplus(aut : PFA) : PFA = {
+    aut match {
+      case PFA(t1, pre1, post1, init1, end1) => {
+        val end = getNewState
+        pre1.+=((end1, Seq(end, init1)))
+
+        PFA(t1, pre1, post1, init1, end)
+      }
+    }
+  }
+
+  def optional(aut : PFA) : PFA = {
+    aut match {
+      case PFA(t1, pre1, post1, init1, end1) => {
+        (post1 get init1) match {
+          case None => {
+            post1 += (init1 -> Seq(end1))
+          }
+          case Some(tgts) => {
+            post1(init1) = tgts.+:(end1)
+          }
+        }
+        PFA(t1, pre1, post1, init1, end1)
+      }
+    }
+  }
+
+  def toDot(aut: PFA) : String = {
     val sb = new StringBuilder()
-    sb.append("digraph GlushkovPFA {\n")
+    sb.append("digraph PFA {\n")
 
-    sb.append("q0[shape=square];\n")
-    if (aut.empty)
-        sb.append("q0[peripheries=2];\n")
-
-    for (f  <- aut.end)
-        sb.append(f + "[peripheries=2];\n")
+    sb.append(aut.initial + "[shape=square];\n")
+    sb.append(aut.accepting + "[peripheries=2];\n")
 
     var priority = Int.MaxValue
-    for (tran <- aut.trans) {
+    for (tran <- aut.sTran) {
       val (state, arrows) = tran
       for (arrow <- arrows) {
         val (lbl, dest) = arrow
@@ -240,10 +250,16 @@ object GlushkovPFA {
     }
 
     priority = Int.MaxValue
-    for (arrow <- aut.initialTrans) {
-      val (lbl, dest) = arrow
-      sb.append("q0 -> " + dest);
-      sb.append("[label=\"" + lbl + "/" + priority + "\"];\n")
+    for ((s, arrow) <- aut.preTran; dest <- arrow) {
+      sb.append(s + " -> " + dest);
+      sb.append("[label=\"preeps" + "/" + priority + "\"];\n")
+      priority -= 1
+    }
+
+    priority = Int.MaxValue
+    for ((s, arrow) <- aut.postTran; dest <- arrow) {
+      sb.append(s + " -> " + dest);
+      sb.append("[label=\"posteps" + "/" + priority + "\"];\n")
       priority -= 1
     }
 
@@ -255,8 +271,8 @@ object GlushkovPFA {
   def printInfo(info : completeInfo) = {
     val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = info
     Console.withOut(Console.err) {
-      println("   Generated Glushkov PNFA with " + numCap + " capture groups and " + numStar + " Klenne stars:")
-      println(GlushkovPFA.toDot(aut))
+      println("   Generated  PNFA with " + numCap + " capture groups and " + numStar + " Klenne stars:")
+      println(PFA.toDot(aut))
       println("   State to Capture Groups:")
       for ((s, caps) <- state2Caps) {
         println(s + " -> { " + caps + " }")
@@ -275,20 +291,20 @@ object GlushkovPFA {
 
 class Regex2PFA(theory : OstrichStringTheory) {
 
-  import GlushkovPFA.completeInfo
+  import PFA.completeInfo
 
-  type State = GlushkovPFA.State
-  type TLabel = GlushkovPFA.TLabel
+  type State = PFA.State
+  type TLabel = PFA.TLabel
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
     re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-    re_loop, str_to_re, re_from_str, 
+    re_loop, str_to_re, re_from_str,
     re_capture, re_reference}
 
-  // this is the map from literal numbering to internal numbering of 
+  // this is the map from literal numbering to internal numbering of
   // capture groups. It is for translating the replacement string.
-  private val capNumTransform = 
+  private val capNumTransform =
     new MHashMap[Int, Int]
 
   private def buildPatternRegex(pat : ITerm) : completeInfo = {
@@ -300,41 +316,41 @@ class Regex2PFA(theory : OstrichStringTheory) {
       new MHashMap[Int, MSet[State]]
       with MMultiMap[Int, State]
 
-    // the set of Start, End, and capture groups within
+    // record the start and end state of subexpr, and capture groups within a star
     val starInfo =
-      new MHashMap[Int, (Set[State], Set[State], Set[Int])]
+      new MHashMap[Int, (State, State, Set[Int])]
 
-    def buildPatternImpl(t : ITerm) : (GlushkovPFA, Set[Int]) = {
+    def buildPatternImpl(t : ITerm) : (PFA, Set[Int]) = { // returns PFA and capture groups within
       t match {
         case IFunApp(`re_none`, _) =>
-          (GlushkovPFA.none, Set())
+          (PFA.none, Set())
         case IFunApp(`re_eps`, _) =>
-          (GlushkovPFA.epsilon, Set())
+          (PFA.epsilon, Set())
         case IFunApp(`re_allchar`, _) =>
-          (GlushkovPFA.single(LabelOps.sigmaLabel), Set())
+          (PFA.single(LabelOps.sigmaLabel), Set())
         case IFunApp(`re_all`, _) => {
-          val aut_allchar = GlushkovPFA.single(LabelOps.sigmaLabel)
-          val aut_all = GlushkovPFA.star(aut_allchar)
-          val localStarNum = numStar // considered as star?
+          val aut_allchar = PFA.single(LabelOps.sigmaLabel)
+          val aut_all = PFA.star(aut_allchar)
+          val localStarNum = numStar // considered as Kleene star Sigma*
           numStar += 1
 
-          starInfo(localStarNum) = (aut_allchar.start, aut_allchar.end, Set.empty[Int])
+          starInfo(localStarNum) = (aut_allchar.initial, aut_allchar.accepting, Set.empty[Int])
           (aut_all, Set())
         }
         case IFunApp(`re_charrange`,
           Seq(IIntLit(IdealInt(a)), IIntLit(IdealInt(b)))) => {
             val lbl = LabelOps.interval(a.toChar, b.toChar) // XXX:Int to Char?
-            (GlushkovPFA.single(lbl), Set())
+            (PFA.single(lbl), Set())
         }
         case IFunApp(`re_++`, Seq(a, b)) => {
           val (autA, capA) = buildPatternImpl(a)
           val (autB, capB) = buildPatternImpl(b)
-          (GlushkovPFA.concat(autA, autB), capA ++ capB)
+          (PFA.concat(autA, autB), capA ++ capB)
         }
         case IFunApp(`re_union`, Seq(a, b)) => {
           val (autA, capA) = buildPatternImpl(a)
           val (autB, capB) = buildPatternImpl(b)
-          (GlushkovPFA.alternate(autA, autB), capA ++ capB)
+          (PFA.alternate(autA, autB), capA ++ capB)
         }
         case IFunApp(`re_inter`, Seq(a, b)) => {
           throw new IllegalArgumentException(
@@ -349,27 +365,27 @@ class Regex2PFA(theory : OstrichStringTheory) {
 
           val localStarNum = numStar
           numStar += 1
-          starInfo(localStarNum) = (autA.start, autA.end, capA)
+          starInfo(localStarNum) = (autA.initial, autA.accepting, capA)
 
-          (GlushkovPFA.star(autA), capA)
+          (PFA.star(autA), capA)
         }
         case IFunApp(`re_+`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
 
           val localStarNum = numStar
           numStar += 1 // plus is regarded as a star
-          starInfo(localStarNum) = (autA.start, autA.end, capA)
+          starInfo(localStarNum) = (autA.initial, autA.accepting, capA)
 
-          (GlushkovPFA.plus(autA), capA)
+          (PFA.plus(autA), capA)
         }
         case IFunApp(`re_opt`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
-          (GlushkovPFA.optional(autA), capA)
+          (PFA.optional(autA), capA)
         }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
           // NOTE
           // It is possible to support this
-          // the crux is to find a way to construct the Glushkov NFA
+          // the crux is to find a way to construct a PFA
           // which allows bounded match of a
           throw new IllegalArgumentException(
             "regex with capture groups does not support loop (yet!) " + t)
@@ -382,28 +398,34 @@ class Regex2PFA(theory : OstrichStringTheory) {
             case None => { capNumTransform += (litCaptureNum -> localCaptureNum)}
             case Some(_) => {
               throw new IllegalArgumentException(
-                "Duplicate capture group index " + litCaptureNum)
+                "Duplicate capture group : " + litCaptureNum)
             }
           }
 
           val (autA, capA) = buildPatternImpl(a)
 
-          for ((s, trans) <- autA.trans; (lbl, tgt) <- trans) {
+          for ((s, trans) <- autA.sTran; (lbl, tgt) <- trans) {
+            capState.addBinding(localCaptureNum, tgt)
+            capState.addBinding(localCaptureNum, s)
+          }
+          for ((s, trans) <- autA.preTran; tgt <- trans) {
+            capState.addBinding(localCaptureNum, s)
             capState.addBinding(localCaptureNum, tgt)
           }
-          for (s <- autA.start) {
+          for ((s, trans) <- autA.postTran; tgt <- trans) {
             capState.addBinding(localCaptureNum, s)
+            capState.addBinding(localCaptureNum, tgt)
           }
 
           (autA, capA + localCaptureNum)
         }
         case IFunApp(`str_to_re`, Seq(a)) => {
-          (GlushkovPFA.constant(StringTheory.term2List(a)), Set())
+          (PFA.constant(StringTheory.term2List(a)), Set())
         }
         case _ =>
           throw new IllegalArgumentException(
             "could not translate " + t + " to an automaton")
-        // TODO: str_to_re & re_from_str ??
+        // TODO: re_from_str ??
       }
     }
 
@@ -415,7 +437,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
         state2Capture_mut.addBinding(s, cap)
     }
 
-    val state2Capture = (for ((s, caps) <- state2Capture_mut) 
+    val state2Capture = (for ((s, caps) <- state2Capture_mut)
       yield (s, caps.toSet)).toMap
 
     val states2Star_mut = new MHashMap[(State, State), MSet[Int]] with MMultiMap[(State, State), Int]
@@ -423,11 +445,11 @@ class Regex2PFA(theory : OstrichStringTheory) {
       case (starnum, (_, _, caps)) => (starnum, caps)
     }).toMap
 
-    for ((starnum, (start, end, _)) <- starInfo; s <- start; e <- end) {
-      states2Star_mut.addBinding((s, e), starnum)
+    for ((starnum, (start, end, _)) <- starInfo) {
+      states2Star_mut.addBinding((end, start), starnum)
     }
 
-    val states2Star = (for ((s, star) <- states2Star_mut) 
+    val states2Star = (for ((s, star) <- states2Star_mut)
       yield (s, star.toSet)).toMap
 
     (aut, numCapture, numStar, state2Capture, states2Star, star2Capture)
@@ -471,7 +493,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
     capNumTransform.clear
 
     val info = buildPatternRegex(pat)
-    val localindex = 
+    val localindex =
       (capNumTransform get index) match {
         case None =>
           throw new IllegalArgumentException("Undefined capture group referenced: " + index)

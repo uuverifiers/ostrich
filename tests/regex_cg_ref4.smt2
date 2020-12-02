@@ -1,23 +1,21 @@
 ;'use strict';
 ;module.exports = function (str, sep) {
-	;if (typeof str !== 'string') {
-		;throw new TypeError('Expected a string');
-	;}
+    ;if (typeof str !== 'string') {
+        ;throw new TypeError('Expected a string');
+    ;}
 
-	;sep = typeof sep === 'undefined' ? '_' : sep;
+    ;sep = typeof sep === 'undefined' ? '_' : sep;
 
-	;return str
-		;.replace(/([a-z\d])([A-Z])/g, '$1' + sep + '$2')
-		;.replace(/([A-Z]+)([A-Z][a-z\d]+)/g, '$1' + sep + '$2')
-		;.toLowerCase();
+    ;return str
+        ;.replace(/([a-z\d])([A-Z])/g, '$1' + sep + '$2')
+        ;.replace(/([A-Z]+)([A-Z][a-z\d]+)/g, '$1' + sep + '$2')
+        ;.toLowerCase();
 ;};
 
 (set-logic QF_S)
 
 (declare-const s String)
 (declare-const in1 String)
-(declare-const in2 String)
-(declare-const in3 String)
 (declare-const res String)
 
 ; we assume 'sep' is '-'
