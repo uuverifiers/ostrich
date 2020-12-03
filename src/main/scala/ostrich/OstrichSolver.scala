@@ -49,7 +49,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
 
-  import theory.{str, str_len, str_empty, str_cons, str_at, str_++, str_in_re,
+  import theory.{str_from_char, str_len, str_empty, str_cons, str_at, str_++,
+                 str_in_re,
                  str_in_re_id, str_to_re, re_from_str,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  re_none, re_all, re_allchar, re_charrange,
@@ -134,7 +135,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
 
     for (a <- atoms.positiveLits) a.pred match {
-      case FunPred(`str` | `str_cons` | `str_empty`)
+      case FunPred(`str_from_char` | `str_cons` | `str_empty`)
         if concreteWords contains a.last =>
         // nothing, can be ignored
       case FunPred(`str_++`)
@@ -336,7 +337,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     for (a <- atoms positiveLitsWithPred p(str_empty))
       assign(a.last, List())
-    for (a <- atoms positiveLitsWithPred p(str)) {
+    for (a <- atoms positiveLitsWithPred p(str_from_char)) {
       if (!a.head.isConstant)
         throw new Exception("Cannot handle " + a)
       assign(a.last, List(a.head.constant.intValueSafe))
