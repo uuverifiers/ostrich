@@ -182,6 +182,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           str_cons(code, str_empty()),
           str_empty())
 
+    // Currently we just under-approximate and assume that the considered
+    // string is "0"
+    case (IFunApp(`str_to_int`, _), Seq(str : ITerm)) => {
+      Console.err.println(
+        "Warning: str.to.int not fully supported")
+      eps(shiftVars(str, 1) === string2Term("0") &&& v(0) === 0)
+    }
+
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
@@ -223,8 +231,9 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
           Seq(s : ITerm, ConcreteRegex(regex))) =>
       str_in_re_id(s, theory.autDatabase.regex2Id(regex))
     case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
-      println("Warning: could not encode regular expression right away," +
-                " post-poning: " + regex)
+      Console.err.println(
+        "Warning: could not encode regular expression right away," +
+          " post-poning: " + regex)
       t update subres
     }
     case _ =>
