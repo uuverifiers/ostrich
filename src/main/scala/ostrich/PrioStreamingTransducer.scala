@@ -315,10 +315,7 @@ extends StreamingTransducer {
       var nextMin : Int = imin.next
 
       while (curMin <= e.toInt) {
-        //println(curMin)
-        println("curMin : " + curMin + " nextMax : " + nextMax + " nextMin : " + nextMin)
         if (nextMin == curMin) {
-          println("yes ")
           nextMin = imin.next
         } else {
           if (nextMin <= nextMax) {
@@ -400,13 +397,8 @@ extends StreamingTransducer {
 
           // sigma transitions
           for ((lbl, ops, priority, nextState) <- transitions) {
-            println("split label: " + lbl)
             val preBlock = blocked ++ epsClosure(for ((_, _, s) <- pre.iterator) yield s)
             for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if LabelOps.isNonEmptyLabel(nlbl)) {
-              {
-                val (a, b) = nlbl
-                println("get label: (" + a.toInt + "," + b.toInt + ")")
-              }
               val newTrace = getNewTrace(tr, ops, (o) => {
                 offsetTraceCache.getOrElseUpdate((nlbl, o), {
                   (for (s <- aut.states;

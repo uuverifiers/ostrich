@@ -52,10 +52,6 @@ object ReplaceAllCGPreOp {
   }
 
   def buildPSST(pat : completeInfo, rep : Seq[UpdateOp]) : PrioStreamingTransducer = {
-    println("=======ReplaceAllPreOp.buildPSST=========")
-    println("Get the following info:")
-    PFA.printInfo(pat)
-
     val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = pat
 
     // for each capture group, we have a string variable.
