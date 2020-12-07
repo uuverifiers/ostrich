@@ -37,6 +37,7 @@ import scala.collection.mutable.{HashSet => MHashSet,
                                  HashMap => MHashMap,
                                  Stack => MStack,
                                  MultiMap => MMultiMap,
+                                 TreeSet => MTreeSet,
                                  Set => MSet}
 
 import dk.brics.automaton.{Automaton => BAutomaton,
@@ -284,9 +285,59 @@ extends StreamingTransducer {
 
     val offsetSplitCache = new MHashMap[(TLabel, Int), Iterable[TLabel]]
 
+    def disjointLabels(sigma: (Char, Char), labels: Iterator[(Char, Char)]) : Iterable[(Char, Char)] = {
+      var disjoint = new MTreeSet[(Char, Char)]()
+
+      if (!labels.hasNext) {
+        disjoint += sigma
+        return disjoint
+      }
+
+      val (s, e) = sigma
+
+      val mins = new MTreeSet[Int]
+      val maxes = new MTreeSet[Int]
+      for ((min, max) <- labels) {
+        mins += min.toInt
+        maxes += max.toInt
+      }
+
+      mins += (e + 1) // guard 1
+      mins += (e + 2) // guard 2
+      maxes += (e + 1)
+      maxes += (e + 2)
+
+      val imin = mins.iterator
+      val imax = maxes.iterator
+
+      var curMin : Int = s.toInt
+      var nextMax : Int = imax.next
+      var nextMin : Int = imin.next
+
+      while (curMin <= e.toInt) {
+        //println(curMin)
+        println("curMin : " + curMin + " nextMax : " + nextMax + " nextMin : " + nextMin)
+        if (nextMin == curMin) {
+          println("yes ")
+          nextMin = imin.next
+        } else {
+          if (nextMin <= nextMax) {
+            disjoint += ((curMin.toChar, (nextMin-1).toChar))
+            curMin = nextMin
+            nextMin = imin.next
+          } else {
+            disjoint += ((curMin.toChar, nextMax.toChar))
+            curMin = (nextMax + 1)
+            nextMax = imax.next
+          }
+        }
+      }
+
+      disjoint
+    }
+
     def splitLabels (tlabel : TLabel, offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[SigmaTransition]) : Iterable[TLabel] = {
       var outgoingLabels : Iterator[TLabel] =
-        Iterator(tlabel) ++
       (for (s <- blocked.iterator;
         (_, transitions, _) <- (lblTrans get s).iterator;
         (l, _, _, _) <- transitions.iterator;
@@ -308,9 +359,10 @@ extends StreamingTransducer {
         })
       }
 
-      val enum =
-        new BricsTLabelEnumerator(outgoingLabels)
-      enum.enumDisjointLabels
+      //val enum =
+        //new BricsTLabelEnumerator(outgoingLabels)
+      //enum.enumDisjointLabels
+      disjointLabels(tlabel, outgoingLabels)
     }
 
     def findOffset(update: Seq[Seq[UpdateOp]]) : Set[Int] = {
@@ -348,8 +400,13 @@ extends StreamingTransducer {
 
           // sigma transitions
           for ((lbl, ops, priority, nextState) <- transitions) {
+            println("split label: " + lbl)
             val preBlock = blocked ++ epsClosure(for ((_, _, s) <- pre.iterator) yield s)
-            for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions)) {
+            for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if LabelOps.isNonEmptyLabel(nlbl)) {
+              {
+                val (a, b) = nlbl
+                println("get label: (" + a.toInt + "," + b.toInt + ")")
+              }
               val newTrace = getNewTrace(tr, ops, (o) => {
                 offsetTraceCache.getOrElseUpdate((nlbl, o), {
                   (for (s <- aut.states;
