@@ -106,6 +106,7 @@ object ReplaceCGPreOp {
 
     val q0 = builder.initialState // q0'
     val qf = builder.getNewState // qf'
+    builder.setAccept(q0, true, output)
     builder.setAccept(qf, true, output)
     builder.addTransition(q0, LabelOps.sigmaLabel, only(numCap, append_after(numCap)), q0)
     builder.addTransition(qf, LabelOps.sigmaLabel, only(numCap, append_after(numCap)), qf)
