@@ -104,13 +104,12 @@ extends StreamingTransducer {
     if (input.size == 0 && isAccept(initialState))
       return Some("")
 
-    // current state, input index to process next, string variable values
-    val worklist = new MStack[(State, Int, Seq[String])]
-    val seenlist = new MHashSet[(State, Int)]
+    // current state, input index to process next, prohibition set, string variable values
+    val worklist = new MStack[(State, Int, Set[(State, State)], Seq[String])]
 
     val emptyVal = (for (i <- 0 until numvars) yield "").toSeq
 
-    worklist.push((initialState, 0, emptyVal))
+    worklist.push((initialState, 0, Set.empty[(State, State)], emptyVal))
 
     def evalUpdateOps(oldv: Seq[String], ops: Seq[UpdateOp], offsetHandle: Int => String) : String = {
       ops.foldLeft ("") {
@@ -138,7 +137,7 @@ extends StreamingTransducer {
     // push configurations to stack by priority,
     // configuration with highest priority is pushed last thus processed first
     while (!worklist.isEmpty) {
-      val (s, pos, values) = worklist.pop
+      val (s, pos, blocked, values) = worklist.pop
       if (pos >= input.size && isAccept(s))
         return Some(evalUpdateOps(values, acceptingStates.get(s).get, (o) => ""))
 
@@ -148,10 +147,11 @@ extends StreamingTransducer {
           for (t <- sortETransitions(post)) {
             val pnext = pos
             val snext = dest(t)
-            if (!seenlist.contains((snext, pnext))) {
+            if (!blocked.contains((s, snext))) {
               val tOps = operation(t)
               val valueNext = getNewVal(values, tOps, (o) => "")
-              worklist.push((snext, pnext, valueNext))
+              val bnext = blocked ++ Set((s, snext))
+              worklist.push((snext, pnext, bnext, valueNext))
             }
           }
 
@@ -161,10 +161,10 @@ extends StreamingTransducer {
               val pnext = pos + 1
               val snext = dest(t)
               val lbl = label(t)
-              if (LabelOps.labelContains(inc, lbl) && !seenlist.contains((snext, pnext))) {
+              if (LabelOps.labelContains(inc, lbl)) {
                 val tOps = operation(t)
                 val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
-                worklist.push((snext, pnext, valueNext))
+                worklist.push((snext, pnext, Set.empty[(State, State)], valueNext))
               }
             }
           }
@@ -172,10 +172,11 @@ extends StreamingTransducer {
           for (t <- sortETransitions(pre)) {
             val pnext = pos
             val snext = dest(t)
-            if (!seenlist.contains((snext, pnext))) {
+            if (!blocked.contains((s, snext))) {
               val tOps = operation(t)
               val valueNext = getNewVal(values, tOps, (o) => "")
-              worklist.push((snext, pnext, valueNext))
+              val bnext = blocked ++ Set((s, snext))
+              worklist.push((snext, pnext, bnext, valueNext))
             }
           }
 
