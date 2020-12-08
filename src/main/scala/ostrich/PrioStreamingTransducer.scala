@@ -203,7 +203,7 @@ extends StreamingTransducer {
           s2.asInstanceOf[aut.State])))
 
     // map rudiments to the preimage aut state
-    val sMapRev = new MHashMap[(State, Trace, Set[State]), aut.State]
+    val sMapRev = new MHashMap[(State, Trace, Set[State], Set[(State, State)]), aut.State]
 
     val defaultTrace = (for (s <- aut.states) yield (s, s)).toSet
     val initTrace = (for (v <- 0 until numvars) yield defaultTrace).toSeq
@@ -211,8 +211,6 @@ extends StreamingTransducer {
     val initAutState = aut.initialState
 
     // this cache is for constant character.
-    // in replaceall_cg, no such operator is used
-    // so this is only for future possible application
     val constantTraceCache = new MHashMap[Char, Set[(aut.State, aut.State)]]
 
     def evalUpdateOps(tr: Trace, ops: Seq[UpdateOp], offsetHandle: Int => Set[(aut.State, aut.State)]) : Set[(aut.State, aut.State)] = {
@@ -257,23 +255,25 @@ extends StreamingTransducer {
     // current state of transducer reached
     // trace
     // prohibition set
+    // blocked e-transition
     // state of preimage aut to add new transitions from
     val worklist = new MStack[(State,
                                Trace,
                                Set[State],
+                               Set[(State, State)],
                                aut.State)]
 
     // transducer state, trace, automaton state set
-    def getState(ts : State, tr : Trace, as : Set[State]) = {
-      sMapRev.getOrElseUpdate((ts, tr, as), {
+    def getState(ts : State, tr : Trace, as : Set[State], bs : Set[(State, State)]) = {
+      sMapRev.getOrElseUpdate((ts, tr, as, bs), {
         val ps = preBuilder.getNewState
         preBuilder.setAccept(ps, isAcceptingState(ts, tr, as))
-        worklist.push((ts, tr, as, ps))
+        worklist.push((ts, tr, as, bs, ps))
         ps
       })
     }
 
-    val newInitState = getState(initialState, initTrace, Set.empty[State])
+    val newInitState = getState(initialState, initTrace, Set.empty[State], Set.empty[(State, State)])
     preBuilder setInitialState newInitState
 
     // collect silent transitions during main loop and eliminate them after
@@ -380,25 +380,26 @@ extends StreamingTransducer {
     val offsetTraceCache = new MHashMap[(TLabel, Int), Set[(aut.State, aut.State)]]
 
     while (!worklist.isEmpty) {
-      val (ts, tr, blocked, ps) = worklist.pop()
+      val (ts, tr, blocked, etrans, ps) = worklist.pop()
 
       (lblTrans get ts) match {
         case Some((pre, transitions, post)) => {
 
           // the prefix group of epsilon transitions
-          for ((ops, priority, nextState) <- pre) {
+          for ((ops, priority, nextState) <- pre; if !etrans.contains((ts, nextState))) {
             val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
             val newBlocked = blocked ++ epsClosure(
               (for ((_, priority2, s) <- pre.iterator;
-                if priority2 > priority)
-                  yield s))
+                if (priority2 > priority) && !etrans.contains((ts, s)) )
+                  yield s), etrans)
+            val newEtrans = etrans ++ Set((ts, nextState))
 
-            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked))
+            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans))
           }
 
           // sigma transitions
           for ((lbl, ops, priority, nextState) <- transitions) {
-            val preBlock = blocked ++ epsClosure(for ((_, _, s) <- pre.iterator) yield s)
+            val preBlock = blocked ++ epsClosure((for ((_, _, s) <- pre.iterator) yield s), etrans)
             for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if LabelOps.isNonEmptyLabel(nlbl)) {
               val newTrace = getNewTrace(tr, ops, (o) => {
                 offsetTraceCache.getOrElseUpdate((nlbl, o), {
@@ -412,24 +413,25 @@ extends StreamingTransducer {
               val newBlocked = postStates(preBlock, nlbl, priority, transitions)
               preBuilder.addTransition(ps,
                                     nlbl.asInstanceOf[aut.TLabel],
-                                    getState(nextState, newTrace, newBlocked))
+                                    getState(nextState, newTrace, newBlocked, Set.empty[(State, State)]))
             }
           }
         }
 
         // the postfix group of epsilon transitions
-        for ((ops, priority, nextState) <- post) {
+        for ((ops, priority, nextState) <- post; if !etrans.contains((ts, nextState))) {
           val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
           val itr : Iterator[State] =
-            (for ((_, _, s) <- pre)
+            (for ((_, _, s) <- pre; if !etrans.contains((ts, s)))
                 yield s).iterator ++
             (for ((_, priority2, s) <- post;
-              if priority2 > priority)
+              if (priority2 > priority) && !etrans.contains((ts, s)) )
                 yield s)
 
-          val newBlocked : Set[State] = blocked ++ epsClosure(itr) ++ Set(ts)
+          val newBlocked : Set[State] = blocked ++ epsClosure(itr, etrans) ++ Set(ts)
+          val newEtrans = etrans ++ Set((ts, nextState))
 
-          silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked))
+          silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans))
         }
 
         case None => // nothing
@@ -459,10 +461,10 @@ extends StreamingTransducer {
           if (priority2 > priority)
           && LabelOps.labelsOverlap(l, label))
           yield s)
-      (epsClosure(targetStates))
+      (epsClosure(targetStates, Set.empty[(State, State)]))
     }
 
-  private def epsClosure(states : Iterator[State]) : Set[State] = {
+  private def epsClosure(states : Iterator[State], Lambda : Set[(State, State)]) : Set[State] = {
     val res = new MHashSet[State]
     val todo = new MStack[State]
 
@@ -473,10 +475,10 @@ extends StreamingTransducer {
     while (!todo.isEmpty) {
       val s = todo.pop
       for ((pre, _, post) <- (lblTrans get s).iterator) {
-        for ((_, _, t) <- pre)
+        for ((_, _, t) <- pre; if !Lambda.contains((s, t)))
           if (res add t)
             todo push t
-        for ((_, _, t) <- post)
+        for ((_, _, t) <- post; if !Lambda.contains((s, t)))
           if (res add t)
             todo push t
       }

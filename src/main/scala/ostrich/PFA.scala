@@ -298,7 +298,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
-    re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
+    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_comp,
     re_loop, str_to_re, re_from_str,
     re_capture, re_reference}
 
@@ -369,6 +369,15 @@ class Regex2PFA(theory : OstrichStringTheory) {
 
           (PFA.star(autA), capA)
         }
+        case IFunApp(`re_*?`, Seq(a)) => {
+          val (autA, capA) = buildPatternImpl(a)
+
+          val localStarNum = numStar
+          numStar += 1
+          starInfo(localStarNum) = (autA.initial, autA.accepting, capA)
+
+          (PFA.lazystar(autA), capA)
+        }
         case IFunApp(`re_+`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
 
@@ -377,6 +386,15 @@ class Regex2PFA(theory : OstrichStringTheory) {
           starInfo(localStarNum) = (autA.initial, autA.accepting, capA)
 
           (PFA.plus(autA), capA)
+        }
+        case IFunApp(`re_+?`, Seq(a)) => {
+          val (autA, capA) = buildPatternImpl(a)
+
+          val localStarNum = numStar
+          numStar += 1 // plus is regarded as a star
+          starInfo(localStarNum) = (autA.initial, autA.accepting, capA)
+
+          (PFA.lazyplus(autA), capA)
         }
         case IFunApp(`re_opt`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
