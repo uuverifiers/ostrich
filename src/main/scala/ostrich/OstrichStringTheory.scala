@@ -82,15 +82,17 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
+  val re_from_ecma2020 =
+    MonoSortedIFunction("re.from.ecma2020", List(SSo), RSo, true, false)
 
-  // List of user-defined functions that can be extended
-  val extraFunctions : Seq[(String, IFunction, PreOp,
-                            Atom => Seq[Term], Atom => Term)] =
+  // List of user-defined functions on strings that can be extended
+  val extraStringFunctions : Seq[(String, IFunction, PreOp,
+                                  Atom => Seq[Term], Atom => Term)] =
     List(("str.reverse", str_reverse, ostrich.ReversePreOp,
           a => List(a(0)), a => a(1)))
 
   val extraFunctionPreOps =
-    (for ((_, f, op, argSelector, resSelector) <- extraFunctions.iterator)
+    (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
      yield (f, (op, argSelector, resSelector))).toMap
 
   val transducersWithPreds : Seq[(String, Predicate, Transducer)] =
@@ -103,10 +105,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Map used by the parser
   val extraOps : Map[String, Either[IFunction, Predicate]] =
-    ((for ((name, f, _, _, _) <- extraFunctions.iterator)
+    ((for ((name, f, _, _, _) <- extraStringFunctions.iterator)
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
-      yield (name, Right(p)))).toMap
+      yield (name, Right(p))) ++
+     Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)))).toMap
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -118,7 +121,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ (extraFunctions map (_._2))
+    predefFunctions ++
+    (extraStringFunctions map (_._2)) ++ List(re_from_ecma2020)
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
@@ -156,7 +160,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replacere, str_replaceallre, str_to_re,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                   re_loop, re_from_str))
+                   re_loop, re_from_str, re_from_ecma2020))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++
