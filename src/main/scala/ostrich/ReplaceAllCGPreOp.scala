@@ -45,7 +45,7 @@ import dk.brics.automaton.{Automaton => BAutomaton,
 
 object ReplaceAllCGPreOp {
 
-  import GlushkovPFA.completeInfo
+  import PFA.completeInfo
 
   def apply(pat : completeInfo, rep : Seq[UpdateOp]) : PreOp = {
     StreamingTransducerPreOp(buildPSST(pat, rep))
@@ -57,24 +57,18 @@ object ReplaceAllCGPreOp {
     // for each capture group, we have a string variable.
     // Besides, we have a special variable 'res' for the result, indexed by 'numCap'
     val builder = PrioStreamingTransducer.getBuilder(numCap + 1)
-    type tranState = PrioStreamingTransducer#State
-    type autState = GlushkovPFA.State
-    type TLabel = GlushkovPFA.TLabel
-    val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
-    val labelEnumerator =
-      new BricsTLabelEnumerator(
-        (for ((_, t) <- aut.trans; (lbl, s) <- t)
-          yield lbl).iterator ++
-        (for ((lbl, s) <- aut.initialTrans)
-          yield lbl).iterator)
-    val labels = labelEnumerator.enumDisjointLabelsComplete
+    type tranState = PrioStreamingTransducer#State
+    type autState = PFA.State
+    type TLabel = PFA.TLabel
+    val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
     // some common update operations
     def nochange(index : Int) : Seq[UpdateOp] = List(RefVariable(index))
     def append_after(index: Int) : Seq[UpdateOp] = List(RefVariable(index), Offset(0))
     def clear : Seq[UpdateOp] = List()
     def single : Seq[UpdateOp] = List(Offset(0))
+    val output = List(RefVariable(numCap))
 
     def updateWithIndex (f: Int => Seq[UpdateOp]) : Seq[Seq[UpdateOp]] = {
       0.to(numCap).map(f)
@@ -89,257 +83,95 @@ object ReplaceAllCGPreOp {
         }
       })
 
-    val output = List(RefVariable(numCap))
-
-    abstract class Mode
-    // not matching (left)
-    case object NotMatching extends Mode
-    // matching (long), word read so far leads to state 'frontier'
-    case class Matching(val frontier : autState) extends Mode
-    // last transition finished a match and reached frontier
-    // 'EndMatch' behaves just like in left mode, 
-    // the only difference is the way prohibition set is regarded
-    case class EndMatch(val frontier : autState) extends Mode
-
-
-    // a state of PSST consists of mode, and a set of states
-    // that should not be reached, a.k.a. prohibition set
-    val sMap = new MHashMap[tranState, (Mode, Set[autState])]
-    val sMapRev = new MHashMap[(Mode, Set[autState]), tranState]
+    val sMap = new MHashMap[tranState, autState]
+    val sMapRev = new MHashMap[autState, tranState]
 
     // states of new transducer to be constructed
     val worklist = new MStack[tranState]
 
-    def mapState(s : tranState, q : (Mode, Set[autState])) = {
+    def mapState(s : tranState, q : autState) = {
       sMap += (s -> q)
       sMapRev += (q -> s)
     }
 
-    def isAccept(s : autState) : Boolean = {
-      aut.end.contains(s)
-    }
-
     // creates and adds to worklist any new states if needed
-    def getState(m : Mode, noreach : Set[autState]) : tranState = {
-      sMapRev.getOrElse((m, noreach), {
+    def getState(as : autState) : tranState = {
+      sMapRev.getOrElse(as, {
         val s = builder.getNewState
-        mapState(s, (m, noreach))
-        val goodNoreach = !noreach.exists(isAccept(_))
-        builder.setAccept(s, m match {
-          case NotMatching => goodNoreach
-          case EndMatch(_) => goodNoreach
-          case Matching(_) => false
-        }, output)
-      if (goodNoreach)
+        mapState(s, as)
+        builder.setAccept(s, false, output)
         worklist.push(s)
-      s
+        s
       })
     }
 
-    val tranInit = builder.initialState
+    val q0 = builder.initialState // q0'
+    builder.setAccept(q0, true, output)
+    builder.addTransition(q0, LabelOps.sigmaLabel, only(numCap, append_after(numCap)), q0)
 
-    mapState(tranInit, (NotMatching, Set.empty[autState]))
-    builder.setAccept(tranInit, true, output)
-    worklist.push(tranInit)
+    val tranInit = getState(aut.initial)
+    builder.addPreETransition(q0, default, tranInit)
 
-    // the returned image is sorted by priority
-    def getImage(s: autState, lbl : TLabel) : Seq[autState] = {
-      (for (t <- aut.trans.get(s).iterator;
-        (lbl2, s2) <- t;
-        if LabelOps.labelsOverlap(lbl, lbl2)) 
-          yield s2).toSeq
-    }
-    def getImageAll(states : Set[autState], lbl : TLabel) : Set[autState] = {
-      for (s1 <- states;
-           t <- aut.trans.get(s1).iterator;
-           (lbl2, s2) <- t;
-           if LabelOps.labelsOverlap(lbl, lbl2))
-             yield s2
-    }
-    def getInitImage(lbl : TLabel) : Seq[autState] = {
-      for ((lbl2, s) <- aut.initialTrans;
-           if LabelOps.labelsOverlap(lbl, lbl2)) yield s
+    val opCache = new MHashMap[(autState, autState), Seq[Seq[UpdateOp]]]
+
+    def getOps(current : autState, next: autState) = {
+      opCache.getOrElseUpdate((current, next), {
+        // we have to consider which Klenne Stars are reset
+        // and how variables are thus updated
+        val caps_activated = state2Caps.getOrElse(next, Set())
+        val stars_reset : Set[Int] = states2Stars.getOrElse((current, next), Set.empty[Int])
+        val caps_in_stars : Set[Int] =
+          (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
+            cap <- starcaps) yield cap).toSet
+
+        val ops : Seq[Seq[UpdateOp]] = updateWithIndex {
+          index => {
+            val is_activated = caps_activated contains index
+            val is_in_stars = caps_in_stars contains index
+            (is_activated, is_in_stars) match {
+              case (true, true) => single
+              case (true, false) => append_after(index)
+              case (false, true) => clear
+              case (false, false) => nochange(index)
+            }
+          }
+        }
+        ops
+      })
     }
 
     // dfs
     while (!worklist.isEmpty) {
       val ts = worklist.pop()
-      val (mode, noreach) = sMap(ts)
+      val as = sMap(ts)
 
-      mode match {
-        case NotMatching => {
-          for (lbl <- labels) {
-            val initImg = getInitImage(lbl)
-            val noreachImg = getImageAll(noreach, lbl)
+      var priority = Int.MaxValue
+      for (trans <- aut.preTran.get(as).iterator; next <- trans) {
+        builder.addPreETransition(ts, getOps(as, next), priority, getState(next))
+        priority -= 1
+      }
 
-            // if we stay in 'left' mode, initImg should not be reached
-            // and update the 'res' variable only.
-            val dontMatch = getState(NotMatching, noreachImg ++ initImg.toSet)
-            builder.addTransition(ts, lbl, only(numCap, append_after(numCap)), dontMatch)
+      priority = Int.MaxValue
+      for (trans <- aut.postTran.get(as).iterator; next <- trans) {
+        builder.addPostETransition(ts, getOps(as, next), priority, getState(next))
+        priority -= 1
+      }
 
-            var priority = Int.MaxValue
-            for (next <- initImg; if !(noreachImg contains next)) {
-              val newMatch = getState(Matching(next), noreachImg)
-              // update the correpsonding variables for 
-              // capture groups that are relevant
-              // (for now we don't need to care about stars)
-              val caps = state2Caps.getOrElse(next, Set())
-              var ops : Seq[Seq[UpdateOp]] = updateWithIndex {
-                i => {
-                  if (caps contains i) {
-                    single
-                  } else {
-                    nochange(i)
-                  }
-                }
-              }
-              builder.addTransition(ts, lbl, ops, priority, newMatch)
-              priority -= 1
-            }
-
-            // accept and go back to left mode directly
-            for (next <- initImg; if isAccept (next)) {
-              val oneCharMatch = getState(EndMatch(next), noreachImg)
-              // since we have not went into long mode
-              // all the variables are empty except 'res'
-              // just keep their values and we only need to update 'res' here
-              lazy val caps = state2Caps.getOrElse(next, Set())
-              val op = RefVariable(numCap) +: rep.flatMap({ 
-                  case RefVariable(n) => {
-                    if (caps contains n) {
-                      single
-                    } else {
-                      List()
-                    }
-                  }
-                  case o => List(o)
-              })
-              builder.addTransition(ts, lbl, only(numCap, op), priority, oneCharMatch)
-              priority -= 1
-            }
-          }
-        }
-        case Matching(frontier) => {
-          for (lbl <- labels) {
-            val frontImg = getImage(frontier, lbl)
-            val noreachImg = getImageAll(noreach, lbl)
-
-            var priority = Int.MaxValue
-            for (next <- frontImg; if !(noreachImg contains next)) {
-              val contMatch = getState(Matching(next), noreachImg)
-              // we have to consider which Klenne Stars are reset
-              // and how variables are thus updated
-              val caps_activated = state2Caps.getOrElse(next, Set())
-              val stars_reset : Set[Int] = states2Stars.getOrElse((frontier, next), Set.empty[Int])
-              val caps_in_stars : Set[Int] = 
-                (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
-                  cap <- starcaps) yield cap).toSet
-
-              val ops : Seq[Seq[UpdateOp]] = updateWithIndex { 
-                index => {
-                  val is_activated = caps_activated contains index
-                  val is_in_stars = caps_in_stars contains index
-                  (is_activated, is_in_stars) match {
-                    case (true, true) => single
-                    case (true, false) => append_after(index)
-                    case (false, true) => clear
-                    case (false, false) => nochange(index)
-                  }
-                }
-              }
-              builder.addTransition(ts, lbl, ops, priority, contMatch)
-              priority -= 1
-            }
-
-            for (next <- frontImg; if isAccept (next)) {
-              val stopMatch = getState(EndMatch(next), noreachImg)
-              lazy val caps_activated = state2Caps.getOrElse(next, Set())
-              lazy val stars_reset : Set[Int] = states2Stars.getOrElse((frontier, next), Set.empty[Int])
-              lazy val caps_in_stars : Set[Int] = 
-                (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
-                  cap <- starcaps) yield cap).toSet
-
-
-              val op : Seq[UpdateOp] = RefVariable(numCap) +: rep.flatMap {
-                case RefVariable(index) => {
-                  val is_activated = caps_activated contains index
-                  val is_in_stars = caps_in_stars contains index
-                  (is_activated, is_in_stars) match {
-                    case (true, true) => single
-                    case (true, false) => append_after(index)
-                    case (false, true) => clear
-                    case (false, false) => nochange(index)
-                  }
-                }
-                case o => List(o)
-              }
-              val ops = updateWithIndex {
-                index => {
-                  if (index == numCap) {
-                    op
-                  } else {
-                    clear
-                  }
-                }
-              }
-              builder.addTransition(ts, lbl, ops, priority, stopMatch)
-              priority -= 1
-            }
-          }
-        }
-        case EndMatch(frontier) => {
-          for (lbl <- labels) {
-            val initImg = getInitImage(lbl)
-            val frontImg = getImage(frontier, lbl).toSet
-            val noreachImg = getImageAll(noreach, lbl) ++ frontImg
-
-            val dontMatch = getState(NotMatching, noreachImg ++ initImg.toSet)
-            builder.addTransition(ts, lbl, only(numCap, append_after(numCap)), dontMatch)
-
-            var priority = Int.MaxValue
-            for (next <- initImg; if !(noreachImg contains next)) {
-              val newMatch = getState(Matching(next), noreachImg)
-              // update the correpsonding variables for 
-              // capture groups that are relevant
-              // (for now we don't need to care about stars)
-              val caps = state2Caps.getOrElse(next, Set())
-              var ops : Seq[Seq[UpdateOp]] = updateWithIndex {
-                i => {
-                  if (caps contains i) {
-                    single
-                  } else {
-                    nochange(i)
-                  }
-                }
-              }
-              builder.addTransition(ts, lbl, ops, priority, newMatch)
-              priority -= 1
-            }
-
-            // accept and go back to left mode directly
-            for (next <- initImg; if isAccept (next)) {
-              val oneCharMatch = getState(EndMatch(next), noreachImg)
-              // since we have not went into long mode
-              // all the variables are empty except 'res'
-              // just keep their values and we only need to update 'res' here
-              lazy val caps = state2Caps.getOrElse(next, Set())
-              val op = RefVariable(numCap) +: rep.flatMap({ 
-                case RefVariable(n) => {
-                  if (caps contains n) {
-                    single
-                  } else {
-                    List()
-                  }
-                }
-                case o => List(o)
-              })
-              builder.addTransition(ts, lbl, only(numCap, op), priority, oneCharMatch)
-              priority -= 1
-            }
-          }
-        }
+      priority = Int.MaxValue
+      for (trans <- aut.sTran.get(as).iterator; (lbl, next) <- trans) {
+        builder.addTransition(ts, lbl, getOps(as, next), priority, getState(next))
+        priority -= 1
       }
     }
+
+    val tranEnd = getState(aut.accepting)
+    builder.addPreETransition(tranEnd, updateWithIndex(o => {
+      if (o == numCap) {
+        List(RefVariable(numCap)) ++ rep
+      } else {
+        clear
+      }
+    }), q0)
 
     val tran = builder.getTransducer
     tran

@@ -37,6 +37,7 @@ import scala.collection.mutable.{HashSet => MHashSet,
                                  HashMap => MHashMap,
                                  Stack => MStack,
                                  MultiMap => MMultiMap,
+                                 TreeSet => MTreeSet,
                                  Set => MSet}
 
 import dk.brics.automaton.{Automaton => BAutomaton,
@@ -67,34 +68,33 @@ object PrioStreamingTransducer {
 }
 
 /**
- * Implementation of prioritised streaming transducers
- * all transitions have priority. And states with both input transitions and epsilon transitions
- * are not allowed.
- * 'numvars' is the number of string variables, which are labeled by indexes 0 .. numvars - 1
- * Note that PSST is intrinsically functional, on the condition that there is no epsilon-circle
+ * Implementation of prioritised streaming transducers.
+ * All transitions have priority.
+ * A state is associated with three groups of transitions: pre epsilon, sigma, and post epsilon, with descending priority.
+ * 'numvars' is the number of string variables, which are internally labeled by indexes 0 ... (numvars - 1).
+ * Note that PSST is intrinsically functional (but not necessarily total), on the condition that there is no epsilon-circle (this property is not checked on transducer level).
  */
 class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
-                          val numvars : Int,
-                          val lblTrans: Map[PrioStreamingTransducer#State,
-                                        Set[PrioStreamingTransducer#Transition]],
-                          val eTrans: Map[PrioStreamingTransducer#State,
-                                      Set[PrioStreamingTransducer#ETransition]],
-                          val acceptingStates : Map[PrioStreamingTransducer#State, Seq[UpdateOp]])
-    extends StreamingTransducer {
+  val numvars : Int,
+  val lblTrans: Map[PrioStreamingTransducer#State,
+                PrioStreamingTransducer#Transition],
+  val acceptingStates : Map[PrioStreamingTransducer#State, Seq[UpdateOp]])
+extends StreamingTransducer {
 
   type State = BricsAutomaton#State
   type TLabel = BricsAutomaton#TLabel
+  private val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
-  val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+  type Assignment = Seq[Seq[UpdateOp]]
+  type SigmaTransition = (TLabel, Assignment, Int, State)
+  type ETransition = (Assignment, Int, State)
+  type Transition = (Set[ETransition], Set[SigmaTransition], Set[ETransition])
 
-  // input transitions
-  type Transition = (TLabel, Seq[Seq[UpdateOp]], Int, State)
-  type ETransition = (Seq[Seq[UpdateOp]], Int, State)
-
-  private def label(t : Transition) = t._1
-  private def operation(t : Transition) = t._2
-  private def priority(t : Transition) = t._3
-  private def dest(t : Transition) : BricsAutomaton#State = t._4
+  // utils
+  private def label(t : SigmaTransition) = t._1
+  private def operation(t : SigmaTransition) = t._2
+  private def priority(t : SigmaTransition) = t._3
+  private def dest(t : SigmaTransition) : BricsAutomaton#State = t._4
 
   private def operation(t : ETransition) = t._1
   private def priority(t : ETransition) = t._2
@@ -104,13 +104,12 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     if (input.size == 0 && isAccept(initialState))
       return Some("")
 
-    // current state, currently processed input index, string variable values
-    val worklist = new MStack[(State, Int, Seq[String])]
-    val seenlist = new MHashSet[(State, Int)]
+    // current state, input index to process next, prohibition set, string variable values
+    val worklist = new MStack[(State, Int, Set[(State, State)], Seq[String])]
 
     val emptyVal = (for (i <- 0 until numvars) yield "").toSeq
 
-    worklist.push((initialState, 0, emptyVal))
+    worklist.push((initialState, 0, Set.empty[(State, State)], emptyVal))
 
     def evalUpdateOps(oldv: Seq[String], ops: Seq[UpdateOp], offsetHandle: Int => String) : String = {
       ops.foldLeft ("") {
@@ -123,10 +122,10 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       }
     }
 
-    def getNewVal(oldv: Seq[String], ops: Seq[Seq[UpdateOp]], offsetHandle: Int => String) : Seq[String] =
+    def getNewVal(oldv: Seq[String], ops: Assignment, offsetHandle: Int => String) : Seq[String] =
       (for (i <- 0 until numvars) yield evalUpdateOps(oldv, ops(i), offsetHandle)).toSeq
 
-    def sortTransitions(trans: Set[Transition]) : Seq[Transition] = {
+    def sortSTransitions(trans: Set[SigmaTransition]) : Seq[SigmaTransition] = {
       trans.toSeq.sortWith((ta, tb) => priority(ta) < priority(tb))
     }
 
@@ -135,35 +134,55 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     }
 
     // find the output by dfs,
-    // push configurations to stack by priority, 
+    // push configurations to stack by priority,
     // configuration with highest priority is pushed last thus processed first
     while (!worklist.isEmpty) {
-      val (s, pos, values) = worklist.pop
-      if (pos >= input.length && isAccept(s))
+      val (s, pos, blocked, values) = worklist.pop
+      if (pos >= input.size && isAccept(s))
         return Some(evalUpdateOps(values, acceptingStates.get(s).get, (o) => ""))
 
-      if (pos < input.size) {
-        val inc = input(pos)
-        for (ts <- lblTrans.get(s); t <- sortTransitions(ts)) {
-          val pnext = pos + 1
-          val snext = dest(t)
-          val lbl = label(t)
-          if (LabelOps.labelContains(inc, lbl) && !seenlist.contains((snext, pnext))) {
-            val tOps = operation(t)
-            val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
-            worklist.push((snext, pnext, valueNext))
-          }
-        }
-      }
+      lblTrans.get(s) match {
+        case Some((pre, ts, post)) => {
 
-      for (ts <- eTrans.get(s); t <- sortETransitions(ts)) {
-        val pnext = pos
-        val snext = dest(t)
-        if (!seenlist.contains((snext, pnext))) {
-          val tOps = operation(t)
-          val valueNext = getNewVal(values, tOps, (o) => "")
-          worklist.push((snext, pnext, valueNext))
+          for (t <- sortETransitions(post)) {
+            val pnext = pos
+            val snext = dest(t)
+            if (!blocked.contains((s, snext))) {
+              val tOps = operation(t)
+              val valueNext = getNewVal(values, tOps, (o) => "")
+              val bnext = blocked ++ Set((s, snext))
+              worklist.push((snext, pnext, bnext, valueNext))
+            }
+          }
+
+          if (pos < input.size) {
+            val inc = input(pos)
+            for (t <- sortSTransitions(ts)) {
+              val pnext = pos + 1
+              val snext = dest(t)
+              val lbl = label(t)
+              if (LabelOps.labelContains(inc, lbl)) {
+                val tOps = operation(t)
+                val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
+                worklist.push((snext, pnext, Set.empty[(State, State)], valueNext))
+              }
+            }
+          }
+
+          for (t <- sortETransitions(pre)) {
+            val pnext = pos
+            val snext = dest(t)
+            if (!blocked.contains((s, snext))) {
+              val tOps = operation(t)
+              val valueNext = getNewVal(values, tOps, (o) => "")
+              val bnext = blocked ++ Set((s, snext))
+              worklist.push((snext, pnext, bnext, valueNext))
+            }
+          }
+
         }
+
+        case None => // nothing
       }
     }
 
@@ -174,7 +193,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
               (aut: A,
                internal: Iterable[(A#State, A#State)]): AtomicStateAutomaton = {
 
-    type trace = Seq[Set[(aut.State,aut.State)]]
+    type Trace = Seq[Set[(aut.State,aut.State)]]
     val preBuilder = aut.getBuilder
 
     // just a cast:
@@ -184,7 +203,7 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
           s2.asInstanceOf[aut.State])))
 
     // map rudiments to the preimage aut state
-    val sMapRev = new MHashMap[(State, trace, Set[State]), aut.State]
+    val sMapRev = new MHashMap[(State, Trace, Set[State], Set[(State, State)]), aut.State]
 
     val defaultTrace = (for (s <- aut.states) yield (s, s)).toSet
     val initTrace = (for (v <- 0 until numvars) yield defaultTrace).toSeq
@@ -192,11 +211,9 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     val initAutState = aut.initialState
 
     // this cache is for constant character.
-    // in replaceall_cg, no such operator is used
-    // so this is only for future possible optimization
     val constantTraceCache = new MHashMap[Char, Set[(aut.State, aut.State)]]
 
-    def evalUpdateOps(tr: trace, ops: Seq[UpdateOp], offsetHandle: Int => Set[(aut.State, aut.State)]) : Set[(aut.State, aut.State)] = {
+    def evalUpdateOps(tr: Trace, ops: Seq[UpdateOp], offsetHandle: Int => Set[(aut.State, aut.State)]) : Set[(aut.State, aut.State)] = {
       ops.foldLeft (defaultTrace) {
         (S, op) => {
           val T = op match {
@@ -220,10 +237,10 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
       }
     }
 
-    def getNewTrace(tr: trace, ops : Seq[Seq[UpdateOp]], offsetHandle: Int => Set[(aut.State, aut.State)]) : trace =
+    def getNewTrace(tr: Trace, ops : Assignment, offsetHandle: Int => Set[(aut.State, aut.State)]) : Trace =
       (for (i <- 0 until numvars) yield evalUpdateOps(tr, ops(i), offsetHandle)).toSeq
 
-    def isAcceptingState(ts : State, tr : trace, s : Set[State]) : Boolean = {
+    def isAcceptingState(ts : State, tr : Trace, s : Set[State]) : Boolean = {
       lazy val traceValid = {
         val ops = (acceptingStates get ts).get
         val trans = evalUpdateOps(tr, ops, (o) => defaultTrace)
@@ -238,27 +255,28 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     // current state of transducer reached
     // trace
     // prohibition set
+    // blocked e-transition
     // state of preimage aut to add new transitions from
     val worklist = new MStack[(State,
-                               trace,
+                               Trace,
                                Set[State],
+                               Set[(State, State)],
                                aut.State)]
 
     // transducer state, trace, automaton state set
-    def getState(ts : State, tr : trace, as : Set[State]) = {
-      sMapRev.getOrElseUpdate((ts, tr, as), {
+    def getState(ts : State, tr : Trace, as : Set[State], bs : Set[(State, State)]) = {
+      sMapRev.getOrElseUpdate((ts, tr, as, bs), {
         val ps = preBuilder.getNewState
         preBuilder.setAccept(ps, isAcceptingState(ts, tr, as))
-        worklist.push((ts, tr, as, ps))
+        worklist.push((ts, tr, as, bs, ps))
         ps
       })
     }
 
-    val newInitState = getState(initialState, initTrace, Set())
+    val newInitState = getState(initialState, initTrace, Set.empty[State], Set.empty[(State, State)])
     preBuilder setInitialState newInitState
 
-    // collect silent transitions during main loop and eliminate them
-    // after (TODO: think of more efficient solution)
+    // collect silent transitions during main loop and eliminate them after
     val silentTransitions = new MHashMap[aut.State, MSet[aut.State]]
                             with MMultiMap[aut.State, aut.State]
 
@@ -268,11 +286,58 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
 
     val offsetSplitCache = new MHashMap[(TLabel, Int), Iterable[TLabel]]
 
-    def splitLabels (tlabel : TLabel, offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[Transition]) : Iterable[TLabel] = {
+    def disjointLabels(sigma: (Char, Char), labels: Iterator[(Char, Char)]) : Iterable[(Char, Char)] = {
+      var disjoint = new MTreeSet[(Char, Char)]()
+
+      if (!labels.hasNext) {
+        disjoint += sigma
+        return disjoint
+      }
+
+      val (s, e) = sigma
+
+      val mins = new MTreeSet[Int]
+      val maxes = new MTreeSet[Int]
+      for ((min, max) <- labels) {
+        mins += min.toInt
+        maxes += max.toInt
+      }
+
+      mins += (e + 1) // guard 1
+      mins += (e + 2) // guard 2
+      maxes += (e + 1)
+      maxes += (e + 2)
+
+      val imin = mins.iterator
+      val imax = maxes.iterator
+
+      var curMin : Int = s.toInt
+      var nextMax : Int = imax.next
+      var nextMin : Int = imin.next
+
+      while (curMin <= e.toInt) {
+        if (nextMin == curMin) {
+          nextMin = imin.next
+        } else {
+          if (nextMin <= nextMax) {
+            disjoint += ((curMin.toChar, (nextMin-1).toChar))
+            curMin = nextMin
+            nextMin = imin.next
+          } else {
+            disjoint += ((curMin.toChar, nextMax.toChar))
+            curMin = (nextMax + 1)
+            nextMax = imax.next
+          }
+        }
+      }
+
+      disjoint
+    }
+
+    def splitLabels (tlabel : TLabel, offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[SigmaTransition]) : Iterable[TLabel] = {
       var outgoingLabels : Iterator[TLabel] =
-        Iterator(tlabel) ++
       (for (s <- blocked.iterator;
-        transitions <- (lblTrans get s).iterator;
+        (_, transitions, _) <- (lblTrans get s).iterator;
         (l, _, _, _) <- transitions.iterator;
         intLabel <- LabelOps.intersectLabels(l, tlabel).iterator)
       yield intLabel) ++
@@ -292,9 +357,10 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
         })
       }
 
-      val enum =
-        new BricsTLabelEnumerator(outgoingLabels)
-      enum.enumDisjointLabels
+      //val enum =
+        //new BricsTLabelEnumerator(outgoingLabels)
+      //enum.enumDisjointLabels
+      disjointLabels(tlabel, outgoingLabels)
     }
 
     def findOffset(update: Seq[Seq[UpdateOp]]) : Set[Int] = {
@@ -312,19 +378,29 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
     }
 
     val offsetTraceCache = new MHashMap[(TLabel, Int), Set[(aut.State, aut.State)]]
+
     while (!worklist.isEmpty) {
-      val (ts, tr, blocked, ps) = worklist.pop()
+      val (ts, tr, blocked, etrans, ps) = worklist.pop()
 
       (lblTrans get ts) match {
-        case Some(transitions) => {
+        case Some((pre, transitions, post)) => {
 
-          if (eTrans contains ts)
-            throw new Exception(
-              "Cannot have both normal transitions and epsilon transitions " +
-              "from state " + ts)
+          // the prefix group of epsilon transitions
+          for ((ops, priority, nextState) <- pre; if !etrans.contains((ts, nextState))) {
+            val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
+            val newBlocked = blocked ++ epsClosure(
+              (for ((_, priority2, s) <- pre.iterator;
+                if (priority2 > priority) && !etrans.contains((ts, s)) )
+                  yield s), etrans)
+            val newEtrans = etrans ++ Set((ts, nextState))
 
+            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans))
+          }
+
+          // sigma transitions
           for ((lbl, ops, priority, nextState) <- transitions) {
-            for (nlbl <- splitLabels(lbl, findOffset(ops), blocked, priority, transitions)) {
+            val preBlock = blocked ++ epsClosure((for ((_, _, s) <- pre.iterator) yield s), etrans)
+            for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if LabelOps.isNonEmptyLabel(nlbl)) {
               val newTrace = getNewTrace(tr, ops, (o) => {
                 offsetTraceCache.getOrElseUpdate((nlbl, o), {
                   (for (s <- aut.states;
@@ -334,30 +410,31 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
                         yield (s, target)).toSet
                 })
               })
-              val newBlocked = postStates(blocked, nlbl, priority, transitions)
+              val newBlocked = postStates(preBlock, nlbl, priority, transitions)
               preBuilder.addTransition(ps,
                                     nlbl.asInstanceOf[aut.TLabel],
-                                    getState(nextState, newTrace, newBlocked))
+                                    getState(nextState, newTrace, newBlocked, Set.empty[(State, State)]))
             }
           }
         }
 
-        case None => {
-          (eTrans get ts) match {
-            case Some(etransitions) => {
-              for ((ops, priority, nextState) <- etransitions) {
-                val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
-                val newBlocked = blocked ++ epsClosure(
-                  (for ((_, priority2, s) <- etransitions.iterator;
-                    if priority2 > priority)
-                      yield s))
+        // the postfix group of epsilon transitions
+        for ((ops, priority, nextState) <- post; if !etrans.contains((ts, nextState))) {
+          val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
+          val itr : Iterator[State] =
+            (for ((_, _, s) <- pre; if !etrans.contains((ts, s)))
+                yield s).iterator ++
+            (for ((_, priority2, s) <- post;
+              if (priority2 > priority) && !etrans.contains((ts, s)) )
+                yield s)
 
-                silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked))
-              }
-            }
-            case None => // nothing
-          }
+          val newBlocked : Set[State] = blocked ++ epsClosure(itr, etrans) ++ Set(ts)
+          val newEtrans = etrans ++ Set((ts, nextState))
+
+          silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans))
         }
+
+        case None => // nothing
       }
     }
 
@@ -373,10 +450,10 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
   private def postStates(states : Iterable[State],
                          label : TLabel,
                          priority: Int,
-                         trans: Iterable[Transition]) : Set[State] = {
+                         trans: Iterable[SigmaTransition]) : Set[State] = {
       val targetStates =
         (for (s <- states.iterator;
-              transitions <- (lblTrans get s).iterator;
+              (_, transitions, _) <- (lblTrans get s).iterator;
               (sLabel, _, _, target) <- transitions.iterator;
               if LabelOps.labelsOverlap(label, sLabel))
          yield target) ++
@@ -384,10 +461,10 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
           if (priority2 > priority)
           && LabelOps.labelsOverlap(l, label))
           yield s)
-      (epsClosure(targetStates))
+      (epsClosure(targetStates, Set.empty[(State, State)]))
     }
 
-  private def epsClosure(states : Iterator[State]) : Set[State] = {
+  private def epsClosure(states : Iterator[State], Lambda : Set[(State, State)]) : Set[State] = {
     val res = new MHashSet[State]
     val todo = new MStack[State]
 
@@ -397,10 +474,14 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
 
     while (!todo.isEmpty) {
       val s = todo.pop
-      for (transitions <- eTrans get s)
-        for ((_, _, t) <- transitions)
+      for ((pre, _, post) <- (lblTrans get s).iterator) {
+        for ((_, _, t) <- pre; if !Lambda.contains((s, t)))
           if (res add t)
             todo push t
+        for ((_, _, t) <- post; if !Lambda.contains((s, t)))
+          if (res add t)
+            todo push t
+      }
     }
 
     res.toSet
@@ -415,17 +496,18 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
         sb.append(f + "[peripheries=2];\n")
 
     for (trans <- lblTrans) {
-      val (state, arrows) = trans
-      for (arrow <- arrows) {
+      val (state, (pre, sigma, post)) = trans
+      for (arrow <- sigma) {
         val (lbl, op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
         sb.append("[label=\"" + lbl + "/" + prio + "/" + op + "\"];\n")
       }
-    }
-
-    for (trans <- eTrans) {
-      val (state, arrows) = trans
-      for (arrow <- arrows) {
+      for (arrow <- pre) {
+        val (op, prio, dest) = arrow
+        sb.append(state + " -> " + dest);
+        sb.append("[label=\"epsilon /" + prio + "\"];\n")
+      }
+      for (arrow <- post) {
         val (op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
         sb.append("[label=\"epsilon /" + prio + "\"];\n")
@@ -444,24 +526,35 @@ class PrioStreamingTransducerBuilder(val numvars : Int)
 
   val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
+  private val states = new MLinkedHashSet[State]
+
   var initialState : State = getNewState
   val acceptingStates
     = new MHashMap[State, Seq[UpdateOp]]
 
-  val lblTrans
-    = new MHashMap[State, MSet[PrioStreamingTransducer#Transition]]
-      with MMultiMap[State, PrioStreamingTransducer#Transition] {
-      override def default(q : State) : MSet[PrioStreamingTransducer#Transition] =
-        MLinkedHashSet.empty[PrioStreamingTransducer#Transition]
+  val sTrans = new MHashMap[State, MSet[PrioStreamingTransducer#SigmaTransition]]
+              with MMultiMap[State, PrioStreamingTransducer#SigmaTransition] {
+      override def default(q : State) : MSet[PrioStreamingTransducer#SigmaTransition] =
+        MLinkedHashSet.empty[PrioStreamingTransducer#SigmaTransition]
     }
-  val eTrans
-    = new MHashMap[State, MSet[PrioStreamingTransducer#ETransition]]
-      with MMultiMap[State, PrioStreamingTransducer#ETransition] {
+
+  val preTrans = new MHashMap[State, MSet[PrioStreamingTransducer#ETransition]]
+              with MMultiMap[State, PrioStreamingTransducer#ETransition] {
       override def default(q : State) : MSet[PrioStreamingTransducer#ETransition] =
         MLinkedHashSet.empty[PrioStreamingTransducer#ETransition]
     }
 
-  def getNewState : State = new PrioStreamingTransducer.TransducerState
+  val postTrans = new MHashMap[State, MSet[PrioStreamingTransducer#ETransition]]
+              with MMultiMap[State, PrioStreamingTransducer#ETransition] {
+      override def default(q : State) : MSet[PrioStreamingTransducer#ETransition] =
+        MLinkedHashSet.empty[PrioStreamingTransducer#ETransition]
+    }
+
+  def getNewState : State = {
+    val s = new PrioStreamingTransducer.TransducerState
+    states += s
+    s
+  }
 
   def setInitialState(s : State) = {
     initialState = s
@@ -487,25 +580,52 @@ class PrioStreamingTransducerBuilder(val numvars : Int)
                     priority : Int,
                     s2 : State) =
     if (LabelOps.isNonEmptyLabel(lbl))
-      lblTrans.addBinding(s1, (lbl, ops, priority, s2))
+      sTrans.addBinding(s1, (lbl, ops, priority, s2))
 
-  def addETransition(s1 : State,
+  def addPreETransition(s1 : State,
                      ops : Seq[Seq[UpdateOp]],
                      s2 : State) =
-    addETransition(s1, ops, 0, s2)
+    addPreETransition(s1, ops, 0, s2)
 
-  def addETransition(s1 : State,
+  def addPreETransition(s1 : State,
                      ops : Seq[Seq[UpdateOp]],
                      priority : Int,
                      s2 : State) =
-    eTrans.addBinding(s1, (ops, priority, s2))
+    preTrans.addBinding(s1, (ops, priority, s2))
+
+  def addPostETransition(s1 : State,
+                     ops : Seq[Seq[UpdateOp]],
+                     s2 : State) =
+    addPostETransition(s1, ops, 0, s2)
+
+  def addPostETransition(s1 : State,
+                     ops : Seq[Seq[UpdateOp]],
+                     priority : Int,
+                     s2 : State) =
+    postTrans.addBinding(s1, (ops, priority, s2))
 
   def getTransducer = {
     // TODO: restrict to live reachable states
+    def transform(s : State) : (Set[PrioStreamingTransducer#ETransition], Set[PrioStreamingTransducer#SigmaTransition], Set[PrioStreamingTransducer#ETransition]) = {
+      val pre = (preTrans get s) match {
+        case None => Set.empty[PrioStreamingTransducer#ETransition]
+        case Some(ps) => ps.toSet
+      }
+      val post = (postTrans get s) match {
+        case None => Set.empty[PrioStreamingTransducer#ETransition]
+        case Some(ps) => ps.toSet
+      }
+      val sigma = (sTrans get s) match {
+        case None => Set.empty[PrioStreamingTransducer#SigmaTransition]
+        case Some(ss) => ss.toSet
+      }
+      (pre, sigma, post)
+    }
+
+    val lblTrans = (for (s <- states) yield (s, transform(s))).toMap
     new PrioStreamingTransducer(initialState,
                             numvars,
-                            lblTrans.toMap.mapValues(_.toSet),
-                            eTrans.toMap.mapValues(_.toSet),
+                            lblTrans,
                             acceptingStates.toMap)
   }
 

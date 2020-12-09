@@ -130,7 +130,11 @@ trait StreamingTransducerBuilder[S, T] {
   /**
    * Add a e-transition to the transducer
    */
-  def addETransition(s1 : State,
+  def addPreETransition(s1 : State,
+                    ops : Seq[Seq[UpdateOp]],
+                    s2 : State) : Unit
+
+  def addPostETransition(s1 : State,
                     ops : Seq[Seq[UpdateOp]],
                     s2 : State) : Unit
 
