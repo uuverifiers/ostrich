@@ -190,6 +190,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       eps(shiftVars(str, 1) === string2Term("0") &&& v(0) === 0)
     }
 
+    // Currently we just under-approximate and assume that the considered
+    // integer is 0
+    case (IFunApp(`int_to_str`, _), Seq(t : ITerm)) => {
+      Console.err.println(
+        "Warning: int.to.str not fully supported")
+      eps(shiftVars(t, 1) === 0 &&& v(0) === string2Term("0"))
+    }
+
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
