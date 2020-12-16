@@ -95,11 +95,17 @@ class ECMARegexParser(theory : OstrichStringTheory) {
             case _ : PlusQuantifier  => re_+(t)
             case _ : OptQuantifier   => re_opt(t)
             case q : Loop1Quantifier => {
-              if (q.listdecimaldigit_.isEmpty)
-                throw new Exception(
-                  "regex repetition needs some digits, not {}")
               val n = parseDecimalDigits(q.listdecimaldigit_)
               re_loop(n, n, t)
+            }
+            case q : Loop2Quantifier => {
+              val n = parseDecimalDigits(q.listdecimaldigit_)
+              reCat(re_loop(n, n, t), re_*(t))
+            }
+            case q : Loop3Quantifier => {
+              val n1 = parseDecimalDigits(q.listdecimaldigit_1)
+              val n2 = parseDecimalDigits(q.listdecimaldigit_2)
+              re_loop(n1, n2, t)
             }
           }
       }
@@ -157,13 +163,13 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       reUnion(r, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassCont2, arg : Unit) = {
+    override def visit(p : ecma2020regex.Absyn.ClassContND, arg : Unit) = {
       val left = p.classatomnodashc_.accept(this, arg)
       val rest = p.neclassrangesnodashc_.accept(this, arg)
       reUnion(left, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassCharRange2, arg : Unit) = {
+    override def visit(p : ecma2020regex.Absyn.ClassCharRangeND, arg : Unit) = {
       val r = regexRange(p.classatomnodashc_.accept(this, arg),
                          p.classatomc_.accept(this, arg))
       val rest = p.classrangesc_.accept(this, arg)
