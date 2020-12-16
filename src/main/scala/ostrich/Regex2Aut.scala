@@ -169,8 +169,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
     case IFunApp(`re_from_ecma2020`, Seq(a)) => {
       val parser = new ECMARegexParser(theory)
-      println(parser.string2Term(StringTheory.term2String(a)))
-      BasicAutomata.makeAnyString
+      val t = parser.string2Term(StringTheory.term2String(a))
+      println(t)
+      toBAutomaton(t, minimize)
     }
 
     case IFunApp(`re_none`, _) =>
