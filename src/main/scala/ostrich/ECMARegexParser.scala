@@ -86,6 +86,48 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.Alternative, arg : Unit) =
       (EPS /: (p.listtermc_ map (_.accept(this, arg)))) (reCat _)
 
+    override def visit(p : ecma2020regex.Absyn.DotAtom, arg : Unit) =
+      re_allchar()
+
+    override def visit(p : ecma2020regex.Absyn.DecAtomEscape, arg : Unit) = {
+      val firstDigit =
+        p.positivedecimal_
+      val tailDigits =
+        p.maybedecimaldigits_ match {
+          case _ : NoDecimalDigits => ""
+          case ds : SomeDecimalDigits =>
+            (for (d <- ds.listdecimaldigit_)
+             yield (printer print d)).mkString("")
+        }
+      val captureGroupNum = IdealInt(firstDigit + tailDigits)
+      Console.err.println("Warning: over-approximating back-reference as .*")
+      re_all()
+    }
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscaped,
+                       arg : Unit) =
+      decimal
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeD,
+                       arg : Unit) =
+      re_inter(re_comp(decimal), re_allchar())
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapes,
+                       arg : Unit) =
+      whitespace
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeS,
+                       arg : Unit) =
+      re_inter(re_comp(whitespace), re_allchar())
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapew,
+                       arg : Unit) =
+      word
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeW,
+                       arg : Unit) =
+      re_inter(re_comp(word), re_allchar())
+
     override def visit(p : ecma2020regex.Absyn.AtomQuanTerm, arg : Unit) = {
       val t = p.atomc_.accept(this, arg)
       p.quantifierc_ match {
@@ -205,22 +247,47 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
   }
 
-  val EPS : ITerm  = re_eps()
-  val NONE : ITerm = re_none()
+  private val EPS : ITerm  = re_eps()
+  private val NONE : ITerm = re_none()
 
-  def reCat(x : ITerm, y : ITerm) = (x, y) match {
+  private def reCat(x : ITerm, y : ITerm) = (x, y) match {
     case (`EPS`, y    ) => y
     case (x,     `EPS`) => x
     case (x,     y    ) => re_++(x, y)
   }
 
-  def reUnion(x : ITerm, y : ITerm) = (x, y) match {
+  private def reUnion(x : ITerm, y : ITerm) = (x, y) match {
     case (`NONE`, y    ) => y
     case (x,     `NONE`) => x
     case (x,     y     ) => re_union(x, y)
   }
 
-  def toSingleCharRegex(str : String) : ITerm =
+  private def reUnionStar(xs : ITerm*) =
+    xs reduceLeft (reUnion _)
+
+  private lazy val decimal =
+    re_charrange(48, 57)
+
+  private lazy val whitespace =
+    charSet(9,          // TAB,   \t
+            10,         // LF,    \n
+            11,         // VT,    \v
+            12,         // FF,    \f
+            13,         // CR,    \r
+            32,         // SPACE
+            160,        // NBSP,  \xA0
+            0xFEFF,     // ZWNBSP
+            0x2028,
+            0x2029)
+
+  // TODO: canonicalise?
+  private lazy val word =
+    reUnionStar(re_charrange(65, 90),   // A-Z
+                re_charrange(97, 122),  // a-z
+                decimal,                // 0-9
+                re_charrange(95, 95))   // _
+
+  private def toSingleCharRegex(str : String) : ITerm =
     if (str.size == 1) {
       val n = str(0).toInt
       re_charrange(n, n)
@@ -228,13 +295,17 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       throw new Exception("Expected string of length 1, not " + str)
     }
 
-  def regexRange(left : ITerm, right : ITerm) : ITerm = (left, right) match {
+  private def regexRange(left : ITerm,
+                         right : ITerm) : ITerm = (left, right) match {
     case (IFunApp(`re_charrange`, Seq(Const(lower), _)),
           IFunApp(`re_charrange`, Seq(_, Const(upper)))) =>
       re_charrange(lower, upper)
   }
 
-  def parseDecimalDigits(digits : Seq[DecimalDigit]) : IdealInt =
+  private def parseDecimalDigits(digits : Seq[DecimalDigit]) : IdealInt =
     IdealInt((for (d <- digits) yield (printer print d)).mkString(""))
+
+  private def charSet(chars : Int*) : ITerm =
+    (for (c <- chars) yield re_charrange(c, c)).reduceLeft(reUnion _)
 
 }
