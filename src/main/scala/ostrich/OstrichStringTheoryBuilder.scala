@@ -73,8 +73,6 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   }
 
   import StringTheoryBuilder._
-  import ap.parser._
-  import IExpression._
 
   lazy val getTransducerTheory : Option[StringTheory] =
     Some(SeqStringTheory(OstrichStringTheory.alphabetSize))

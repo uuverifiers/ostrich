@@ -325,7 +325,6 @@ class BricsAutomaton(val underlying: BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
 
-//  Console.err.println("Automata states: " + underlying.getNumberOfStates)
 
   type State = BState
   type TLabel = (Char, Char)

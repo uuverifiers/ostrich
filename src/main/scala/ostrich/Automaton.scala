@@ -32,23 +32,13 @@
 
 package ostrich
 
-import ap.basetypes.IdealInt
-import ap.PresburgerTools
-import ap.terfor.{Formula, Term, TerForConvenience, TermOrder, OneTerm}
-import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
-
 import scala.collection.mutable.{
-  BitSet => MBitSet,
   HashMap => MHashMap,
   HashSet => MHashSet,
   ArrayStack
 }
 
-import ap.{SimpleAPI}
 import ap.parser.{IExpression, IFormula}
-import ap.terfor.{TerForConvenience, Formula}
-import ap.terfor.substitutions.ConstantSubst
 
 /**
  * Interface for different implementations of finite-state automata.
