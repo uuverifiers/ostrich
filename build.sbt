@@ -3,7 +3,7 @@ lazy val commonSettings = Seq(
   organization := "uuverifiers",
   version := "1.0",
   scalaVersion := "2.11.12",
-  crossScalaVersions := Seq("2.11.12", "2.12.10"),
+  crossScalaVersions := Seq("2.11.12", "2.12.12"),
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) ),
    scalacOptions ++= Seq(
     "-deprecation",
@@ -20,7 +20,8 @@ lazy val commonSettings = Seq(
     .withAllowInsecureProtocol(true),
   libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
   libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-  libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8"
+  libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
+  libraryDependencies += "uuverifiers" %% "parikh-theory" % "0.1.0-SNAPSHOT"
 )
 
 lazy val root = (project in file(".")).

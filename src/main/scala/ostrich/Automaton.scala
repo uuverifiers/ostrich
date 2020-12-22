@@ -39,11 +39,15 @@ import scala.collection.mutable.{
 }
 
 import ap.parser.{IExpression, IFormula}
+import uuverifiers.parikh_theory.{
+  Automaton => OtherAutomaton,
+  LengthCounting
+}
 
 /**
  * Interface for different implementations of finite-state automata.
  */
-trait Automaton {
+trait Automaton extends OtherAutomaton {
   /**
    * Union
    */
@@ -199,6 +203,8 @@ trait AtomicStateAutomaton extends Automaton {
    */
   type TLabel
 
+  type Label = TLabel
+
   /**
    * Operations on labels
    */
@@ -252,34 +258,11 @@ trait AtomicStateAutomaton extends Automaton {
   //////////////////////////////////////////////////////////////////////////
   // Derived methods
 
-  class AutomatonGraph(val aut: AtomicStateAutomaton)
-      extends Graphable[State, TLabel] {
-
-    def allNodes() = states.to
-    def edges() = transitions.to
-    def transitionsFrom(node: State) =
-      outgoingTransitions(node).map(t => (node, t._2, t._1)).toSeq
-    // FIXME this is ugly we should *not* change type
-    def subgraph(selectedNodes: Set[State]): Graphable[State, TLabel] =
-      this.dropEdges(Set()).subgraph(selectedNodes)
-    def dropEdges(edgesToDrop: Set[(State, TLabel, State)]) = {
-      new MapGraph(edges.toSet &~ edgesToDrop)
-    }
-
-    def addEdges(edgesToAdd: Iterable[(State, TLabel, State)]) = {
-      val selectedEdges: Set[(State, TLabel, State)] = this
-        .edges()
-        .toSet ++ edgesToAdd
-      new MapGraph(selectedEdges.toSeq)
-    }
-  }
-
-  lazy val toGraph = new AutomatonGraph(this)
 
   /**
    * Iterate over all transitions
    */
-  def transitions : Iterator[(State, TLabel, State)] =
+  override def transitions : Iterator[(State, TLabel, State)] =
     for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
       yield (s1, lbl, s2)
 
@@ -361,7 +344,7 @@ trait AtomicStateAutomaton extends Automaton {
    */
   lazy val getLengthAbstraction: IFormula = {
     val length = IExpression.v(0)
-    (new ParikhTheory(this)) allowsRegisterValues Seq(length)
+    (LengthCounting(this)) allowsRegisterValues Seq(length)
   }
 }
 
