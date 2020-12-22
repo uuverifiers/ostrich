@@ -6,3 +6,5 @@
 /project/project
 /project/target
 .DS_Store
+/project/.bloop/
+/.bsp/
