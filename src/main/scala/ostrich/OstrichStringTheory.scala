@@ -52,6 +52,9 @@ object OstrichStringTheory {
 
   val alphabetSize = 1 << 16
 
+  object NotStraightlineException extends Exception("input is not straightline")
+  object CancelledException       extends Exception("solving cancelled")
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -188,12 +191,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         breakCyclicEquations(goal) match {
           case Some(actions) =>
             actions
-          case None =>
+          case None => try {
             modelCache(goal.facts) {
               ostrichSolver.findStringModel(goal) } match {
               case Some(m) => List()
-              case None => List(Plugin.AddFormula(Conjunction.TRUE))
+              case _ => List(Plugin.AddFormula(Conjunction.TRUE))
             }
+          } catch {
+            case OstrichStringTheory.CancelledException =>
+              List(Plugin.AddFormula(Conjunction.TRUE))
+          }
         }
       }
 

@@ -54,7 +54,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward = false
+  private var eager, forward, wSL = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
@@ -68,6 +68,10 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.Auto
     case CmdlParser.Opt("forward", value) =>
       forward = value
+    case CmdlParser.ValueOpt("writeSL", filename) => {
+      wSL = true
+      StraightLineStore.slFile = Some(filename)
+    }
     case str =>
       super.parseParameter(str)
   }
@@ -103,7 +107,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     new OstrichStringTheory (symTransducers,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength = useLen,
-                                    forwardApprox = forward))
+                                    forwardApprox = forward,
+                                    writeSL = wSL))
   }
 
 }

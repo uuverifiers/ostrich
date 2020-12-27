@@ -46,6 +46,7 @@ case class OFlags(
   eagerAutomataOperations : Boolean = false,
   measureTimes : Boolean = false,
   useLength : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto,
-  forwardApprox : Boolean = false
+  forwardApprox : Boolean = false,
+  writeSL : Boolean = false
 
 )

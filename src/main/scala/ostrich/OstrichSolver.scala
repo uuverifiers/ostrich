@@ -280,6 +280,9 @@ class OstrichSolver(theory : OstrichStringTheory,
     SimpleAPI.withProver { lengthProver =>
       val lProver =
         if (useLength) {
+          if (flags.writeSL)
+            throw OstrichStringTheory.NotStraightlineException
+
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 

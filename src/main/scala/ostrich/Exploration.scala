@@ -134,6 +134,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     else
       comp
 
+  if (flags.writeSL && StraightLineStore.straightlineFormula.isDefined)
+    throw OstrichStringTheory.NotStraightlineException
+
   Console.err.println
   Console.err.println("Running OSTRICH")
 
@@ -174,8 +177,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   for ((ops, t) <- sortedFunApps)
     if (ops.size > 1 && !(concreteValues contains t))
-      throw new Exception("Multiple definitions found for " + t +
-                          ", input is not straightline")
+      throw OstrichStringTheory.NotStraightlineException
+//      throw new Exception("Multiple definitions found for " + t +
+//                          ", input is not straightline")
 
   val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
 
@@ -188,6 +192,32 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           println("     " + op + "(" + (args mkString ", ") + ")")
       }
     }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  if (flags.writeSL) {
+  StraightLineStore.straightlineFormula = Some(
+    ap.DialogUtil.asString {
+      for ((apps, res) <- sortedFunApps.reverse) {
+        print("" + res + " := ")
+        apps match {
+          case Seq((ConcatPreOp, args)) =>
+            println("concat(" + (args mkString ", ") + ");")
+          case _ =>
+            throw OstrichStringTheory.NotStraightlineException
+        }
+      }
+
+      for ((v, aut) <- initialConstraints) {
+        println
+        println("" + v + " in {")
+        print(aut)
+        println("};")
+      }
+    })
+
+    throw OstrichStringTheory.CancelledException
+  }
 
   //////////////////////////////////////////////////////////////////////////////
 
