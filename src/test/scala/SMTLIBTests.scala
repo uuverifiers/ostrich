@@ -161,6 +161,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("extract-cg.smt2") =
     checkFile("tests/extract-cg.smt2", "sat")
+  property("extract-cg2.smt2") =
+    checkFile("tests/extract-cg2.smt2", "sat")
 
   property("simple-cvc-smtlib.smt2") =
     checkFile("tests/simple-cvc-smtlib.smt2", "sat", "+model")

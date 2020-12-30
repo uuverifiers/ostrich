@@ -95,6 +95,7 @@ object ExtractPreOp {
     val qf = builder.getNewState // qf'
     builder.setAccept(qf, true, output)
     builder.addTransition(qf, LabelOps.sigmaLabel, nochange, qf)
+    builder.addTransition(q0, LabelOps.sigmaLabel, nochange, q0)
 
     val tranInit = getState(aut.initial)
     builder.addPreETransition(q0, nochange, tranInit)
