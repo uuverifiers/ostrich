@@ -68,7 +68,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
-                 re_comp, re_loop, str_to_re, re_from_str, re_capture}
+                 re_comp, re_loop, str_to_re, re_from_str, re_capture,
+                 re_begin_anchor, re_end_anchor}
   import Regex2Aut._
 
   def toBricsRegexString(t : ITerm) : String =
@@ -173,6 +174,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
       BasicAutomata.makeEmpty
     case IFunApp(`re_eps`, _) =>
       BasicAutomata.makeString("")
+    case IFunApp(`re_begin_anchor` | `re_end_anchor`, _) => {
+      Console.err.println("Warning: ignoring anchor")
+      BasicAutomata.makeString("")
+    }
     case IFunApp(`re_all`, _) =>
       BasicAutomata.makeAnyString
     case IFunApp(`re_allchar`, _) =>
@@ -231,8 +236,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat(n1, n2), minimize)
 
-    case IFunApp(`re_capture`, Seq(_, t)) => // ignored here
+    case IFunApp(`re_capture`, Seq(_, t)) => {
+      Console.err.println("Warning: ignoring capture group")
       toBAutomaton(t, minimize)
+    }
   }
 
   private def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {

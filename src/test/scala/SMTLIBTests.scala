@@ -59,6 +59,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("non-greedy-quantifiers.smt2") =
     checkFile("tests/non-greedy-quantifiers.smt2", "sat")
+  property("anchors.smt2") =
+    checkFile("tests/anchors.smt2", "sat")
 
   property("regex_cg.smt2") =
     checkFile("tests/regex_cg.smt2", "sat")

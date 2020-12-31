@@ -82,12 +82,19 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
+  val re_begin_anchor =
+    MonoSortedIFunction("re.begin-anchor", List(), RSo, true, false)
+  val re_end_anchor =
+    MonoSortedIFunction("re.end-anchor", List(), RSo, true, false)
 
   // List of user-defined functions that can be extended
   val extraFunctions : Seq[(String, IFunction, PreOp,
                             Atom => Seq[Term], Atom => Term)] =
     List(("str.reverse", str_reverse, ostrich.ReversePreOp,
           a => List(a(0)), a => a(1)))
+
+  val extraRegexFunctions =
+    List(re_begin_anchor, re_end_anchor)
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraFunctions.iterator)
@@ -106,7 +113,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     ((for ((name, f, _, _, _) <- extraFunctions.iterator)
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
-      yield (name, Right(p)))).toMap
+      yield (name, Right(p))) ++
+     (for (f <- extraRegexFunctions.iterator)
+      yield (f.name, Left(f)))).toMap
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -118,7 +127,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ (extraFunctions map (_._2))
+    predefFunctions ++ (extraFunctions map (_._2)) ++ extraRegexFunctions
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
@@ -158,7 +167,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_extract,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
-                   re_comp, re_loop, re_from_str, re_capture, re_reference))
+                   re_comp, re_loop, re_from_str, re_capture, re_reference,
+                   re_begin_anchor, re_end_anchor))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++
