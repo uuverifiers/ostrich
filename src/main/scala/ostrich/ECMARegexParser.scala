@@ -86,8 +86,15 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.Alternative, arg : Unit) =
       (EPS /: (p.listtermc_ map (_.accept(this, arg)))) (reCat _)
 
+    override def visit(p : ecma2020regex.Absyn.GroupAtom, arg : Unit) =
+      // capture group
+      (NONE /: (p.listalternativec_ map (_.accept(this, arg)))) (reUnion _)
+    override def visit(p : ecma2020regex.Absyn.NonCaptGroup, arg : Unit) =
+      // non-capture group
+      (NONE /: (p.listalternativec_ map (_.accept(this, arg)))) (reUnion _)
+
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : Unit) =
-      re_allchar()
+      charComplement(lineTerminator) // . is anything apart from a line term.
 
     override def visit(p : ecma2020regex.Absyn.DecAtomEscape, arg : Unit) = {
       val firstDigit =
@@ -101,7 +108,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         }
       val captureGroupNum = IdealInt(firstDigit + tailDigits)
       Console.err.println("Warning: over-approximating back-reference as .*")
-      re_all()
+      ALL
     }
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscaped,
@@ -110,7 +117,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeD,
                        arg : Unit) =
-      re_inter(re_comp(decimal), re_allchar())
+      charComplement(decimal)
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscapes,
                        arg : Unit) =
@@ -118,7 +125,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeS,
                        arg : Unit) =
-      re_inter(re_comp(whitespace), re_allchar())
+      charComplement(whitespace)
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscapew,
                        arg : Unit) =
@@ -126,7 +133,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeW,
                        arg : Unit) =
-      re_inter(re_comp(word), re_allchar())
+      charComplement(word)
 
     override def visit(p : ecma2020regex.Absyn.AtomQuanTerm, arg : Unit) = {
       val t = p.atomc_.accept(this, arg)
@@ -174,7 +181,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     }
 
     override def visit(p : ecma2020regex.Absyn.NegClass, arg : Unit) =
-      re_inter(re_comp(p.classrangesc_.accept(this, arg)), re_allchar())
+      charComplement(p.classrangesc_.accept(this, arg))
 
     override def visit(p : ecma2020regex.Absyn.EmptyRange, arg : Unit) =
       NONE
@@ -245,10 +252,27 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg3, arg : Unit)=
       toSingleCharRegex(printer print p)
 
+    override def visit(p : ecma2020regex.Absyn.BClassEscape, arg : Unit) =
+      charSet(0x0008)
+    override def visit(p : ecma2020regex.Absyn.DashClassEscape, arg : Unit) =
+      charSet(0x002D)
+    override def visit(p : ecma2020regex.Absyn.NullCharEscape, arg : Unit) =
+      charSet(0x0000)
+
+    override def visit(p : ecma2020regex.Absyn.LetterCharEscape, arg : Unit) = {
+      val letter = printer print p.controlletter_
+      assert(letter.size == 1)
+      charSet(letter(0).toInt % 32)
+    }
+
   }
 
-  private val EPS : ITerm  = re_eps()
-  private val NONE : ITerm = re_none()
+  //////////////////////////////////////////////////////////////////////////////
+
+  private val EPS : ITerm       = re_eps()
+  private val NONE : ITerm      = re_none()
+  private val ALL : ITerm       = re_all()
+  private val ALL_CHAR : ITerm  = re_allchar()
 
   private def reCat(x : ITerm, y : ITerm) = (x, y) match {
     case (`EPS`, y    ) => y
@@ -277,8 +301,14 @@ class ECMARegexParser(theory : OstrichStringTheory) {
             32,         // SPACE
             160,        // NBSP,  \xA0
             0xFEFF,     // ZWNBSP
-            0x2028,
-            0x2029)
+            0x2028,     // LS, line separator
+            0x2029)     // PS, paragraph separator
+
+  private lazy val lineTerminator =
+    charSet(10,         // LF,    \n
+            13,         // CR,    \r
+            0x2028,     // LS, line separator
+            0x2029)     // PS, paragraph separator
 
   // TODO: canonicalise?
   private lazy val word =
@@ -294,6 +324,9 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     } else {
       throw new Exception("Expected string of length 1, not " + str)
     }
+
+  private def charComplement(t : ITerm) =
+    re_inter(re_comp(t), ALL_CHAR)
 
   private def regexRange(left : ITerm,
                          right : ITerm) : ITerm = (left, right) match {
