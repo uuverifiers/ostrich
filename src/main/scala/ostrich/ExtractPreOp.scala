@@ -91,14 +91,8 @@ object ExtractPreOp {
       })
     }
 
-    val q0 = builder.initialState // q0'
-    val qf = builder.getNewState // qf'
-    builder.setAccept(qf, true, output)
-    builder.addTransition(qf, LabelOps.sigmaLabel, nochange, qf)
-    builder.addTransition(q0, LabelOps.sigmaLabel, nochange, q0)
-
     val tranInit = getState(aut.initial)
-    builder.addPreETransition(q0, nochange, tranInit)
+    builder.setInitialState(tranInit)
 
     val opCache = new MHashMap[(autState, autState), Seq[Seq[UpdateOp]]]
 
@@ -149,7 +143,7 @@ object ExtractPreOp {
     }
 
     val tranEnd = getState(aut.accepting)
-    builder.addPreETransition(tranEnd, nochange, qf)
+    builder.setAccept(tranEnd, true, output)
 
     val tran = builder.getTransducer
     tran
