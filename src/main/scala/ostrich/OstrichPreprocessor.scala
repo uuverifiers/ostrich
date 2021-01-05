@@ -140,11 +140,13 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shLen3    = VariableShiftVisitor(len, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shBegin3 &
-        str_len(v(2, StringSort)) === shLen3     // TODO: what should happen when
-                                                 // extracting more characters than
-                                                 // a string contains?
+        ite(
+          shLen3 < 0 | shBegin3 < 0 | shBegin3 + shLen3 > str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shBegin3 &
+          str_len(v(2, StringSort)) === shLen3
+        )
       )))
     }
 

@@ -107,8 +107,8 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     // extract regex constraints and function applications from the
     // literals
-    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
-    val regexes = new ArrayBuffer[(Term, Automaton)]
+    val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
+    val regexes    = new ArrayBuffer[(Term, Automaton)]
     val lengthVars = new MHashMap[Term, Term]
 
     ////////////////////////////////////////////////////////////////////////////
@@ -125,14 +125,15 @@ class OstrichSolver(theory : OstrichStringTheory,
           case Some(aut) =>
             regexes += ((a.head, aut))
           case None =>
-            Console.err.println("Warning: could not decode regex id " + a(1))
+            throw new Exception ("Could not decode regex id " + a(1))
         }
       }
       case lc =>
-        Console.err.println("Warning: could not decode regex id " + lc)
+        throw new Exception ("Could not decode regex id " + lc)
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Collect positive literals
 
     for (a <- atoms.positiveLits) a.pred match {
       case FunPred(`str_from_char` | `str_cons` | `str_empty`)
@@ -188,12 +189,14 @@ class OstrichSolver(theory : OstrichStringTheory,
       case pred if theory.transducerPreOps contains pred =>
         funApps += ((theory.transducerPreOps(pred), List(a(0)), a(1)))
       case p if (theory.predicates contains p) =>
-        Console.err.println("Warning: ignoring " + a)
+        // Console.err.println("Warning: ignoring " + a)
+        throw new Exception ("Cannot handle literal " + a)
       case _ =>
         // nothing
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Collect negative literals
 
     for (a <- atoms.negativeLits) a.pred match {
       case `str_in_re` => {
@@ -206,43 +209,15 @@ class OstrichSolver(theory : OstrichStringTheory,
       case pred if theory.transducerPreOps contains pred =>
         throw new Exception ("Cannot handle negated transducer constraint " + a)
       case p if (theory.predicates contains p) =>
-        Console.err.println("Warning: ignoring !" + a)
+        // Console.err.println("Warning: ignoring !" + a)
+        throw new Exception ("Cannot handle negative literal " + a)
       case _ =>
         // nothing
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Check whether any of the function applications can be evaluated
 
-    {
-      import TerForConvenience._
-      implicit val o = order
-
-      val lengthConstants =
-        (for (t <- lengthVars.values.iterator;
-              c <- t.constants.iterator) yield c).toSet
-
-      for (lc <- goal.facts.arithConj.negativeEqs) lc match {
-        case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
-          if concreteWords contains l(c) => {
-            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
-            regexes += ((l(d), !(BricsAutomaton fromString str)))
-        }
-        case Seq((IdealInt.ONE, d), (IdealInt.MINUS_ONE, c))
-          if concreteWords contains l(c) => {
-            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
-            regexes += ((l(d), !(BricsAutomaton fromString str)))
-        }
-        case lc
-          if useLength && (lc.constants forall lengthConstants) =>
-          // nothing
-        case _ =>
-          Console.err.println("Warning: ignoring " + (lc =/= 0))
-      }
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    // check whether any of the function applications can be evaluated
     {
       var changed = true
       while (changed) {
@@ -270,12 +245,51 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Check whether any of the negated equations talk about strings
+
+    if (!goal.facts.arithConj.negativeEqs.isEmpty) {
+      import TerForConvenience._
+      implicit val o = order
+
+      val stringConstants =
+        ((for ((t, _) <- regexes.iterator;
+               c <- t.constants.iterator) yield c) ++
+         (for ((_, args, res) <- funApps.iterator;
+               t <- args.iterator ++ Iterator(res);
+               c <- t.constants.iterator) yield c)).toSet
+      val lengthConstants =
+        (for (t <- lengthVars.values.iterator;
+              c <- t.constants.iterator) yield c).toSet
+
+      for (lc <- goal.facts.arithConj.negativeEqs) lc match {
+        case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
+          if concreteWords contains l(c) => {
+            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
+            regexes += ((l(d), !(BricsAutomaton fromString str)))
+        }
+        case Seq((IdealInt.ONE, d), (IdealInt.MINUS_ONE, c))
+          if concreteWords contains l(c) => {
+            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
+            regexes += ((l(d), !(BricsAutomaton fromString str)))
+        }
+        case lc if useLength && (lc.constants forall lengthConstants) =>
+          // nothing
+        case lc if lc.constants exists stringConstants =>
+          throw new Exception ("Cannot handle negative string equation " +
+                                 (lc =/= 0))
+        case _ =>
+          // nothing
+      }
+    }
+
     val interestingTerms =
       ((for ((t, _) <- regexes.iterator) yield t) ++
        (for ((_, args, res) <- funApps.iterator;
              t <- args.iterator ++ Iterator(res)) yield t)).toSet
 
     ////////////////////////////////////////////////////////////////////////////
+    // Start the actual OSTRICH solver
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
