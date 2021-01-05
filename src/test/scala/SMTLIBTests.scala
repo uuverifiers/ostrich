@@ -15,7 +15,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
       }
     }
 
-    (result split "\n") contains expResult
+    expResult match {
+      case "error" =>
+        (result split "\n") exists { str => str contains "error" }
+      case res =>
+        (result split "\n") contains res
+    }
   }
 
   def checkFile(filename : String, result : String,
@@ -179,6 +184,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/indexof.smt2", "sat")
   property("substring.smt2") =
     checkFile("tests/substring.smt2", "sat")
+  property("substring-bug.smt2") =
+    checkFile("tests/substring-bug.smt2", "sat")
 
   property("parse-regex.smt2") =
     checkFile("tests/parse-regex.smt2", "sat")
@@ -206,5 +213,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-regex-lookahead3b.smt2", "unsat")
   property("parse-regex-lookahead4.smt2") =
     checkFile("tests/parse-regex-lookahead4.smt2", "sat")
+
+  // Negated equations in general are not handled yet, but should
+  // not give incorrect results
+  property("negated-equation-1.smt2") =
+    checkFile("tests/negated-equation-1.smt2", "unsat")
+  property("negated-equation-2.smt2") =
+    checkFile("tests/negated-equation-2.smt2", "error")
 
 }
