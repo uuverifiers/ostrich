@@ -169,6 +169,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       )))
     }
 
+    case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
+    case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
+
     case (IFunApp(`str_++`, _),
           Seq(ConcreteString(str1), ConcreteString(str2))) =>
       string2Term(str1 + str2)
