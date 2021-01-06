@@ -96,21 +96,6 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : Unit) =
       charComplement(lineTerminator) // . is anything apart from a line term.
 
-    override def visit(p : ecma2020regex.Absyn.DecAtomEscape, arg : Unit) = {
-      val firstDigit =
-        p.positivedecimal_
-      val tailDigits =
-        p.maybedecimaldigits_ match {
-          case _ : NoDecimalDigits => ""
-          case ds : SomeDecimalDigits =>
-            (for (d <- ds.listdecimaldigit_)
-             yield (printer print d)).mkString("")
-        }
-      val captureGroupNum = IdealInt(firstDigit + tailDigits)
-      Console.err.println("Warning: over-approximating back-reference as .*")
-      ALL
-    }
-
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscaped,
                        arg : Unit) =
       decimal
@@ -252,6 +237,23 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg3, arg : Unit)=
       toSingleCharRegex(printer print p)
 
+    // Different escape sequences
+
+    override def visit(p : ecma2020regex.Absyn.DecAtomEscape, arg : Unit) = {
+      val firstDigit =
+        p.positivedecimal_
+      val tailDigits =
+        p.maybedecimaldigits_ match {
+          case _ : NoDecimalDigits => ""
+          case ds : SomeDecimalDigits =>
+            (for (d <- ds.listdecimaldigit_)
+             yield (printer print d)).mkString("")
+        }
+      val captureGroupNum = IdealInt(firstDigit + tailDigits)
+      Console.err.println("Warning: over-approximating back-reference as .*")
+      ALL
+    }
+
     override def visit(p : ecma2020regex.Absyn.BClassEscape, arg : Unit) =
       charSet(0x0008)
     override def visit(p : ecma2020regex.Absyn.DashClassEscape, arg : Unit) =
@@ -264,6 +266,24 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       assert(letter.size == 1)
       charSet(letter(0).toInt % 32)
     }
+
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeT, arg : Unit) =
+      charSet(0x0009)
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeN, arg : Unit) =
+      charSet(0x000A)
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeV, arg : Unit) =
+      charSet(0x000B)
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeF, arg : Unit) =
+      charSet(0x000C)
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeR, arg : Unit) =
+      charSet(0x000D)
+
+    override def visit(p : ecma2020regex.Absyn.HexEscapeSequence, arg : Unit) =
+      charSet(IdealInt((printer print p.hexdigit_1) +
+                         (printer print p.hexdigit_2), 16).intValue)
+
+    override def visit(p : ecma2020regex.Absyn.IdentityEscape, arg : Unit) =
+      toSingleCharRegex(printer print p)
 
   }
 
