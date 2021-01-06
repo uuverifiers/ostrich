@@ -49,7 +49,8 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
   def string2Term(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
-    TranslationVisitor(pat)
+    val visitor = new TranslationVisitor
+    visitor(pat)
   }
 
   def parseRegex(inputString : String) : Pattern = {
@@ -57,7 +58,6 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       new java.io.BufferedReader (new java.io.StringReader(inputString))
     val res = parseRegex(input)
     input.close
-    println(printer print res)
     res
   }
 
@@ -81,9 +81,11 @@ class ECMARegexParser(theory : OstrichStringTheory) {
   val LookAhead  = new IFunction("LookAhead",  1, false, false)
   val LookBehind = new IFunction("LookBehind", 1, false, false)
 
-  object TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
+  class TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
+
+    private var captGroupNum = 1
 
     def apply(pat : Pattern) = this.visit(pat, true)
 
@@ -142,9 +144,13 @@ class ECMARegexParser(theory : OstrichStringTheory) {
           true
       }
 
-    override def visit(p : ecma2020regex.Absyn.GroupAtom, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.GroupAtom, arg : VisitorArg) = {
       // capture group
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      val body = reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      val num = captGroupNum
+      captGroupNum = captGroupNum + 1
+      re_capture(num, body)
+    }
     override def visit(p : ecma2020regex.Absyn.NonCaptGroup, arg : VisitorArg) =
       // non-capture group
       reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
@@ -197,40 +203,40 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                        arg : VisitorArg) =
       charComplement(word)
 
-    override def visit(p : ecma2020regex.Absyn.AtomQuanTerm, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.AtomQuanTerm,
+                       arg : VisitorArg) = {
       val t = p.atomc_.accept(this, arg)
-      p.quantifierc_ match {
-        case q : ECMAQuantifier =>
-          q.quantifierprefixc_ match {
-            case _ : StarQuantifier  => re_*(t)
-            case _ : PlusQuantifier  => re_+(t)
-            case _ : OptQuantifier   => re_opt(t)
-            case q : Loop1Quantifier => {
-              val n = parseDecimalDigits(q.listdecimaldigit_)
-              re_loop(n, n, t)
-            }
-            case q : Loop2Quantifier => {
-              val n = parseDecimalDigits(q.listdecimaldigit_)
-              reCat(re_loop(n, n, t), re_*(t))
-            }
-            case q : Loop3Quantifier => {
-              val n1 = parseDecimalDigits(q.listdecimaldigit_1)
-              val n2 = parseDecimalDigits(q.listdecimaldigit_2)
-              re_loop(n1, n2, t)
-            }
-          }
+      val (prefix, greedy) = p.quantifierc_ match {
+        case q : ECMAQuantifier      => (q.quantifierprefixc_, true)
+        case q : QuantifierNonGreedy => (q.quantifierprefixc_, false)
+      }
+      prefix match {
+        case _ : StarQuantifier  =>
+          if (greedy) re_*(t) else re_*?(t)
+        case _ : PlusQuantifier  =>
+          if (greedy) re_+(t) else re_+?(t)
+        case _ : OptQuantifier   => re_opt(t)
+        case q : Loop1Quantifier => {
+          val n = parseDecimalDigits(q.listdecimaldigit_)
+          re_loop(n, n, t)
+        }
+        case q : Loop2Quantifier => {
+          val n = parseDecimalDigits(q.listdecimaldigit_)
+          reCat(re_loop(n, n, t), re_*(t))
+        }
+        case q : Loop3Quantifier => {
+          val n1 = parseDecimalDigits(q.listdecimaldigit_1)
+          val n2 = parseDecimalDigits(q.listdecimaldigit_2)
+          re_loop(n1, n2, t)
+        }
       }
     }
 
-    override def visit(p : ecma2020regex.Absyn.BegAnchor, arg : VisitorArg) = {
-      Console.err.println("Warning: ignoring anchor ^")
-      EPS
-    }
+    override def visit(p : ecma2020regex.Absyn.BegAnchor, arg : VisitorArg) =
+      re_begin_anchor()
 
-    override def visit(p : ecma2020regex.Absyn.EndAnchor, arg : VisitorArg) = {
-      Console.err.println("Warning: ignoring anchor $")
-      EPS
-    }
+    override def visit(p : ecma2020regex.Absyn.EndAnchor, arg : VisitorArg) =
+      re_end_anchor()
 
     override def visit(p : ecma2020regex.Absyn.WordAnchor, arg : VisitorArg) = {
       Console.err.println("Warning: ignoring anchor \\b")
@@ -327,9 +333,8 @@ class ECMARegexParser(theory : OstrichStringTheory) {
             (for (d <- ds.listdecimaldigit_)
              yield (printer print d)).mkString("")
         }
-      val captureGroupNum = IdealInt(firstDigit + tailDigits)
-      Console.err.println("Warning: over-approximating back-reference as .*")
-      ALL
+      val groupNum = IdealInt(firstDigit + tailDigits)
+      re_reference(groupNum)
     }
 
     override def visit(p : ecma2020regex.Absyn.BClassEscape, arg : VisitorArg) =

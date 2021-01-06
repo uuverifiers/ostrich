@@ -129,7 +129,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ (extraFunctions map (_._2)) ++ extraRegexFunctions
+    predefFunctions ++ (extraStringFunctions map (_._2)) ++ extraRegexFunctions
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
