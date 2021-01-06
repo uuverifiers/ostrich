@@ -300,7 +300,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
     re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_comp,
     re_loop, str_to_re, re_from_str,
-    re_capture, re_reference}
+    re_capture, re_reference, re_from_ecma2020}
 
   // this is the map from literal numbering to internal numbering of
   // capture groups. It is for translating the replacement string.
@@ -439,6 +439,11 @@ class Regex2PFA(theory : OstrichStringTheory) {
         }
         case IFunApp(`str_to_re`, Seq(a)) => {
           (PFA.constant(StringTheory.term2List(a)), Set())
+        }
+        case IFunApp(`re_from_ecma2020`, Seq(a)) => {
+          val parser = new ECMARegexParser(theory)
+          val t = parser.string2Term(StringTheory.term2String(a))
+          buildPatternImpl(t)
         }
         case _ =>
           throw new IllegalArgumentException(
