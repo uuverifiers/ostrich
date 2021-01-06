@@ -69,7 +69,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
                  re_comp, re_loop, str_to_re, re_from_str, re_capture,
-                 re_begin_anchor, re_end_anchor}
+                 re_begin_anchor, re_end_anchor, re_from_ecma2020}
   import Regex2Aut._
 
   def toBricsRegexString(t : ITerm) : String =
@@ -168,6 +168,12 @@ class Regex2Aut(theory : OstrichStringTheory) {
   
       val bricsPattern = jsRegex2BricsRegex(StringTheory.term2String(a))
       new RegExp(bricsPattern).toAutomaton(minimize)
+    }
+
+    case IFunApp(`re_from_ecma2020`, Seq(a)) => {
+      val parser = new ECMARegexParser(theory)
+      val t = parser.string2Term(StringTheory.term2String(a))
+      toBAutomaton(t, minimize)
     }
 
     case IFunApp(`re_none`, _) =>
