@@ -140,11 +140,13 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shLen3    = VariableShiftVisitor(len, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shBegin3 &
-        str_len(v(2, StringSort)) === shLen3     // TODO: what should happen when
-                                                 // extracting more characters than
-                                                 // a string contains?
+        ite(
+          shLen3 < 0 | shBegin3 < 0 | shBegin3 + shLen3 > str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shBegin3 &
+          str_len(v(2, StringSort)) === shLen3
+        )
       )))
     }
 
@@ -167,6 +169,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       )))
     }
 
+    case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
+    case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
+
     case (IFunApp(`str_++`, _),
           Seq(ConcreteString(str1), ConcreteString(str2))) =>
       string2Term(str1 + str2)
@@ -188,6 +193,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       Console.err.println(
         "Warning: str.to.int not fully supported")
       eps(shiftVars(str, 1) === string2Term("0") &&& v(0) === 0)
+    }
+
+    // Currently we just under-approximate and assume that the considered
+    // integer is 0
+    case (IFunApp(`int_to_str`, _), Seq(t : ITerm)) => {
+      Console.err.println(
+        "Warning: int.to.str not fully supported")
+      eps(shiftVars(t, 1) === 0 &&& v(0) === string2Term("0"))
     }
 
     case (IFunApp(`re_range`, _),
