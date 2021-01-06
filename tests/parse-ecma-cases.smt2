@@ -6,7 +6,10 @@
 
         (= (str.in_re w (re.from.ecma2020 '[a-z]'))
            (str.in_re w (re.range "a" "z")))
-           
+
+        (= (str.in_re w (re.from.ecma2020 ' *'))
+           (str.in_re w (re.* (str.to_re " "))))
+
         (= (str.in_re w (re.from.ecma2020 '[^A-Za-z]'))
            (str.in_re w (re.inter re.allchar
                           (re.comp
@@ -23,6 +26,10 @@
                                (re.* (re.range "a" "z"))
                                (re.union (str.to_re "$") (str.to_re '\z')))))
 
+        (= (str.in_re w (re.from.ecma2020 '(?=.*[a-z])X.*[A-Z].*'))
+           (str.in_re w (re.inter (re.++ (re.from.ecma2020 '.*[a-z]') re.all)
+                                  (re.from.ecma2020 'X.*[A-Z].*'))))
+           
  )))
 
 (check-sat)
