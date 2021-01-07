@@ -57,7 +57,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       new java.io.BufferedReader (new java.io.StringReader(inputString))
     val res = parseRegex(input)
     input.close
-    println(printer print res)
+    // println(printer print res)
     res
   }
 
