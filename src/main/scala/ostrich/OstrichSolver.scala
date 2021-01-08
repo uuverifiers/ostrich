@@ -90,6 +90,19 @@ class OstrichSolver(theory : OstrichStringTheory,
       case None => return None
     }
 
+    //Added by Riccardo
+    for (a <- atoms.positiveLits) a.pred match {
+      case FunPred(`str_cons` | `str_empty`)  => {
+        if (a(0).isConstant)
+          concreteWords put (a(0), this.theory.strDatabase.id2Str(a(0).constant.intValueSafe))
+      }
+      case `str_in_re_id` => {
+        if (a(0).isConstant)
+          concreteWords put (a(0), this.theory.strDatabase.id2Str(a(0).constant.intValueSafe))
+      }
+      case _ =>
+    }
+
     // extract regex constraints and function applications from the
     // literals
     val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
@@ -136,11 +149,14 @@ class OstrichSolver(theory : OstrichStringTheory,
       case FunPred(`str_++`) =>
         funApps += ((ConcatPreOp, List(a(0), a(1)), a(2)))
       case FunPred(`str_replaceall`) => {
-        val b = (wordExtractor extractWord a(1)).asConcreteWord
+        // Modified by Riccardo
+        val b = if (a(1).isConstant) this.theory.strDatabase.id2Str(a(1).constant.intValueSafe)
+                else (wordExtractor extractWord a(1)).asConcreteWord
         funApps += ((ReplaceAllPreOp(b map (_.toChar)), List(a(0), a(2)), a(3)))
       }
       case FunPred(`str_replace`) => {
-        val b = (wordExtractor extractWord a(1)).asConcreteWord
+        val b = if (a(1).isConstant) this.theory.strDatabase.id2Str(a(1).constant.intValueSafe)
+        else (wordExtractor extractWord a(1)).asConcreteWord
         funApps += ((ReplacePreOp(b map (_.toChar)), List(a(0), a(2)), a(3)))
       }
       case FunPred(`str_replaceallre`) => {
@@ -205,12 +221,12 @@ class OstrichSolver(theory : OstrichStringTheory,
           if concreteWords contains l(c) => {
             val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
             regexes += ((l(d), !(BricsAutomaton fromString str)))
-        }
+          }
         case Seq((IdealInt.ONE, d), (IdealInt.MINUS_ONE, c))
           if concreteWords contains l(c) => {
             val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
             regexes += ((l(d), !(BricsAutomaton fromString str)))
-        }
+          }
         case lc
           if useLength && (lc.constants forall lengthConstants) =>
           // nothing

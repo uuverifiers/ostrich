@@ -215,7 +215,9 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
 
 
 
-/* Added by Riccardo */
+/** Added by Riccardo
+ * Stores constant string to strDatabase for easy access.
+ * */
 class OstrichStringEncoder(theory : OstrichStringTheory)
   extends ContextAwareVisitor[Unit, IExpression] {
   import IExpression._
@@ -226,10 +228,13 @@ class OstrichStringEncoder(theory : OstrichStringTheory)
 
   def postVisit(t : IExpression,
                 ctxt : Context[Unit],
-                subres : Seq[IExpression]) : IExpression = (t, subres) match {
+                subres : Seq[IExpression]) : IExpression = t match {
 
-    case (IFunApp(`str_empty`, _), _ ) =>
+    case emptyStr @ IFunApp(this.theory.str_empty, _) => this.theory.strDatabase.str2Id(emptyStr)
 
-    case (IFunApp(`str_cons`, _), _ ))
+    case consStr @ IFunApp(this.theory.str_cons, _) => this.theory.strDatabase.str2Id(consStr)
+
+    case _ => t update subres
   }
 }
+
