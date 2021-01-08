@@ -1,19 +1,33 @@
-/*
+/**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2019-2020  Matthew Hague, Philipp Ruemmer
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (c) 2019-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package ostrich
@@ -126,13 +140,20 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shLen3    = VariableShiftVisitor(len, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shBegin3 &
-        str_len(v(2, StringSort)) === shLen3     // TODO: what should happen when
-                                                 // extracting more characters than
-                                                 // a string contains?
+        ite(
+          shLen3 < 0 | shBegin3 < 0 | shBegin3 + shLen3 > str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shBegin3 &
+          str_len(v(2, StringSort)) === shLen3
+        )
       )))
     }
+
+    // keep str.at with concrete index, we will later translate it
+    // to a transducer
+    case (IFunApp(`str_at`, _), Seq(bigStr : ITerm, Const(_))) =>
+      t update subres
 
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm, index : ITerm)) => {
@@ -147,6 +168,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
                                                   // string range?
       )))
     }
+
+    case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
+    case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
 
     case (IFunApp(`str_++`, _),
           Seq(ConcreteString(str1), ConcreteString(str2))) =>
@@ -163,12 +187,29 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           str_cons(code, str_empty()),
           str_empty())
 
+    // Currently we just under-approximate and assume that the considered
+    // string is "0"
+    case (IFunApp(`str_to_int`, _), Seq(str : ITerm)) => {
+      Console.err.println(
+        "Warning: str.to.int not fully supported")
+      eps(shiftVars(str, 1) === string2Term("0") &&& v(0) === 0)
+    }
+
+    // Currently we just under-approximate and assume that the considered
+    // integer is 0
+    case (IFunApp(`int_to_str`, _), Seq(t : ITerm)) => {
+      Console.err.println(
+        "Warning: int.to.str not fully supported")
+      eps(shiftVars(t, 1) === 0 &&& v(0) === string2Term("0"))
+    }
+
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
       re_charrange(lower, upper)
 
     case (t, _) =>
+      // TODO: generalise
       (t update subres) match {
         case Geq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound <= 1000 =>
           // encode an upper bound using a regular expression
@@ -203,8 +244,9 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
           Seq(s : ITerm, ConcreteRegex(regex))) =>
       str_in_re_id(s, theory.autDatabase.regex2Id(regex))
     case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
-      println("Warning: could not encode regular expression right away," +
-                " post-poning: " + subres)
+      Console.err.println(
+        "Warning: could not encode regular expression right away," +
+          " post-poning: " + regex)
       t update subres
     }
     case _ =>

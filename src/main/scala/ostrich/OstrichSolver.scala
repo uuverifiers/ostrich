@@ -1,19 +1,33 @@
-/*
+/**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package ostrich
@@ -35,16 +49,18 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
 
-  import theory.{str, str_len, str_empty, str_cons, str_++, str_in_re,
-                 str_in_re_id, str_to_re, re_from_str,
+  import theory.{str_from_char, str_len, str_empty, str_cons, str_at, str_++,
+                 str_in_re,
+                 str_in_re_id, str_to_re, re_from_str, re_from_ecma2020,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 re_loop, FunPred}
+                 re_loop, re_eps, FunPred}
 
   val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
-        re_*, re_+, re_opt, re_comp, re_loop, str_to_re, re_from_str)
+        re_*, re_+, re_opt, re_comp, re_loop, re_eps, str_to_re, re_from_str,
+        re_from_ecma2020)
 
   private val p = theory.functionPredicateMap
 
@@ -105,8 +121,8 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     // extract regex constraints and function applications from the
     // literals
-    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
-    val regexes = new ArrayBuffer[(Term, Automaton)]
+    val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
+    val regexes    = new ArrayBuffer[(Term, Automaton)]
     val lengthVars = new MHashMap[Term, Term]
 
     ////////////////////////////////////////////////////////////////////////////
@@ -123,17 +139,18 @@ class OstrichSolver(theory : OstrichStringTheory,
           case Some(aut) =>
             regexes += ((a.head, aut))
           case None =>
-            Console.err.println("Warning: could not decode regex id " + a(1))
+            throw new Exception ("Could not decode regex id " + a(1))
         }
       }
       case lc =>
-        Console.err.println("Warning: could not decode regex id " + lc)
+        throw new Exception ("Could not decode regex id " + lc)
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Collect positive literals
 
     for (a <- atoms.positiveLits) a.pred match {
-      case FunPred(`str` | `str_cons` | `str_empty`)
+      case FunPred(`str_from_char` | `str_cons` | `str_empty`)
         if concreteWords contains a.last =>
         // nothing, can be ignored
       case FunPred(`str_++`)
@@ -174,6 +191,12 @@ class OstrichSolver(theory : OstrichStringTheory,
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
       }
+      case FunPred(`str_at`) => {
+        val LinearCombination.Constant(IdealInt(ind)) = a(1)
+        funApps +=
+          ((TransducerPreOp(BricsTransducer.getStrAtTransducer(ind)),
+            List(a(0)), a(2)))
+      }
       case FunPred(f) if rexOps contains f =>
         // nothing
       case FunPred(f) if theory.extraFunctionPreOps contains f => {
@@ -183,12 +206,14 @@ class OstrichSolver(theory : OstrichStringTheory,
       case pred if theory.transducerPreOps contains pred =>
         funApps += ((theory.transducerPreOps(pred), List(a(0)), a(1)))
       case p if (theory.predicates contains p) =>
-        Console.err.println("Warning: ignoring " + a)
+        // Console.err.println("Warning: ignoring " + a)
+        throw new Exception ("Cannot handle literal " + a)
       case _ =>
         // nothing
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Collect negative literals
 
     for (a <- atoms.negativeLits) a.pred match {
       case `str_in_re` => {
@@ -201,14 +226,17 @@ class OstrichSolver(theory : OstrichStringTheory,
       case pred if theory.transducerPreOps contains pred =>
         throw new Exception ("Cannot handle negated transducer constraint " + a)
       case p if (theory.predicates contains p) =>
-        Console.err.println("Warning: ignoring !" + a)
+        // Console.err.println("Warning: ignoring !" + a)
+        throw new Exception ("Cannot handle negative literal " + a)
       case _ =>
         // nothing
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Check whether any of the function applications can be evaluated
 
     {
+/* %%%%%%%%%%%%%%%%%% Old Riccardo's things %%%%%%%%%%%%%%%%%%%
       import TerForConvenience._
       implicit val o = order
 
@@ -239,6 +267,8 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     // check whether any of the function applications can be evaluated
     {
+ %%%%%%%%%%%%%%%%%% Old Riccardo's things %%%%%%%%%%%%%%%%%%% */
+
       var changed = true
       while (changed) {
         changed = false
@@ -265,12 +295,51 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Check whether any of the negated equations talk about strings
+
+    if (!goal.facts.arithConj.negativeEqs.isEmpty) {
+      import TerForConvenience._
+      implicit val o = order
+
+      val stringConstants =
+        ((for ((t, _) <- regexes.iterator;
+               c <- t.constants.iterator) yield c) ++
+         (for ((_, args, res) <- funApps.iterator;
+               t <- args.iterator ++ Iterator(res);
+               c <- t.constants.iterator) yield c)).toSet
+      val lengthConstants =
+        (for (t <- lengthVars.values.iterator;
+              c <- t.constants.iterator) yield c).toSet
+
+      for (lc <- goal.facts.arithConj.negativeEqs) lc match {
+        case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
+          if concreteWords contains l(c) => {
+            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
+            regexes += ((l(d), !(BricsAutomaton fromString str)))
+        }
+        case Seq((IdealInt.ONE, d), (IdealInt.MINUS_ONE, c))
+          if concreteWords contains l(c) => {
+            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
+            regexes += ((l(d), !(BricsAutomaton fromString str)))
+        }
+        case lc if useLength && (lc.constants forall lengthConstants) =>
+          // nothing
+        case lc if lc.constants exists stringConstants =>
+          throw new Exception ("Cannot handle negative string equation " +
+                                 (lc =/= 0))
+        case _ =>
+          // nothing
+      }
+    }
+
     val interestingTerms =
       ((for ((t, _) <- regexes.iterator) yield t) ++
        (for ((_, args, res) <- funApps.iterator;
              t <- args.iterator ++ Iterator(res)) yield t)).toSet
 
     ////////////////////////////////////////////////////////////////////////////
+    // Start the actual OSTRICH solver
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
@@ -332,7 +401,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     for (a <- atoms positiveLitsWithPred p(str_empty))
       assign(a.last, List())
-    for (a <- atoms positiveLitsWithPred p(str)) {
+    for (a <- atoms positiveLitsWithPred p(str_from_char)) {
       if (!a.head.isConstant)
         throw new Exception("Cannot handle " + a)
       assign(a.last, List(a.head.constant.intValueSafe))

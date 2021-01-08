@@ -1,19 +1,33 @@
-/*
+/**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018-2020  Matthew Hague, Philipp Ruemmer
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package ostrich
@@ -34,6 +48,7 @@ import ap.theories.strings.{StringTheory, StringTheoryBuilder}
 object TransducerTranslator {
 
   import StringTheoryBuilder._
+  import Transducer._
 
   def toBricsTransducer(transducer : SymTransducer,
                         alphabetSize : Int,
@@ -76,11 +91,8 @@ object TransducerTranslator {
 
         epsilons match {
           case Seq(true, false) => p.scope {
-            import p._
-            !! (bvLabel)
-            while (??? == ProverStatus.Sat) {
-              val out = eval(outputC)
-
+            for (out <- enumLabelSolutions(bvLabel, outputC,
+                                           p, transducerStringTheory)) {
               val op = OutputOp(out.intValueSafe.toChar.toString, NOP, "")
 
               Console.err.println("" + fromState + "- <eps> -> " +
@@ -88,7 +100,6 @@ object TransducerTranslator {
 
               builder.addETransition(states2Brics(fromState), op,
                                      states2Brics(toState))
-              !! (outputC =/= out)
             }
           }
 
@@ -105,7 +116,9 @@ object TransducerTranslator {
 
           case Seq(false, outEps) => {
             val presLabel =
-              IntCastEliminator(PartialEvaluator(p.simplify(bvLabel)))
+              IntCastEliminator(
+                PartialEvaluator(
+                  simplifyLabel(bvLabel, p, transducerStringTheory)))
 
             if (!ContainsSymbol.isPresburger(presLabel))
               throw new Exception(
@@ -166,6 +179,69 @@ object TransducerTranslator {
     builder setInitialState states2Brics(0)
 
     builder.getTransducer
+  }
+
+  /**
+   * Enumerate the solutions of a label that contains <code>outputC</code>
+   * as the only variable.
+   */
+  private def enumLabelSolutions(f       : IFormula,
+                                 outputC : ITerm,
+                                 p       : SimpleAPI,
+                                 tdST    : StringTheory) : Iterator[IdealInt] ={
+    import IExpression._
+    import tdST._
+    f match {
+      case Eq(`outputC`,
+              IFunApp(`str_to_code`,
+                      Seq(IFunApp(`str_cons`,
+                                  Seq(IFunApp(ModuloArithmetic.mod_cast,
+                                              Seq(IIntLit(lower),IIntLit(upper),
+                                                  Const(value))),
+                                      IFunApp(`str_empty`, Seq())))))) =>
+        Iterator single ModuloArithmetic.evalModCast(lower, upper, value)
+      case f => {
+        import p._
+        !! (f)
+        new Iterator[IdealInt] {
+          def hasNext : Boolean =
+            (??? == ProverStatus.Sat)
+          def next : IdealInt = {
+            ???
+            val res = eval(outputC)
+            !! (outputC =/= res)
+            res
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Simplify the label of a transition, with some optimisations for
+   * simple/common labels.
+   */
+  private def simplifyLabel(f    : IFormula,
+                            p    : SimpleAPI,
+                            tdST : StringTheory) : IFormula = {
+    import IExpression._
+    import tdST._
+    f match {
+      case f : IBoolLit =>
+        f
+      case f @ Eq(_ : IConstant, _ : IConstant) =>
+        f
+      case Eq(c : IConstant,
+              IFunApp(`str_to_code`,
+                      Seq(IFunApp(`str_cons`,
+                                  Seq(IFunApp(ModuloArithmetic.mod_cast,
+                                              Seq(IIntLit(lower),IIntLit(upper),
+                                                  Const(value))),
+                                      IFunApp(`str_empty`, Seq())))))) =>
+        c === ModuloArithmetic.evalModCast(lower, upper, value)
+      case f =>
+        p.simplify(f)
+    }
   }
 
   /**
