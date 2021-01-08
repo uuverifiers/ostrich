@@ -82,6 +82,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       "(" + buildBricsRegex(a) + "){" + n1 + "," + n2 + "}"
 
     case IFunApp(`str_to_re`, Seq(a)) =>
+      // Modified by Riccardo
       StringTheory.term2List(a) match {
         case Seq() =>
           "()"
@@ -96,6 +97,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
       // be problems due to escaping. The processing of regexes can also
       // only be done correctly within a proper regex parser.
 
+
+      // Modified by Riccardo
       val str = StringTheory.term2String(a)
 
       // BRICS cannot handle anchors, so currently we are just removing them

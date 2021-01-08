@@ -18,6 +18,7 @@ class StrDatabase(theory : OstrichStringTheory) {
     id2StrMap.get(id) match {
       case Some((IFunApp(this.theory.str_empty, _), None)) => Nil
 
+      case Some((IFunApp(this.theory.str_cons, Seq(_, _, IIntLit(IdealInt(i)))), None)) =>
       case Some((funApp, Some(nextId))) => funApp(2).asInstanceOf[IIntLit].value.intValueSafe :: id2Str(nextId)
     }
   }
