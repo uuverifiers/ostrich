@@ -111,6 +111,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Right(p))) ++
      Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)))).toMap
 
+  val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] = Map()
+
   //////////////////////////////////////////////////////////////////////////////
 
   val autDatabase = new AutDatabase(this)
