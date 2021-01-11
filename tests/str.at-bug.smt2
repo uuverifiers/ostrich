@@ -1,0 +1,10 @@
+(declare-fun a () Bool) 
+(declare-fun b () String) 
+(declare-fun c () String) 
+(declare-fun d () Bool) 
+(declare-fun e () Bool)   
+(assert (xor a e)) 
+(assert (= d (not (= "" (str.replace b c (str.at b (str.len b))))))) 
+(assert (= (xor a e) (= "-" c))) 
+(check-sat)
+

@@ -216,6 +216,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str.at.smt2", "sat")
   property("str.at-2.smt2") =
     checkFile("tests/str.at-2.smt2", "unsat")
+  property("str.at-bug.smt2") =
+    checkFile("tests/str.at-bug.smt2", "sat")
 
   property("email-regex.smt2") =
     checkFile("tests/email-regex.smt2", "sat")
@@ -248,6 +250,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-ecma-groups.smt2", "sat")
   property("parse-ecma-replace.smt2") =
     checkFile("tests/parse-ecma-replace.smt2", "sat")
+  property("parse-ecma-bug1.smt2") =
+    checkFile("tests/parse-ecma-bug1.smt2", "sat")
 
   property("parse-regex-lookahead.smt2") =
     checkFile("tests/parse-regex-lookahead.smt2", "sat")
@@ -270,5 +274,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/negated-equation-2.smt2", "error")
   property("concat-empty.smt2") =
     checkFile("tests/concat-empty.smt2", "unsat")
+  property("replace-bug.smt2") =
+    checkFile("tests/replace-bug.smt2", "error")
 
 }
