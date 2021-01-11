@@ -80,6 +80,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  import Sort.Integer
+
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
   val re_begin_anchor =
@@ -89,6 +91,35 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val re_from_ecma2020 =
     MonoSortedIFunction("re.from.ecma2020", List(SSo), RSo, true, false)
 
+  // Replacement with regular expression and capture groups
+  val str_replacecg =
+    new MonoSortedIFunction("str.replace_cg",
+                            List(SSo, RSo, RSo), SSo, true, false)
+  val str_replaceallcg =
+    new MonoSortedIFunction("str.replace_cg_all",
+                            List(SSo, RSo, RSo), SSo, true, false)
+
+  // Non-greedy quantifiers
+  val re_*? =
+    new MonoSortedIFunction("re.*?", List(RSo), RSo, true, false)
+  val re_+? =
+    new MonoSortedIFunction("re.+?", List(RSo), RSo, true, false)
+
+  // Capture groups and references
+  val re_capture =
+    new MonoSortedIFunction("re.capture", List(Integer, RSo), RSo,
+                            true, false)
+  val re_reference =
+    new MonoSortedIFunction("re.reference", List(Integer), RSo,
+                            true, false)
+
+  val str_match =
+    new MonoSortedIFunction("str.match", List(Integer, Integer, SSo, RSo), SSo,
+                            true, false)
+  val str_extract =
+    new MonoSortedIFunction("str.extract", List(Integer, SSo, RSo), SSo,
+                            true, false)
+
   // List of user-defined functions on strings that can be extended
   val extraStringFunctions : Seq[(String, IFunction, PreOp,
                                   Atom => Seq[Term], Atom => Term)] =
@@ -96,7 +127,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           a => List(a(0)), a => a(1)))
 
   val extraRegexFunctions =
-    List(re_begin_anchor, re_end_anchor, re_from_ecma2020)
+    List(re_begin_anchor, re_end_anchor, re_from_ecma2020,
+         str_replacecg, str_replaceallcg,
+         re_*?, re_+?)
+
+  val extraIndexedFunctions =
+    List((re_capture, 1),
+         (re_reference, 1),
+         (str_match, 2),
+         (str_extract, 1))
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
@@ -119,7 +158,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
      (for (f <- extraRegexFunctions.iterator)
       yield (f.name, Left(f)))).toMap
 
-  val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] = Map()
+  val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] =
+    (for ((f, ind) <- extraIndexedFunctions.iterator)
+     yield ((f.name, ind), Left(f))).toMap
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -131,7 +172,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ (extraStringFunctions map (_._2)) ++ extraRegexFunctions
+    predefFunctions ++ (extraStringFunctions map (_._2)) ++
+    extraRegexFunctions ++ (extraIndexedFunctions map (_._1))
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
