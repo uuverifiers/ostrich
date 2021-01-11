@@ -154,13 +154,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     while (!remFunApps.isEmpty) {
       val (selectedApps, otherApps) =
-        remFunApps partition { case (_, _, res) => argTermNum(res) == 0 }
+        remFunApps partition { case (_, _, res) =>
+                                 argTermNum(res) == 0 ||
+                                 (concreteValues contains res) }
       remFunApps = otherApps
 
       for ((_, args, _) <- selectedApps; a <- args)
         argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
 
-      assert(!selectedApps.isEmpty)
+      if (selectedApps.isEmpty)
+        throw new Exception(
+          "Cyclic definitions found, input is not straightline")
 
       val appsPerRes = selectedApps groupBy (_._3)
       val nonArgTerms = (selectedApps map (_._3)).distinct
@@ -178,7 +182,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       throw new Exception("Multiple definitions found for " + t +
                           ", input is not straightline")
 
-  val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
+  val resultTerms =
+    (for ((_, t) <- sortedFunApps.iterator) yield t).toSet
+  val leafTerms =
+    allTerms filter {
+      case t => (concreteValues contains t) || !(resultTerms contains t)
+    }
 
   if (!sortedFunApps.isEmpty)
     Console.withOut(Console.err) {
