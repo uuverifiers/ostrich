@@ -161,11 +161,13 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shIndex3  = VariableShiftVisitor(index, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shIndex3 &
-        str_in_re(v(2, StringSort), re_allchar()) // TODO: what should happen when
-                                                  // extracting a character outside of the
-                                                  // string range?
+        ite(
+          shIndex3 < 0 | shIndex3 >= str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shIndex3 &
+          str_in_re(v(2, StringSort), re_allchar())
+        )
       )))
     }
 
