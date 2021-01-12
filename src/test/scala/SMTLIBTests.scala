@@ -44,6 +44,15 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("str.from_int.smt2") =
+    checkFile("tests/str.from_int.smt2", "sat")
+  property("str.from_int_2.smt2") =
+    checkFile("tests/str.from_int_2.smt2", "unsat")
+  property("str.to_int.smt2") =
+    checkFile("tests/str.to_int.smt2", "sat")
+  property("str.to_int_2.smt2") =
+    checkFile("tests/str.to_int_2.smt2", "unsat")
+
   property("chars.smt2") =
     checkFile("tests/chars.smt2", "sat")
   property("chars2.smt2") =

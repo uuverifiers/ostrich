@@ -211,6 +211,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replacere, str_replaceallre, str_replaceallcg, 
                    str_replacecg, str_to_re,
                    str_extract,
+                   str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
                    re_comp, re_loop, re_from_str, re_capture, re_reference,
@@ -228,6 +229,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //////////////////////////////////////////////////////////////////////////////
 
   private val ostrichSolver = new OstrichSolver (this, flags)
+  private val strIntConverter = new OstrichStrIntConverter(this)
 
   def plugin = Some(new Plugin {
     // not used
@@ -240,6 +242,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
+
+      case Plugin.GoalState.Intermediate =>
+        strIntConverter.handleGoalEarly(goal)
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
 
