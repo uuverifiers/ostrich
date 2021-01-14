@@ -18,11 +18,16 @@ class StrDatabase(theory : OstrichStringTheory) {
     id2StrMap.get(id) match {
       case Some((IFunApp(this.theory.str_empty, _), None)) => Nil
 
-      //OLD case Some((funApp, Some(nextId))) => funApp(2).asInstanceOf[IIntLit].value.intValueSafe :: id2Str(nextId)
+      //OLD, but working
+      case Some((funApp, Some(nextId))) => funApp(2).asInstanceOf[IIntLit].value.intValueSafe :: id2Str(nextId)
       //NEW with improved pattern matching:
-      case Some((IFunApp(this.theory.str_cons, Seq(_, _, IIntLit(IdealInt(i)))), Some(nextId))) => i.intValue() :: id2Str(nextId)
+      //case Some((IFunApp(this.theory.str_cons, Seq(_, _, IIntLit(IdealInt(i)))), Some(nextId))) => i.intValue() :: id2Str(nextId)
+      case _ => throw new RuntimeException("Riccardo, this should not happen!")
     }
   }
+
+  def listInt2String(list : List[Int]) : String =
+    (for (c <- list) yield c.toChar).mkString
 
   /** Query a string for an id (it adds str to database if not already present) */
   def str2Id(str : IFunApp) : Int = synchronized {

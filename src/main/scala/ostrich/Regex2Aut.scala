@@ -89,6 +89,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
           "[\\" + numToUnicode(a) + "-" + "\\" + numToUnicode(b) + "]")
 
       case IFunApp(`str_to_re`, Seq(a)) => {
+        System.out.println(a);
         val res =
           StringTheory.term2List(a) match {
             case Seq() =>
@@ -102,6 +103,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       }
 
       case IFunApp(`re_from_str`, Seq(a)) => {
+        System.out.println(a);
         // TODO: this translation has to be checked more carefully, there might
         // be problems due to escaping. The processing of regexes can also
         // only be done correctly within a proper regex parser.
@@ -152,11 +154,16 @@ class Regex2Aut(theory : OstrichStringTheory) {
   private def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
-                 Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
+    Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
 
-    case IFunApp(`str_to_re`, Seq(a)) =>
-      BasicAutomata.makeString(StringTheory.term2String(a))
+    case IFunApp(`str_to_re`, Seq(a)) => {
+      // modified by Riccardo
+      a match {
+        case IIntLit(value) => BasicAutomata.makeString(theory.strDatabase.listInt2String(theory.strDatabase.id2Str(value.intValueSafe)))
+        case _ => BasicAutomata.makeString(StringTheory.term2String(a))
+      }
+    }
 
     case IFunApp(`re_from_str`, Seq(a)) => {
       // TODO: this translation has to be checked more carefully, there might

@@ -198,7 +198,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
             actions
           case None =>
             modelCache(goal.facts) {
-              ostrichSolver.findStringModel(goal) } match {
+              //modified by Riccardo
+              try {
+                // problematic code, say
+                // findStringModel in OstrichStringTheory.scala
+                ostrichSolver.findStringModel(goal)
+              } catch {
+                case t : Throwable => t.printStackTrace; throw t
+              }
+            } match {
               case Some(m) => List()
               case None => List(Plugin.AddFormula(Conjunction.TRUE))
             }
@@ -213,7 +221,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         None
       } else {
         val model = (modelCache(goal.facts) {
-          ostrichSolver.findStringModel(goal)
+          try {
+            // problematic code, say
+            // findStringModel in OstrichStringTheory.scala
+            ostrichSolver.findStringModel(goal)
+          } catch {
+            case t : Throwable => t.printStackTrace; throw t
+          }
         }).get
         implicit val order = goal.order
 
