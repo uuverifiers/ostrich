@@ -60,8 +60,8 @@ case class PFA(val sTran: MMap[PFA.State, Seq[PFA.SigmaTransition]],
 object PFA {
 
   type State = BricsAutomaton#State
-  type TLabel = BricsAutomaton#TLabel
-  val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+  type TLabel = AnchoredLabel
+  val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
   type SigmaTransition = (TLabel, State)
   type ETransition = State
 
@@ -244,7 +244,7 @@ object PFA {
       for (arrow <- arrows) {
         val (lbl, dest) = arrow
         sb.append(state + " -> " + dest);
-        sb.append("[label=\"" + lbl + "/" + priority + "\"];\n")
+        sb.append("[label=\"" + lbl.toString + "/" + priority + "\"];\n")
         priority -= 1
       }
     }
@@ -295,11 +295,12 @@ class Regex2PFA(theory : OstrichStringTheory) {
 
   type State = PFA.State
   type TLabel = PFA.TLabel
-  val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+  val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
     re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_comp,
     re_loop, str_to_re, re_from_str,
+    re_begin_anchor, re_end_anchor,
     re_capture, re_reference, re_from_ecma2020}
 
   // this is the map from literal numbering to internal numbering of
@@ -328,6 +329,10 @@ class Regex2PFA(theory : OstrichStringTheory) {
           (PFA.epsilon, Set())
         case IFunApp(`re_allchar`, _) =>
           (PFA.single(LabelOps.sigmaLabel), Set())
+        case IFunApp(`re_begin_anchor`, _) =>
+          (PFA.single(BeginAnchor), Set())
+        case IFunApp(`re_end_anchor`, _) =>
+          (PFA.single(EndAnchor), Set())
         case IFunApp(`re_all`, _) => {
           val aut_allchar = PFA.single(LabelOps.sigmaLabel)
           val aut_all = PFA.star(aut_allchar)

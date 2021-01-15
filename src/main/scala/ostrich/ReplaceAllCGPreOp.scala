@@ -61,7 +61,7 @@ object ReplaceAllCGPreOp {
     type tranState = PrioStreamingTransducer#State
     type autState = PFA.State
     type TLabel = PFA.TLabel
-    val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+    val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
 
     // some common update operations
     def nochange(index : Int) : Seq[UpdateOp] = List(RefVariable(index))
