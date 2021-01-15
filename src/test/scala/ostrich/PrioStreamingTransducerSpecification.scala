@@ -40,7 +40,7 @@ object PrioStreamingTransducerSpecification
     val qf = builder.getNewState
     builder.setAccept(qf, true, List(RefVariable(0)))
 
-    builder.addTransition(q0, ('a', 'c'), List(toConstants("zz") ++ List(Offset(0)) ++ toConstants("adb")), qf)
+    builder.addTransition(q0, NormalLabel(('a', 'c')), List(toConstants("zz") ++ List(Offset(0)) ++ toConstants("adb")), qf)
 
     builder.setInitialState(q0)
 
@@ -79,9 +79,9 @@ object PrioStreamingTransducerSpecification
 
     val nop = List(List(RefVariable(0)))
     val update = List(List(RefVariable(0), Constant('b')))
-    builder.addTransition(q0, BricsTLabelOps.singleton('b'), nop, q0)
-    builder.addTransition(q0, BricsTLabelOps.singleton('a'), nop, qf)
-    builder.addTransition(qf, BricsTLabelOps.singleton('b'), update, qf)
+    builder.addTransition(q0, AnchoredLabelOps.singleton('b'), nop, q0)
+    builder.addTransition(q0, AnchoredLabelOps.singleton('a'), nop, qf)
+    builder.addTransition(qf, AnchoredLabelOps.singleton('b'), update, qf)
 
     builder.setInitialState(q0)
     builder.setAccept(qf, true, List(RefVariable(0), Constant('a'), RefVariable(0)))
@@ -119,13 +119,13 @@ object PrioStreamingTransducerSpecification
     val updatex = List(List(RefVariable(0), Offset(0)), List(RefVariable(1)))
     val updatey = List(List(RefVariable(0)), List(RefVariable(1), Offset(0)))
 
-    builder.addTransition(q0, ('a', 'b'), updatex, 1, q0)
+    builder.addTransition(q0, NormalLabel(('a', 'b')), updatex, 1, q0)
 
-    builder.addTransition(q0, BricsTLabelOps.singleton('a'), updatey, 0, q1)
-    builder.addTransition(q0, BricsTLabelOps.singleton('c'), updatey, 0, q1)
+    builder.addTransition(q0, AnchoredLabelOps.singleton('a'), updatey, 0, q1)
+    builder.addTransition(q0, AnchoredLabelOps.singleton('c'), updatey, 0, q1)
 
-    builder.addTransition(q1, BricsTLabelOps.singleton('a'), updatey, 1, q1)
-    builder.addTransition(q1, BricsTLabelOps.singleton('c'), updatey, 1, q1)
+    builder.addTransition(q1, AnchoredLabelOps.singleton('a'), updatey, 1, q1)
+    builder.addTransition(q1, AnchoredLabelOps.singleton('c'), updatey, 1, q1)
 
     builder.setInitialState(q0)
     builder.setAccept(q0, true, List(RefVariable(1), RefVariable(0)))
@@ -164,8 +164,8 @@ object PrioStreamingTransducerSpecification
     val nop = List(List(RefVariable(0)))
     val update = List(List(RefVariable(0), Constant('a')))
 
-    builder.addTransition(q0, ('a', 'a'), update, q1)
-    builder.addTransition(qf, ('a', 'a'), nop, qf)
+    builder.addTransition(q0, NormalLabel(('a', 'a')), update, q1)
+    builder.addTransition(qf, NormalLabel(('a', 'a')), nop, qf)
     builder.addPreETransition(q1, nop, 0, qf)
     builder.addPreETransition(q1, nop, 1, q0) // this is the prioritised transition
 
@@ -225,10 +225,10 @@ object PrioStreamingTransducerSpecification
     val q3 = builder.getNewState // read extra a
     val q4 = builder.getNewState // stop match
 
-    builder.addTransition(q0, BricsTLabelOps.sigmaLabel, trivial, q0)
+    builder.addTransition(q0, AnchoredLabelOps.sigmaLabel, trivial, q0)
     builder.addPreETransition(q0, trivial, q1)
-    builder.addTransition(q1, ('a', 'a'), updateVar, q2)
-    builder.addTransition(q2, ('a', 'a'), updateVar, q3)
+    builder.addTransition(q1, NormalLabel(('a', 'a')), updateVar, q2)
+    builder.addTransition(q2, NormalLabel(('a', 'a')), updateVar, q3)
     builder.addPreETransition(q3, updateVar, q2)
     builder.addPreETransition(q2, updateVar, q4)
     builder.addPreETransition(q4, dump, 1, q0)
