@@ -42,6 +42,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("propagation.smt2") =
+    checkFileOpts("tests/propagation.smt2", "sat", "", "+incremental")
+
   property("str.from_int.smt2") =
     checkFile("tests/str.from_int.smt2", "sat")
   property("str.from_int_2.smt2") =
