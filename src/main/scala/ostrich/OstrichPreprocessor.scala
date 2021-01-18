@@ -161,11 +161,13 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shIndex3  = VariableShiftVisitor(index, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shIndex3 &
-        str_in_re(v(2, StringSort), re_allchar()) // TODO: what should happen when
-                                                  // extracting a character outside of the
-                                                  // string range?
+        ite(
+          shIndex3 < 0 | shIndex3 >= str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shIndex3 &
+          str_in_re(v(2, StringSort), re_allchar())
+        )
       )))
     }
 
@@ -187,6 +189,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           str_cons(code, str_empty()),
           str_empty())
 
+/*
     // Currently we just under-approximate and assume that the considered
     // string is "0"
     case (IFunApp(`str_to_int`, _), Seq(str : ITerm)) => {
@@ -202,6 +205,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         "Warning: int.to.str not fully supported")
       eps(shiftVars(t, 1) === 0 &&& v(0) === string2Term("0"))
     }
+*/
 
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),

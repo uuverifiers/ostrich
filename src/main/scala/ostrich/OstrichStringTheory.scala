@@ -111,6 +111,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Right(p))) ++
      Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)))).toMap
 
+  val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] = Map()
+
   //////////////////////////////////////////////////////////////////////////////
 
   val autDatabase = new AutDatabase(this)
@@ -162,6 +164,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_to_re,
+                   str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
                    re_loop, re_from_str, re_from_ecma2020))
@@ -177,7 +180,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  private val ostrichSolver = new OstrichSolver (this, flags)
+  private val ostrichSolver      = new OstrichSolver (this, flags)
+  private val strIntConverter    = new OstrichStrIntConverter(this)
+  private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
     // not used
@@ -190,6 +195,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
+
+      case Plugin.GoalState.Intermediate =>
+        strIntConverter.handleGoalEarly(goal)
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
 
@@ -207,8 +215,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                 case t : Throwable => t.printStackTrace; throw t
               }
             } match {
-              case Some(m) => List()
-              case None => List(Plugin.AddFormula(Conjunction.TRUE))
+              case Some(m) =>
+                equalityPropagator.handleSolution(goal, m)
+              case None =>
+                List(Plugin.AddFormula(Conjunction.TRUE))
             }
         }
       }
