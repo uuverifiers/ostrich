@@ -176,8 +176,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  private val ostrichSolver = new OstrichSolver (this, flags)
-  private val strIntConverter = new OstrichStrIntConverter(this)
+  private val ostrichSolver      = new OstrichSolver (this, flags)
+  private val strIntConverter    = new OstrichStrIntConverter(this)
+  private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
     // not used
@@ -202,8 +203,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           case None =>
             modelCache(goal.facts) {
               ostrichSolver.findStringModel(goal) } match {
-              case Some(m) => List()
-              case None => List(Plugin.AddFormula(Conjunction.TRUE))
+              case Some(m) =>
+                equalityPropagator.handleSolution(goal, m)
+              case None =>
+                List(Plugin.AddFormula(Conjunction.TRUE))
             }
         }
       }
