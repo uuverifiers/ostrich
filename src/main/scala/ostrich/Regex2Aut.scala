@@ -49,7 +49,7 @@ object Regex2Aut {
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
   private val LookAheadBehind = """\(\?[=!<]""".r
 
-  private object SmartConst {
+  object SmartConst {
     import IExpression._
     def unapply(t : ITerm) : Option[IdealInt] = t match {
       case Const(value) =>

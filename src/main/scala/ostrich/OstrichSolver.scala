@@ -55,7 +55,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 re_loop, re_eps, FunPred}
+                 re_loop, re_eps, FunPred, strDatabase}
 
   val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
@@ -107,6 +107,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     }
 
     //Added by Riccardo
+/*
     for (a <- atoms.positiveLits) a.pred match {
       case FunPred(`str_cons` | `str_empty`)  => {
         if (a(0).isConstant)
@@ -118,6 +119,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
       case _ =>
     }
+ */
 
     // extract regex constraints and function applications from the
     // literals
@@ -366,10 +368,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps, regexes, concreteWords.toMap,
+          Exploration.eagerExp(funApps, regexes, concreteWords.toMap, strDatabase,
                                lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps, regexes, concreteWords.toMap,
+          Exploration.lazyExp(funApps, regexes, concreteWords.toMap, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
       exploration.findModel match {

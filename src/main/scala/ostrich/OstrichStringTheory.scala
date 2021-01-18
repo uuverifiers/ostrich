@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -216,6 +216,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
               }
             } match {
               case Some(m) =>
+                println(m)
                 equalityPropagator.handleSolution(goal, m)
               case None =>
                 List(Plugin.AddFormula(Conjunction.TRUE))
@@ -252,7 +253,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                 if x.constants subsetOf order.orderedConstants)
               yield l(x - len))
 
-        Some(stringAssignments & lenAssignments)
+        val res = Some(stringAssignments & lenAssignments)
+        println(res)
+res
       }
 
   })
@@ -290,6 +293,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     println("Out: " + res)
     res
   }
+
+  override val reducerPlugin = new OstrichReducerFactory(this)
 
   TheoryRegistry register this
   StringTheory register this

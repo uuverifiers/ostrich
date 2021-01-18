@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -259,11 +259,9 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
 
 }
 
-
-
-/** Added by Riccardo
+/**
  * Stores constant string to strDatabase for easy access.
- * */
+ */
 class OstrichStringEncoder(theory : OstrichStringTheory)
   extends ContextAwareVisitor[Unit, IExpression] {
   import IExpression._
@@ -274,13 +272,16 @@ class OstrichStringEncoder(theory : OstrichStringTheory)
 
   def postVisit(t : IExpression,
                 ctxt : Context[Unit],
-                subres : Seq[IExpression]) : IExpression = t match {
+                subres : Seq[IExpression]) : IExpression =
+    (t update subres) match {
 
-    case emptyStr @ IFunApp(this.theory.str_empty, _) => this.theory.strDatabase.str2Id(emptyStr)
+      case emptyStr @ IFunApp(this.theory.str_empty, _) =>
+        this.theory.strDatabase.str2Id(emptyStr)
 
-    case consStr @ IFunApp(this.theory.str_cons, _) => this.theory.strDatabase.str2Id(consStr)
+      case consStr @ IFunApp(this.theory.str_cons, _) =>
+        this.theory.strDatabase.str2Id(consStr)
 
-    case _ => t update subres
-  }
+      case t => t
+    }
 }
 

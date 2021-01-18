@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2021 Riccardo de Masellis. All rights reserved.
+ * Copyright (c) 2020-2021 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -33,55 +33,88 @@
 package ostrich
 
 import ap.basetypes.IdealInt
-import ap.parser.{IFunApp, IIntLit}
+import ap.parser.{IFunApp, IIntLit, ITerm, IExpression}
+import ap.theories.strings.StringTheory
+import ap.terfor.Term
+import ap.terfor.linearcombination.LinearCombination
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
 class StrDatabase(theory : OstrichStringTheory) {
 
-  private val id2StrMap = new MHashMap[Int, (IFunApp, Option[Int])]
+  import theory.{str_empty, str_cons}
+  import IExpression._
+
+  private val id2StrMap = new MHashMap[Int, IFunApp]
   private val str2IdMap = new MHashMap[IFunApp, Int]
 
+  /**
+   * Check whether the given term represents a concrete string.
+   */
+  def isConcrete(t : Term) : Boolean = t match {
+    case LinearCombination.Constant(IdealInt(id)) => synchronized {
+      id2StrMap contains id
+    }
+    case _ =>
+      false
+  }
 
-  /** Query the id for a concrete string */
-  def id2Str(id : Int) : List[Int] = {
+  /**
+   * Check whether the given term represents a concrete string.
+   */
+  def term2Str(t : Term) : Option[List[Int]] = t match {
+    case LinearCombination.Constant(IdealInt(id)) => Some(id2Str(id))
+    case _ => None
+  }
+
+  /**
+   * Query the string for an id. If no string belongs to the id, an
+   * exception is thrown.
+   */
+  def id2Str(id : Int) : List[Int] = StringTheory.term2List(id2StrTerm(id))
+
+  /**
+   * Query the string for an id. If no string belongs to the id, an
+   * exception is thrown.
+   */
+  def id2StrTerm(id : Int) : ITerm = synchronized {
     id2StrMap.get(id) match {
-      case Some((IFunApp(this.theory.str_empty, _), None)) => Nil
-
-      //OLD, but working
-      case Some((funApp, Some(nextId))) => funApp(2).asInstanceOf[IIntLit].value.intValueSafe :: id2Str(nextId)
-      //NEW with improved pattern matching:
-      //case Some((IFunApp(this.theory.str_cons, Seq(_, _, IIntLit(IdealInt(i)))), Some(nextId))) => i.intValue() :: id2Str(nextId)
-      case _ => throw new RuntimeException("Riccardo, this should not happen!")
+      case Some(t@IFunApp(`str_empty`, _)) =>
+        t
+      case Some(IFunApp(`str_cons`,
+                        Seq(head, IIntLit(IdealInt(tail))))) =>
+        str_cons(head, id2StrTerm(tail))
+      case _ =>
+        throw new RuntimeException("Riccardo, this should not happen!")
     }
   }
 
   def listInt2String(list : List[Int]) : String =
     (for (c <- list) yield c.toChar).mkString
 
-  /** Query a string for an id (it adds str to database if not already present) */
-  def str2Id(str : IFunApp) : Int = synchronized {
-    str2IdMap getOrElseUpdate(str, {
-      val id = str2IdMap.size
-      str2IdMap.put(str, id)
-
-      str match {
-        case IFunApp(this.theory.str_empty, _) => {
-          id2StrMap put(id, (str, None))
-          return id
-        }
-
-        case IFunApp(this.theory.str_cons, _) => {
-          val strHead = str.args(0).asInstanceOf[IFunApp]
-          val strTail = str.args(1).asInstanceOf[IFunApp]
-          str2IdMap get strTail match {
-            case None => throw new RuntimeException("Riccardo, this should not happen!")
-            case Some(s) => id2StrMap put (id, (strHead, Some(s)))
-          }
-          return id
-        }
-      }
-    })
+  /**
+   * Query a string for an id (it adds str to database if not already present)
+   */
+  def str2Id(str : ITerm) : Int = str match {
+    case IIntLit(IdealInt(id)) =>
+      id
+    case str@IFunApp(`str_empty`, _) =>
+      atomic2Id(str)
+    case IFunApp(`str_cons`, Seq(Regex2Aut.SmartConst(head), tail)) =>
+      atomic2Id(str_cons(head, str2Id(tail)))
   }
 
+  /**
+   * Add a string to the database; this method only handles the case
+   * of an empty string, or of a string that consists of a single
+   * <code>str.cons</code>, and some id as tail.
+   */
+  private def atomic2Id(atomicStr : IFunApp) : Int = synchronized {
+    str2IdMap.getOrElseUpdate(atomicStr,
+                              {
+                                val id = str2IdMap.size
+                                id2StrMap.put(id, atomicStr)
+                                id
+                              })
+  }
 }
