@@ -84,20 +84,19 @@ class OstrichEqualityPropagator(theory : OstrichStringTheory) {
     implicit val order = goal.order
     import TerForConvenience._
 
+    // TODO: it is better to do proper binary splitting here
     (for (w <- variableClasses.keySet.toSeq.sorted.iterator;
           terms = variableClasses(w) map (_._1);
           interestingTerms = terms filter {
             t => !Seqs.disjoint(t.constants, interestingConstants)
           };
           if interestingTerms.size > 1) yield {
-       val eqs =
-         (for (Seq(t1, t2) <- interestingTerms sliding 2)
-          yield t1 === t2).toList
-       val eqConj =
-         conj(eqs)
+       val allEq =
+         conj(for (Seq(t1, t2) <- interestingTerms sliding 2) yield t1 === t2)
        Plugin.AxiomSplit(List(),
-                         (eqConj, List()) :: (
-                           for (eq <- eqs) yield (!eq, List())),
+                         (allEq, List()) :: (
+                           for (eq <- allEq.iterator)
+                           yield (!eq, List())).toList,
                          theory)
      }).toStream.headOption.toSeq
   }
