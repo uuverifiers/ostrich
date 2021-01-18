@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020 Zhilei Han. All rights reserved.
+ * Copyright (c) 2020-2021 Zhilei Han. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -82,8 +82,8 @@ class PrioStreamingTransducer(val initialState : PrioStreamingTransducer#State,
 extends StreamingTransducer {
 
   type State = BricsAutomaton#State
-  type TLabel = BricsAutomaton#TLabel
-  private val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+  type TLabel = AnchoredLabel
+  private val LabelOps = AnchoredLabelOps
 
   type Assignment = Seq[Seq[UpdateOp]]
   type SigmaTransition = (TLabel, Assignment, Int, State)
@@ -100,17 +100,10 @@ extends StreamingTransducer {
   private def priority(t : ETransition) = t._2
   private def dest(t : ETransition) : BricsAutomaton#State = t._3
 
-  def apply(input: String, internal: String = ""): Option[String] = {
-    if (input.size == 0 && isAccept(initialState))
-      return Some("")
-
-    // current state, input index to process next, prohibition set, string variable values
-    val worklist = new MStack[(State, Int, Set[(State, State)], Seq[String])]
-
-    val emptyVal = (for (i <- 0 until numvars) yield "").toSeq
-
-    worklist.push((initialState, 0, Set.empty[(State, State)], emptyVal))
-
+  def apply(input: String, internal: String = ""): Option[String] = { // concrete evaluation
+    /*
+     * auxiliary functions
+     */
     def evalUpdateOps(oldv: Seq[String], ops: Seq[UpdateOp], offsetHandle: Int => String) : String = {
       ops.foldLeft ("") {
         (res, op) => op match {
@@ -125,6 +118,8 @@ extends StreamingTransducer {
     def getNewVal(oldv: Seq[String], ops: Assignment, offsetHandle: Int => String) : Seq[String] =
       (for (i <- 0 until numvars) yield evalUpdateOps(oldv, ops(i), offsetHandle)).toSeq
 
+    lazy val emptyVal = (for (i <- 0 until numvars) yield "").toSeq
+
     def sortSTransitions(trans: Set[SigmaTransition]) : Seq[SigmaTransition] = {
       trans.toSeq.sortWith((ta, tb) => priority(ta) < priority(tb))
     }
@@ -133,17 +128,36 @@ extends StreamingTransducer {
       trans.toSeq.sortWith((ta, tb) => priority(ta) < priority(tb))
     }
 
+    // we choose the first (most prioritized) run which:
+    // 1. consumes all input string
+    // 2. halt in an accepting state
+    // and output a string based on its accepting condition
+
+    // maintain a stack with following elements:
+    // current state,
+    // input index to process next,
+    // prohibition set of epsilon transitions,
+    // string variable values,
+    // is begin anchor consumed?
+    // is end anchor consumed?
+    val worklist = new MStack[(State, Int, Set[(State, State)], Seq[String], Boolean, Boolean)]
+
+    worklist.push((initialState, 0, Set.empty[(State, State)], emptyVal, false, false))
+
     // find the output by dfs,
     // push configurations to stack by priority,
     // configuration with highest priority is pushed last thus processed first
     while (!worklist.isEmpty) {
-      val (s, pos, blocked, values) = worklist.pop
+      val (s, pos, blocked, values, beginMatched, endMatched) = worklist.pop
+
       if (pos >= input.size && isAccept(s))
         return Some(evalUpdateOps(values, acceptingStates.get(s).get, (o) => ""))
 
       lblTrans.get(s) match {
         case Some((pre, ts, post)) => {
 
+          // process the post epsilon transitions first,
+          // in a reverse order
           for (t <- sortETransitions(post)) {
             val pnext = pos
             val snext = dest(t)
@@ -151,24 +165,70 @@ extends StreamingTransducer {
               val tOps = operation(t)
               val valueNext = getNewVal(values, tOps, (o) => "")
               val bnext = blocked ++ Set((s, snext))
-              worklist.push((snext, pnext, bnext, valueNext))
+              worklist.push((snext, pnext, bnext, valueNext, beginMatched, endMatched))
             }
           }
 
-          if (pos < input.size) {
-            val inc = input(pos)
-            for (t <- sortSTransitions(ts)) {
-              val pnext = pos + 1
-              val snext = dest(t)
-              val lbl = label(t)
-              if (LabelOps.labelContains(inc, lbl)) {
-                val tOps = operation(t)
-                val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
-                worklist.push((snext, pnext, Set.empty[(State, State)], valueNext))
+          // then comes sigma transitions
+          for (t <- sortSTransitions(ts)) {
+            val snext = dest(t)
+            val l = label(t)
+            l match {
+              case NormalLabel(lbl) => { // a normal sigma transition
+                if (pos < input.size) {
+                  val inc = input(pos)
+                  val pnext = pos + 1
+                  if (BricsTLabelOps.labelContains(inc, lbl)) {
+                    val tOps = operation(t)
+                    val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
+                    worklist.push((snext, pnext, Set.empty[(State, State)], valueNext, beginMatched, endMatched))
+                  }
+                }
+              }
+              case BeginAnchor => {
+                // the begin anchor ^ is matched against the beginning
+                // of the input string. And we assume that the input string
+                // has only one such 'anchor' position.
+                // So, ^ can only be matched once at the beginning, indicated by
+                // the boolean 'beginMatched'.
+
+                // Note that it is possible to take several epsilon transitions
+                // before ^ is matched.
+                // this is crucial for regex like 'a|^b'
+
+                val pnext = pos
+                if (!beginMatched && pos == 0) {
+                  val tOps = operation(t)
+                  // ^ is not a real char, exclude it in capture groups
+                  val valueNext = getNewVal(values, tOps, (o) => "")
+                  // we assume ^ and $ resets the blocked set:
+                  worklist.push((snext, pnext, Set.empty[(State, State)], valueNext, true, endMatched))
+                }
+              }
+              case EndAnchor => {
+                // the end anchor $ is matched against the end
+                // of the input string. And we assume that the input string
+                // has only one such 'anchor' position.
+                // So, $ can only be matched once at the end.
+                val pnext = pos
+                // note that if pos == input.size and current state is accepting
+                // dfs will end before reaching here(see loop head)
+                // so this only makes sense if the current state is not accepting
+
+                // Also, after the match of $, it is still possible to take
+                // several (only) epsilon transitions before halting.
+                // like when regex is 'b | c$'
+                if (!endMatched && pos == input.size) {
+                  val tOps = operation(t)
+                  // $ is not a real char, exclude it in capture groups
+                  val valueNext = getNewVal(values, tOps, (o) => "")
+                  worklist.push((snext, pnext, Set.empty[(State, State)], valueNext, beginMatched, true))
+                }
               }
             }
           }
 
+          // pre epsilon transitions processed last
           for (t <- sortETransitions(pre)) {
             val pnext = pos
             val snext = dest(t)
@@ -176,7 +236,7 @@ extends StreamingTransducer {
               val tOps = operation(t)
               val valueNext = getNewVal(values, tOps, (o) => "")
               val bnext = blocked ++ Set((s, snext))
-              worklist.push((snext, pnext, bnext, valueNext))
+              worklist.push((snext, pnext, bnext, valueNext, beginMatched, endMatched))
             }
           }
 
@@ -203,12 +263,10 @@ extends StreamingTransducer {
           s2.asInstanceOf[aut.State])))
 
     // map rudiments to the preimage aut state
-    val sMapRev = new MHashMap[(State, Trace, Set[State], Set[(State, State)]), aut.State]
+    val sMapRev = new MHashMap[(State, Trace, Set[State], Set[(State, State)], Boolean, Boolean), aut.State]
 
     val defaultTrace = (for (s <- aut.states) yield (s, s)).toSet
     val initTrace = (for (v <- 0 until numvars) yield defaultTrace).toSeq
-
-    val initAutState = aut.initialState
 
     // this cache is for constant character.
     val constantTraceCache = new MHashMap[Char, Set[(aut.State, aut.State)]]
@@ -229,7 +287,7 @@ extends StreamingTransducer {
             case InternalOp => internal2
             case Offset(o) => offsetHandle(o)
           }
-          // SLOW?
+          // this slow relation composition operation might be the bottleneck
           (for ((fst, snd) <- S;
             (fst2, snd2) <- T;
             if snd == fst2) yield (fst, snd2)).toSet
@@ -239,6 +297,8 @@ extends StreamingTransducer {
 
     def getNewTrace(tr: Trace, ops : Assignment, offsetHandle: Int => Set[(aut.State, aut.State)]) : Trace =
       (for (i <- 0 until numvars) yield evalUpdateOps(tr, ops(i), offsetHandle)).toSeq
+
+    val initAutState = aut.initialState
 
     def isAcceptingState(ts : State, tr : Trace, s : Set[State]) : Boolean = {
       lazy val traceValid = {
@@ -251,29 +311,39 @@ extends StreamingTransducer {
       isAccept(ts) && (s forall { a => !isAccept(a)}) && traceValid
     }
 
-    // (ts, tr, s, ps)
+    // (ts, tr, s, bs, b1, b2, ps)
     // current state of transducer reached
     // trace
     // prohibition set
     // blocked e-transition
+    // ^ allowed?
+    // $ allowed?
     // state of preimage aut to add new transitions from
     val worklist = new MStack[(State,
                                Trace,
                                Set[State],
                                Set[(State, State)],
+                               Boolean,
+                               Boolean,
                                aut.State)]
 
     // transducer state, trace, automaton state set
-    def getState(ts : State, tr : Trace, as : Set[State], bs : Set[(State, State)]) = {
-      sMapRev.getOrElseUpdate((ts, tr, as, bs), {
+    def getState(ts : State, tr : Trace, as : Set[State], bs : Set[(State, State)],
+      beginAllowed : Boolean, endAllowed : Boolean) = {
+      sMapRev.getOrElseUpdate((ts, tr, as, bs, beginAllowed, endAllowed), {
         val ps = preBuilder.getNewState
+        // bs, beginAllowed and endAllowed only restricts the run,
+        // they are irrelevant to the acceptance of a run.
         preBuilder.setAccept(ps, isAcceptingState(ts, tr, as))
-        worklist.push((ts, tr, as, bs, ps))
+        worklist.push((ts, tr, as, bs, beginAllowed, endAllowed, ps))
         ps
       })
     }
 
-    val newInitState = getState(initialState, initTrace, Set.empty[State], Set.empty[(State, State)])
+    val newInitState = getState(initialState, initTrace,
+      Set.empty[State],
+      Set.empty[(State, State)],
+      true, true)
     preBuilder setInitialState newInitState
 
     // collect silent transitions during main loop and eliminate them after
@@ -284,7 +354,7 @@ extends StreamingTransducer {
                           (_, lbl) <- aut.outgoingTransitions(s))
                      yield lbl).toSet
 
-    val offsetSplitCache = new MHashMap[(TLabel, Int), Iterable[TLabel]]
+    val offsetSplitCache = new MHashMap[((Char, Char), Int), Iterable[(Char, Char)]]
 
     def disjointLabels(sigma: (Char, Char), labels: Iterator[(Char, Char)]) : Iterable[(Char, Char)] = {
       var disjoint = new MTreeSet[(Char, Char)]()
@@ -334,16 +404,19 @@ extends StreamingTransducer {
       disjoint
     }
 
-    def splitLabels (tlabel : TLabel, offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[SigmaTransition]) : Iterable[TLabel] = {
-      var outgoingLabels : Iterator[TLabel] =
+    def splitLabels (tlabel : (Char, Char), offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[SigmaTransition]) : Iterable[(Char, Char)] = {
+      var outgoingLabels :
+        Iterator[(Char, Char)] =
       (for (s <- blocked.iterator;
         (_, transitions, _) <- (lblTrans get s).iterator;
         (l, _, _, _) <- transitions.iterator;
-        intLabel <- LabelOps.intersectLabels(l, tlabel).iterator)
+        lbl <- LabelOps.weaken(l).iterator;
+        intLabel <- BricsTLabelOps.intersectLabels(lbl, tlabel).iterator)
       yield intLabel) ++
       (for ((l, _, priority2, _) <- trans;
         if priority2 > priority;
-        intLabel <- LabelOps.intersectLabels(l, tlabel).iterator)
+        lbl <- LabelOps.weaken(l).iterator;
+        intLabel <- BricsTLabelOps.intersectLabels(lbl, tlabel).iterator)
       yield intLabel)
 
       for (o <- offset) {
@@ -351,8 +424,8 @@ extends StreamingTransducer {
           outgoingLabels ++
           offsetSplitCache.getOrElseUpdate((tlabel, o), {
           for (albl <- autLabels;
-               shiftLbl = aut.LabelOps.shift(albl, -o).asInstanceOf[TLabel];
-               intLabel <- LabelOps.intersectLabels(shiftLbl, tlabel).iterator)
+               shiftLbl = aut.LabelOps.shift(albl, -o).asInstanceOf[(Char, Char)];
+               intLabel <- BricsTLabelOps.intersectLabels(shiftLbl, tlabel).iterator)
              yield intLabel
         })
       }
@@ -377,12 +450,17 @@ extends StreamingTransducer {
         yield o).toSet
     }
 
-    val offsetTraceCache = new MHashMap[(TLabel, Int), Set[(aut.State, aut.State)]]
+    val offsetTraceCache = new MHashMap[((Char, Char), Int), Set[(aut.State, aut.State)]]
 
+    /*
+     * the main loop
+     * constructing preimage aut. in a dfs.
+     */
     while (!worklist.isEmpty) {
-      val (ts, tr, blocked, etrans, ps) = worklist.pop()
+      val (ts, tr, blocked, etrans, beginAllowed, endAllowed, ps) = worklist.pop()
 
       (lblTrans get ts) match {
+        case None => // nothing
         case Some((pre, transitions, post)) => {
 
           // the prefix group of epsilon transitions
@@ -394,47 +472,74 @@ extends StreamingTransducer {
                   yield s), etrans)
             val newEtrans = etrans ++ Set((ts, nextState))
 
-            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans))
+            // epsilon transitions does not alter anchor usability status.
+            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endAllowed))
           }
 
-          // sigma transitions
-          for ((lbl, ops, priority, nextState) <- transitions) {
-            val preBlock = blocked ++ epsClosure((for ((_, _, s) <- pre.iterator) yield s), etrans)
-            for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if LabelOps.isNonEmptyLabel(nlbl)) {
-              val newTrace = getNewTrace(tr, ops, (o) => {
-                offsetTraceCache.getOrElseUpdate((nlbl, o), {
-                  (for (s <- aut.states;
-                        (target, lbl) <- aut.outgoingTransitions(s);
-                        shiftLbl = aut.LabelOps.shift(lbl, -o);
-                        if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
-                        yield (s, target)).toSet
-                })
-              })
-              val newBlocked = postStates(preBlock, nlbl, priority, transitions)
-              preBuilder.addTransition(ps,
-                                    nlbl.asInstanceOf[aut.TLabel],
-                                    getState(nextState, newTrace, newBlocked, Set.empty[(State, State)]))
+
+          // if the end anchor $ is already matched, it signifies the end of the run!
+          // thus only when endAllowed is true, sigma transitions are allowed.
+          if (endAllowed) {
+            // sigma transitions
+            for ((l, ops, priority, nextState) <- transitions) {
+              val preBlock = blocked ++ epsClosure((for ((_, _, s) <- pre.iterator) yield s), etrans)
+              l match {
+                case NormalLabel(lbl) => {
+                  for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if BricsTLabelOps.isNonEmptyLabel(nlbl)) {
+                    // nlbl : (Char, Char)
+                    val newTrace = getNewTrace(tr, ops, (o) => {
+                      offsetTraceCache.getOrElseUpdate((nlbl, o), {
+                        (for (s <- aut.states;
+                              (target, lbl) <- aut.outgoingTransitions(s);
+                              shiftLbl = aut.LabelOps.shift(lbl, -o);
+                              if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
+                              yield (s, target)).toSet
+                      })
+                    })
+                    val newBlocked = postStates(preBlock, NormalLabel(nlbl), priority, transitions)
+                    preBuilder.addTransition(ps,
+                                          nlbl.asInstanceOf[aut.TLabel],
+                                          getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, endAllowed)) // sigma transition always disable the start anchor ^
+                  }
+                }
+                case BeginAnchor => {
+                  if (beginAllowed) {
+                    // if ^ is still possible, then proceed
+                    // note that ^ is never a char in 'aut', so its trace is empty. But
+                    // since ^ is not a real char, it should be regarded as "" when computing trace
+                    val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
+                    // should ^ and $ be considered as epsilon transitions when
+                    // computing the blocked set???
+                    val newBlocked = postStates(preBlock, BeginAnchor, priority, transitions)
+                    silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, endAllowed))
+                  }
+                }
+                case EndAnchor => {
+                  // likewise for $
+                  val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
+                  val newBlocked = postStates(preBlock, EndAnchor, priority, transitions)
+                  silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, false)) // $ disables both ^ and $
+                }
+              }
             }
           }
+
+          // the postfix group of epsilon transitions
+          for ((ops, priority, nextState) <- post; if !etrans.contains((ts, nextState))) {
+            val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
+            val itr : Iterator[State] =
+              (for ((_, _, s) <- pre; if !etrans.contains((ts, s)))
+                  yield s).iterator ++
+              (for ((_, priority2, s) <- post;
+                if (priority2 > priority) && !etrans.contains((ts, s)) )
+                  yield s)
+
+            val newBlocked : Set[State] = blocked ++ epsClosure(itr, etrans) ++ Set(ts)
+            val newEtrans = etrans ++ Set((ts, nextState))
+
+            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endAllowed))
+          }
         }
-
-        // the postfix group of epsilon transitions
-        for ((ops, priority, nextState) <- post; if !etrans.contains((ts, nextState))) {
-          val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
-          val itr : Iterator[State] =
-            (for ((_, _, s) <- pre; if !etrans.contains((ts, s)))
-                yield s).iterator ++
-            (for ((_, priority2, s) <- post;
-              if (priority2 > priority) && !etrans.contains((ts, s)) )
-                yield s)
-
-          val newBlocked : Set[State] = blocked ++ epsClosure(itr, etrans) ++ Set(ts)
-          val newEtrans = etrans ++ Set((ts, nextState))
-
-          silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans))
-        }
-
-        case None => // nothing
       }
     }
 
@@ -524,7 +629,7 @@ class PrioStreamingTransducerBuilder(val numvars : Int)
     extends StreamingTransducerBuilder[PrioStreamingTransducer#State,
                               PrioStreamingTransducer#TLabel] {
 
-  val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
+  val LabelOps = AnchoredLabelOps
 
   private val states = new MLinkedHashSet[State]
 
