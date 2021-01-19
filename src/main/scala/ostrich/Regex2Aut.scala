@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -67,8 +67,8 @@ object Regex2Aut {
 class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
-                 re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                 re_loop, str_to_re, re_from_str, re_from_ecma2020}
+                 re_++, re_union, re_inter, re_diff, re_*, re_+, re_opt,
+                 re_comp, re_loop, str_to_re, re_from_str, re_from_ecma2020}
   import Regex2Aut._
 
   def toBricsRegexString(t : ITerm) : String =
@@ -222,6 +222,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
         maybeMin(BasicOperations.intersection(aut1, aut2), minimize)
       }
     }
+
+    case IFunApp(`re_diff`, Seq(t1, t2)) =>
+      maybeMin(BasicOperations.minus(toBAutomaton(t1, minimize),
+                                     toBAutomaton(t2, minimize)), minimize)
 
     case IFunApp(`re_*`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat, minimize)
