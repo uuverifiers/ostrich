@@ -62,6 +62,76 @@ object Regex2Aut {
     }
   }
 
+  /**
+   * A simple rewriter to eliminate <code>re.diff</code> and
+   * <code>re.inter</code>.
+   */
+  class DiffEliminator(theory : OstrichStringTheory) {
+    import IExpression._
+    import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
+                   re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+                   re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
+                   re_begin_anchor, re_end_anchor, re_from_ecma2020}
+    import StringTheory.ConcreteString
+
+    def apply(t : ITerm) = Rewriter.rewrite(t, rewrTerm _).asInstanceOf[ITerm]
+
+    private def rewrTerm(t : IExpression) : IExpression = t match {
+
+      case IFunApp(`str_to_re`,
+                   Seq(ConcreteString(str))) if str.size == 1 =>
+        re_charrange(str(0), str(0))
+
+      case IFunApp(`re_inter`,
+                   Seq(IFunApp(`re_charrange`,
+                               Seq(Const(l1), Const(u1))),
+                       IFunApp(`re_charrange`,
+                               Seq(Const(l2), Const(u2))))) =>
+        re_charrange(l1 max l2, u1 min u2)
+
+      case IFunApp(`re_charrange`,
+                   Seq(Const(l), Const(u))) if l > u =>
+        re_none()
+
+      case IFunApp(`re_inter`,
+                   Seq(IFunApp(`re_union`, Seq(t1, t2)), s)) =>
+        re_union(re_inter(t1, s), re_inter(t2, s))
+      case IFunApp(`re_inter`,
+                   Seq(s, IFunApp(`re_union`, Seq(t1, t2)))) =>
+        re_union(re_inter(s, t1), re_inter(s, t2))
+
+      case IFunApp(`re_inter`,
+                   Seq(IFunApp(`re_none`, _), s)) =>
+        re_none()
+      case IFunApp(`re_inter`,
+                   Seq(s, IFunApp(`re_none`, _))) =>
+        re_none()
+
+      case IFunApp(`re_union`,
+                   Seq(IFunApp(`re_none`, _), s)) =>
+        s
+      case IFunApp(`re_union`,
+                   Seq(s, IFunApp(`re_none`, _))) =>
+        s
+
+      case IFunApp(`re_diff`,
+                   Seq(s, IFunApp(`re_union`, Seq(t1, t2)))) =>
+        re_inter(re_diff(s, t1), re_diff(s, t2))
+
+      case IFunApp(`re_diff`,
+                   Seq(s, IFunApp(`re_inter`, Seq(t1, t2)))) =>
+        re_union(re_diff(s, t1), re_diff(s, t2))
+
+      case IFunApp(`re_diff`,
+                   Seq(IFunApp(`re_allchar`, _),
+                       IFunApp(`re_charrange`, Seq(Const(l), Const(u))))) =>
+        re_union(re_charrange(0, l-1), re_charrange(u+1, theory.upperBound))
+
+      case t => t
+    }
+
+  }
+
 }
 
 class Regex2Aut(theory : OstrichStringTheory) {

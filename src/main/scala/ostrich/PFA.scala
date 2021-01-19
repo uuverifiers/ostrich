@@ -303,6 +303,8 @@ class Regex2PFA(theory : OstrichStringTheory) {
     re_begin_anchor, re_end_anchor,
     re_capture, re_reference, re_from_ecma2020}
 
+  val simplifier = new Regex2Aut.DiffEliminator(theory)
+
   // this is the map from literal numbering to internal numbering of
   // capture groups. It is for translating the replacement string.
   private val capNumTransform =
@@ -448,7 +450,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
         case IFunApp(`re_from_ecma2020`, Seq(a)) => {
           val parser = new ECMARegexParser(theory)
           val t = parser.string2Term(StringTheory.term2String(a))
-          buildPatternImpl(t)
+          buildPatternImpl(simplifier(t))
         }
         case _ =>
           throw new IllegalArgumentException(
@@ -457,7 +459,7 @@ class Regex2PFA(theory : OstrichStringTheory) {
       }
     }
 
-    val (aut, _) = buildPatternImpl(pat)
+    val (aut, _) = buildPatternImpl(simplifier(pat))
     val state2Capture_mut = new MHashMap[State, MSet[Int]] with MMultiMap[State, Int]
 
     for ((cap, states) <- capState;
