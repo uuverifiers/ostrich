@@ -457,6 +457,8 @@ extends StreamingTransducer {
      * constructing preimage aut. in a dfs.
      */
     while (!worklist.isEmpty) {
+      ap.util.Timeout.check
+
       val (ts, tr, blocked, etrans, beginAllowed, endAllowed, ps) = worklist.pop()
 
       (lblTrans get ts) match {
