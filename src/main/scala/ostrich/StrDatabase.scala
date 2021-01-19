@@ -60,7 +60,8 @@ class StrDatabase(theory : OstrichStringTheory) {
   }
 
   /**
-   * Check whether the given term represents a concrete string.
+   * Check whether the given term represents a concrete string, and return
+   * the string.
    */
   def term2Str(t : Term) : Option[List[Int]] = t match {
     case LinearCombination.Constant(IdealInt(id)) => Some(id2Str(id))
@@ -93,7 +94,8 @@ class StrDatabase(theory : OstrichStringTheory) {
     (for (c <- list) yield c.toChar).mkString
 
   /**
-   * Query a string for an id (it adds str to database if not already present)
+   * Retrieve the id of a string; add the string to the database if it
+   * does not exist yet.
    */
   def str2Id(str : ITerm) : Int = str match {
     case IIntLit(IdealInt(id)) =>
@@ -103,6 +105,15 @@ class StrDatabase(theory : OstrichStringTheory) {
     case IFunApp(`str_cons`, Seq(Regex2Aut.SmartConst(head), tail)) =>
       atomic2Id(str_cons(head, str2Id(tail)))
   }
+
+  /**
+   * Retrieve the id of a string in list representation; add the string to
+   * the database if it does not exist yet.
+   */
+  def list2Id(str : Seq[Int]) : Int =
+    str.foldRight(atomic2Id(str_empty())) {
+      case (c, id) => atomic2Id(str_cons(c, id))
+    }
 
   /**
    * Add a string to the database; this method only handles the case
