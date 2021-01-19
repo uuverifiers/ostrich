@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -213,7 +213,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_extract,
                    str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
-                   re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt,
+                   re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+                   re_opt,
                    re_comp, re_loop, re_from_str, re_capture, re_reference,
                    re_begin_anchor, re_end_anchor, re_from_ecma2020))
      yield functionPredicateMap(f)) ++

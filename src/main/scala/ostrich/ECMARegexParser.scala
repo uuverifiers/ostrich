@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2021 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -446,7 +446,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     }
 
   private def charComplement(t : ITerm) =
-    re_inter(re_comp(t), ALL_CHAR)
+    re_diff(ALL_CHAR, t)
 
   private def regexRange(left : ITerm,
                          right : ITerm) : ITerm = (left, right) match {
