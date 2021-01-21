@@ -127,6 +127,12 @@ object Regex2Aut {
                        IFunApp(`re_charrange`, Seq(Const(l), Const(u))))) =>
         re_union(re_charrange(0, l-1), re_charrange(u+1, theory.upperBound))
 
+      case IFunApp(`re_diff`,
+                   Seq(lhs@IFunApp(`re_charrange`, _),
+                       IFunApp(`re_charrange`, Seq(Const(l), Const(u))))) =>
+        re_union(re_inter(lhs, re_charrange(0, l-1)),
+                 re_inter(lhs, re_charrange(u+1, theory.upperBound)))
+
       case t => t
     }
 
