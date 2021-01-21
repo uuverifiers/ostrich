@@ -95,7 +95,12 @@ object ExtractPreOp {
     builder.setInitialState(tranInit)
 
     val autInit = getState(aut.initial)
-    builder.addPreETransition(tranInit, List(List(Constant('\u0000'))), autInit) // initialize to null
+    val initial_activated = state2Caps.getOrElse(aut.initial, Set()) contains index
+    if (initial_activated) {
+      builder.addPreETransition(tranInit, List(List()), autInit) // initialize to null
+    } else {
+      builder.addPreETransition(tranInit, List(List(Constant('\u0000'))), autInit) // initialize to null
+    }
 
     val opCache = new MHashMap[(autState, autState), Seq[Seq[UpdateOp]]]
 
