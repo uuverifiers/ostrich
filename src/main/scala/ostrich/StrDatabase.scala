@@ -49,12 +49,18 @@ class StrDatabase(theory : OstrichStringTheory) {
   private val str2IdMap = new MHashMap[IFunApp, Int]
 
   /**
+   * Check whether the given id belongs to a string.
+   */
+  def containsId(id : Int) : Boolean = synchronized {
+    id2StrMap contains id
+  }
+
+  /**
    * Check whether the given term represents a concrete string.
    */
   def isConcrete(t : Term) : Boolean = t match {
-    case LinearCombination.Constant(IdealInt(id)) => synchronized {
-      id2StrMap contains id
-    }
+    case LinearCombination.Constant(IdealInt(id)) =>
+      containsId(id)
     case _ =>
       false
   }
@@ -69,10 +75,23 @@ class StrDatabase(theory : OstrichStringTheory) {
   }
 
   /**
+   * Return the concrete string represented by the given term, throw
+   * an exception if the term does not represent a concrete string.
+   */
+  def term2StrGet(t : Term) : List[Int] = term2Str(t).get
+
+  /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
    */
   def id2Str(id : Int) : List[Int] = StringTheory.term2List(id2StrTerm(id))
+
+  /**
+   * Query the string for an id. If no string belongs to the id, an
+   * exception is thrown.
+   */
+  def id2StrStr(id : Int) : String =
+    StringTheory term2String id2StrTerm(id)
 
   /**
    * Query the string for an id. If no string belongs to the id, an

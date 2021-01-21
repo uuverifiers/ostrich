@@ -191,6 +191,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
 
   object FunPred {
+    def apply(f : IFunction) : Predicate = functionPredicateMap(f)
     def unapply(p : Predicate) : Option[IFunction] = predFunMap get p
   }
 

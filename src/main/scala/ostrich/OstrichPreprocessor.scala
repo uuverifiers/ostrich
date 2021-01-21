@@ -189,6 +189,10 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           str_cons(code, str_empty()),
           str_empty())
 
+    case (IFunApp(`str_from_char`, _), Seq(c : ITerm)) =>
+      str_cons(c, str_empty())
+
+
 /*
     // Currently we just under-approximate and assume that the considered
     // string is "0"
