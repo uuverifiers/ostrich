@@ -91,30 +91,41 @@ object ExtractPreOp {
       })
     }
 
-    val tranInit = getState(aut.initial)
+    val tranInit = builder.initialState
     builder.setInitialState(tranInit)
+
+    val autInit = getState(aut.initial)
+    builder.addPreETransition(tranInit, List(List(Constant('\u0000'))), autInit) // initialize to null
 
     val opCache = new MHashMap[(autState, autState), Seq[Seq[UpdateOp]]]
 
     def getOps(current : autState, next: autState) = {
       opCache.getOrElseUpdate((current, next), {
-        val caps_activated = state2Caps.getOrElse(next, Set())
-        val stars_reset : Set[Int] = states2Stars.getOrElse((current, next), Set.empty[Int])
-        val caps_in_stars : Set[Int] =
-          (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
-            cap <- starcaps) yield cap).toSet
+        val caps_activated_old = state2Caps.getOrElse(current, Set())
+        val is_activated_old = caps_activated_old contains index
 
-        val ops : Seq[Seq[UpdateOp]] = {
-            val is_activated = caps_activated contains index
-            val is_in_stars = caps_in_stars contains index
-            (is_activated, is_in_stars) match {
-              case (true, true) => single
-              case (true, false) => append_after
-              case (false, true) => clear
-              case (false, false) => nochange
-            }
+        val caps_activated = state2Caps.getOrElse(next, Set())
+        val is_activated = caps_activated contains index
+
+        if (is_activated && !is_activated_old) {
+          single
+        } else {
+          val stars_reset : Set[Int] = states2Stars.getOrElse((current, next), Set.empty[Int])
+          val caps_in_stars : Set[Int] =
+            (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
+              cap <- starcaps) yield cap).toSet
+
+          val ops : Seq[Seq[UpdateOp]] = {
+              val is_in_stars = caps_in_stars contains index
+              (is_activated, is_in_stars) match {
+                case (true, true) => single
+                case (true, false) => append_after
+                case (false, true) => clear
+                case (false, false) => nochange
+              }
+          }
+          ops
         }
-        ops
       })
     }
 
