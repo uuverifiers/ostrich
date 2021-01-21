@@ -113,7 +113,7 @@ object ExtractPreOp {
         val is_activated = caps_activated contains index
 
         if (is_activated && !is_activated_old) {
-          single
+          clear
         } else {
           val stars_reset : Set[Int] = states2Stars.getOrElse((current, next), Set.empty[Int])
           val caps_in_stars : Set[Int] =
