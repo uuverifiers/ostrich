@@ -216,19 +216,7 @@ object PFA {
   }
 
   def optional(aut : PFA) : PFA = {
-    aut match {
-      case PFA(t1, pre1, post1, init1, end1) => {
-        (post1 get init1) match {
-          case None => {
-            post1 += (init1 -> Seq(end1))
-          }
-          case Some(tgts) => {
-            post1(init1) = tgts.+:(end1)
-          }
-        }
-        PFA(t1, pre1, post1, init1, end1)
-      }
-    }
+    alternate(aut, epsilon)
   }
 
   def toDot(aut: PFA) : String = {
