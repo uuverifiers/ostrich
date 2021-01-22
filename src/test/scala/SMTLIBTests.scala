@@ -95,6 +95,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/anchor-6.smt2", "unsat")
   property("anchor-7.smt2") =
     checkFile("tests/anchor-7.smt2", "sat")
+  property("anchor-8.smt2") =
+    checkFile("tests/anchor-8.smt2", "sat")
 
   property("regex_cg.smt2") =
     checkFile("tests/regex_cg.smt2", "sat")

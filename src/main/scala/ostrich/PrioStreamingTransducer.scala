@@ -249,6 +249,7 @@ extends StreamingTransducer {
     return None
   }
 
+  type ProhibitionSet = Set[(State, Boolean, Boolean)]
   def preImage[A <: AtomicStateAutomaton]
               (aut: A,
                internal: Iterable[(A#State, A#State)]): AtomicStateAutomaton = {
@@ -263,7 +264,7 @@ extends StreamingTransducer {
           s2.asInstanceOf[aut.State])))
 
     // map rudiments to the preimage aut state
-    val sMapRev = new MHashMap[(State, Trace, Set[State], Set[(State, State)], Boolean, Boolean), aut.State]
+    val sMapRev = new MHashMap[(State, Trace, ProhibitionSet, Set[(State, State)], Boolean, Boolean), aut.State]
 
     val defaultTrace = (for (s <- aut.states) yield (s, s)).toSet
     val initTrace = (for (v <- 0 until numvars) yield defaultTrace).toSeq
@@ -300,7 +301,7 @@ extends StreamingTransducer {
 
     val initAutState = aut.initialState
 
-    def isAcceptingState(ts : State, tr : Trace, s : Set[State]) : Boolean = {
+    def isAcceptingPreState(ts : State, tr : Trace, s : ProhibitionSet) : Boolean = {
       lazy val traceValid = {
         val ops = (acceptingStates get ts).get
         val trans = evalUpdateOps(tr, ops, (o) => defaultTrace)
@@ -308,7 +309,7 @@ extends StreamingTransducer {
           case (src, tgt) => src == initAutState && (aut isAccept tgt)
         }
       }
-      isAccept(ts) && (s forall { a => !isAccept(a)}) && traceValid
+      isAccept(ts) && (s forall { case (a, _, _) => !isAccept(a)}) && traceValid
     }
 
     // (ts, tr, s, bs, b1, b2, ps)
@@ -321,27 +322,27 @@ extends StreamingTransducer {
     // state of preimage aut to add new transitions from
     val worklist = new MStack[(State,
                                Trace,
-                               Set[State],
+                               ProhibitionSet,
                                Set[(State, State)],
                                Boolean,
                                Boolean,
                                aut.State)]
 
     // transducer state, trace, automaton state set
-    def getState(ts : State, tr : Trace, as : Set[State], bs : Set[(State, State)],
+    def getState(ts : State, tr : Trace, as : ProhibitionSet, bs : Set[(State, State)],
       beginAllowed : Boolean, endAllowed : Boolean) = {
       sMapRev.getOrElseUpdate((ts, tr, as, bs, beginAllowed, endAllowed), {
         val ps = preBuilder.getNewState
         // bs, beginAllowed and endAllowed only restricts the run,
         // they are irrelevant to the acceptance of a run.
-        preBuilder.setAccept(ps, isAcceptingState(ts, tr, as))
+        preBuilder.setAccept(ps, isAcceptingPreState(ts, tr, as))
         worklist.push((ts, tr, as, bs, beginAllowed, endAllowed, ps))
         ps
       })
     }
 
     val newInitState = getState(initialState, initTrace,
-      Set.empty[State],
+      Set.empty[(State, Boolean, Boolean)],
       Set.empty[(State, State)],
       true, true)
     preBuilder setInitialState newInitState
@@ -404,10 +405,10 @@ extends StreamingTransducer {
       disjoint
     }
 
-    def splitLabels (tlabel : (Char, Char), offset: Set[Int], blocked: Set[State], priority: Int, trans: Set[SigmaTransition]) : Iterable[(Char, Char)] = {
+    def splitLabels (tlabel : (Char, Char), offset: Set[Int], blocked: ProhibitionSet, priority: Int, trans: Set[SigmaTransition]) : Iterable[(Char, Char)] = {
       var outgoingLabels :
         Iterator[(Char, Char)] =
-      (for (s <- blocked.iterator;
+      (for ((s, _, _) <- blocked.iterator;
         (_, transitions, _) <- (lblTrans get s).iterator;
         (l, _, _, _) <- transitions.iterator;
         lbl <- LabelOps.weaken(l).iterator;
@@ -471,22 +472,25 @@ extends StreamingTransducer {
             val newBlocked = blocked ++ epsClosure(
               (for ((_, priority2, s) <- pre.iterator;
                 if (priority2 > priority) && !etrans.contains((ts, s)) )
-                  yield s), etrans)
+                  yield (s, beginAllowed, endAllowed)), etrans)
             val newEtrans = etrans ++ Set((ts, nextState))
 
             // epsilon transitions does not alter anchor usability status.
             silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endAllowed))
           }
 
-
           // if the end anchor $ is already matched, it signifies the end of the run!
           // thus only when endAllowed is true, sigma transitions are allowed.
           if (endAllowed) {
             // sigma transitions
             for ((l, ops, priority, nextState) <- transitions) {
-              val preBlock = blocked ++ epsClosure((for ((_, _, s) <- pre.iterator) yield s), etrans)
               l match {
                 case NormalLabel(lbl) => {
+
+                  val preBlock = blocked ++ epsClosure(
+                    (for ((_, _, s) <- pre.iterator)
+                      yield (s, beginAllowed, endAllowed)), etrans)
+
                   for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if BricsTLabelOps.isNonEmptyLabel(nlbl)) {
                     // nlbl : (Char, Char)
                     val newTrace = getNewTrace(tr, ops, (o) => {
@@ -498,7 +502,7 @@ extends StreamingTransducer {
                               yield (s, target)).toSet
                       })
                     })
-                    val newBlocked = postStates(preBlock, NormalLabel(nlbl), priority, transitions)
+                    val newBlocked = postStates(preBlock, nlbl, priority, transitions)
                     preBuilder.addTransition(ps,
                                           nlbl.asInstanceOf[aut.TLabel],
                                           getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, endAllowed)) // sigma transition always disable the start anchor ^
@@ -512,15 +516,25 @@ extends StreamingTransducer {
                     val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
                     // should ^ and $ be considered as epsilon transitions when
                     // computing the blocked set???
-                    val newBlocked = postStates(preBlock, BeginAnchor, priority, transitions)
-                    silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, endAllowed))
+                    val itr = (for ((_, _, s) <- pre.iterator)
+                      yield (s, beginAllowed, endAllowed)) ++
+                    (for ((lbl, _, priority2, s) <- transitions; if lbl == BeginAnchor && priority2 > priority)
+                      yield (s, false, endAllowed))
+
+                    val preBlock = blocked ++ epsClosure(itr, etrans)
+                    silentTransitions.addBinding(ps, getState(nextState, newTrace, preBlock, Set.empty[(State, State)], false, endAllowed))
                   }
                 }
                 case EndAnchor => {
                   // likewise for $
                   val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
-                  val newBlocked = postStates(preBlock, EndAnchor, priority, transitions)
-                  silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, false)) // $ disables both ^ and $
+                  val itr = (for ((_, _, s) <- pre.iterator)
+                    yield (s, beginAllowed, endAllowed)) ++
+                  (for ((lbl, _, priority2, s) <- transitions; if lbl == EndAnchor && priority2 > priority)
+                    yield (s, false, false))
+
+                  val preBlock = blocked ++ epsClosure(itr, etrans)
+                  silentTransitions.addBinding(ps, getState(nextState, newTrace, preBlock, Set.empty[(State, State)], false, false)) // $ disables both ^ and $
                 }
               }
             }
@@ -529,14 +543,14 @@ extends StreamingTransducer {
           // the postfix group of epsilon transitions
           for ((ops, priority, nextState) <- post; if !etrans.contains((ts, nextState))) {
             val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
-            val itr : Iterator[State] =
+            val itr : Iterator[(State, Boolean, Boolean)] =
               (for ((_, _, s) <- pre; if !etrans.contains((ts, s)))
-                  yield s).iterator ++
+                  yield (s, beginAllowed, endAllowed)).iterator ++
               (for ((_, priority2, s) <- post;
                 if (priority2 > priority) && !etrans.contains((ts, s)) )
-                  yield s)
+                  yield (s, beginAllowed, endAllowed))
 
-            val newBlocked : Set[State] = blocked ++ epsClosure(itr, etrans) ++ Set(ts)
+            val newBlocked : ProhibitionSet = blocked ++ epsClosure(itr, etrans) ++ Set((ts, beginAllowed, endAllowed))
             val newEtrans = etrans ++ Set((ts, nextState))
 
             silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endAllowed))
@@ -554,40 +568,71 @@ extends StreamingTransducer {
 
   // compute the post image of old blocked states,
   // and add new blocked states which are of higher priority
-  private def postStates(states : Iterable[State],
-                         label : TLabel,
+  // this function only applies to sigma transition!
+  private def postStates(states : Iterable[(State, Boolean, Boolean)],
+                         label : (Char, Char),
                          priority: Int,
-                         trans: Iterable[SigmaTransition]) : Set[State] = {
+                         trans: Iterable[SigmaTransition]) : ProhibitionSet = {
       val targetStates =
-        (for (s <- states.iterator;
+        // 'advance' the old blocked states with 'label'
+        (for ((s, _, end) <- states.iterator; if end;
               (_, transitions, _) <- (lblTrans get s).iterator;
               (sLabel, _, _, target) <- transitions.iterator;
-              if LabelOps.labelsOverlap(label, sLabel))
-         yield target) ++
+              l <- LabelOps.weaken(sLabel).iterator;
+              if BricsTLabelOps.labelsOverlap(label, l))
+                // ^ is always disabled by a sigma transition
+                // as for $, it is guaranteed to be enabled, otherwise
+                // current transition is impossible
+         yield (target, false, true)) ++
+        // add new blocked states
         (for ((l, _, priority2, s) <- trans;
+          lbl <- LabelOps.weaken(l).iterator;
           if (priority2 > priority)
-          && LabelOps.labelsOverlap(l, label))
-          yield s)
+          && BricsTLabelOps.labelsOverlap(lbl, label))
+          yield (s, false, true)) //likewise
       (epsClosure(targetStates, Set.empty[(State, State)]))
     }
 
-  private def epsClosure(states : Iterator[State], Lambda : Set[(State, State)]) : Set[State] = {
-    val res = new MHashSet[State]
-    val todo = new MStack[State]
+  private def epsClosure(states : Iterator[(State, Boolean, Boolean)], Lambda : Set[(State, State)]) : ProhibitionSet = {
+    val res = new MHashSet[(State, Boolean, Boolean)]
+    val todo = new MStack[(State, Boolean, Boolean)]
 
     for (s <- states)
       if (res add s)
         todo push s
 
     while (!todo.isEmpty) {
-      val s = todo.pop
-      for ((pre, _, post) <- (lblTrans get s).iterator) {
-        for ((_, _, t) <- pre; if !Lambda.contains((s, t)))
-          if (res add t)
-            todo push t
-        for ((_, _, t) <- post; if !Lambda.contains((s, t)))
-          if (res add t)
-            todo push t
+      val (s, beginAllowed, endAllowed) = todo.pop
+      for ((pre, transitions, post) <- (lblTrans get s).iterator) {
+        for ((_, _, t) <- pre; if !Lambda.contains((s, t))) {
+          val ts = (t, beginAllowed, endAllowed)
+          if (res add ts)
+            todo push ts
+        }
+        for ((_, _, t) <- post; if !Lambda.contains((s, t))) {
+          val ts = (t, beginAllowed, endAllowed)
+          if (res add ts)
+            todo push ts
+        }
+        for ((lbl, _, _, s) <- transitions) {
+          lbl match {
+            case BeginAnchor => {
+              if (beginAllowed) {
+                val ts = (s, false, endAllowed)
+                if (res add ts)
+                  todo push ts
+              }
+            }
+            case EndAnchor => {
+              if (endAllowed) {
+                val ts = (s, false, false)
+                if (res add ts)
+                  todo push ts
+              }
+            }
+            case _ =>
+          }
+        }
       }
     }
 
