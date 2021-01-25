@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2021 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,22 @@ import ap.parser._
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
+object AutDatabase {
+
+  abstract sealed class NamedAutomaton (val id : Int) {
+    def complement : NamedAutomaton
+  }
+
+  case class PositiveAut    (_id : Int) extends NamedAutomaton (_id) {
+    def complement = ComplementedAut(id)
+  }
+
+  case class ComplementedAut(_id : Int) extends NamedAutomaton (_id) {
+    def complement = PositiveAut(id)
+  }
+
+}
+
 /**
  * A database to store the automata or transducers obtained from
  * regular expressions. The database will assign a unique id to regular
@@ -43,12 +59,17 @@ import scala.collection.mutable.{HashMap => MHashMap}
  */
 class AutDatabase(theory : OstrichStringTheory) {
 
+  import AutDatabase._
+
   private val regex2Aut  = new Regex2Aut(theory)
 
   private val regexes    = new MHashMap[ITerm, Int]
   private val id2Regex   = new MHashMap[Int, ITerm]
   private val id2Aut     = new MHashMap[Int, Automaton]
   private val id2CompAut = new MHashMap[Int, Automaton]
+
+  private val subsetRel  =
+    new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]
 
   /**
    * Query the id of a regular expression.
@@ -109,6 +130,43 @@ class AutDatabase(theory : OstrichStringTheory) {
           }
       }
     }
+
+  /**
+   * Query the automaton that belongs to the regular expression with
+   * given id.
+   */
+  def id2Automaton(id : NamedAutomaton) : Option[Automaton] = id match {
+    case PositiveAut(id)     => id2Automaton(id)
+    case ComplementedAut(id) => id2ComplementedAutomaton(id)
+  }
+
+  /**
+   * Check whether <code>aut1</code> specifies a subset of <code>aut2</code>.
+   */
+  def isSubsetOf(aut1 : NamedAutomaton, aut2 : NamedAutomaton) : Boolean =
+    if (aut1.id < aut2.id) {
+      synchronized {
+        // aut1 <= aut2
+        //  <==>
+        // (aut1 & aut2.complement) = empty
+        subsetRel.getOrElseUpdate((aut1, aut2),
+                                  !AutomataUtils.areConsistentAutomata(
+                                    List(id2Automaton(aut1).get,
+                                         id2Automaton(aut2.complement).get)))
+      }
+    } else if (aut1.id > aut2.id) {
+      isSubsetOf(aut2.complement, aut1.complement)
+    } else {
+      true
+    }
+
+  /**
+   * Check whether <code>aut1</code> and <code>aut2</code> have empty
+   * intersection.
+   */
+  def emptyIntersection(aut1 : NamedAutomaton,
+                        aut2 : NamedAutomaton) : Boolean =
+    isSubsetOf(aut1, aut2.complement)
 
   /**
    * Query the automaton that belongs to a regular expression.

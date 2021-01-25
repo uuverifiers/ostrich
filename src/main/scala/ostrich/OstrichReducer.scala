@@ -33,32 +33,68 @@
 package ostrich
 
 import ap.parser.{IFunApp, IIntLit}
-import ap.terfor.{TermOrder, TerForConvenience, ComputationLogger}
+import ap.terfor.{Term, Formula,
+                  TermOrder, TerForConvenience, ComputationLogger}
 import ap.terfor.conjunctions.{Conjunction, Quantifier, ReduceWithConjunction,
                                ReducerPluginFactory, ReducerPlugin}
 import ap.terfor.arithconj.ArithConj
 import ap.terfor.preds.{Atom, Predicate, PredConj}
 
+import AutDatabase.{NamedAutomaton, PositiveAut, ComplementedAut}
+
+import scala.collection.mutable.{HashMap => MHashMap}
+
+object OstrichReducer {
+  def extractLanguageConstraints(conj : PredConj,
+                                 theory : OstrichStringTheory)
+                               : Map[Term, List[NamedAutomaton]] = {
+    val languages = new MHashMap[Term, List[NamedAutomaton]]
+
+    for (a <- conj positiveLitsWithPred theory.str_in_re_id)
+      if (a(0).variables.isEmpty) {
+        assert(a(1).isConstant)
+        val id = a(1).constant.intValueSafe
+        languages.put(a(0),
+                      PositiveAut(id) :: languages.getOrElse(a(0), List()))
+      }
+
+    for (a <- conj negativeLitsWithPred theory.str_in_re_id)
+      if (a(0).variables.isEmpty) {
+        assert(a(1).isConstant)
+        val id = a(1).constant.intValueSafe
+        languages.put(a(0),
+                      ComplementedAut(id) :: languages.getOrElse(a(0), List()))
+      }
+
+    languages.toMap
+  }
+}
+
 class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
       extends ReducerPluginFactory {
+  import OstrichReducer.extractLanguageConstraints
+
   def apply(conj : Conjunction, order : TermOrder) =
-    new OstrichReducer(theory, conj, this)
+    new OstrichReducer(theory,
+                       new OstrichStringFunctionTranslator(theory, conj),
+                       List(extractLanguageConstraints(conj.predConj, theory)),
+                       this)
 }
 
 /**
  * Reducer for string constraints. This class is responsible for
  * simplifying string formulas during proof construction.
  */
-class OstrichReducer protected[ostrich] (theory : OstrichStringTheory,
-                                         facts : Conjunction,
-                                         val factory : ReducerPluginFactory)
+class OstrichReducer protected[ostrich]
+           (theory : OstrichStringTheory,
+            funTranslator : OstrichStringFunctionTranslator,
+            languageConstraints: List[Map[Term, List[NamedAutomaton]]],
+            val factory : ReducerPluginFactory)
       extends ReducerPlugin {
 
+  import OstrichReducer.extractLanguageConstraints
   import theory.{_str_empty, _str_cons, _str_++,
                  str_empty, str_cons, str_in_re_id, strDatabase, autDatabase}
-
-  private val funTranslator =
-    new OstrichStringFunctionTranslator(theory, facts)
 
   def passQuantifiers(num : Int) = this
 
@@ -66,73 +102,111 @@ class OstrichReducer protected[ostrich] (theory : OstrichStringTheory,
                      mode : ReducerPlugin.ReductionMode.Value) = this
 
   def addAssumptions(predConj : PredConj,
-                     mode : ReducerPlugin.ReductionMode.Value) = this
+                     mode : ReducerPlugin.ReductionMode.Value) = {
+    val newLangs = extractLanguageConstraints(predConj, theory)
+    if (newLangs.isEmpty)
+      this
+    else
+      new OstrichReducer(theory, funTranslator,
+                         newLangs :: languageConstraints,
+                         factory)
+  }
   
   def finalReduce(conj : Conjunction) = conj
 
-    def reduce(predConj : PredConj,
-               reducer : ReduceWithConjunction,
-               logger : ComputationLogger,
-               mode : ReducerPlugin.ReductionMode.Value)
-             : ReducerPlugin.ReductionResult = {
-      implicit val order = predConj.order
-      import TerForConvenience._
-      import strDatabase.isConcrete
+  def reduce(predConj : PredConj,
+             reducer : ReduceWithConjunction,
+             logger : ComputationLogger,
+             mode : ReducerPlugin.ReductionMode.Value)
+           : ReducerPlugin.ReductionResult = {
+    implicit val order = predConj.order
+    import TerForConvenience._
+    import strDatabase.isConcrete
 
-      ReducerPlugin.rewritePreds(predConj,
-                                 List(_str_empty, _str_cons,
-                                      str_in_re_id) ++ // str_len
-                                   funTranslator.translatablePredicates,
-                                 order,
-                                 logger) { a =>
-        a.pred match {
-          case `_str_empty` =>
-            val n =
+//    val languages = new MHashMap[Term, List[NamedAutomaton]]
+
+    def getLanguages(t : Term) : Iterator[NamedAutomaton] =
+      for (c <- languageConstraints.iterator;
+           l <- (c get t).iterator;
+           aut <- l.iterator)
+      yield aut
+
+    ReducerPlugin.rewritePreds(predConj,
+                               List(_str_empty, _str_cons,
+                                    str_in_re_id) ++ // str_len
+                                 funTranslator.translatablePredicates,
+                               order,
+                               logger) { a =>
+      a.pred match {
+        case `_str_empty` => {
+          val n =
             a.last === strDatabase.str2Id(IFunApp(str_empty, List()))
-              println("Rewriting " + a + " to " + n)
-              n
+          println("Rewriting " + a + " to " + n)
+          n
+        }
 
-          case `_str_cons` =>
-            if (a(0).isConstant && isConcrete(a(1))) {
-              a.last ===
-                strDatabase.str2Id(IFunApp(str_cons,
-                                           List(IIntLit(a(0).constant),
-                                                IIntLit(a(1).constant))))
-            } else {
-              a
-            }
+        case `_str_cons` =>
+          if (a(0).isConstant && isConcrete(a(1))) {
+            a.last ===
+            strDatabase.str2Id(IFunApp(str_cons,
+                                       List(IIntLit(a(0).constant),
+                                            IIntLit(a(1).constant))))
+          } else {
+            a
+          }
 
-          case `str_in_re_id` =>
-            if (isConcrete(a(0))) {
-              assert(a(1).isConstant)
-              val Some(str) = strDatabase.term2Str(a(0))
-              val Some(aut) = autDatabase.id2Automaton(a(1).constant.intValueSafe)
-              if (aut(str)) Conjunction.TRUE else Conjunction.FALSE
-            } else {
-              a
-            }
+        case `str_in_re_id` => {
+          assert(a(1).isConstant)
+          val autId = a(1).constant.intValueSafe
+          if (isConcrete(a(0))) {
+            val Some(str) = strDatabase.term2Str(a(0))
+            val Some(aut) = autDatabase.id2Automaton(autId)
+            if (aut(str)) Conjunction.TRUE else Conjunction.FALSE
+          } else {
+            val aut = PositiveAut(autId)
+            val knownLanguages = getLanguages(a(0))
 
-          case p => {
-            assert(funTranslator.translatablePredicates contains p)
-            funTranslator(a) match {
-              case Some((op, args, res)) if (args forall isConcrete) => {
-                val argStrs = args map strDatabase.term2StrGet
-                op().eval(argStrs) match {
-                  case Some(resStr) => {
-                    val n = res === strDatabase.list2Id(resStr)
-                    println("Rewriting " + a + " to " + n)
-                    n
-                  }
-                  case None =>
-                    a
-                }
+            var res : Formula = a
+            var reduced = false
+            while (!reduced && knownLanguages.hasNext) {
+              val knownAut = knownLanguages.next
+              if (autDatabase.emptyIntersection(aut, knownAut)) {
+                res = Conjunction.FALSE
+                reduced = true
+              } else if (autDatabase.isSubsetOf(knownAut, aut)) {
+                res = Conjunction.TRUE
+                reduced = true
               }
-              case _ =>
-                a
             }
+
+            if (reduced)
+              println("reduced to " + res)
+
+            res
+          }
+        }
+
+        case p => {
+          assert(funTranslator.translatablePredicates contains p)
+          funTranslator(a) match {
+            case Some((op, args, res)) if (args forall isConcrete) => {
+              val argStrs = args map strDatabase.term2StrGet
+              op().eval(argStrs) match {
+                case Some(resStr) => {
+                  val n = res === strDatabase.list2Id(resStr)
+                  println("Rewriting " + a + " to " + n)
+                  n
+                }
+                case None =>
+                  a
+              }
+            }
+            case _ =>
+              a
           }
         }
       }
     }
+  }
 
 }
