@@ -92,4 +92,20 @@ object APITest extends Properties("APITest") {
       }
     }}
 
+  property("len-no-regex") =
+    Console.withErr(ap.CmdlMain.NullStream) {
+    SimpleAPI.withProver(enableAssert = true) { p =>
+      import p._
+
+      val x = createConstant(StringSort)
+
+      !! (str_len(x) > 10)
+      expect(???, ProverStatus.Sat)
+
+      // this previous led to unsat, since the generated solution did
+      // not actually satisfy the length constraint
+      !! (x === evalToTerm(x))
+      ??? == ProverStatus.Sat
+    }}
+
 }
