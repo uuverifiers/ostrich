@@ -4,7 +4,7 @@
 
 (declare-const w String)
 
-(assert (str.in.re w (re.from.ecma2020 '[\)]')))
+(assert (str.in.re w (re.from_ecma2020 '[\)]')))
 
 (check-sat)
 (get-model)

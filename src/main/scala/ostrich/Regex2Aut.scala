@@ -68,7 +68,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_+, re_opt,
-                 re_comp, re_loop, str_to_re, re_from_str, re_from_ecma2020}
+                 re_comp, re_loop, str_to_re, re_from_str, re_from_ecma2020,
+                 re_case_insensitive}
   import Regex2Aut._
 
   def toBricsRegexString(t : ITerm) : String =
@@ -178,6 +179,14 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val parser = new ECMARegexParser(theory)
       val t = parser.string2Term(StringTheory.term2String(a))
       toBAutomaton(t, minimize)
+    }
+
+    case IFunApp(`re_case_insensitive`, Seq(a)) => {
+      val aut = toBAutomaton(a, minimize)
+      maybeMin(AutomataUtils.makeCaseInsensitive(
+                 new BricsAutomaton(aut))
+                 .asInstanceOf[BricsAutomaton].underlying,
+               minimize)
     }
 
     case IFunApp(`re_none`, _) =>

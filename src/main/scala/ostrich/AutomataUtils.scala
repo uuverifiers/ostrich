@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -561,4 +561,32 @@ object AutomataUtils {
       }
     }
   }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Make an automaton case-insensitive.
+   */
+  def makeCaseInsensitive(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val stateMapping =
+      (for (s <- aut.states.iterator) yield (s -> builder.getNewState)).toMap
+
+    builder setInitialState stateMapping(aut.initialState)
+
+    for ((a, b) <- stateMapping)
+      builder.setAccept(b, aut isAccept a)
+
+    for ((a, l, b) <- aut.transitions) {
+      val (ll, lu) = l.asInstanceOf[(Char, Char)]
+      for ((nl, nu) <- UnicodeData.upperLowerCaseClosure((ll.toInt, lu.toInt)))
+        builder.addTransition(stateMapping(a),
+                              (nl.toChar, nu.toChar),
+                              stateMapping(b))
+    }
+
+    builder.getAutomaton
+  }
+
 }

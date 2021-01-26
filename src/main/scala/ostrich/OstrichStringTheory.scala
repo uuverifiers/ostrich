@@ -119,7 +119,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
   val re_from_ecma2020 =
-    MonoSortedIFunction("re.from.ecma2020", List(SSo), RSo, true, false)
+    MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
+  val re_case_insensitive =
+    MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
 
   // List of user-defined functions on strings that can be extended
   val extraStringFunctions : Seq[(String, IFunction, PreOp,
@@ -145,7 +147,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
       yield (name, Right(p))) ++
-     Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)))).toMap
+     Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)),
+              (re_case_insensitive.name, Left(re_case_insensitive)))).toMap
 
   val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] = Map()
 
@@ -164,7 +167,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val functions =
     predefFunctions ++ List(str_empty, str_cons, str_head, str_tail) ++
-    (extraStringFunctions map (_._2)) ++ List(re_from_ecma2020)
+    (extraStringFunctions map (_._2)) ++
+    List(re_from_ecma2020, re_case_insensitive)
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
@@ -204,7 +208,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_+, re_opt,
-                   re_comp, re_loop, re_from_str, re_from_ecma2020))
+                   re_comp, re_loop, re_from_str, re_from_ecma2020,
+                   re_case_insensitive))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++
@@ -293,6 +298,48 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       }
 
   })
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  val asString = new Theory.Decoder[String] {
+    def apply(d : IdealInt)
+             (implicit ctxt : Theory.DecoderContext) : String =
+      asStringPartial(d).get
+  }
+
+  val asStringPartial = new Theory.Decoder[Option[String]] {
+    def apply(d : IdealInt)
+             (implicit ctxt : Theory.DecoderContext) : Option[String] =
+      (ctxt getDataFor OstrichStringTheory.this) match {
+        case DecoderData(m) =>
+          for (s <- m get d)
+          yield ("" /: s) { case (res, c) => res + c.intValueSafe.toChar }
+      }
+  }
+
+  case class DecoderData(m : Map[IdealInt, Seq[IdealInt]])
+       extends Theory.TheoryDecoderData
+
+  override def generateDecoderData(model : Conjunction)
+                                  : Option[Theory.TheoryDecoderData] = {
+    val atoms = model.predConj
+
+    val stringMap = new MHashMap[IdealInt, List[IdealInt]]
+
+    for (a <- atoms positiveLitsWithPred _str_empty)
+      stringMap.put(a(0).constant, List())
+
+    var oldMapSize = 0
+    while (stringMap.size != oldMapSize) {
+      oldMapSize = stringMap.size
+      for (a <- atoms positiveLitsWithPred _str_cons) {
+        for (s1 <- stringMap get a(1).constant)
+          stringMap.put(a(2).constant, a(0).constant :: s1)
+      }
+    }
+
+    Some(DecoderData(stringMap.toMap))
+  }
 
   //////////////////////////////////////////////////////////////////////////////
 

@@ -8,7 +8,7 @@
 (assert (= (f y) 2))
 
 (assert (= x "aaaaa"))
-(assert (str.in_re y (re.from.ecma2020 'a{5,}')))
+(assert (str.in_re y (re.from_ecma2020 'a{5,}')))
 
 (check-sat)
 (get-model)
