@@ -246,6 +246,48 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  val asString = new Theory.Decoder[String] {
+    def apply(d : IdealInt)
+             (implicit ctxt : Theory.DecoderContext) : String =
+      asStringPartial(d).get
+  }
+
+  val asStringPartial = new Theory.Decoder[Option[String]] {
+    def apply(d : IdealInt)
+             (implicit ctxt : Theory.DecoderContext) : Option[String] =
+      (ctxt getDataFor OstrichStringTheory.this) match {
+        case DecoderData(m) =>
+          for (s <- m get d)
+          yield ("" /: s) { case (res, c) => res + c.intValueSafe.toChar }
+      }
+  }
+
+  case class DecoderData(m : Map[IdealInt, Seq[IdealInt]])
+       extends Theory.TheoryDecoderData
+
+  override def generateDecoderData(model : Conjunction)
+                                  : Option[Theory.TheoryDecoderData] = {
+    val atoms = model.predConj
+
+    val stringMap = new MHashMap[IdealInt, List[IdealInt]]
+
+    for (a <- atoms positiveLitsWithPred _str_empty)
+      stringMap.put(a(0).constant, List())
+
+    var oldMapSize = 0
+    while (stringMap.size != oldMapSize) {
+      oldMapSize = stringMap.size
+      for (a <- atoms positiveLitsWithPred _str_cons) {
+        for (s1 <- stringMap get a(1).constant)
+          stringMap.put(a(2).constant, a(0).constant :: s1)
+      }
+    }
+
+    Some(DecoderData(stringMap.toMap))
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
   override def isSoundForSat(
                  theories : Seq[Theory],
                  config : Theory.SatSoundnessConfig.Value) : Boolean =
