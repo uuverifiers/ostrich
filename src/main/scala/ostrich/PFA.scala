@@ -396,12 +396,30 @@ class Regex2PFA(theory : OstrichStringTheory) {
           (PFA.optional(autA), capA)
         }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
-          // NOTE
-          // It is possible to support this
-          // the crux is to find a way to construct a PFA
-          // which allows bounded match of a
-          throw new IllegalArgumentException(
-            "regex with capture groups does not support loop (yet!) " + t)
+          val (autA, capA) = buildPatternImpl(a)
+          if (capA.isEmpty) {
+            var aut = PFA.none
+            var i = n1
+            while (i <= n2) {
+              var j = 0
+              var disjunct = PFA.epsilon
+              while (j < i) {
+                val (copy, _) = buildPatternImpl(a)
+                disjunct = PFA.concat(copy, disjunct)
+                j = j + 1
+              }
+              aut = PFA.alternate(disjunct, aut)
+              i = i + 1
+            }
+            (aut, capA)
+          } else {
+            // NOTE
+            // It is possible to support this
+            // the crux is to find a way to construct a PFA
+            // which allows bounded match of a
+            throw new IllegalArgumentException(
+              "regex with capture groups does not support loop (yet!) " + t)
+          }
         }
         case IFunApp(`re_capture`, Seq(IIntLit(IdealInt(litCaptureNum)), a)) => {
           val localCaptureNum = numCapture
