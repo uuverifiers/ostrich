@@ -109,9 +109,6 @@ class StrDatabase(theory : OstrichStringTheory) {
     }
   }
 
-  def listInt2String(list : List[Int]) : String =
-    (for (c <- list) yield c.toChar).mkString
-
   /**
    * Retrieve the id of a string; add the string to the database if it
    * does not exist yet.

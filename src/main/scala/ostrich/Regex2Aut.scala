@@ -161,8 +161,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
     case IFunApp(`str_to_re`, Seq(a)) => {
       // modified by Riccardo
       a match {
-        case IIntLit(value) => BasicAutomata.makeString(theory.strDatabase.listInt2String(theory.strDatabase.id2Str(value.intValueSafe)))
-        case _ => BasicAutomata.makeString(StringTheory.term2String(a))
+        case IIntLit(value) =>
+          BasicAutomata.makeString(theory.strDatabase.id2StrStr(value.intValueSafe))
+        case _ =>
+          BasicAutomata.makeString(StringTheory.term2String(a))
       }
     }
 
