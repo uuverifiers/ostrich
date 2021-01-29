@@ -223,7 +223,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //////////////////////////////////////////////////////////////////////////////
 
   private val ostrichSolver      = new OstrichSolver (this, flags)
-  private val strIntConverter    = new OstrichStrIntConverter(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
@@ -238,9 +237,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
 
-      case Plugin.GoalState.Intermediate =>
-        strIntConverter.handleGoalEarly(goal)
-
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
 
         breakCyclicEquations(goal) match {
@@ -248,14 +244,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
             actions
           case None =>
             modelCache(goal.facts) {
-              //modified by Riccardo
-              try {
-                // problematic code, say
-                // findStringModel in OstrichStringTheory.scala
-                ostrichSolver.findStringModel(goal)
-              } catch {
-                case t : Throwable => t.printStackTrace; throw t
-              }
+              ostrichSolver.findStringModel(goal)
             } match {
               case Some(m) =>
                 equalityPropagator.handleSolution(goal, m)
@@ -273,14 +262,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         None
       } else {
         val model = (modelCache(goal.facts) {
-          try {
-            // problematic code, say
-            // findStringModel in OstrichStringTheory.scala
-            ostrichSolver.findStringModel(goal)
-          } catch {
-            case t : Throwable => t.printStackTrace; throw t
-          }
-        }).get
+                       ostrichSolver.findStringModel(goal)
+                     }).get
         implicit val order = goal.order
         import TerForConvenience._
 
