@@ -32,6 +32,7 @@
 
 package ostrich
 
+import ap.basetypes.IdealInt
 import ap.parser.{IFunApp, IIntLit}
 import ap.terfor.{Term, Formula,
                   TermOrder, TerForConvenience, ComputationLogger}
@@ -68,17 +69,25 @@ object OstrichReducer {
 
     languages.toMap
   }
+
+  val IntRegex = """[0-9]+""".r
 }
 
 class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
       extends ReducerPluginFactory {
   import OstrichReducer.extractLanguageConstraints
 
+  import theory.{str_len, int_to_str, str_to_int, FunPred}
+
   def apply(conj : Conjunction, order : TermOrder) =
     new OstrichReducer(theory,
                        new OstrichStringFunctionTranslator(theory, conj),
                        List(extractLanguageConstraints(conj.predConj, theory)),
                        this)
+
+  val _str_len    = FunPred(str_len)
+  val _int_to_str = FunPred(int_to_str)
+  val _str_to_int = FunPred(str_to_int)
 }
 
 /**
@@ -89,15 +98,13 @@ class OstrichReducer protected[ostrich]
            (theory : OstrichStringTheory,
             funTranslator : OstrichStringFunctionTranslator,
             languageConstraints: List[Map[Term, List[NamedAutomaton]]],
-            val factory : ReducerPluginFactory)
+            val factory : OstrichReducerFactory)
       extends ReducerPlugin {
 
-  import OstrichReducer.extractLanguageConstraints
-  import theory.{_str_empty, _str_cons, _str_++, str_len,
-                 str_empty, str_cons, str_in_re_id, strDatabase, autDatabase,
-                 FunPred}
-
-  val _str_len = FunPred(str_len)
+  import OstrichReducer._
+  import theory.{_str_empty, _str_cons, _str_++,
+                 str_empty, str_cons, str_in_re_id, strDatabase, autDatabase}
+  import factory.{_str_len, _int_to_str, _str_to_int}
 
   def passQuantifiers(num : Int) = this
 
@@ -136,7 +143,8 @@ class OstrichReducer protected[ostrich]
 
     ReducerPlugin.rewritePreds(predConj,
                                List(_str_empty, _str_cons,
-                                    str_in_re_id, _str_len) ++
+                                    str_in_re_id, _str_len,
+                                    _int_to_str, _str_to_int) ++
                                  funTranslator.translatablePredicates,
                                order,
                                logger) { a =>
@@ -194,6 +202,28 @@ class OstrichReducer protected[ostrich]
             a.last === (strDatabase term2StrGet a(0)).size
           } else if (a.last.isConstant && a.last.constant.isZero) {
             a(0) === (strDatabase list2Id List())
+          } else {
+            a
+          }
+
+        case `_int_to_str` =>
+          if (a(0).isConstant) {
+            val const = a(0).constant
+            val str = if (const.signum < 0) "" else a(0).constant.toString
+            val id = strDatabase str2Id str
+            a.last === id
+          } else {
+            a
+          }
+
+        case `_str_to_int` =>
+          if (isConcrete(a(0))) {
+            val str = (strDatabase term2StrStr a(0)).get
+            val strVal = str match {
+              case IntRegex() => IdealInt(str)
+              case _          => IdealInt.MINUS_ONE
+            }
+            a.last === strVal
           } else {
             a
           }

@@ -75,6 +75,15 @@ class StrDatabase(theory : OstrichStringTheory) {
   }
 
   /**
+   * Check whether the given term represents a concrete string, and return
+   * the string.
+   */
+  def term2StrStr(t : Term) : Option[String] = t match {
+    case LinearCombination.Constant(IdealInt(id)) => Some(id2StrStr(id))
+    case _ => None
+  }
+
+  /**
    * Return the concrete string represented by the given term, throw
    * an exception if the term does not represent a concrete string.
    */
@@ -127,6 +136,15 @@ class StrDatabase(theory : OstrichStringTheory) {
    * the database if it does not exist yet.
    */
   def list2Id(str : Seq[Int]) : Int =
+    str.foldRight(atomic2Id(str_empty())) {
+      case (c, id) => atomic2Id(str_cons(c, id))
+    }
+
+  /**
+   * Retrieve the id of a string in list representation; add the string to
+   * the database if it does not exist yet.
+   */
+  def str2Id(str : String) : Int =
     str.foldRight(atomic2Id(str_empty())) {
       case (c, id) => atomic2Id(str_cons(c, id))
     }
