@@ -29,6 +29,9 @@
         (= (str.in_re w (re.from_ecma2020 '(?=.*[a-z])X.*[A-Z].*'))
            (str.in_re w (re.inter (re.++ (re.from_ecma2020 '.*[a-z]') re.all)
                                   (re.from_ecma2020 'X.*[A-Z].*'))))
+
+        (= (str.in_re w (re.from_ecma2020 '\,'))
+           (str.in_re w (str.to.re ",")))
            
  )))
 
