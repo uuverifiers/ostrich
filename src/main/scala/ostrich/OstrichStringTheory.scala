@@ -70,7 +70,7 @@ object OstrichStringTheory {
     override def decodeToTerm(
                    d : IdealInt,
                    assignment : GMap[(IdealInt, Sort), ITerm]) : Option[ITerm] =
-      Some(theory.strDatabase.id2StrTerm(d.intValueSafe))
+      Some(theory.strDatabase.id2ITerm(d.intValueSafe))
 
   }
 
@@ -295,7 +295,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
              (implicit ctxt : Theory.DecoderContext) : Option[String] =
       d match {
         case IdealInt(v) if (strDatabase containsId v) =>
-          Some(strDatabase id2StrStr v)
+          Some(strDatabase id2Str v)
         case _ =>
           None
       }

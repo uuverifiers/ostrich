@@ -280,10 +280,10 @@ class OstrichStringEncoder(theory : OstrichStringTheory)
     (t update subres) match {
 
       case emptyStr @ IFunApp(this.theory.str_empty, _) =>
-        this.theory.strDatabase.str2Id(emptyStr)
+        this.theory.strDatabase.iTerm2Id(emptyStr)
 
       case consStr @ IFunApp(this.theory.str_cons, _) =>
-        this.theory.strDatabase.str2Id(consStr)
+        this.theory.strDatabase.iTerm2Id(consStr)
 
       case t => t
     }

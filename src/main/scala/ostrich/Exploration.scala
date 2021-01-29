@@ -223,7 +223,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     // check whether any of the terms have concrete definitions
     for (t <- allTerms)
-      for (w <- strDatabase.term2Str(t)) {
+      for (w <- strDatabase.term2List(t)) {
         val str : String = w.map(i => i.toChar)(breakOut)
         additionalConstraints += ((t, BricsAutomaton fromString str))
         for (ind <- term2Index get t)

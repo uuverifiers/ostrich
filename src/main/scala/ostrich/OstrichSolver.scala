@@ -287,13 +287,13 @@ class OstrichSolver(theory : OstrichStringTheory,
       for (lc <- goal.facts.arithConj.negativeEqs) lc match {
         case Seq((IdealInt.ONE, c : ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
-          val str = strDatabase id2StrStr 0
+          val str = strDatabase id2Str 0
           regexes += ((l(c), !(BricsAutomaton fromString str)))
         }
         case Seq((IdealInt.ONE, c : ConstantTerm), (IdealInt(coeff), OneTerm))
             if (stringConstants contains c) &&
                (strDatabase containsId -coeff) => {
-          val str = strDatabase id2StrStr -coeff
+          val str = strDatabase id2Str -coeff
           regexes += ((l(c), !(BricsAutomaton fromString str)))
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>

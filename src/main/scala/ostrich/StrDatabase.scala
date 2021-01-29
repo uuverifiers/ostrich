@@ -69,17 +69,8 @@ class StrDatabase(theory : OstrichStringTheory) {
    * Check whether the given term represents a concrete string, and return
    * the string.
    */
-  def term2Str(t : Term) : Option[List[Int]] = t match {
-    case LinearCombination.Constant(IdealInt(id)) => Some(id2Str(id))
-    case _ => None
-  }
-
-  /**
-   * Check whether the given term represents a concrete string, and return
-   * the string.
-   */
-  def term2StrStr(t : Term) : Option[String] = t match {
-    case LinearCombination.Constant(IdealInt(id)) => Some(id2StrStr(id))
+  def term2List(t : Term) : Option[List[Int]] = t match {
+    case LinearCombination.Constant(IdealInt(id)) => Some(id2List(id))
     case _ => None
   }
 
@@ -87,32 +78,41 @@ class StrDatabase(theory : OstrichStringTheory) {
    * Return the concrete string represented by the given term, throw
    * an exception if the term does not represent a concrete string.
    */
-  def term2StrGet(t : Term) : List[Int] = term2Str(t).get
+  def term2ListGet(t : Term) : List[Int] = term2List(t).get
+
+  /**
+   * Check whether the given term represents a concrete string, and return
+   * the string.
+   */
+  def term2Str(t : Term) : Option[String] = t match {
+    case LinearCombination.Constant(IdealInt(id)) => Some(id2Str(id))
+    case _ => None
+  }
 
   /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
    */
-  def id2Str(id : Int) : List[Int] = StringTheory.term2List(id2StrTerm(id))
+  def id2List(id : Int) : List[Int] = StringTheory.term2List(id2ITerm(id))
 
   /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
    */
-  def id2StrStr(id : Int) : String =
-    StringTheory term2String id2StrTerm(id)
+  def id2Str(id : Int) : String =
+    StringTheory term2String id2ITerm(id)
 
   /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
    */
-  def id2StrTerm(id : Int) : ITerm = synchronized {
+  def id2ITerm(id : Int) : ITerm = synchronized {
     id2StrMap.get(id) match {
       case Some(t@IFunApp(`str_empty`, _)) =>
         t
       case Some(IFunApp(`str_cons`,
                         Seq(head, IIntLit(IdealInt(tail))))) =>
-        str_cons(head, id2StrTerm(tail))
+        str_cons(head, id2ITerm(tail))
       case _ =>
         throw new RuntimeException("Riccardo, this should not happen!")
     }
@@ -122,13 +122,13 @@ class StrDatabase(theory : OstrichStringTheory) {
    * Retrieve the id of a string; add the string to the database if it
    * does not exist yet.
    */
-  def str2Id(str : ITerm) : Int = str match {
+  def iTerm2Id(str : ITerm) : Int = str match {
     case IIntLit(IdealInt(id)) =>
       id
     case str@IFunApp(`str_empty`, _) =>
       atomic2Id(str)
     case IFunApp(`str_cons`, Seq(Regex2Aut.SmartConst(head), tail)) =>
-      atomic2Id(str_cons(head, str2Id(tail)))
+      atomic2Id(str_cons(head, iTerm2Id(tail)))
   }
 
   /**

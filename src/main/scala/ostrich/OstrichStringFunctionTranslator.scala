@@ -61,14 +61,14 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) => {
       val op = () => {
-        val b = strDatabase term2StrGet a(1)
+        val b = strDatabase term2ListGet a(1)
         ReplaceAllPreOp(b map (_.toChar))
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
     case FunPred(`str_replace`) => {
       val op = () => {
-        val b = strDatabase term2StrGet a(1)
+        val b = strDatabase term2ListGet a(1)
         ReplacePreOp(b map (_.toChar))
       }
       Some((op, List(a(0), a(2)), a(3)))

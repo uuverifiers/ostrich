@@ -149,19 +149,15 @@ class OstrichReducer protected[ostrich]
                                order,
                                logger) { a =>
       a.pred match {
-        case `_str_empty` => {
-          val n =
-            a.last === strDatabase.str2Id(IFunApp(str_empty, List()))
-          println("Rewriting " + a + " to " + n)
-          n
-        }
+        case `_str_empty` =>
+          a.last === strDatabase.iTerm2Id(IFunApp(str_empty, List()))
 
         case `_str_cons` =>
           if (a(0).isConstant && isConcrete(a(1))) {
             a.last ===
-            strDatabase.str2Id(IFunApp(str_cons,
-                                       List(IIntLit(a(0).constant),
-                                            IIntLit(a(1).constant))))
+            strDatabase.iTerm2Id(IFunApp(str_cons,
+                                         List(IIntLit(a(0).constant),
+                                              IIntLit(a(1).constant))))
           } else {
             a
           }
@@ -170,7 +166,7 @@ class OstrichReducer protected[ostrich]
           assert(a(1).isConstant)
           val autId = a(1).constant.intValueSafe
           if (isConcrete(a(0))) {
-            val Some(str) = strDatabase.term2Str(a(0))
+            val Some(str) = strDatabase.term2List(a(0))
             val Some(aut) = autDatabase.id2Automaton(autId)
             if (aut(str)) Conjunction.TRUE else Conjunction.FALSE
           } else {
@@ -190,16 +186,13 @@ class OstrichReducer protected[ostrich]
               }
             }
 
-            if (reduced)
-              println("reduced to " + res)
-
             res
           }
         }
 
         case `_str_len` =>
           if (isConcrete(a(0))) {
-            a.last === (strDatabase term2StrGet a(0)).size
+            a.last === (strDatabase term2ListGet a(0)).size
           } else if (a.last.isConstant && a.last.constant.isZero) {
             a(0) === (strDatabase list2Id List())
           } else {
@@ -218,7 +211,7 @@ class OstrichReducer protected[ostrich]
 
         case `_str_to_int` =>
           if (isConcrete(a(0))) {
-            val str = (strDatabase term2StrStr a(0)).get
+            val str = strDatabase.term2Str(a(0)).get
             val strVal = str match {
               case IntRegex() => IdealInt(str)
               case _          => IdealInt.MINUS_ONE
@@ -232,13 +225,10 @@ class OstrichReducer protected[ostrich]
           assert(funTranslator.translatablePredicates contains p)
           funTranslator(a) match {
             case Some((op, args, res)) if (args forall isConcrete) => {
-              val argStrs = args map strDatabase.term2StrGet
+              val argStrs = args map strDatabase.term2ListGet
               op().eval(argStrs) match {
-                case Some(resStr) => {
-                  val n = res === strDatabase.list2Id(resStr)
-                  println("Rewriting " + a + " to " + n)
-                  n
-                }
+                case Some(resStr) =>
+                  res === strDatabase.list2Id(resStr)
                 case None =>
                   a
               }
