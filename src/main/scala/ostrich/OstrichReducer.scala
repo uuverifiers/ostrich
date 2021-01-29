@@ -93,8 +93,11 @@ class OstrichReducer protected[ostrich]
       extends ReducerPlugin {
 
   import OstrichReducer.extractLanguageConstraints
-  import theory.{_str_empty, _str_cons, _str_++,
-                 str_empty, str_cons, str_in_re_id, strDatabase, autDatabase}
+  import theory.{_str_empty, _str_cons, _str_++, str_len,
+                 str_empty, str_cons, str_in_re_id, strDatabase, autDatabase,
+                 FunPred}
+
+  val _str_len = FunPred(str_len)
 
   def passQuantifiers(num : Int) = this
 
@@ -133,7 +136,7 @@ class OstrichReducer protected[ostrich]
 
     ReducerPlugin.rewritePreds(predConj,
                                List(_str_empty, _str_cons,
-                                    str_in_re_id) ++ // str_len
+                                    str_in_re_id, _str_len) ++
                                  funTranslator.translatablePredicates,
                                order,
                                logger) { a =>
@@ -185,6 +188,15 @@ class OstrichReducer protected[ostrich]
             res
           }
         }
+
+        case `_str_len` =>
+          if (isConcrete(a(0))) {
+            a.last === (strDatabase term2StrGet a(0)).size
+          } else if (a.last.isConstant && a.last.constant.isZero) {
+            a(0) === (strDatabase list2Id List())
+          } else {
+            a
+          }
 
         case p => {
           assert(funTranslator.translatablePredicates contains p)
