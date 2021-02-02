@@ -156,19 +156,21 @@ object PFA {
   def star(aut : PFA) : PFA = {
     aut match {
       case PFA(t1, pre1, post1, init1, end1) => {
+        val init = getNewState
         val end = getNewState
-        pre1 += ((end1, Seq(init1)))
+        pre1 += ((end1, Seq(init1, end)))
+        pre1 += ((init, Seq(init1, end)))
 
-        (post1 get init1) match {
-          case None => {
-            post1 += (init1 -> Seq(end))
-          }
-          case Some(tgts) => {
-            post1(init1) = tgts :+ (end)
-          }
-        }
+        //(post1 get init1) match {
+          //case None => {
+            //post1 += (init1 -> Seq(end))
+          //}
+          //case Some(tgts) => {
+            //post1(init1) = tgts :+ (end)
+          //}
+        //}
 
-        PFA(t1, pre1, post1, init1, end)
+        PFA(t1, pre1, post1, init, end)
       }
     }
   }
@@ -176,19 +178,21 @@ object PFA {
   def lazystar(aut : PFA) : PFA = {
     aut match {
       case PFA(t1, pre1, post1, init1, end1) => {
+        val init = getNewState
         val end = getNewState
-        pre1.+=((end1, Seq(init1)))
+        pre1 += ((end1, Seq(end, init1)))
+        pre1 += ((init, Seq(end, init1)))
 
-        (pre1 get init1) match {
-          case None => {
-            pre1 += (init1 -> Seq(end))
-          }
-          case Some(tgts) => {
-            pre1(init1) = tgts.+:(end)
-          }
-        }
+        //(pre1 get init1) match {
+          //case None => {
+            //pre1 += (init1 -> Seq(end))
+          //}
+          //case Some(tgts) => {
+            //pre1(init1) = tgts.+:(end)
+          //}
+        //}
 
-        PFA(t1, pre1, post1, init1, end)
+        PFA(t1, pre1, post1, init, end)
       }
     }
   }
