@@ -169,7 +169,7 @@ object ReplaceCGPreOp {
     val tranEnd = getState(aut.accepting)
     builder.addPreETransition(tranEnd, updateWithIndex(o => {
       if (o == numCap) {
-        rep
+        List(RefVariable(numCap)) ++ rep
       } else {
         clear
       }
