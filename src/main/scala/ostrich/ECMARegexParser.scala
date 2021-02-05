@@ -81,6 +81,9 @@ class ECMARegexParser(theory : OstrichStringTheory) {
   val LookAhead  = new IFunction("LookAhead",  1, false, false)
   val LookBehind = new IFunction("LookBehind", 1, false, false)
 
+  /**
+   * Visitor to translate a regex AST to a term.
+   */
   object TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
@@ -95,7 +98,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.Alternative,
                        outermost : VisitorArg) = {
-      val terms = p.listtermc_ map (_.accept(this, false))
+      val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
 
       if (outermost) {
         // handle leading look-aheads and trailing look-behinds
@@ -126,6 +129,41 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       } else {
         reCatStar(dropLookAheadBehinds(terms) : _*)
       }
+    }
+
+    private def expandGroups(ts : Seq[ecma2020regex.Absyn.TermC])
+                                         : Seq[ecma2020regex.Absyn.TermC] = {
+      var changed = false
+      val newTS =
+        for (t <- ts;
+             s <- (t match {
+               case t : AtomTerm => t.atomc_ match {
+                 case g : ecma2020regex.Absyn.GroupAtom
+                     if g.listalternativec_.size == 1 => {
+                       changed = true
+                       altToTerms(g.listalternativec_)
+                     }
+                 case g : ecma2020regex.Absyn.NonCaptGroup
+                     if g.listalternativec_.size == 1 => {
+                       changed = true
+                       altToTerms(g.listalternativec_)
+                     }
+                 case _ =>
+                   List(t)
+               }
+               case t =>
+                 List(t)
+             }))
+        yield s
+
+      if (changed) expandGroups(newTS) else ts
+    }
+
+    private def altToTerms(a : Seq[ecma2020regex.Absyn.AlternativeC])
+                         : Seq[ecma2020regex.Absyn.TermC] = {
+      assert(a.size == 1)
+      val alt = a.head.asInstanceOf[ecma2020regex.Absyn.Alternative]
+      alt.listtermc_.toList
     }
 
     private def dropLookAheadBehinds(ts : Seq[ITerm]) : Seq[ITerm] =
@@ -197,28 +235,30 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                        arg : VisitorArg) =
       charComplement(word)
 
-    override def visit(p : ecma2020regex.Absyn.AtomQuanTerm, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.AtomQuanTerm,
+                       arg : VisitorArg) = {
       val t = p.atomc_.accept(this, arg)
-      p.quantifierc_ match {
-        case q : ECMAQuantifier =>
-          q.quantifierprefixc_ match {
-            case _ : StarQuantifier  => re_*(t)
-            case _ : PlusQuantifier  => re_+(t)
-            case _ : OptQuantifier   => re_opt(t)
-            case q : Loop1Quantifier => {
-              val n = parseDecimalDigits(q.listdecimaldigit_)
-              re_loop(n, n, t)
-            }
-            case q : Loop2Quantifier => {
-              val n = parseDecimalDigits(q.listdecimaldigit_)
-              reCat(re_loop(n, n, t), re_*(t))
-            }
-            case q : Loop3Quantifier => {
-              val n1 = parseDecimalDigits(q.listdecimaldigit_1)
-              val n2 = parseDecimalDigits(q.listdecimaldigit_2)
-              re_loop(n1, n2, t)
-            }
-          }
+      val (prefix, greedy) = p.quantifierc_ match {
+        case q : ECMAQuantifier      => (q.quantifierprefixc_, true)
+        case q : QuantifierNonGreedy => (q.quantifierprefixc_, false)
+      }
+      prefix match {
+        case _ : StarQuantifier  => re_*(t)
+        case _ : PlusQuantifier  => re_+(t)
+        case _ : OptQuantifier   => re_opt(t)
+        case q : Loop1Quantifier => {
+          val n = parseDecimalDigits(q.listdecimaldigit_)
+          re_loop(n, n, t)
+        }
+        case q : Loop2Quantifier => {
+          val n = parseDecimalDigits(q.listdecimaldigit_)
+          reCat(re_loop(n, n, t), re_*(t))
+        }
+        case q : Loop3Quantifier => {
+          val n1 = parseDecimalDigits(q.listdecimaldigit_1)
+          val n2 = parseDecimalDigits(q.listdecimaldigit_2)
+          re_loop(n1, n2, t)
+        }
       }
     }
 
