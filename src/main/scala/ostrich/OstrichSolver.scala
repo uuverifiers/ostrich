@@ -103,29 +103,6 @@ class OstrichSolver(theory : OstrichStringTheory,
     val stringFunctionTranslator =
       new OstrichStringFunctionTranslator(theory, goal.facts)
 
-//    Console.err.println(atoms)
-
-    val concreteWords = new MHashMap[Term, Seq[Int]]
-    findConcreteWords(atoms) match {
-      case Some(w) => concreteWords ++= w
-      case None => return None
-    }
-
-    //Added by Riccardo
-/*
-    for (a <- atoms.positiveLits) a.pred match {
-      case FunPred(`str_cons` | `str_empty`)  => {
-        if (a(0).isConstant)
-          concreteWords put (a(0), this.theory.strDatabase.id2Str(a(0).constant.intValueSafe))
-      }
-      case `str_in_re_id` => {
-        if (a(0).isConstant)
-          concreteWords put (a(0), this.theory.strDatabase.id2Str(a(0).constant.intValueSafe))
-      }
-      case _ =>
-    }
- */
-
     // extract regex constraints and function applications from the
     // literals
     val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
@@ -203,71 +180,6 @@ class OstrichSolver(theory : OstrichStringTheory,
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // Check whether any of the function applications can be evaluated
-
-/* %%%%%%%%%%%%%%%%%% Old Riccardo's things %%%%%%%%%%%%%%%%%%%
-    {
-      import TerForConvenience._
-      implicit val o = order
-
-      val lengthConstants =
-        (for (t <- lengthVars.values.iterator;
-              c <- t.constants.iterator) yield c).toSet
-
-      for (lc <- goal.facts.arithConj.negativeEqs) lc match {
-        case Seq((IdealInt.ONE, c), (IdealInt.MINUS_ONE, d))
-          if concreteWords contains l(c) => {
-            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
-            regexes += ((l(d), !(BricsAutomaton fromString str)))
-          }
-        case Seq((IdealInt.ONE, d), (IdealInt.MINUS_ONE, c))
-          if concreteWords contains l(c) => {
-            val str : String = concreteWords(l(c)).map(i => i.toChar)(breakOut)
-            regexes += ((l(d), !(BricsAutomaton fromString str)))
-          }
-        case lc
-          if useLength && (lc.constants forall lengthConstants) =>
-          // nothing
-        case _ =>
-          Console.err.println("Warning: ignoring " + (lc =/= 0))
-      }
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    // check whether any of the function applications can be evaluated
-    {
- %%%%%%%%%%%%%%%%%% Old Riccardo's things %%%%%%%%%%%%%%%%%%% */
-
-/*
-      var changed = true
-      while (changed) {
-        changed = false
-
-        for (n <- (funApps.size - 1) to 0 by -1) {
-          val (op, args, res) = funApps(n)
-          if (args forall (concreteWords contains _)) {
-            op.eval(args map concreteWords) match {
-              case Some(newRes) =>
-                (concreteWords get res) match {
-                  case Some(oldRes) =>
-                    if (newRes != oldRes)
-                      return None
-                  case None =>
-                    concreteWords.put(res, newRes)
-                }
-              case None =>
-                return None
-            }
-            funApps remove n
-            changed = true
-          }
-        }
-      }
-    }
- */
-
-    ////////////////////////////////////////////////////////////////////////////
     // Check whether any of the negated equations talk about strings
 
     if (!goal.facts.arithConj.negativeEqs.isEmpty) {
@@ -329,9 +241,6 @@ class OstrichSolver(theory : OstrichStringTheory,
           import TerForConvenience._
           implicit val o = lengthProver.order
 
-          for ((strVar, lenTerm) <- lengthVars; str <- concreteWords get strVar)
-            lengthProver addAssertion (lenTerm === str.size)
-
           Some(lengthProver)
         } else {
           None
@@ -339,67 +248,17 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps, regexes, concreteWords.toMap, strDatabase,
+          Exploration.eagerExp(funApps, regexes, strDatabase,
                                lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps, regexes, concreteWords.toMap, strDatabase,
+          Exploration.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
-      exploration.findModel match {
-        case Some(model) =>
-          Some(model ++ (for ((v, w) <- concreteWords) yield (v, Right(w))))
-        case None =>
-          None
-      }
+      exploration.findModel
     }
   }
 
   //////////////////////////////////////////////////////////////////////////////
-
-  private object Inconsistent extends Exception
-
-  private def findConcreteWords(atoms : PredConj)
-                              : Option[Map[Term, Seq[Int]]] = try {
-    val res = new MHashMap[Term, Seq[Int]]
-
-    def assign(t : Term, w : Seq[Int]) : Unit =
-      (res get t) match {
-        case Some(u) =>
-          if (u != w)
-            // inconsistent words
-            throw Inconsistent
-        case None =>
-          res.put(t, w)
-      }
-
-    for (a <- atoms positiveLitsWithPred p(str_empty))
-      assign(a.last, List())
-    for (a <- atoms positiveLitsWithPred p(str_from_char)) {
-      if (!a.head.isConstant)
-        throw new Exception("Cannot handle " + a)
-      assign(a.last, List(a.head.constant.intValueSafe))
-    }
-
-    var oldSize = 0
-    while (res.size > oldSize) {
-      oldSize = res.size
-
-      for (a <- atoms positiveLitsWithPred p(str_++))
-        if ((res contains a(0)) && (res contains a(1)))
-          assign(a(2), res(a(0)) ++ res(a(1)))
-
-      for (a <- atoms positiveLitsWithPred p(str_cons)) {
-        if (!a.head.isConstant)
-          throw new Exception("Cannot handle " + a)
-        if (res contains a(1))
-          assign(a(2), List(a(0).constant.intValueSafe) ++ res(a(1)))
-      }
-    }
-
-    Some(res.toMap)
-  } catch {
-    case Inconsistent => None
-  }
 
   /**
    * Translate term in a regex argument position into an automaton

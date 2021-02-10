@@ -91,24 +91,22 @@ object Exploration {
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
-               concreteValues : Map[Term, Seq[Int]],
                strDatabase : StrDatabase,
                lengthProver : Option[SimpleAPI],
                lengthVars : Map[Term, Term],
                strictLengths : Boolean,
                flags : OFlags) : Exploration =
-    new EagerExploration(funApps, initialConstraints, concreteValues, strDatabase,
+    new EagerExploration(funApps, initialConstraints, strDatabase,
                          lengthProver, lengthVars, strictLengths, flags)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
-              concreteValues : Map[Term, Seq[Int]],
               strDatabase : StrDatabase,
               lengthProver : Option[SimpleAPI],
               lengthVars : Map[Term, Term],
               strictLengths : Boolean,
               flags : OFlags) : Exploration =
-    new LazyExploration(funApps, initialConstraints, concreteValues, strDatabase,
+    new LazyExploration(funApps, initialConstraints, strDatabase,
                         lengthProver, lengthVars, strictLengths, flags)
 
   private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
@@ -122,7 +120,6 @@ object Exploration {
  */
 abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
-                           concreteValues : Map[Term, Seq[Int]],
                            strDatabase : StrDatabase,
                            lengthProver : Option[SimpleAPI],
                            lengthVars : Map[Term, Term],
@@ -553,13 +550,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _initialConstraints : Seq[(Term, Automaton)],
-                       _concreteValues : Map[Term, Seq[Int]],
                        _strDatabase : StrDatabase,
                        _lengthProver : Option[SimpleAPI],
                        _lengthVars : Map[Term, Term],
                        _strictLengths : Boolean,
                        _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _concreteValues, _strDatabase,
+      extends Exploration(_funApps, _initialConstraints, _strDatabase,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
@@ -639,13 +635,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _initialConstraints : Seq[(Term, Automaton)],
-                      _concreteValues : Map[Term, Seq[Int]],
                       _strDatabase : StrDatabase,
                       _lengthProver : Option[SimpleAPI],
                       _lengthVars : Map[Term, Term],
                       _strictLengths : Boolean,
                       _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _concreteValues, _strDatabase,
+      extends Exploration(_funApps, _initialConstraints, _strDatabase,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
