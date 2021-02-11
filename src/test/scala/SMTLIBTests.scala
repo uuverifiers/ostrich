@@ -44,6 +44,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
+  property("subsumption.smt2") =
+    checkFile("tests/subsumption.smt2", "sat")
+  property("subsumption2.smt2") =
+    checkFile("tests/subsumption2.smt2", "unsat")
 
   property("case-insensitive.smt2") =
     checkFile("tests/case-insensitive.smt2", "sat")

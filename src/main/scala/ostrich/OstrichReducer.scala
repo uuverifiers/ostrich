@@ -37,13 +37,15 @@ import ap.parser.{IFunApp, IIntLit}
 import ap.terfor.{Term, Formula,
                   TermOrder, TerForConvenience, ComputationLogger}
 import ap.terfor.conjunctions.{Conjunction, Quantifier, ReduceWithConjunction,
-                               ReducerPluginFactory, ReducerPlugin}
+                               ReducerPluginFactory, ReducerPlugin,
+                               NegatedConjunctions}
 import ap.terfor.arithconj.ArithConj
 import ap.terfor.preds.{Atom, Predicate, PredConj}
+import ap.util.PeekIterator
 
 import AutDatabase.{NamedAutomaton, PositiveAut, ComplementedAut}
 
-import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer}
 
 object OstrichReducer {
   def extractLanguageConstraints(conj : PredConj,
@@ -53,21 +55,24 @@ object OstrichReducer {
 
     for (a <- conj positiveLitsWithPred theory.str_in_re_id)
       if (a(0).variables.isEmpty) {
-        assert(a(1).isConstant)
-        val id = a(1).constant.intValueSafe
+        val id = regexAtomToId(a)
         languages.put(a(0),
                       PositiveAut(id) :: languages.getOrElse(a(0), List()))
       }
 
     for (a <- conj negativeLitsWithPred theory.str_in_re_id)
       if (a(0).variables.isEmpty) {
-        assert(a(1).isConstant)
-        val id = a(1).constant.intValueSafe
+        val id = regexAtomToId(a)
         languages.put(a(0),
                       ComplementedAut(id) :: languages.getOrElse(a(0), List()))
       }
 
     languages.toMap
+  }
+
+  def regexAtomToId(a : Atom) : Int = {
+    assert(a(1).isConstant)
+    a(1).constant.intValueSafe
   }
 
   val IntRegex = """[0-9]+""".r
@@ -128,12 +133,21 @@ class OstrichReducer protected[ostrich]
              reducer : ReduceWithConjunction,
              logger : ComputationLogger,
              mode : ReducerPlugin.ReductionMode.Value)
-           : ReducerPlugin.ReductionResult = {
+           : ReducerPlugin.ReductionResult =
+    reduce1(predConj, reducer, logger, mode) orElse
+    reduce2(predConj, reducer, logger, mode)
+
+  /**
+   * Reduction based on contextual knowledge.
+   */
+  private def reduce1(predConj : PredConj,
+                      reducer : ReduceWithConjunction,
+                      logger : ComputationLogger,
+                      mode : ReducerPlugin.ReductionMode.Value)
+                    : ReducerPlugin.ReductionResult = {
     implicit val order = predConj.order
     import TerForConvenience._
     import strDatabase.isConcrete
-
-//    val languages = new MHashMap[Term, List[NamedAutomaton]]
 
     def getLanguages(t : Term) : Iterator[NamedAutomaton] =
       for (c <- languageConstraints.iterator;
@@ -163,8 +177,7 @@ class OstrichReducer protected[ostrich]
           }
 
         case `str_in_re_id` => {
-          assert(a(1).isConstant)
-          val autId = a(1).constant.intValueSafe
+          val autId = regexAtomToId(a)
           if (isConcrete(a(0))) {
             val Some(str) = strDatabase.term2List(a(0))
             val Some(aut) = autDatabase.id2Automaton(autId)
@@ -240,5 +253,126 @@ class OstrichReducer protected[ostrich]
       }
     }
   }
+
+  /**
+   * Subsumption and consistency checks for regexes.
+   */
+  private def reduce2(predConj : PredConj,
+                      reducer : ReduceWithConjunction,
+                      logger : ComputationLogger,
+                      mode : ReducerPlugin.ReductionMode.Value)
+                    : ReducerPlugin.ReductionResult =
+    mode match {
+      case ReducerPlugin.ReductionMode.Contextual => {
+        val posLits = predConj positiveLitsWithPred str_in_re_id
+        val negLits = predConj negativeLitsWithPred str_in_re_id
+
+        if (posLits.size + negLits.size >= 2) {
+          implicit val order = predConj.order
+
+          val posIt = PeekIterator(posLits.iterator)
+          val negIt = PeekIterator(negLits.iterator)
+
+          val newPos, newNeg, curPos, curNeg = new ArrayBuffer[Atom]
+
+          import autDatabase.{isSubsetOf, emptyIntersection}
+
+          def pickNextTerm : Term =
+            if (posIt.hasNext) {
+              if (negIt.hasNext) {
+                val a = posIt.peekNext(0)
+                val b = negIt.peekNext(0)
+                if (order.compare(a, b) >= 0) a else b
+              } else {
+                posIt.peekNext(0)
+              }
+            } else {
+              negIt.peekNext(0)
+            }
+
+          def isConflicting(aut : NamedAutomaton) : Boolean =
+            (curPos exists { a =>
+               emptyIntersection(PositiveAut(regexAtomToId(a)), aut) }) ||
+            (curNeg exists { a =>
+               emptyIntersection(ComplementedAut(regexAtomToId(a)), aut) })
+
+          def isFwdSubsumed(aut : NamedAutomaton) : Boolean =
+            (curPos exists { a =>
+               isSubsetOf(PositiveAut(regexAtomToId(a)), aut) }) ||
+            (curNeg exists { a =>
+               isSubsetOf(ComplementedAut(regexAtomToId(a)), aut) })
+
+          def removeBwdSubsumed(aut : NamedAutomaton) : Unit = {
+            var n = 0
+
+            while (n < curPos.size)
+              if (isSubsetOf(aut, PositiveAut(regexAtomToId(curPos(n)))))
+                curPos remove n
+              else
+                n = n + 1
+
+            n = 0
+            while (n < curNeg.size)
+              if (isSubsetOf(aut, ComplementedAut(regexAtomToId(curNeg(n)))))
+                curNeg remove n
+              else
+                n = n + 1
+          }
+
+          def otherAtoms(atoms : Seq[Atom]) : Seq[Atom] =
+            atoms filterNot { a => a.pred == str_in_re_id }
+
+          def addConstraint(a : Atom, aut : NamedAutomaton,
+                            set : ArrayBuffer[Atom]) : Boolean =
+            if (isFwdSubsumed(aut)) {
+              false
+            } else if (isConflicting(aut)) {
+              true
+            } else {
+              removeBwdSubsumed(aut)
+              set += a
+              false
+            }
+
+          while (posIt.hasNext || negIt.hasNext) {
+            val nextTerm = pickNextTerm
+
+            while (posIt.hasNext && posIt.peekNext(0) == nextTerm) {
+              val a = posIt.next
+              if (addConstraint(a, PositiveAut(regexAtomToId(a)), curPos))
+                return ReducerPlugin.FalseResult
+            }
+
+            while (negIt.hasNext && negIt.peekNext(0) == nextTerm) {
+              val a = negIt.next
+              if (addConstraint(a, ComplementedAut(regexAtomToId(a)), curNeg))
+                return ReducerPlugin.FalseResult
+            }
+
+            newPos ++= curPos
+            newNeg ++= curNeg
+
+            curPos.clear
+            curNeg.clear
+          }
+
+          if (newPos.size != posLits.size || newNeg.size != negLits.size) {
+            val newPredConj =
+              PredConj(otherAtoms(predConj.positiveLits) ++ newPos,
+                       otherAtoms(predConj.negativeLits) ++ newNeg,
+                       order)
+            ReducerPlugin.ChangedConjResult(ArithConj.TRUE,
+                                            newPredConj,
+                                            NegatedConjunctions.TRUE)
+          } else {
+            ReducerPlugin.UnchangedResult
+          }
+        } else {
+          ReducerPlugin.UnchangedResult
+        }
+      }
+      case _ =>
+        ReducerPlugin.UnchangedResult
+    }
 
 }
