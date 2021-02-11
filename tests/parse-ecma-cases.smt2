@@ -33,6 +33,9 @@
         (= (str.in_re w (re.from_ecma2020 '\,'))
            (str.in_re w (str.to.re ",")))
 
+        (= (str.in_re w (re.from_ecma2020 '[\u{61}-\u007A0-9]'))
+           (str.in_re w (re.union (re.range "a" "z") (re.range "0" "9"))))
+
         (= (str.in_re w (re.from_ecma2020 '((?=.*?[A-Z])).{8,}'))
            (and (str.in_re w (re.from_ecma2020 '.{8,}'))
                 (str.in_re w (re.++ re.all (re.range "A" "Z") re.all))))

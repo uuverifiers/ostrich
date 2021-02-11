@@ -397,8 +397,19 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       charSet(0x000D)
 
     override def visit(p : ecma2020regex.Absyn.HexEscapeSequence, arg : VisitorArg) =
-      charSet(IdealInt((printer print p.hexdigit_1) +
-                         (printer print p.hexdigit_2), 16).intValue)
+      charSet(Integer.parseInt((printer print p.hexdigit_1) +
+                                 (printer print p.hexdigit_2), 16))
+
+    override def visit(p : ecma2020regex.Absyn.Hex4UniEscapeSequence, arg : VisitorArg) =
+      charSet(Integer.parseInt((printer print p.hexdigit_1) +
+                                 (printer print p.hexdigit_2) +
+                                 (printer print p.hexdigit_3) +
+                                 (printer print p.hexdigit_4), 16))
+
+    override def visit(p : ecma2020regex.Absyn.CodepointUniEscapeSequence, arg : VisitorArg) = {
+      val str = printer print p
+      charSet(Integer.parseInt(str.substring(2, str.size - 1), 16))
+    }
 
     override def visit(p : ecma2020regex.Absyn.IdentityEscape, arg : VisitorArg) =
       toSingleCharRegex(printer print p)
