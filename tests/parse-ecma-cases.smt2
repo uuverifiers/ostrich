@@ -40,6 +40,9 @@
            (and (str.in_re w (re.from_ecma2020 '.{8,}'))
                 (str.in_re w (re.++ re.all (re.range "A" "Z") re.all))))
            
+        (= (str.in_re w (re.from_ecma2020 '()'))
+           (str.in_re w (str.to.re "")))
+
  )))
 
 (check-sat)
