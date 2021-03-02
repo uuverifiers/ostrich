@@ -43,6 +43,15 @@
         (= (str.in_re w (re.from_ecma2020 '()'))
            (str.in_re w (str.to.re "")))
 
+        (= (str.in_re w (re.from_ecma2020 '\b[ ab]*\b'))
+           (and (str.in_re w (re.from_ecma2020 '[ ab]+'))
+                (not (str.prefixof " " w))
+                (not (str.suffixof " " w))))
+
+        (= (str.in_re w (re.from_ecma2020 '\B[ a]*'))
+           (and (str.in_re w (re.from_ecma2020 '[ a]*'))
+                (not (str.prefixof "a" w))))
+
  )))
 
 (check-sat)
