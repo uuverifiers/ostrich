@@ -19,6 +19,7 @@ lazy val commonSettings = Seq(
   resolvers += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/")
     .withAllowInsecureProtocol(true),
   libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+  libraryDependencies += "uuverifiers" % "ecma2020-regex-parser" % "0.1-SNAPSHOT",
   libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
   libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
   libraryDependencies += "uuverifiers" %% "parikh-theory" % "0.1.0-SNAPSHOT"
