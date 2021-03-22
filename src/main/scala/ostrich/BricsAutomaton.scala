@@ -35,8 +35,6 @@ package ostrich
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
                            Automaton => BAutomaton, State => BState}
 
-import scala.collection.JavaConversions.{asScalaIterator,
-                                         iterableAsScalaIterable}
 import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
                                  LinkedHashSet => MLinkedHashSet,
@@ -44,6 +42,7 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  TreeSet => MTreeSet,
                                  MultiMap => MMultiMap,
                                  Set => MSet}
+import scala.jdk.CollectionConverters._
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -230,8 +229,8 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
   def enumLabelOverlap(lbl : (Char, Char)) : Iterable[(Char, Char)] = {
     val (lMin, lMax) = lbl
     disjointLabels.
-      from((lMin, Char.MinValue)).
-      to((lMax, Char.MaxValue)).
+      rangeFrom((lMin, Char.MinValue)).
+      rangeTo((lMax, Char.MaxValue)).
       toIterable
   }
 
@@ -399,7 +398,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
     val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
-    for (t <- from.getTransitions)
+    for (t <- from.getTransitions.asScala)
       dests.addBinding((t.getMin, t.getMax), t.getDest)
 
     val outgoing = new MLinkedHashSet[(State, TLabel)]
@@ -408,9 +407,9 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
       def sortingFn(s1 : State, s2 : State) : Boolean = {
         // sort by lowest outgoing transition
-        for ((t1, t2) <- s1.getSortedTransitions(false)
+        for ((t1, t2) <- s1.getSortedTransitions(false).asScala
                          zip
-                         s2.getSortedTransitions(false)) {
+                         s2.getSortedTransitions(false).asScala) {
           import scala.math.Ordering.Implicits._
           val lbl1 = (t1.getMin, t1.getMax)
           val lbl2 = (t2.getMin, t2.getMax)
@@ -514,7 +513,7 @@ class BricsAutomatonBuilder
 
   def outgoingTransitions(q : BricsAutomaton#State)
         : Iterator[(BricsAutomaton#State, BricsAutomaton#TLabel)] =
-    for (t <- q.getTransitions.iterator)
+    for (t <- q.getTransitions.asScala.iterator)
       yield (t.getDest, (t.getMin, t.getMax))
 
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =

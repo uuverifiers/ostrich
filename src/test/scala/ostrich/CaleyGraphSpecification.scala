@@ -4,15 +4,18 @@ import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 import scala.collection.mutable.Set
-import scala.collection.JavaConversions.iterableAsScalaIterable
+
+
+import scala.jdk.CollectionConverters._
 
 class PrintableState extends State {
   override def toString = "q" + hashCode
 }
 
 class IDState(val ident : Int) extends State {
+
   override def toString =
-    getTransitions.foldLeft("q" + ident + '\n') { (s, t) =>
+    getTransitions.asScala.foldLeft("q" + ident + '\n') { (s, t) =>
       val dest = t.getDest match {
         case d : IDState => "q" + d.ident
         case q => q.toString

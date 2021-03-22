@@ -2,8 +2,7 @@ lazy val commonSettings = Seq(
   name := "ostrich",
   organization := "uuverifiers",
   version := "1.0",
-  scalaVersion := "2.11.12",
-  crossScalaVersions := Seq("2.11.12", "2.12.10"),
+  scalaVersion := "2.13.5",
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) ),
   scalacOptions ++= Seq(
     "-deprecation",
@@ -30,5 +29,3 @@ lazy val root = (project in file(".")).
     mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala"
   )
-
-

@@ -43,7 +43,6 @@ import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
-import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 class OstrichSolver(theory : OstrichStringTheory,
@@ -248,10 +247,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps, regexes, strDatabase,
+          Exploration.eagerExp(funApps.toSeq, regexes.toSeq, strDatabase,
                                lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps, regexes, strDatabase,
+          Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
       exploration.findModel
