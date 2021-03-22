@@ -43,9 +43,9 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
                            Transition => BTransition}
 
-import scala.collection.JavaConversions.{iterableAsScalaIterable,asJavaCollection}
 
 import java.lang.StringBuilder
+import scala.collection.MapView
 
 object BricsTransducer {
   def apply() : BricsTransducer =
@@ -212,9 +212,9 @@ class TransducerState extends BState {
  * a character of output
  */
 class BricsTransducer(val initialState : BricsAutomaton#State,
-                      val lblTrans: Map[BricsAutomaton#State,
+                      val lblTrans: MapView[BricsAutomaton#State,
                                         Set[BricsTransducer#TTransition]],
-                      val eTrans: Map[BricsAutomaton#State,
+                      val eTrans: MapView[BricsAutomaton#State,
                                       Set[BricsTransducer#TETransition]],
                       val acceptingStates : Set[BricsAutomaton#State])
     extends Transducer {
@@ -816,11 +816,11 @@ class BricsTransducerBuilder
           worklist.push(snext)
     }
 
-    acceptingStates.retain(bwdReach.contains(_))
-    lblTrans.retain((k, v) => bwdReach.contains(k))
-    eTrans.retain((k, v) => bwdReach.contains(k))
-    lblTrans.foreach({ case (k, v) => v.retain(t => bwdReach.contains(dest(t))) })
-    eTrans.foreach({ case (k, v) => v.retain(t => bwdReach.contains(edest(t))) })
+    acceptingStates.filterInPlace(bwdReach.contains(_))
+    lblTrans.filterInPlace{case (k, v) => bwdReach.contains(k)}
+    eTrans.filterInPlace{case (k, v) => bwdReach.contains(k)}
+    lblTrans.foreach({ case (k, v) => v.filterInPlace(t => bwdReach.contains(dest(t))) })
+    eTrans.foreach({ case (k, v) => v.filterInPlace(t => bwdReach.contains(edest(t))) })
   }
 }
 

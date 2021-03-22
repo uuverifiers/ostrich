@@ -40,7 +40,6 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
 import ap.util.Seqs
 
-import scala.collection.breakOut
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
                                  BitSet => MBitSet}
@@ -222,7 +221,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     // check whether any of the terms have concrete definitions
     for (t <- allTerms)
       for (w <- strDatabase.term2List(t)) {
-        val str : String = w.map(i => i.toChar)(breakOut)
+        val str = w.iterator.map(i => i.toChar).mkString
         additionalConstraints += ((t, BricsAutomaton fromString str))
         for (ind <- term2Index get t)
           coveredTerms += ind
@@ -399,7 +398,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             throw new Exception(
               "Could not satisfy length constraints for " + res +
                 " with solution " +
-                resValue.right.get.map(i => i.toChar)(breakOut) +
+                resValue.right.get.iterator.map(i => i.toChar).mkString +
                 "; length is " + resValue.right.get.size +
                 " but should be " + resLen)
 
@@ -544,7 +543,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private def popLengthConstraints : Unit =
     for (p <- lengthProver) {
       p.pop
-      lengthPartitions reduceToSize lengthPartitionStack.pop
+      lengthPartitions dropRightInPlace (lengthPartitions.size - lengthPartitionStack.pop())
     }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -580,11 +579,11 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     private val constraintStack = new ArrayStack[(Int, Option[Automaton])]
 
     def push : Unit =
-      constraintStack push (constraints.size, currentConstraint)
+      constraintStack push((constraints.size, currentConstraint))
 
     def pop : Unit = {
-      val (oldSize, lastCC) = constraintStack.pop
-      constraints reduceToSize oldSize
+      val (oldSize, lastCC) = constraintStack.pop()
+      constraints dropRightInPlace (constraints.size - oldSize)
       currentConstraint = lastCC
     }
 
@@ -602,7 +601,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
               constraints += aut
               currentConstraint = Some(newAut)
               addLengthConstraint(TermConstraint(t, newAut),
-                                  for (a <- constraints)
+                                  for (a <- constraints.toSeq)
                                   yield TermConstraint(t, a))
               None
             }
@@ -703,10 +702,10 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def push : Unit = constraintStack push constraints.size
 
     def pop : Unit = {
-      val oldSize = constraintStack.pop
+      val oldSize = constraintStack.pop()
       while (constraints.size > oldSize) {
         constraintSet -= constraints.last
-        constraints reduceToSize (constraints.size - 1)
+        constraints dropRightInPlace (1)
       }
     }
 
@@ -739,7 +738,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           potentialConflicts = potentialConflicts.tail
         }
 
-        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints, aut) } match {
+        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints.toSeq, aut) } match {
           case Some(core) => {
             addIncAutomata(core)
             Some(for (a <- core.toList) yield TermConstraint(t, a))
@@ -768,20 +767,20 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           // nothing, all length constraints already pushed
         case auts =>
           addLengthConstraint(TermConstraint(t, intersection),
-                              for (a <- constraints)
+                              for (a <- constraints.toSeq)
                               yield TermConstraint(t, a))
       }
 
     def getAcceptedWord : Seq[Int] =
       constraints match {
         case Seq() => List()
-        case auts  => intersection.getAcceptedWord.get
+        case auts  => intersection.getAcceptedWord.get.toSeq
       }
 
     def getAcceptedWordLen(len : Int) : Seq[Int] =
       constraints match {
         case Seq() => for (_ <- 0 until len) yield 0
-        case auts  => AutomataUtils.findAcceptedWord(auts, len).get
+        case auts  => AutomataUtils.findAcceptedWord(auts.toSeq, len).get
       }
   }
 

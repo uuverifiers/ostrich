@@ -28,7 +28,7 @@ object APITest extends Properties("APITest") {
       import p._
 
       val x, y, z = createConstant(StringSort)
-      implicit val _ = decoderContext
+      implicit val context = decoderContext
 
       scope {
         !! (x === "abc")
@@ -62,7 +62,7 @@ object APITest extends Properties("APITest") {
       import p._
 
       val x, y, z = createConstant(StringSort)
-      implicit val _ = decoderContext
+      implicit val context = decoderContext
 
       scope {
         !! (x ++ y === y ++ x)
