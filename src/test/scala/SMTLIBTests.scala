@@ -18,8 +18,13 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     expResult match {
       case "error" =>
         (result split "\n") exists { str => str contains "error" }
-      case res =>
-        (result split "\n") contains res
+      case res => {
+        // FIXME There is almost guaranteed to be a better way to debug this,
+        // but it beats me.
+        val doesMatch = (result split "\n") contains res
+        if(!doesMatch) println(result.strip())
+        doesMatch
+      }
     }
   }
 
