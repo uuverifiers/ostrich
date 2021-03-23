@@ -3,7 +3,7 @@ package ostrich
 import ap.CmdlMain
 import ap.DialogUtil.asString
 
-import org.scalacheck.{Arbitrary, Gen, Properties}
+import org.scalacheck.Properties
 import org.scalacheck.Prop._
 
 object SMTLIBTests extends Properties("SMTLIBTests") {
