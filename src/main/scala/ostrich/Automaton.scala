@@ -342,11 +342,10 @@ trait AtomicStateAutomaton extends Automaton with OtherAutomaton {
     * Compute the length abstraction of this automaton.
     */
   lazy val getLengthAbstraction: Formula = {
-    import TerForConvenience._
-    implicit val order = TermOrder.EMPTY
+    val lengthTheory = LengthCounting(IndexedSeq(this))
 
-    val length = v(0)
-    (LengthCounting(IndexedSeq(this))) allowsMonoidValues Seq(length)
+    val length = TerForConvenience.v(0)
+    lengthTheory.allowsMonoidValues(Seq(length))(TermOrder.EMPTY)
   }
 }
 
