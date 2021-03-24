@@ -34,18 +34,19 @@ package ostrich
 
 import ap.basetypes.IdealInt
 import ap.PresburgerTools
-import ap.terfor.{Formula, Term, TerForConvenience, TermOrder, OneTerm}
+import ap.terfor.{Formula, TerForConvenience, TermOrder, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
 
 import scala.collection.mutable.{BitSet => MBitSet,
                                  HashMap => MHashMap, HashSet => MHashSet,
-                                 ArrayStack}
+  ArrayStack}
 
 /**
  * Interface for different implementations of finite-state automata.
  */
 trait Automaton {
+
   /**
    * Union
    */
@@ -190,7 +191,7 @@ trait TLabelEnumerator[TLabel] {
  * don't have any structure and are not composite, there is a unique
  * initial state, and a set of accepting states.
  */
-trait AtomicStateAutomaton extends Automaton {
+trait AtomicStateAutomaton extends Automaton  {
   /**
    * Type of states
    */
@@ -200,6 +201,8 @@ trait AtomicStateAutomaton extends Automaton {
    * Type of labels
    */
   type TLabel
+
+  type Label = TLabel
 
   /**
    * Operations on labels
@@ -259,7 +262,7 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def transitions : Iterator[(State, TLabel, State)] =
     for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
-      yield (s1, lbl, s2)
+    yield (s1, lbl, s2)
 
   /**
    * Get image of a set of states under a given label
@@ -338,7 +341,7 @@ trait AtomicStateAutomaton extends Automaton {
    * Compute the length abstraction of this automaton. Special case of
    * Parikh images, following the procedure in Verma et al, CADE 2005
    */
-  lazy val getLengthAbstraction : Formula = /* Exploration.measure("length abstraction") */ {
+   lazy val getLengthAbstraction : Formula = /* Exploration.measure("length abstraction") */ {
     import TerForConvenience._
     implicit val order = TermOrder.EMPTY
 

@@ -32,7 +32,6 @@
 
 package ostrich
 
-import scala.collection.breakOut
 
 object TransducerPreOp {
   def apply(t : Transducer) = new TransducerPreOp(t)

@@ -39,7 +39,8 @@ import ecma2020regex._
 import ecma2020regex.Absyn._
 import ecma2020regex.Absyn.{Quantifier => ECMAQuantifier}
 
-import scala.collection.JavaConversions.{asScalaBuffer, asScalaIterator}
+// import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class ECMARegexParser(theory : OstrichStringTheory) {
 
@@ -96,11 +97,11 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     def combine(x : ITerm, y : ITerm, arg : VisitorArg) : ITerm = reCat(x, y)
 
     override def visit(p : ecma2020regex.Absyn.Pattern, arg : VisitorArg) =
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)
 
     override def visit(p : ecma2020regex.Absyn.Alternative,
                        outermost : VisitorArg) = {
-      val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
+      val terms = expandGroups(p.listtermc_.asScala.toSeq) map (_.accept(this, false))
 
       if (outermost) {
         // handle leading look-aheads and trailing look-behinds
@@ -155,12 +156,12 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                  case g : ecma2020regex.Absyn.GroupAtom
                      if g.listalternativec_.size == 1 => {
                        changed = true
-                       altToTerms(g.listalternativec_)
+                       altToTerms(g.listalternativec_.asScala.toSeq)
                      }
                  case g : ecma2020regex.Absyn.NonCaptGroup
                      if g.listalternativec_.size == 1 => {
                        changed = true
-                       altToTerms(g.listalternativec_)
+                       altToTerms(g.listalternativec_.asScala.toSeq)
                      }
                  case _ =>
                    List(t)
@@ -177,7 +178,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                          : Seq[ecma2020regex.Absyn.TermC] = {
       assert(a.size == 1)
       val alt = a.head.asInstanceOf[ecma2020regex.Absyn.Alternative]
-      alt.listtermc_.toList
+      alt.listtermc_.asScala.toList
     }
 
     private def dropAssertions(ts : Seq[ITerm]) : Seq[ITerm] =
@@ -204,31 +205,31 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.GroupAtom, arg : VisitorArg) =
       // capture group
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)
     override def visit(p : ecma2020regex.Absyn.NonCaptGroup, arg : VisitorArg) =
       // non-capture group
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)
 
     override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) =
       LookAhead(
-        reCat(reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*),
+        reCat(reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*),
               ALL))
     override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) =
       LookAhead(
         re_comp(reCat(reUnionStar(
-          p.listalternativec_ map (_.accept(this, arg)) : _*), ALL)))
+          p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*), ALL)))
 
     override def visit(p : ecma2020regex.Absyn.PosLookbehind,
                        arg : VisitorArg) =
       LookBehind(
         reCat(ALL, reUnionStar(
-                p.listalternativec_ map (_.accept(this, arg)) : _*)))
+                p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)))
 
     override def visit(p : ecma2020regex.Absyn.NegLookbehind,
                        arg : VisitorArg) =
       LookBehind(
         re_comp(reCat(ALL, reUnionStar(
-                  p.listalternativec_ map (_.accept(this, arg)) : _*))))
+                  p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*))))
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
       charComplement(lineTerminator) // . is anything apart from a line term.
@@ -269,16 +270,16 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         case _ : PlusQuantifier  => re_+(t)
         case _ : OptQuantifier   => re_opt(t)
         case q : Loop1Quantifier => {
-          val n = parseDecimalDigits(q.listdecimaldigit_)
+          val n = parseDecimalDigits(q.listdecimaldigit_.asScala.toSeq)
           re_loop(n, n, t)
         }
         case q : Loop2Quantifier => {
-          val n = parseDecimalDigits(q.listdecimaldigit_)
+          val n = parseDecimalDigits(q.listdecimaldigit_.asScala.toSeq)
           reCat(re_loop(n, n, t), re_*(t))
         }
         case q : Loop3Quantifier => {
-          val n1 = parseDecimalDigits(q.listdecimaldigit_1)
-          val n2 = parseDecimalDigits(q.listdecimaldigit_2)
+          val n1 = parseDecimalDigits(q.listdecimaldigit_1.asScala.toSeq)
+          val n2 = parseDecimalDigits(q.listdecimaldigit_2.asScala.toSeq)
           re_loop(n1, n2, t)
         }
       }
@@ -382,7 +383,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         p.maybedecimaldigits_ match {
           case _ : NoDecimalDigits => ""
           case ds : SomeDecimalDigits =>
-            (for (d <- ds.listdecimaldigit_)
+            (for (d <- ListHasAsScala(ds.listdecimaldigit_).asScala)
              yield (printer print d)).mkString("")
         }
       val captureGroupNum = IdealInt(firstDigit + tailDigits)
@@ -447,7 +448,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (x,     y    ) => re_++(x, y)
   }
 
-  private def reCatStar(xs : ITerm*) = (EPS /: xs) (reCat _)
+  private def reCatStar(xs : ITerm*) = xs.foldLeft(EPS) (reCat _)
 
   private def reUnion(x : ITerm, y : ITerm) = (x, y) match {
     case (`NONE`, y    ) => y
@@ -455,7 +456,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (x,     y     ) => re_union(x, y)
   }
 
-  private def reUnionStar(xs : ITerm*) = (NONE /: xs) (reUnion _)
+  private def reUnionStar(xs : ITerm*) = xs.foldLeft(NONE) (reUnion _)
 
   private def reInter(x : ITerm, y : ITerm) = (x, y) match {
     case (`ALL`, y    ) => y
@@ -463,7 +464,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (x,     y    ) => re_inter(x, y)
   }
 
-  private def reInterStar(xs : ITerm*) = (ALL /: xs) (reInter _)
+  private def reInterStar(xs : ITerm*) = xs.foldLeft(ALL) (reInter _)
 
   private lazy val decimal =
     re_charrange(48, 57)

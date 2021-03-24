@@ -101,7 +101,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
         (name, aut)
       }
 
-    new OstrichStringTheory (symTransducers,
+    new OstrichStringTheory (symTransducers.toSeq,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength = useLen,
                                     forwardApprox = forward))
