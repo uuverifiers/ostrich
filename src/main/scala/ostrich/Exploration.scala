@@ -275,8 +275,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     for (p <- lengthProver) {
       for ((t, aut) <- allInitialConstraints)
-        p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                               aut.getLengthAbstraction)
+        aut.assertLengthConstraint(lengthVars(t), p)
 
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
@@ -517,8 +516,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       lengthPartitions += sources
       p setPartitionNumber lengthPartitions.size
       val TermConstraint(t, aut) = constraint
-      p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                                  aut.getLengthAbstraction)
+      aut.assertLengthConstraint(lengthVars(t), p)
     }
 
   private def checkLengthConsistency : Option[Seq[TermConstraint]] =

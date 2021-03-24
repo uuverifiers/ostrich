@@ -32,7 +32,8 @@
 
 package ostrich
 
-import ap.terfor.{Formula, TerForConvenience, TermOrder}
+import ap.terfor.Term
+import ap.SimpleAPI
 
 import scala.collection.mutable.{HashMap => MHashMap,
   HashSet => MHashSet,
@@ -80,9 +81,9 @@ trait Automaton {
   def getAcceptedWord : Option[Seq[Int]]
 
   /**
-   * Compute the length abstraction of this automaton.
+   * Compute the length abstraction of this automaton and assert it into a prover.
    */
-  def getLengthAbstraction : Formula
+  def assertLengthConstraint(lengthTerm: Term, prover: SimpleAPI) : Unit
 
 }
 
@@ -338,14 +339,15 @@ trait AtomicStateAutomaton extends Automaton with OtherAutomaton {
       None
   }
 
+  // Spare us running multiple instantiations (it might be expensive)
+  lazy private val lengthTheory = LengthCounting(IndexedSeq(this))
+
   /**
     * Compute the length abstraction of this automaton.
     */
-  lazy val getLengthAbstraction: Formula = {
-    val lengthTheory = LengthCounting(IndexedSeq(this))
-
-    val length = TerForConvenience.v(0)
-    lengthTheory.allowsMonoidValues(Seq(length))(TermOrder.EMPTY)
+  def assertLengthConstraint(lengthTerm: Term, prover: SimpleAPI): Unit = {
+    prover addTheory lengthTheory // Assumption: addTheory is idempotent.
+    prover addAssertion (lengthTheory.allowsMonoidValues(Seq(lengthTerm))(prover.order))
   }
 }
 
