@@ -365,6 +365,10 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       toSingleCharRegex(printer print p)
     override def visit(p : ecma2020regex.Absyn.NegAtom, arg : VisitorArg) =
       toSingleCharRegex(printer print p)
+    override def visit(p : ecma2020regex.Absyn.NegAtomND, arg : VisitorArg) =
+      toSingleCharRegex(printer print p)
+    override def visit(p : ecma2020regex.Absyn.DashAtomNN, arg : VisitorArg) =
+      toSingleCharRegex(printer print p)
     
     override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg1, arg : VisitorArg)=
       toSingleCharRegex(p.normalchar_)

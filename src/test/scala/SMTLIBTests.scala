@@ -225,6 +225,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-ecma-cases.smt2", "unsat")
   property("parse-ecma-bug1.smt2") =
     checkFile("tests/parse-ecma-bug1.smt2", "sat")
+  property("parse-ecma-bug2.smt2") =
+    checkFile("tests/parse-ecma-bug2.smt2", "unsat")
 
   property("parse-regex-lookahead.smt2") =
     checkFile("tests/parse-regex-lookahead.smt2", "sat")
