@@ -54,6 +54,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("case-insensitive-2.smt2") =
     checkFile("tests/case-insensitive-2.smt2", "unsat")
 
+  property("minimize-problem.smt2") =
+    checkFile("tests/minimize-problem.smt2", "sat")
+
   property("str.from_int.smt2") =
     checkFile("tests/str.from_int.smt2", "sat")
   property("str.from_int_2.smt2") =

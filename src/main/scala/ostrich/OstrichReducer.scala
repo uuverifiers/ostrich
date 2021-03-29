@@ -275,7 +275,7 @@ class OstrichReducer protected[ostrich]
 
           val newPos, newNeg, curPos, curNeg = new ArrayBuffer[Atom]
 
-          import autDatabase.{isSubsetOf, emptyIntersection}
+          import autDatabase.{isSubsetOf, isSubsetOfBE, emptyIntersection}
 
           def pickNextTerm : Term =
             if (posIt.hasNext) {
@@ -298,22 +298,26 @@ class OstrichReducer protected[ostrich]
 
           def isFwdSubsumed(aut : NamedAutomaton) : Boolean =
             (curPos exists { a =>
-               isSubsetOf(PositiveAut(regexAtomToId(a)), aut) }) ||
+               isSubsetOfBE(PositiveAut(regexAtomToId(a)), aut) ==
+               Some(true) }) ||
             (curNeg exists { a =>
-               isSubsetOf(ComplementedAut(regexAtomToId(a)), aut) })
+               isSubsetOfBE(ComplementedAut(regexAtomToId(a)), aut) ==
+               Some(true) })
 
           def removeBwdSubsumed(aut : NamedAutomaton) : Unit = {
             var n = 0
 
             while (n < curPos.size)
-              if (isSubsetOf(aut, PositiveAut(regexAtomToId(curPos(n)))))
+              if (isSubsetOfBE(aut, PositiveAut(regexAtomToId(curPos(n)))) ==
+                    Some(true))
                 curPos remove n
               else
                 n = n + 1
 
             n = 0
             while (n < curNeg.size)
-              if (isSubsetOf(aut, ComplementedAut(regexAtomToId(curNeg(n)))))
+              if (isSubsetOfBE(aut, ComplementedAut(regexAtomToId(curNeg(n))))==
+                    Some(true))
                 curNeg remove n
               else
                 n = n + 1
