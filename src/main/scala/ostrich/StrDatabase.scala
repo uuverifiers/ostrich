@@ -162,4 +162,20 @@ class StrDatabase(theory : OstrichStringTheory) {
                                 id
                               })
   }
+
+  /**
+   * Extractor to recognise strings in different representations.
+   */
+  object EncodedString {
+    def unapply(t : ITerm) : Option[String] =
+      t match {
+        case IIntLit(IdealInt(value)) =>
+          Some(id2Str(value))
+        case StringTheory.ConcreteString(str) =>
+          Some(str)
+        case _ =>
+          None
+      }
+  }
+
 }

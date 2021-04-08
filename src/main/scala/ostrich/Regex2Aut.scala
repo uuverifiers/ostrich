@@ -152,35 +152,30 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   //////////////////////////////////////////////////////////////////////////////
 
+  import theory.strDatabase.EncodedString
+
   private def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
     Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
 
-    case IFunApp(`str_to_re`, Seq(a)) => {
-      // modified by Riccardo
-      a match {
-        case IIntLit(value) =>
-          BasicAutomata.makeString(theory.strDatabase.id2Str(value.intValueSafe))
-        case _ =>
-          BasicAutomata.makeString(StringTheory.term2String(a))
-      }
-    }
+    case IFunApp(`str_to_re`, Seq(EncodedString(str))) =>
+      BasicAutomata.makeString(str)
 
-    case IFunApp(`re_from_str`, Seq(a)) => {
+    case IFunApp(`re_from_str`, Seq(EncodedString(str))) => {
       // TODO: this translation has to be checked more carefully, there might
       // be problems due to escaping. The processing of regexes can also
       // only be done correctly within a proper regex parser.
   
-      val bricsPattern = jsRegex2BricsRegex(StringTheory.term2String(a))
+      val bricsPattern = jsRegex2BricsRegex(str)
       new RegExp(bricsPattern).toAutomaton(minimize)
     }
 
-    case IFunApp(`re_from_ecma2020`, Seq(a)) => {
+    case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
       val parser = new ECMARegexParser(theory)
-      val t = parser.string2Term(StringTheory.term2String(a))
-      toBAutomaton(t, minimize)
+      val s = parser.string2Term(str)
+      toBAutomaton(s, minimize)
     }
 
     case IFunApp(`re_case_insensitive`, Seq(a)) => {
