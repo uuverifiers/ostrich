@@ -45,14 +45,14 @@ import dk.brics.automaton.{Automaton => BAutomaton,
 
 object ReplaceAllCGPreOp {
 
-  import PFA.completeInfo
+  import Regex2PFA.completeInfo
 
   def apply(pat : completeInfo, rep : Seq[UpdateOp]) : PreOp = {
     StreamingTransducerPreOp(buildPSST(pat, rep))
   }
 
   def buildPSST(pat : completeInfo, rep : Seq[UpdateOp]) : PrioStreamingTransducer = {
-    val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = pat
+    val (aut, numCap, state2Caps, cap2Init) = pat
 
     // for each capture group, we have a string variable.
     // Besides, we have a special variable 'res' for the result, indexed by 'numCap'
@@ -112,32 +112,30 @@ object ReplaceAllCGPreOp {
     val tranInit = getState(aut.initial)
     builder.addPreETransition(q0, default, tranInit)
 
-    val opCache = new MHashMap[(autState, autState), Seq[Seq[UpdateOp]]]
-
     def getOps(current : autState, next: autState) = {
-      opCache.getOrElseUpdate((current, next), {
-        // we have to consider which Klenne Stars are reset
-        // and how variables are thus updated
-        val caps_activated = state2Caps.getOrElse(next, Set())
-        val stars_reset : Set[Int] = states2Stars.getOrElse((current, next), Set.empty[Int])
-        val caps_in_stars : Set[Int] =
-          (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
-            cap <- starcaps) yield cap).toSet
+      val caps_activated = state2Caps.getOrElse(next, Set())
+      val caps_activated_old = state2Caps.getOrElse(current, Set())
 
-        val ops : Seq[Seq[UpdateOp]] = updateWithIndex {
-          index => {
-            val is_activated = caps_activated contains index
-            val is_in_stars = caps_in_stars contains index
-            (is_activated, is_in_stars) match {
-              case (true, true) => single
-              case (true, false) => append_after(index)
-              case (false, true) => clear
-              case (false, false) => nochange(index)
+      val ops : Seq[Seq[UpdateOp]] = updateWithIndex {
+        index => {
+          val is_activated = caps_activated contains index
+          val is_activated_old = caps_activated_old contains index
+          if (is_activated && is_activated_old) {
+            // now check inital states:
+            val caps_initials = cap2Init.getOrElse(index, Set())
+            val is_initial = caps_initials contains current
+            if (is_initial) {
+              clear
+            } else {
+              append_after(index)
             }
+          } else {
+            // `index` is not relevant here
+            nochange(index)
           }
         }
-        ops
-      })
+      }
+      ops
     }
 
     // dfs
@@ -164,15 +162,27 @@ object ReplaceAllCGPreOp {
       }
     }
 
-    val tranEnd = getState(aut.accepting)
-    builder.addPreETransition(tranEnd, updateWithIndex(o => {
-      if (o == numCap) {
-        List(RefVariable(numCap)) ++ rep
-      } else {
-        clear
-      }
-    }), q0)
-
+    val (f1, f2) = aut.accepting
+    for (s <- f1) {
+      val tranEnd = getState(s)
+      builder.addPreETransition(tranEnd, updateWithIndex(o => {
+        if (o == numCap) {
+          List(RefVariable(numCap)) ++ rep
+        } else {
+          clear
+        }
+      }), q0)
+    }
+    for (s <- f2) {
+      val tranEnd = getState(s)
+      builder.addPreETransition(tranEnd, updateWithIndex(o => {
+        if (o == numCap) {
+          List(RefVariable(numCap)) ++ rep
+        } else {
+          clear
+        }
+      }), q0)
+    }
     val tran = builder.getTransducer
     tran
   }

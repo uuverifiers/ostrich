@@ -45,13 +45,13 @@ import dk.brics.automaton.{Automaton => BAutomaton,
 
 object ExtractPreOp {
 
-  import PFA.completeInfo
+  import Regex2PFA.completeInfo
 
   def apply(index : Int, pat : completeInfo) : PreOp = 
     StreamingTransducerPreOp(buildPSST(index, pat))
 
   def buildPSST(index: Int, pat : completeInfo) : PrioStreamingTransducer = {
-    val (aut, numCap, numStar, state2Caps, states2Stars, star2Caps) = pat
+    val (aut, numCap, state2Caps, cap2Init) = pat
 
     // we just need one capture group
     val builder = PrioStreamingTransducer.getBuilder(1)
@@ -95,43 +95,39 @@ object ExtractPreOp {
     builder.setInitialState(tranInit)
 
     val autInit = getState(aut.initial)
-    val initial_activated = state2Caps.getOrElse(aut.initial, Set()) contains index
-    if (initial_activated) {
-      builder.addPreETransition(tranInit, List(List()), autInit) // initialize to null
-    } else {
-      builder.addPreETransition(tranInit, List(List(Constant('\u0000'))), autInit) // initialize to null
-    }
-
-    val opCache = new MHashMap[(autState, autState), Seq[Seq[UpdateOp]]]
+    //val initial_activated = state2Caps.getOrElse(aut.initial, Set()) contains index
+    //if (initial_activated) {
+      //builder.addPreETransition(tranInit, List(List()), autInit) // initialize to epsilon
+    //} else {
+      //builder.addPreETransition(tranInit, List(List(Constant('\u0000'))), autInit) // initialize to null
+    //}
+    builder.addPreETransition(tranInit, List(List(Constant('\u0000'))), autInit) // initialize to null
 
     def getOps(current : autState, next: autState) = {
-      opCache.getOrElseUpdate((current, next), {
-        val caps_activated_old = state2Caps.getOrElse(current, Set())
-        val is_activated_old = caps_activated_old contains index
+      val caps_activated_old = state2Caps.getOrElse(current, Set())
+      val is_activated_old = caps_activated_old contains index
 
-        val caps_activated = state2Caps.getOrElse(next, Set())
-        val is_activated = caps_activated contains index
+      val caps_activated = state2Caps.getOrElse(next, Set())
+      val is_activated = caps_activated contains index
 
-        if (is_activated && !is_activated_old) {
+      if (is_activated && is_activated_old) {
+        // so the transition current -> next is in the
+        // subgraph which is the counterpart of capture group `index`..
+
+        // now let's check if `current` is in the initial states:
+        val initials_of_index = cap2Init.getOrElse(index, Set())
+        val is_current_initial = initials_of_index contains current
+        if (is_current_initial) {
+          // the subgraph is 're-entered', clear the content
           clear
         } else {
-          val stars_reset : Set[Int] = states2Stars.getOrElse((current, next), Set.empty[Int])
-          val caps_in_stars : Set[Int] =
-            (for (star <- stars_reset; starcaps = (star2Caps.getOrElse(star, Set()));
-              cap <- starcaps) yield cap).toSet
-
-          val ops : Seq[Seq[UpdateOp]] = {
-              val is_in_stars = caps_in_stars contains index
-              (is_activated, is_in_stars) match {
-                case (true, true) => single
-                case (true, false) => append_after
-                case (false, true) => clear
-                case (false, false) => nochange
-              }
-          }
-          ops
+          // normal case
+          append_after
         }
-      })
+      } else {
+        // the transition is not relevant to capture group `index`
+        nochange
+      }
     }
 
     // dfs
@@ -158,8 +154,16 @@ object ExtractPreOp {
       }
     }
 
-    val tranEnd = getState(aut.accepting)
-    builder.setAccept(tranEnd, true, output)
+    val (f1, f2) = aut.accepting
+
+    for (s <- f1) {
+      val tranEnd = getState(s)
+      builder.setAccept(tranEnd, true, output)
+    }
+    for (s <- f2) {
+      val tranEnd = getState(s)
+      builder.setAccept(tranEnd, true, output)
+    }
 
     val tran = builder.getTransducer
     tran
