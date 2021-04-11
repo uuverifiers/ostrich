@@ -559,17 +559,10 @@ class JavascriptPFABuilder extends PFABuilder {
   }
 
   def plus(aut : PFA) : PFA = {
-    Console.println("====debug of plus operator====")
-    Console.println("original:")
-    Console.println(aut.toDot)
     // aut will be modified during recursion
     // so we must make a copy here
     val autcopy = duplicate(aut)
-    Console.println("copy:")
-    Console.println(autcopy.toDot)
     val staraut = star(aut)
-    Console.println("star:")
-    Console.println(staraut.toDot)
     concat(autcopy, staraut)
   }
 
@@ -721,11 +714,8 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
         }
         case IFunApp(`re_+`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
-          val autplus = builder.plus(autA)
-          Console.println("the plus PFA:")
-          Console.println(autplus.toDot)
 
-          (autplus, capA)
+          (builder.plus(autA), capA)
         }
         case IFunApp(`re_+?`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
@@ -822,8 +812,6 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
     val cap2Init = (for ((cap, inits) <- Regex2PFA.capInit)
       yield (cap, inits.toSet)).toMap
-
-    Console.println(aut.toDot())
 
     (aut, numCapture, state2Capture, cap2Init)
   }
