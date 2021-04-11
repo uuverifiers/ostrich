@@ -657,12 +657,12 @@ extends StreamingTransducer {
       for (arrow <- pre) {
         val (op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
-        sb.append("[label=\"epsilon /" + prio + "\"];\n")
+        sb.append("[label=\"epsilon /" + prio + "/" + op + "\"];\n")
       }
       for (arrow <- post) {
         val (op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
-        sb.append("[label=\"epsilon /" + prio + "\"];\n")
+        sb.append("[label=\"epsilon /" + prio + "/" + op + "\"];\n")
       }
     }
 
