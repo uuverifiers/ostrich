@@ -87,7 +87,7 @@ case class PFA(val sTran: MMap[PFA.State, Seq[PFA.SigmaTransition]],
         sb.append(s + "[peripheries=2];\n")
       }
       for (s <- f2) {
-        sb.append(s + "[peripheries=2];\n")
+        sb.append(s + "[peripheries=3];\n")
       }
 
       var priority = Int.MaxValue
@@ -331,9 +331,6 @@ class JavascriptPFABuilder extends PFABuilder {
         // states of old automaton
         val worklist = new MStack[State]
 
-        val newinit = getNewState
-        worklist.push(init1)
-
         def mapState(oldstate : State, newstate : State) = {
           sMap += (oldstate -> newstate)
         }
@@ -345,6 +342,8 @@ class JavascriptPFABuilder extends PFABuilder {
             newstate
           })
         }
+
+        val newinit = getState(init1)
 
         val newf1 = new MHashSet[State]
         val newf2 = new MHashSet[State]
@@ -471,7 +470,7 @@ class JavascriptPFABuilder extends PFABuilder {
             for (s <- f1_1) {
               pre += ((s, Seq(init2)))
             }
-            for (s <- f1_2) {
+            for (s <- f2_1) {
               pre += ((s, Seq(init2)))
             }
             val post = post1 ++ post2
@@ -517,7 +516,7 @@ class JavascriptPFABuilder extends PFABuilder {
         for (s <- f1) {
           pre1 += ((s, Seq(init1)))
         }
-        for (s <- f1) {
+        for (s <- f2) {
           // f2 is only reachable from nonempty matches
           pre1 += ((s, Seq(init1, end_nonempty)))
         }
@@ -543,7 +542,7 @@ class JavascriptPFABuilder extends PFABuilder {
         for (s <- f1) {
           pre1 += ((s, Seq(init1)))
         }
-        for (s <- f1) {
+        for (s <- f2) {
           // f2 is only reachable from nonempty matches
           pre1 += ((s, Seq(end_nonempty, init1)))
         }
@@ -560,10 +559,17 @@ class JavascriptPFABuilder extends PFABuilder {
   }
 
   def plus(aut : PFA) : PFA = {
+    Console.println("====debug of plus operator====")
+    Console.println("original:")
+    Console.println(aut.toDot)
     // aut will be modified during recursion
     // so we must make a copy here
     val autcopy = duplicate(aut)
+    Console.println("copy:")
+    Console.println(autcopy.toDot)
     val staraut = star(aut)
+    Console.println("star:")
+    Console.println(staraut.toDot)
     concat(autcopy, staraut)
   }
 
@@ -715,8 +721,11 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
         }
         case IFunApp(`re_+`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
+          val autplus = builder.plus(autA)
+          Console.println("the plus PFA:")
+          Console.println(autplus.toDot)
 
-          (builder.plus(autA), capA)
+          (autplus, capA)
         }
         case IFunApp(`re_+?`, Seq(a)) => {
           val (autA, capA) = buildPatternImpl(a)
@@ -813,6 +822,8 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
     val cap2Init = (for ((cap, inits) <- Regex2PFA.capInit)
       yield (cap, inits.toSet)).toMap
+
+    Console.println(aut.toDot())
 
     (aut, numCapture, state2Capture, cap2Init)
   }
