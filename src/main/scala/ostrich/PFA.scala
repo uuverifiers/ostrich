@@ -52,7 +52,6 @@ import scala.collection.mutable.{HashMap => MHashMap,
 import java.lang.StringBuilder
 
 object PFA {
-
   type State = BricsAutomaton#State
   type TLabel = AnchoredLabel
   val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
@@ -248,14 +247,6 @@ class PythonPFABuilder extends PFABuilder {
         }
         pre1 += ((init, Seq(init1, end)))
 
-        //(post1 get init1) match {
-          //case None => {
-            //post1 += (init1 -> Seq(end))
-          //}
-          //case Some(tgts) => {
-            //post1(init1) = tgts :+ (end)
-          //}
-        //}
         val f1 = new MHashSet[State]
         f1 += end
 
@@ -274,14 +265,6 @@ class PythonPFABuilder extends PFABuilder {
         }
         pre1 += ((init, Seq(end, init1)))
 
-        //(pre1 get init1) match {
-          //case None => {
-            //pre1 += (init1 -> Seq(end))
-          //}
-          //case Some(tgts) => {
-            //pre1(init1) = tgts.+:(end)
-          //}
-        //}
         val f1 = new MHashSet[State]
         f1 += end
 
@@ -322,6 +305,273 @@ class PythonPFABuilder extends PFABuilder {
     }
   }
 
+}
+
+class JavascriptPFABuilder extends PFABuilder {
+  // In js mode, we use the first component F1 (res. F2) to denote accepting
+  // states which only accepts empty (res. nonempty) traces.
+  // to approximate the js semantics as precisely as possible,
+  // we need to duplicate automaton at times
+
+  import PFA.getNewState
+
+  // return a deep copy of `base` and update the Regex2PFA database
+  // which means
+  // 1) if state s is related to capture group i
+  // then the copyed state s' should be related to i too
+  // 2) if state s is an initial state of some automaton corresponding
+  // to capture group i, so is the copyed state s'
+  def duplicate(base : PFA) : PFA = {
+    import Regex2PFA.{capState, stateCap, capInit}
+    base match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+
+        // map from base.state to copy.state
+        val sMap = new MHashMap[State, State]
+        // states of old automaton
+        val worklist = new MStack[State]
+
+        val newinit = getNewState
+        worklist.push(init1)
+
+        def mapState(oldstate : State, newstate : State) = {
+          sMap += (oldstate -> newstate)
+        }
+        def getState(oldstate : State) : State = {
+          sMap.getOrElse(oldstate, {
+            val newstate = getNewState
+            mapState(oldstate, newstate)
+            worklist.push(oldstate)
+            newstate
+          })
+        }
+
+        val newf1 = new MHashSet[State]
+        val newf2 = new MHashSet[State]
+        val newtrans = new MHashMap[State, Seq[SigmaTransition]]
+        val newpre = new MHashMap[State, Seq[ETransition]]
+        val newpost = new MHashMap[State, Seq[ETransition]]
+
+        // we use a DFS here to exclude unreachable states
+        while (!worklist.isEmpty) {
+          // note a state is visited only once
+          val oldstate = worklist.pop()
+          val newstate = getState(oldstate)
+          if (f1 contains oldstate) {
+            newf1 += newstate
+          }
+          if (f2 contains oldstate) {
+            newf2 += newstate
+          }
+          for (trans <- t1.get(oldstate).iterator) {
+            // trans : Seq[(label, nextState)]
+            val t = trans.map(sigmaTrans => {
+              val (label, next) = sigmaTrans
+              (label, getState(next))
+            })
+            newtrans += ((newstate, t))
+          }
+          for (trans <- pre1.get(oldstate).iterator) {
+            // trans : Seq[nextState]
+            val t = trans.map(s => getState(s))
+            newpre += ((newstate, t))
+          }
+          for (trans <- post1.get(oldstate).iterator) {
+            // trans : Seq[nextState]
+            val t = trans.map(s => getState(s))
+            newpost += ((newstate, t))
+          }
+
+          // now the database ...
+          for (caps <- stateCap.get(oldstate).iterator; cap <- caps) {
+            stateCap.addBinding(newstate, cap)
+            capState.addBinding(cap, newstate)
+            if (capInit.getOrElse(cap, MSet()) contains oldstate) {
+              capInit.addBinding(cap, newstate)
+            }
+          }
+        }
+        val newend = (f1, f2)
+
+        PFA(newtrans, newpre, newpost, newinit, (newf1, newf2))
+      }
+    }
+  }
+
+  def none() : PFA = {
+      val init = getNewState
+      val end = (new MHashSet[State], new MHashSet[State])
+      val trans = new MHashMap[State, Seq[SigmaTransition]]
+      val pre = new MHashMap[State, Seq[ETransition]]
+      val post = new MHashMap[State, Seq[ETransition]]
+      PFA(trans, pre, post, init, end)
+  }
+
+  def epsilon() : PFA = {
+      val init = getNewState
+      val F1 = new MHashSet[State]
+      val newaccepting = getNewState
+      F1 += newaccepting
+      val F2 = new MHashSet[State]
+      val end = (F1, F2)
+      val trans = new MHashMap[State, Seq[SigmaTransition]]
+      val pre = new MHashMap[State, Seq[ETransition]]
+      pre += ((init, Seq(newaccepting)))
+      val post = new MHashMap[State, Seq[ETransition]]
+      PFA(trans, pre, post, init, end)
+  }
+
+  def single(lbl : TLabel) : PFA = {
+    if (LabelOps isNonEmptyLabel lbl) {
+      val init = getNewState
+      val intermediate = getNewState
+      val newaccepting = getNewState
+      val F1 = new MHashSet[State]
+      val F2 = new MHashSet[State]
+      F2 += newaccepting
+      val end = (F1, F2)
+      val trans = new MHashMap[State, Seq[SigmaTransition]]
+      trans += ((intermediate, Seq((lbl, newaccepting))))
+      val pre = new MHashMap[State, Seq[ETransition]]
+      pre += ((init, Seq(intermediate)))
+      val post = new MHashMap[State, Seq[ETransition]]
+      PFA(trans, pre, post, init, end)
+    } else {
+      none
+    }
+  }
+
+  def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
+    (aut1, aut2) match {
+      case (PFA(t1, pre1, post1, init1, (f1_1, f2_1)), PFA(t2, pre2, post2, init2, (f1_2, f2_2))) => {
+        val init = getNewState
+        val f1 = f1_1 ++ f1_2
+        val f2 = f2_1 ++ f2_2
+        val trans = t1 ++ t2
+        val pre = pre1 ++ pre2
+        pre += ((init, Seq(init1, init2)))
+        val post = post1 ++ post2
+
+        PFA(trans, pre, post, init, (f1, f2))
+      }
+    }
+  }
+
+  def concat(aut1 : PFA, aut2 : PFA) : PFA = {
+    (aut1, aut2) match {
+      case (PFA(t1, pre1, post1, init1, (f1_1, f2_1)),
+        PFA(t2, pre2, post2, init2, (f1_2, f2_2))) => {
+          // for performance, we only copy aut2 when both aut1 and aut2 accept
+          // empty string.
+          if (f1_1.isEmpty || f1_2.isEmpty) {
+            // the same as in Python mode. However, here
+            // we move all f1_2 states to f2_2
+            val trans = t1 ++ t2
+            val pre = pre1 ++ pre2
+            for (s <- f1_1) {
+              pre += ((s, Seq(init2)))
+            }
+            for (s <- f1_2) {
+              pre += ((s, Seq(init2)))
+            }
+            val post = post1 ++ post2
+            val f1 = new MHashSet[State]
+            val f2 = f1_2 ++ f2_2
+
+            PFA(trans, pre, post, init1, (f1, f2))
+          } else {
+            // the hard part
+            // first make a copy of aut2
+            val aut2copy = duplicate(aut2)
+            aut2copy match {
+              case PFA(t2copy, pre2copy, post2copy, init2copy, (f1_2copy, f2_2copy)) => {
+                val trans = t1 ++ t2 ++ t2copy
+                val pre = pre1 ++ pre2 ++ pre2copy
+                // empty trace from aut1 continues in aut2
+                for (s <- f1_1) {
+                  pre += ((s, Seq(init2)))
+                }
+                // nonempty trace from aut1 continues in aut2copy
+                for (s <- f2_1) {
+                  pre += ((s, Seq(init2copy)))
+                }
+                val post = post1 ++ post2 ++ post2copy
+                val f1 = f1_2
+                val f2 = f2_2 ++ f1_2copy ++ f2_2copy
+
+                PFA(trans, pre, post, init1, (f1, f2))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def star(aut : PFA) : PFA = {
+    aut match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+        val init = getNewState
+        val end_empty = getNewState
+        val end_nonempty = getNewState
+
+        for (s <- f1) {
+          pre1 += ((s, Seq(init1)))
+        }
+        for (s <- f1) {
+          // f2 is only reachable from nonempty matches
+          pre1 += ((s, Seq(init1, end_nonempty)))
+        }
+        pre1 += ((init, Seq(init1, end_empty)))
+
+        val newf1 = new MHashSet[State]
+        newf1 += end_empty
+        val newf2 = new MHashSet[State]
+        newf2 += end_nonempty
+
+        PFA(t1, pre1, post1, init, (newf1, newf2))
+      }
+    }
+  }
+
+  def lazystar(aut : PFA) : PFA = {
+    aut match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+        val init = getNewState
+        val end_empty = getNewState
+        val end_nonempty = getNewState
+
+        for (s <- f1) {
+          pre1 += ((s, Seq(init1)))
+        }
+        for (s <- f1) {
+          // f2 is only reachable from nonempty matches
+          pre1 += ((s, Seq(end_nonempty, init1)))
+        }
+        pre1 += ((init, Seq(end_empty, init1)))
+
+        val newf1 = new MHashSet[State]
+        newf1 += end_empty
+        val newf2 = new MHashSet[State]
+        newf2 += end_nonempty
+
+        PFA(t1, pre1, post1, init, (newf1, newf2))
+      }
+    }
+  }
+
+  def plus(aut : PFA) : PFA = {
+    // aut will be modified during recursion
+    // so we must make a copy here
+    val autcopy = duplicate(aut)
+    val staraut = star(aut)
+    concat(autcopy, staraut)
+  }
+
+  def lazyplus(aut : PFA) : PFA = {
+    val autcopy = duplicate(aut)
+    val staraut = lazystar(aut)
+    concat(autcopy, staraut)
+  }
 }
 
 object Regex2PFA {
