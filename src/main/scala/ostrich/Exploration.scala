@@ -35,6 +35,7 @@ package ostrich
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
+import ap.parser.SMTLineariser
 import ap.terfor.{Term, ConstantTerm, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
@@ -134,8 +135,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     else
       comp
 
-  if (flags.writeSL && StraightLineStore.straightlineFormula.isDefined)
+  if (flags.writeSL && StraightLineStore.straightlineFormula.isDefined) {
+    Console.err.println("more than one disjunct found")
     throw OstrichStringTheory.NotStraightlineException
+  }
 
   Console.err.println
   Console.err.println("Running OSTRICH")
@@ -182,8 +185,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   }
 
   for ((ops, t) <- sortedFunApps)
-    if (ops.size > 1 && !(strDatabase isConcrete t))
+    if (ops.size > 1 && !(strDatabase isConcrete t)) {
+      Console.err.println("multiple definitions found for " + t)
       throw OstrichStringTheory.NotStraightlineException
+    }
 //      throw new Exception("Multiple definitions found for " + t +
 //                          ", input is not straightline")
 
@@ -207,21 +212,52 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   //////////////////////////////////////////////////////////////////////////////
 
   if (flags.writeSL) {
-  StraightLineStore.straightlineFormula = Some(
-    ap.DialogUtil.asString {
-      for ((apps, res) <- sortedFunApps.reverse) {
-        print("" + res + " := ")
-        apps match {
-          case Seq((ConcatPreOp, args)) =>
-            println("concat(" + (args mkString ", ") + ");")
-          case _ =>
-            throw OstrichStringTheory.NotStraightlineException
-        }
+    def term2String(t : Term) : String =
+      t match {
+        case LinearCombination.Constant(id) => "const" + id
+        case t => t.toString
       }
+
+    StraightLineStore.straightlineFormula = Some(
+      ap.DialogUtil.asString {
+        val stringConsts = new MHashSet[Int]
+
+        def declareConst(t : Term) : Unit =
+          t match {
+            case LinearCombination.Constant(IdealInt(id)) =>
+              if (stringConsts add id) {
+                val str = strDatabase id2Str id
+                println("const" + id + " == \"" +
+                          SMTLineariser.escapeString(str) + "\";")
+              }
+            case _ =>
+              // nothing
+          }
+
+        for ((apps, res) <- sortedFunApps.reverse) {
+          declareConst(res)
+          for ((_, args) <- apps; t <- args)
+            declareConst(t)
+        }
+
+        for ((v, _) <- initialConstraints)
+          declareConst(v)
+
+        println
+
+        for ((apps, res) <- sortedFunApps.reverse) {
+          print("" + term2String(res) + " := ")
+          apps match {
+            case Seq((ConcatPreOp, args)) =>
+              println("concat(" + ((args map term2String) mkString ", ") + ");")
+            case _ =>
+              throw OstrichStringTheory.NotStraightlineException
+          }
+        }
 
       for ((v, aut) <- initialConstraints) {
         println
-        println("" + v + " in {")
+        println("" + term2String(v) + " in {")
         print(aut)
         println("};")
       }

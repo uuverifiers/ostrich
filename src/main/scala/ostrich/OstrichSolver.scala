@@ -230,7 +230,8 @@ class OstrichSolver(theory : OstrichStringTheory,
       val lProver =
         if (useLength) {
           if (flags.writeSL)
-            throw OstrichStringTheory.NotStraightlineException
+            throw new Exception(
+              "Cannot handle length when exporting constraints")
 
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)

@@ -40,7 +40,7 @@ import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
 import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
 import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
-import ap.terfor.conjunctions.Conjunction
+import ap.terfor.conjunctions.{Conjunction, IdentityReducerPluginFactory}
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
@@ -336,7 +336,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (visitor3(visitor2(visitor1(f))), signature)
   }
 
-  override val reducerPlugin = new OstrichReducerFactory(this)
+  override val reducerPlugin =
+    if (flags.writeSL)
+      IdentityReducerPluginFactory
+    else
+      new OstrichReducerFactory(this)
 
   TheoryRegistry register this
   StringTheory register this
