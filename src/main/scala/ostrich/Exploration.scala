@@ -182,7 +182,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   }
 
   for ((ops, t) <- sortedFunApps)
-    if (ops.size > 1 && !(concreteValues contains t))
+    if (ops.size > 1 && !(strDatabase isConcrete t))
       throw OstrichStringTheory.NotStraightlineException
 //      throw new Exception("Multiple definitions found for " + t +
 //                          ", input is not straightline")
