@@ -15,7 +15,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
       }
     }
 
-    (result split "\n") contains expResult
+    expResult match {
+      case "error" =>
+        (result split "\n") exists { str => str contains "error" }
+      case res =>
+        (result split "\n") contains res
+    }
   }
 
   def checkFile(filename : String, result : String,
@@ -36,6 +41,30 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                             filename) ++ extractOpts).toArray,
                         false)
     }
+
+  property("propagation.smt2") =
+    checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
+  property("subsumption.smt2") =
+    checkFile("tests/subsumption.smt2", "sat")
+  property("subsumption2.smt2") =
+    checkFile("tests/subsumption2.smt2", "unsat")
+
+  property("case-insensitive.smt2") =
+    checkFile("tests/case-insensitive.smt2", "sat")
+  property("case-insensitive-2.smt2") =
+    checkFile("tests/case-insensitive-2.smt2", "unsat")
+
+  property("minimize-problem.smt2") =
+    checkFile("tests/minimize-problem.smt2", "sat")
+
+  property("str.from_int.smt2") =
+    checkFile("tests/str.from_int.smt2", "sat")
+  property("str.from_int_2.smt2") =
+    checkFile("tests/str.from_int_2.smt2", "unsat")
+  property("str.to_int.smt2") =
+    checkFile("tests/str.to_int.smt2", "sat")
+  property("str.to_int_2.smt2") =
+    checkFile("tests/str.to_int_2.smt2", "unsat")
 
   property("chars.smt2") =
     checkFile("tests/chars.smt2", "sat")
@@ -167,6 +196,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str.at.smt2", "sat")
   property("str.at-2.smt2") =
     checkFile("tests/str.at-2.smt2", "unsat")
+  property("str.at-bug.smt2") =
+    checkFile("tests/str.at-bug.smt2", "sat")
 
   property("email-regex.smt2") =
     checkFile("tests/email-regex.smt2", "sat")
@@ -179,6 +210,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/indexof.smt2", "sat")
   property("substring.smt2") =
     checkFile("tests/substring.smt2", "sat")
+  property("substring-bug.smt2") =
+    checkFile("tests/substring-bug.smt2", "sat")
 
   property("parse-regex.smt2") =
     checkFile("tests/parse-regex.smt2", "sat")
@@ -190,6 +223,13 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-regex2b.smt2", "unsat")
   property("parse-regex4.smt2") =
     checkFile("tests/parse-regex4.smt2", "sat")
+
+  property("parse-ecma-cases.smt2") =
+    checkFile("tests/parse-ecma-cases.smt2", "unsat")
+  property("parse-ecma-bug1.smt2") =
+    checkFile("tests/parse-ecma-bug1.smt2", "sat")
+  property("parse-ecma-bug2.smt2") =
+    checkFile("tests/parse-ecma-bug2.smt2", "unsat")
 
   property("parse-regex-lookahead.smt2") =
     checkFile("tests/parse-regex-lookahead.smt2", "sat")
@@ -203,5 +243,16 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-regex-lookahead3b.smt2", "unsat")
   property("parse-regex-lookahead4.smt2") =
     checkFile("tests/parse-regex-lookahead4.smt2", "sat")
+
+  // Negated equations in general are not handled yet, but should
+  // not give incorrect results
+  property("negated-equation-1.smt2") =
+    checkFile("tests/negated-equation-1.smt2", "unsat")
+  property("negated-equation-2.smt2") =
+    checkFile("tests/negated-equation-2.smt2", "error")
+  property("concat-empty.smt2") =
+    checkFile("tests/concat-empty.smt2", "unsat")
+  property("replace-bug.smt2") =
+    checkFile("tests/replace-bug.smt2", "error")
 
 }

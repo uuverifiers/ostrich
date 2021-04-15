@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -91,22 +91,22 @@ object Exploration {
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
-               concreteValues : Map[Term, Seq[Int]],
+               strDatabase : StrDatabase,
                lengthProver : Option[SimpleAPI],
                lengthVars : Map[Term, Term],
                strictLengths : Boolean,
                flags : OFlags) : Exploration =
-    new EagerExploration(funApps, initialConstraints, concreteValues,
+    new EagerExploration(funApps, initialConstraints, strDatabase,
                          lengthProver, lengthVars, strictLengths, flags)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
-              concreteValues : Map[Term, Seq[Int]],
+              strDatabase : StrDatabase,
               lengthProver : Option[SimpleAPI],
               lengthVars : Map[Term, Term],
               strictLengths : Boolean,
               flags : OFlags) : Exploration =
-    new LazyExploration(funApps, initialConstraints, concreteValues,
+    new LazyExploration(funApps, initialConstraints, strDatabase,
                         lengthProver, lengthVars, strictLengths, flags)
 
   private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
@@ -120,7 +120,7 @@ object Exploration {
  */
 abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
-                           concreteValues : Map[Term, Seq[Int]],
+                           strDatabase : StrDatabase,
                            lengthProver : Option[SimpleAPI],
                            lengthVars : Map[Term, Term],
                            strictLengths : Boolean,
@@ -148,6 +148,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       argTermNum.put(res, 0)
     for ((t, _) <- initialConstraints)
       argTermNum.put(t, 0)
+    for ((t, _) <- lengthVars)
+      argTermNum.put(t, 0)
     for ((_, args, _) <- funApps; a <- args)
       argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
 
@@ -156,13 +158,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     while (!remFunApps.isEmpty) {
       val (selectedApps, otherApps) =
-        remFunApps partition { case (_, _, res) => argTermNum(res) == 0 }
+        remFunApps partition { case (_, _, res) =>
+                                 argTermNum(res) == 0 ||
+                                 strDatabase.isConcrete(res) }
       remFunApps = otherApps
 
       for ((_, args, _) <- selectedApps; a <- args)
         argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
 
-      assert(!selectedApps.isEmpty)
+      if (selectedApps.isEmpty)
+        throw new Exception(
+          "Cyclic definitions found, input is not straightline")
 
       val appsPerRes = selectedApps groupBy (_._3)
       val nonArgTerms = (selectedApps map (_._3)).distinct
@@ -181,7 +187,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 //      throw new Exception("Multiple definitions found for " + t +
 //                          ", input is not straightline")
 
-  val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
+  val resultTerms =
+    (for ((_, t) <- sortedFunApps.iterator) yield t).toSet
+  val leafTerms =
+    allTerms filter {
+      case t => (strDatabase isConcrete t) || !(resultTerms contains t)
+    }
 
   if (!sortedFunApps.isEmpty)
     Console.withOut(Console.err) {
@@ -239,7 +250,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     // check whether any of the terms have concrete definitions
     for (t <- allTerms)
-      for (w <- concreteValues get t) {
+      for (w <- strDatabase.term2List(t)) {
         val str : String = w.map(i => i.toChar)(breakOut)
         additionalConstraints += ((t, BricsAutomaton fromString str))
         for (ind <- term2Index get t)
@@ -569,12 +580,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _initialConstraints : Seq[(Term, Automaton)],
-                       _concreteValues : Map[Term, Seq[Int]],
+                       _strDatabase : StrDatabase,
                        _lengthProver : Option[SimpleAPI],
                        _lengthVars : Map[Term, Term],
                        _strictLengths : Boolean,
                        _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _concreteValues,
+      extends Exploration(_funApps, _initialConstraints, _strDatabase,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
@@ -654,12 +665,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _initialConstraints : Seq[(Term, Automaton)],
-                      _concreteValues : Map[Term, Seq[Int]],
+                      _strDatabase : StrDatabase,
                       _lengthProver : Option[SimpleAPI],
                       _lengthVars : Map[Term, Term],
                       _strictLengths : Boolean,
                       _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _concreteValues,
+      extends Exploration(_funApps, _initialConstraints, _strDatabase,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._

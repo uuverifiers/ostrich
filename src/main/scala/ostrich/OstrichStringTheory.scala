@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,11 +34,11 @@ package ostrich
 
 import ap.Signature
 import ap.basetypes.IdealInt
-import ap.parser.{ITerm, IFormula, IExpression, IFunction}
+import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp}
 import IExpression.Predicate
 import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
-import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate}
+import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
 import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
@@ -47,13 +47,36 @@ import ap.proof.goal.Goal
 import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.{Map => GMap}
 
 object OstrichStringTheory {
 
   val alphabetSize = 1 << 16
 
+
   object NotStraightlineException extends Exception("input is not straightline")
   object CancelledException       extends Exception("solving cancelled")
+
+  class OstrichStringSort extends ProxySort(Sort.Integer) {
+    override val name = "String"
+
+    private var theory : OstrichStringTheory = null
+
+    protected[ostrich] def setTheory(_theory : OstrichStringTheory) : Unit =
+      theory = _theory
+
+    override lazy val individuals : Stream[ITerm] =
+      IFunApp(theory.str_empty, List()) #::
+      (for (t <- individuals;
+            n <- theory.CharSort.individuals)
+       yield IFunApp(theory.str_cons, List(n, t)))
+
+    override def decodeToTerm(
+                   d : IdealInt,
+                   assignment : GMap[(IdealInt, Sort), ITerm]) : Option[ITerm] =
+      Some(theory.strDatabase.id2ITerm(d.intValueSafe))
+
+  }
 
 }
 
@@ -65,12 +88,13 @@ object OstrichStringTheory {
 class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                           flags : OFlags) extends {
 
+  val StringSort   = new OstrichStringTheory.OstrichStringSort
   val alphabetSize = OstrichStringTheory.alphabetSize
-  val upperBound = IdealInt(alphabetSize - 1)
-  val CharSort   = ModuloArithmetic.ModSort(IdealInt.ZERO, upperBound)
-  val RegexSort  = Sort.createInfUninterpretedSort("RegLan")
+  val upperBound   = IdealInt(alphabetSize - 1)
+  val CharSort     = ModuloArithmetic.ModSort(IdealInt.ZERO, upperBound)
+  val RegexSort    = Sort.createInfUninterpretedSort("RegLan")
 
-} with AbstractStringTheoryWithSort {
+} with AbstractStringTheory {
 
   private val CSo = CharSort
   private val SSo = StringSort
@@ -83,17 +107,34 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  val str_empty =
+    new MonoSortedIFunction("str_empty", List(), SSo, true, false)
+  val str_cons =
+    new MonoSortedIFunction("str_cons", List(CSo, SSo), SSo, true, false)
+  val str_head =
+    new MonoSortedIFunction("str_head", List(SSo), CSo, true, false)
+  val str_tail =
+    new MonoSortedIFunction("str_tail", List(SSo), SSo, true, false)
+
+  StringSort setTheory this
+
+  //////////////////////////////////////////////////////////////////////////////
+
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
+  val re_from_ecma2020 =
+    MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
+  val re_case_insensitive =
+    MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
 
-  // List of user-defined functions that can be extended
-  val extraFunctions : Seq[(String, IFunction, PreOp,
-                            Atom => Seq[Term], Atom => Term)] =
+  // List of user-defined functions on strings that can be extended
+  val extraStringFunctions : Seq[(String, IFunction, PreOp,
+                                  Atom => Seq[Term], Atom => Term)] =
     List(("str.reverse", str_reverse, ostrich.ReversePreOp,
           a => List(a(0)), a => a(1)))
 
   val extraFunctionPreOps =
-    (for ((_, f, op, argSelector, resSelector) <- extraFunctions.iterator)
+    (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
      yield (f, (op, argSelector, resSelector))).toMap
 
   val transducersWithPreds : Seq[(String, Predicate, Transducer)] =
@@ -106,22 +147,32 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Map used by the parser
   val extraOps : Map[String, Either[IFunction, Predicate]] =
-    ((for ((name, f, _, _, _) <- extraFunctions.iterator)
+    ((for ((name, f, _, _, _) <- extraStringFunctions.iterator)
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
-      yield (name, Right(p)))).toMap
+      yield (name, Right(p))) ++
+     Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)),
+              (re_case_insensitive.name, Left(re_case_insensitive)))).toMap
+
+  val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] = Map()
 
   //////////////////////////////////////////////////////////////////////////////
 
-  val autDatabase = new AutDatabase(this)
+  val autDatabase = new AutDatabase(this, flags.minimizeAutomata)
 
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
 
   //////////////////////////////////////////////////////////////////////////////
+  /* Modified by Riccardo */
+  val strDatabase = new StrDatabase(this)
+
+  //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ (extraFunctions map (_._2))
+    predefFunctions ++ List(str_empty, str_cons, str_head, str_tail) ++
+    (extraStringFunctions map (_._2)) ++
+    List(re_from_ecma2020, re_case_insensitive)
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
@@ -148,6 +199,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
 
   object FunPred {
+    def apply(f : IFunction) : Predicate = functionPredicateMap(f)
     def unapply(p : Predicate) : Option[IFunction] = predFunMap get p
   }
 
@@ -157,9 +209,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_to_re,
+                   str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
-                   re_++, re_union, re_inter, re_*, re_+, re_opt, re_comp,
-                   re_loop, re_from_str))
+                   re_++, re_union, re_inter, re_diff, re_*, re_+, re_opt,
+                   re_comp, re_loop, re_from_str, re_from_ecma2020,
+                   re_case_insensitive))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++
@@ -172,7 +226,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  private val ostrichSolver = new OstrichSolver (this, flags)
+  private val ostrichSolver      = new OstrichSolver (this, flags)
+  private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
     // not used
@@ -193,9 +248,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
             actions
           case None => try {
             modelCache(goal.facts) {
-              ostrichSolver.findStringModel(goal) } match {
-              case Some(m) => List()
-              case _ => List(Plugin.AddFormula(Conjunction.TRUE))
+              ostrichSolver.findStringModel(goal)
+            } match {
+              case Some(m) =>
+                equalityPropagator.handleSolution(goal, m)
+              case None =>
+                List(Plugin.AddFormula(Conjunction.TRUE))
             }
           } catch {
             case OstrichStringTheory.CancelledException =>
@@ -212,14 +270,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         None
       } else {
         val model = (modelCache(goal.facts) {
-          ostrichSolver.findStringModel(goal)
-        }).get
+                       ostrichSolver.findStringModel(goal)
+                     }).get
         implicit val order = goal.order
+        import TerForConvenience._
 
         val stringAssignments =
-          assignStringValues(goal.facts,
-                             for ((x, Right(w)) <- model) yield (x, w),
-                             order)
+          conj(for ((x, Right(w)) <- model)
+               yield (x === strDatabase.list2Id(w)))
 
         import TerForConvenience._
         val lenAssignments =
@@ -231,6 +289,25 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       }
 
   })
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  val asString = new Theory.Decoder[String] {
+    def apply(d : IdealInt)
+             (implicit ctxt : Theory.DecoderContext) : String =
+      asStringPartial(d).get
+  }
+
+  val asStringPartial = new Theory.Decoder[Option[String]] {
+    def apply(d : IdealInt)
+             (implicit ctxt : Theory.DecoderContext) : Option[String] =
+      d match {
+        case IdealInt(v) if (strDatabase containsId v) =>
+          Some(strDatabase id2Str v)
+        case _ =>
+          None
+      }
+  }
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -253,8 +330,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                           : (IFormula, Signature) = {
     val visitor1 = new OstrichPreprocessor (this)
     val visitor2 = new OstrichRegexEncoder (this)
-    (visitor2(visitor1(f)), signature)
+    // Added by Riccardo
+    val visitor3 = new OstrichStringEncoder(this)
+
+    (visitor3(visitor2(visitor1(f))), signature)
   }
+
+  override val reducerPlugin = new OstrichReducerFactory(this)
 
   TheoryRegistry register this
   StringTheory register this

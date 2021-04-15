@@ -3,6 +3,7 @@
 dotfilebase="/tmp/.ostrich"
 
 JAVA=java
+JAVA_OPTS="-Xss20000k -Xmx1500m"
 
 me=`whoami`
 portfile="$dotfilebase"_"$me"
@@ -39,8 +40,7 @@ startDaemon() {
         touch "$tempportfile"
         chmod go-rwx "$tempportfile"
 
-        export JAVA_OPTS="-Xss20000k -Xmx1500m"
-	$JAVA -cp $TARGET ap.ServerMain >"$tempportfile" &
+	$JAVA $JAVA_OPTS -cp $TARGET ap.ServerMain >"$tempportfile" &
 
         ostrichId=$!
 
@@ -88,7 +88,7 @@ until [ $success -eq 0 ]; do
 
         for var; do
 	    case "$var" in
-                [+-]eager | [+-]forward | -length=* | -writeSL=*)
+                [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | -writeSL=*)
                     if [ x"$ostrichParams" = x"" ]; then
                         ostrichParams=$var
                     else

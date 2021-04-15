@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -140,11 +140,13 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shLen3    = VariableShiftVisitor(len, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shBegin3 &
-        str_len(v(2, StringSort)) === shLen3     // TODO: what should happen when
-                                                 // extracting more characters than
-                                                 // a string contains?
+        ite(
+          shLen3 < 0 | shBegin3 < 0 | shBegin3 + shLen3 > str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shBegin3 &
+          str_len(v(2, StringSort)) === shLen3
+        )
       )))
     }
 
@@ -159,13 +161,18 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shIndex3  = VariableShiftVisitor(index, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
-        strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-        str_len(v(1, StringSort)) === shIndex3 &
-        str_in_re(v(2, StringSort), re_allchar()) // TODO: what should happen when
-                                                  // extracting a character outside of the
-                                                  // string range?
+        ite(
+          shIndex3 < 0 | shIndex3 >= str_len(shBigStr3),
+          v(2, StringSort) === "",
+          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
+          str_len(v(1, StringSort)) === shIndex3 &
+          str_in_re(v(2, StringSort), re_allchar())
+        )
       )))
     }
+
+    case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
+    case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
 
     case (IFunApp(`str_++`, _),
           Seq(ConcreteString(str1), ConcreteString(str2))) =>
@@ -182,6 +189,11 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           str_cons(code, str_empty()),
           str_empty())
 
+    case (IFunApp(`str_from_char`, _), Seq(c : ITerm)) =>
+      str_cons(c, str_empty())
+
+
+/*
     // Currently we just under-approximate and assume that the considered
     // string is "0"
     case (IFunApp(`str_to_int`, _), Seq(str : ITerm)) => {
@@ -197,6 +209,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         "Warning: int.to.str not fully supported")
       eps(shiftVars(t, 1) === 0 &&& v(0) === string2Term("0"))
     }
+*/
 
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
@@ -249,3 +262,30 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
   }
 
 }
+
+/**
+ * Stores constant string to strDatabase for easy access.
+ */
+class OstrichStringEncoder(theory : OstrichStringTheory)
+  extends ContextAwareVisitor[Unit, IExpression] {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula =
+    this.visit(f, Context(())).asInstanceOf[IFormula]
+
+  def postVisit(t : IExpression,
+                ctxt : Context[Unit],
+                subres : Seq[IExpression]) : IExpression =
+    (t update subres) match {
+
+      case emptyStr @ IFunApp(this.theory.str_empty, _) =>
+        this.theory.strDatabase.iTerm2Id(emptyStr)
+
+      case consStr @ IFunApp(this.theory.str_cons, _) =>
+        this.theory.strDatabase.iTerm2Id(consStr)
+
+      case t => t
+    }
+}
+
