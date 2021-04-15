@@ -44,7 +44,7 @@ import ap.util.Seqs
 import scala.collection.breakOut
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
-                                 BitSet => MBitSet}
+                                 BitSet => MBitSet, Queue}
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
@@ -255,12 +255,82 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           }
         }
 
-      for ((v, aut) <- initialConstraints) {
+        for ((v, aut) <- initialConstraints) {
+          println
+          println("" + term2String(v) + " in {")
+          print(aut)
+          println("};")
+        }
+
+        // check whether this problem can be solved through
+        // forward propagation
+
+        val termConsts = new MHashMap[Int, ConstantTerm]
+
+        def term2Const(t : Term) : ConstantTerm = t match {
+          case LinearCombination.Constant(IdealInt(id)) =>
+            termConsts.getOrElseUpdate(id, new ConstantTerm("const" + id))
+          case LinearCombination.SingleTerm(c : ConstantTerm) =>
+            c
+        }
+
+        val concats : Seq[(ConstantTerm, (ConstantTerm, ConstantTerm))] =
+          (for ((apps, res) <- sortedFunApps.reverse) yield {
+             apps match {
+               case Seq((ConcatPreOp, Seq(arg1, arg2))) =>
+                 (term2Const(res), (term2Const(arg1), term2Const(arg2)))
+               case _ =>
+                 throw OstrichStringTheory.NotStraightlineException
+             }
+           }).toList
+
+        val todo = new Queue[(ConstantTerm, Automaton)]
+
+        for ((v, aut) <- initialConstraints) {
+          val c = term2Const(v)
+          todo += ((c, aut))
+        }
+
+        for (id <- stringConsts) {
+          val c = termConsts(id)
+          val aut = BricsAutomaton fromString strDatabase.id2Str(id)
+          todo += ((c, aut))
+        }
+
+        val regexes = new MHashMap[ConstantTerm, List[Automaton]]
+        var foundInconsistency = false
+
+        def addAut(c : ConstantTerm, aut : Automaton) : Unit = {
+          val newAuts = aut :: regexes.getOrElse(c, List())
+          regexes.put(c, newAuts)
+          if (!AutomataUtils.areConsistentAutomata(newAuts))
+            foundInconsistency = true
+        }
+
+        def concatAuts(aut1 : Automaton, aut2 : Automaton) : Automaton =
+          AutomataUtils.concat(aut1.asInstanceOf[AtomicStateAutomaton],
+                               aut2.asInstanceOf[AtomicStateAutomaton])
+
+        while (!foundInconsistency && !todo.isEmpty) {
+          val (c, aut) = todo.dequeue
+          addAut(c, aut)
+
+          for ((res, (`c`, arg)) <- concats;
+               aut2 <- regexes.getOrElse(arg, List()))
+            todo += ((res, concatAuts(aut, aut2)))
+
+          for ((res, (arg, `c`)) <- concats;
+               aut2 <- regexes.getOrElse(arg, List()))
+            todo += ((res, concatAuts(aut2, aut)))
+        }
+
         println
-        println("" + term2String(v) + " in {")
-        print(aut)
-        println("};")
-      }
+
+        if (foundInconsistency)
+          println("// Forward propagation can prove that the constraints are unsat")
+        else
+          println("// Forward propagation is inconclusive")
+
     })
 
     throw OstrichStringTheory.CancelledException
