@@ -1,19 +1,33 @@
-/*
+/**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018  Matthew Hague, Philipp Ruemmer
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package ostrich
@@ -23,7 +37,9 @@ import ap.terfor.preds.PredConj
 
 import dk.brics.automaton.RegExp
 
-import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
+import scala.collection.mutable.{HashMap => MHashMap,
+                                 Stack => MStack,
+                                 HashSet => MHashSet}
 
 object ReplaceAllPreOp {
   def apply(a : Char) : PreOp = new ReplaceAllPreOpChar(a)
@@ -125,6 +141,8 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
  * transducer representation of word
  */
 object ReplaceAllPreOpWord {
+  import Transducer._
+
   def apply(w : Seq[Char]) = {
     val wtran = buildWordTransducer(w)
     new ReplaceAllPreOpTran(wtran)
@@ -151,12 +169,45 @@ object ReplaceAllPreOpWord {
     builder.addTransition(states(end), (w(end), w(end)), internal, states(0))
 
     for (i <- 0 until w.size) {
+      // the amount of w read up to state i
+      val buffer = w.slice(0, i)
+      // for when we need to output whole prefix read so far
       val output = OutputOp(w.slice(0, i), Plus(0), "")
 
-      // begin again if mismatch
+      // if mismatch, look for the largest suffix of the output buffer
+      // that is a correct prefix of the word being searched for. Then
+      // return to the state corresponding to that part of the word.
       val anyLbl = builder.LabelOps.sigmaLabel
-      for (lbl <- builder.LabelOps.subtractLetter(w(i), anyLbl))
+
+      // chars that are handled specially (do not return to start)
+      // e.g. the next letter in w
+      val handledChars= new MHashSet[Char]
+      handledChars.add(w(i))
+
+      // for each prefix - we go in reverse so we get the longest ones
+      // first
+      for (j <- i - 1 to 0 by -1) {
+        val prefix = w.slice(0, j)
+        val charNext = w(prefix.size)
+
+        if (!handledChars.contains(charNext) && buffer.endsWith(prefix)) {
+          val rejectedOldMatchSize = buffer.size - prefix.size
+          val rejectedOldMatchPart = buffer.slice(0, rejectedOldMatchSize)
+          val rejectedOutput = OutputOp(rejectedOldMatchPart, NOP, "")
+
+          builder.addTransition(states(i),
+                                (charNext, charNext),
+                                rejectedOutput,
+                                states(prefix.size + 1))
+
+          handledChars.add(charNext)
+        }
+      }
+
+      // letters that should return to start
+      for (lbl <- builder.LabelOps.subtractLetters(handledChars, anyLbl)) {
         builder.addTransition(states(i), lbl, output, states(0))
+      }
 
       // handle word ending in middle of match
       val outop = if (i == w.size -1) internal else output
@@ -173,6 +224,8 @@ object ReplaceAllPreOpWord {
  * z) for a regular expression e.
  */
 object ReplaceAllPreOpRegEx {
+  import Transducer._
+
   /**
    * Build preop from c and context giving regex to be replaced
    */
@@ -355,7 +408,6 @@ class ReplaceAllPreOpTran(tran : Transducer) extends PreOp {
 
     // x = replaceall(y, w, z) internally translated to
     // y' = tran(y); x = replaceall(y', w, z)
-    //
     val cg = CaleyGraph[rc.type](rc, zcons)
     val res =
     for (box <- cg.getAcceptNodes.iterator;

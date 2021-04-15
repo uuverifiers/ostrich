@@ -1,19 +1,33 @@
-/*
+/**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (C) 2018-2019  Matthew Hague, Philipp Ruemmer
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package ostrich
@@ -77,22 +91,22 @@ object Exploration {
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
-               concreteValues : Map[Term, Seq[Int]],
+               strDatabase : StrDatabase,
                lengthProver : Option[SimpleAPI],
                lengthVars : Map[Term, Term],
                strictLengths : Boolean,
                flags : OFlags) : Exploration =
-    new EagerExploration(funApps, initialConstraints, concreteValues,
+    new EagerExploration(funApps, initialConstraints, strDatabase,
                          lengthProver, lengthVars, strictLengths, flags)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
-              concreteValues : Map[Term, Seq[Int]],
+              strDatabase : StrDatabase,
               lengthProver : Option[SimpleAPI],
               lengthVars : Map[Term, Term],
               strictLengths : Boolean,
               flags : OFlags) : Exploration =
-    new LazyExploration(funApps, initialConstraints, concreteValues,
+    new LazyExploration(funApps, initialConstraints, strDatabase,
                         lengthProver, lengthVars, strictLengths, flags)
 
   private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
@@ -106,7 +120,7 @@ object Exploration {
  */
 abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
-                           concreteValues : Map[Term, Seq[Int]],
+                           strDatabase : StrDatabase,
                            lengthProver : Option[SimpleAPI],
                            lengthVars : Map[Term, Term],
                            strictLengths : Boolean,
@@ -131,6 +145,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       argTermNum.put(res, 0)
     for ((t, _) <- initialConstraints)
       argTermNum.put(t, 0)
+    for ((t, _) <- lengthVars)
+      argTermNum.put(t, 0)
     for ((_, args, _) <- funApps; a <- args)
       argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
 
@@ -139,13 +155,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     while (!remFunApps.isEmpty) {
       val (selectedApps, otherApps) =
-        remFunApps partition { case (_, _, res) => argTermNum(res) == 0 }
+        remFunApps partition { case (_, _, res) =>
+                                 argTermNum(res) == 0 ||
+                                 strDatabase.isConcrete(res) }
       remFunApps = otherApps
 
       for ((_, args, _) <- selectedApps; a <- args)
         argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
 
-      assert(!selectedApps.isEmpty)
+      if (selectedApps.isEmpty)
+        throw new Exception(
+          "Cyclic definitions found, input is not straightline")
 
       val appsPerRes = selectedApps groupBy (_._3)
       val nonArgTerms = (selectedApps map (_._3)).distinct
@@ -159,11 +179,16 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   }
 
   for ((ops, t) <- sortedFunApps)
-    if (ops.size > 1 && !(concreteValues contains t))
+    if (ops.size > 1 && !(strDatabase isConcrete t))
       throw new Exception("Multiple definitions found for " + t +
                           ", input is not straightline")
 
-  val leafTerms = allTerms -- (for ((_, t) <- sortedFunApps) yield t)
+  val resultTerms =
+    (for ((_, t) <- sortedFunApps.iterator) yield t).toSet
+  val leafTerms =
+    allTerms filter {
+      case t => (strDatabase isConcrete t) || !(resultTerms contains t)
+    }
 
   if (!sortedFunApps.isEmpty)
     Console.withOut(Console.err) {
@@ -195,7 +220,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     // check whether any of the terms have concrete definitions
     for (t <- allTerms)
-      for (w <- concreteValues get t) {
+      for (w <- strDatabase.term2List(t)) {
         val str : String = w.map(i => i.toChar)(breakOut)
         additionalConstraints += ((t, BricsAutomaton fromString str))
         for (ind <- term2Index get t)
@@ -368,7 +393,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         for (resLen <- getVarLength(res))
           if (resValue.right.get.size != resLen.intValueSafe)
             throw new Exception(
-              "Could not satisfy length constraints for " + res)
+              "Could not satisfy length constraints for " + res +
+                " with solution " +
+                resValue.right.get.map(i => i.toChar)(breakOut) +
+                "; length is " + resValue.right.get.size +
+                " but should be " + resLen)
 
         model.put(res, resValue)
       }
@@ -521,12 +550,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _initialConstraints : Seq[(Term, Automaton)],
-                       _concreteValues : Map[Term, Seq[Int]],
+                       _strDatabase : StrDatabase,
                        _lengthProver : Option[SimpleAPI],
                        _lengthVars : Map[Term, Term],
                        _strictLengths : Boolean,
                        _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _concreteValues,
+      extends Exploration(_funApps, _initialConstraints, _strDatabase,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
@@ -606,12 +635,12 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
  */
 class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _initialConstraints : Seq[(Term, Automaton)],
-                      _concreteValues : Map[Term, Seq[Int]],
+                      _strDatabase : StrDatabase,
                       _lengthProver : Option[SimpleAPI],
                       _lengthVars : Map[Term, Term],
                       _strictLengths : Boolean,
                       _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _concreteValues,
+      extends Exploration(_funApps, _initialConstraints, _strDatabase,
                           _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._

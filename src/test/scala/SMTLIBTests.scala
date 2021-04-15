@@ -15,7 +15,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
       }
     }
 
-    (result split "\n") contains expResult
+    expResult match {
+      case "error" =>
+        (result split "\n") exists { str => str contains "error" }
+      case res =>
+        (result split "\n") contains res
+    }
   }
 
   def checkFile(filename : String, result : String,
@@ -37,6 +42,37 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("propagation.smt2") =
+    checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
+  property("subsumption.smt2") =
+    checkFile("tests/subsumption.smt2", "sat")
+  property("subsumption2.smt2") =
+    checkFile("tests/subsumption2.smt2", "unsat")
+
+  property("case-insensitive.smt2") =
+    checkFile("tests/case-insensitive.smt2", "sat")
+  property("case-insensitive-2.smt2") =
+    checkFile("tests/case-insensitive-2.smt2", "unsat")
+
+  property("minimize-problem.smt2") =
+    checkFile("tests/minimize-problem.smt2", "sat")
+
+  property("str.from_int.smt2") =
+    checkFile("tests/str.from_int.smt2", "sat")
+  property("str.from_int_2.smt2") =
+    checkFile("tests/str.from_int_2.smt2", "unsat")
+  property("str.to_int.smt2") =
+    checkFile("tests/str.to_int.smt2", "sat")
+  property("str.to_int_2.smt2") =
+    checkFile("tests/str.to_int_2.smt2", "unsat")
+
+  property("chars.smt2") =
+    checkFile("tests/chars.smt2", "sat")
+  property("chars2.smt2") =
+    checkFile("tests/chars2.smt2", "sat")
+  property("chars3.smt2") =
+    checkFile("tests/chars3.smt2", "sat")
+
   property("concat-regex.smt2") =
     checkFile("tests/concat-regex.smt2", "sat")
   property("concat-regex2.smt2") =
@@ -45,6 +81,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex3.smt2", "sat")
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
+  property("empty-union.smt2") =
+    checkFile("tests/empty-union.smt2", "sat")
 
   property("concat-regex.smt2 eager") =
     checkFileOpts("tests/concat-regex.smt2", "sat", "+eager")
@@ -54,6 +92,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/concat-regex3.smt2", "sat", "+eager")
   property("concat-regex4.smt2 eager") =
     checkFileOpts("tests/concat-regex4.smt2", "sat", "+eager")
+
+  property("loop.smt2") =
+    checkFile("tests/loop.smt2", "sat")
+  property("loop2.smt2") =
+    checkFile("tests/loop2.smt2", "unsat")
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
@@ -87,6 +130,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("transducer1.smt2") =
     checkFile("tests/transducer1.smt2", "sat")
+  property("transducer1b.smt2") =
+    checkFile("tests/transducer1b.smt2", "sat")
+  property("transducer1c.smt2") =
+    checkFile("tests/transducer1c.smt2", "sat")
   property("transducer2.smt2") =
     checkFile("tests/transducer2.smt2", "unsat")
   property("transducer2b.smt2") =
@@ -137,5 +184,75 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("len-bug.smt2") =
     checkFile("tests/len-bug.smt2", "unsat")
+
+  property("prefix.smt2") =
+    checkFile("tests/prefix.smt2", "sat")
+  property("prefix2.smt2") =
+    checkFile("tests/prefix2.smt2", "unsat")
+  property("prefix3.smt2") =
+    checkFile("tests/prefix3.smt2", "sat")
+
+  property("str.at.smt2") =
+    checkFile("tests/str.at.smt2", "sat")
+  property("str.at-2.smt2") =
+    checkFile("tests/str.at-2.smt2", "unsat")
+  property("str.at-bug.smt2") =
+    checkFile("tests/str.at-bug.smt2", "sat")
+
+  property("email-regex.smt2") =
+    checkFile("tests/email-regex.smt2", "sat")
+  property("name-regex.smt2") =
+    checkFile("tests/name-regex.smt2", "unsat")
+  property("brackets-regex.smt2") =
+    checkFile("tests/brackets-regex.smt2", "sat")
+
+  property("indexof.smt2") =
+    checkFile("tests/indexof.smt2", "sat")
+  property("substring.smt2") =
+    checkFile("tests/substring.smt2", "sat")
+  property("substring-bug.smt2") =
+    checkFile("tests/substring-bug.smt2", "sat")
+
+  property("parse-regex.smt2") =
+    checkFile("tests/parse-regex.smt2", "sat")
+  property("parse-regex2.smt2") =
+    checkFile("tests/parse-regex2.smt2", "sat")
+  property("parse-regex3.smt2") =
+    checkFile("tests/parse-regex3.smt2", "unsat")
+  property("parse-regex2b.smt2") =
+    checkFile("tests/parse-regex2b.smt2", "unsat")
+  property("parse-regex4.smt2") =
+    checkFile("tests/parse-regex4.smt2", "sat")
+
+  property("parse-ecma-cases.smt2") =
+    checkFile("tests/parse-ecma-cases.smt2", "unsat")
+  property("parse-ecma-bug1.smt2") =
+    checkFile("tests/parse-ecma-bug1.smt2", "sat")
+  property("parse-ecma-bug2.smt2") =
+    checkFile("tests/parse-ecma-bug2.smt2", "unsat")
+
+  property("parse-regex-lookahead.smt2") =
+    checkFile("tests/parse-regex-lookahead.smt2", "sat")
+  property("parse-regex-lookahead2.smt2") =
+    checkFile("tests/parse-regex-lookahead2.smt2", "sat")
+  property("parse-regex-lookahead2b.smt2") =
+    checkFile("tests/parse-regex-lookahead2b.smt2", "unsat")
+  property("parse-regex-lookahead3.smt2") =
+    checkFile("tests/parse-regex-lookahead3.smt2", "sat")
+  property("parse-regex-lookahead3b.smt2") =
+    checkFile("tests/parse-regex-lookahead3b.smt2", "unsat")
+  property("parse-regex-lookahead4.smt2") =
+    checkFile("tests/parse-regex-lookahead4.smt2", "sat")
+
+  // Negated equations in general are not handled yet, but should
+  // not give incorrect results
+  property("negated-equation-1.smt2") =
+    checkFile("tests/negated-equation-1.smt2", "unsat")
+  property("negated-equation-2.smt2") =
+    checkFile("tests/negated-equation-2.smt2", "error")
+  property("concat-empty.smt2") =
+    checkFile("tests/concat-empty.smt2", "unsat")
+  property("replace-bug.smt2") =
+    checkFile("tests/replace-bug.smt2", "error")
 
 }

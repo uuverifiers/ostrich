@@ -13,14 +13,14 @@ TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
 LIBDIR=$BASEDIR/lib
 SCALA=scala
 JAVA=java
-export JAVA_OPTS="-Xss20000k -Xmx1500m"
+export JAVA_OPTS="-Xss20000k -Xmx2000m"
 
 princessParams=()
 ostrichParams=""
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | [+-]length | [+-]certificates)
+        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]certificates)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else
@@ -33,8 +33,6 @@ for p; do
     esac
 done
 
-princessParams+=("-logo")
-
-exec $JAVA -cp $TARGET \
-     ap.CmdlMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+exec $JAVA $JAVA_OPTS -cp $TARGET \
+     ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
      "${princessParams[@]}"
