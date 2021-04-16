@@ -187,7 +187,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   for ((ops, t) <- sortedFunApps)
     if (ops.size > 1 && !(strDatabase isConcrete t)) {
       Console.err.println("multiple definitions found for " + t)
-      throw OstrichStringTheory.NotStraightlineException
+      if (!flags.writeSL)
+        throw OstrichStringTheory.NotStraightlineException
     }
 //      throw new Exception("Multiple definitions found for " + t +
 //                          ", input is not straightline")
@@ -245,13 +246,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
         println
 
-        for ((apps, res) <- sortedFunApps.reverse) {
+        for ((apps, res) <- sortedFunApps.reverse; app <- apps) {
           print("" + term2String(res) + " := ")
-          apps match {
-            case Seq((ConcatPreOp, args)) =>
+          app match {
+            case (ConcatPreOp, args) =>
               println("concat(" + ((args map term2String) mkString ", ") + ");")
-            case _ =>
-              throw OstrichStringTheory.NotStraightlineException
           }
         }
 
@@ -275,12 +274,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         }
 
         val concats : Seq[(ConstantTerm, (ConstantTerm, ConstantTerm))] =
-          (for ((apps, res) <- sortedFunApps.reverse) yield {
-             apps match {
-               case Seq((ConcatPreOp, Seq(arg1, arg2))) =>
+          (for ((apps, res) <- sortedFunApps.reverse; app <- apps) yield {
+             app match {
+               case (ConcatPreOp, Seq(arg1, arg2)) =>
                  (term2Const(res), (term2Const(arg1), term2Const(arg2)))
-               case _ =>
-                 throw OstrichStringTheory.NotStraightlineException
              }
            }).toList
 
@@ -320,6 +317,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             todo += ((res, concatAuts(aut, aut2)))
 
           for ((res, (arg, `c`)) <- concats;
+               if arg != c;
                aut2 <- regexes.getOrElse(arg, List()))
             todo += ((res, concatAuts(aut2, aut)))
         }
