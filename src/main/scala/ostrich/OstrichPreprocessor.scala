@@ -39,7 +39,8 @@ import ap.theories.strings.StringTheory
 /**
  * Pre-processor for reducing some operators to more basic ones.
  */
-class OstrichPreprocessor(theory : OstrichStringTheory)
+class OstrichPreprocessor(theory : OstrichStringTheory,
+                          rewriteStringEquations : Boolean)
       extends ContextAwareVisitor[Unit, IExpression] {
 
   import IExpression._
@@ -219,12 +220,22 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case (t, _) =>
       // TODO: generalise
       (t update subres) match {
+        case Eq(t, ConcreteString(str)) if rewriteStringEquations =>
+          str_in_re(t, str_to_re(str))
+        case Eq(ConcreteString(str), t) if rewriteStringEquations =>
+          str_in_re(t, str_to_re(str))
         case Geq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound <= 1000 =>
           // encode an upper bound using a regular expression
           str_in_re(w, re_loop(0, bound, re_allchar()))
         case Geq(IFunApp(`str_len`, Seq(w)), Const(bound)) if bound <= 1000 =>
           // encode a lower bound using a regular expression
           str_in_re(w, re_++(re_loop(bound, bound, re_allchar()), re_all()))
+        case Eq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound <= 1000 =>
+          // encode a length constraint using a regular expression
+          str_in_re(w, re_loop(bound, bound, re_allchar()))
+        case Eq(IFunApp(`str_len`, Seq(w)), Const(bound)) if bound <= 1000 =>
+          // encode a length constraint using a regular expression
+          str_in_re(w, re_loop(bound, bound, re_allchar()))
         case newT =>
           newT
       }
