@@ -230,8 +230,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       val lProver =
         if (useLength) {
           if (flags.writeSL)
-            throw new Exception(
-              "Cannot handle length when exporting constraints")
+            Console.err.println("Warning: ignoring length constraints")
 
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
