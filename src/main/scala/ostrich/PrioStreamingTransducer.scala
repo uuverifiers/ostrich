@@ -138,17 +138,15 @@ extends StreamingTransducer {
     // input index to process next,
     // prohibition set of epsilon transitions,
     // string variable values,
-    // is begin anchor consumed?
-    // is end anchor consumed?
-    val worklist = new MStack[(State, Int, Set[(State, State)], Seq[String], Boolean, Boolean)]
+    val worklist = new MStack[(State, Int, Set[(State, State)], Seq[String])]
 
-    worklist.push((initialState, 0, Set.empty[(State, State)], emptyVal, false, false))
+    worklist.push((initialState, 0, Set.empty[(State, State)], emptyVal))
 
     // find the output by dfs,
     // push configurations to stack by priority,
     // configuration with highest priority is pushed last thus processed first
     while (!worklist.isEmpty) {
-      val (s, pos, blocked, values, beginMatched, endMatched) = worklist.pop
+      val (s, pos, blocked, values) = worklist.pop
 
       if (pos >= input.size && isAccept(s))
         return Some(evalUpdateOps(values, acceptingStates.get(s).get, (o) => ""))
@@ -165,7 +163,7 @@ extends StreamingTransducer {
               val tOps = operation(t)
               val valueNext = getNewVal(values, tOps, (o) => "")
               val bnext = blocked ++ Set((s, snext))
-              worklist.push((snext, pnext, bnext, valueNext, beginMatched, endMatched))
+              worklist.push((snext, pnext, bnext, valueNext))
             }
           }
 
@@ -181,7 +179,7 @@ extends StreamingTransducer {
                   if (BricsTLabelOps.labelContains(inc, lbl)) {
                     val tOps = operation(t)
                     val valueNext = getNewVal(values, tOps, (o) => (inc + o).toChar.toString)
-                    worklist.push((snext, pnext, Set.empty[(State, State)], valueNext, beginMatched, endMatched))
+                    worklist.push((snext, pnext, Set.empty[(State, State)], valueNext))
                   }
                 }
               }
@@ -197,12 +195,12 @@ extends StreamingTransducer {
                 // this is crucial for regex like 'a|^b'
 
                 val pnext = pos
-                if (!beginMatched && pos == 0) {
+                if (pos == 0) {
                   val tOps = operation(t)
                   // ^ is not a real char, exclude it in capture groups
                   val valueNext = getNewVal(values, tOps, (o) => "")
                   // we assume ^ and $ resets the blocked set:
-                  worklist.push((snext, pnext, Set.empty[(State, State)], valueNext, true, endMatched))
+                  worklist.push((snext, pnext, Set.empty[(State, State)], valueNext))
                 }
               }
               case EndAnchor => {
@@ -218,11 +216,11 @@ extends StreamingTransducer {
                 // Also, after the match of $, it is still possible to take
                 // several (only) epsilon transitions before halting.
                 // like when regex is 'b | c$'
-                if (!endMatched && pos == input.size) {
+                if (pos == input.size) {
                   val tOps = operation(t)
                   // $ is not a real char, exclude it in capture groups
                   val valueNext = getNewVal(values, tOps, (o) => "")
-                  worklist.push((snext, pnext, Set.empty[(State, State)], valueNext, beginMatched, true))
+                  worklist.push((snext, pnext, Set.empty[(State, State)], valueNext))
                 }
               }
             }
@@ -236,7 +234,7 @@ extends StreamingTransducer {
               val tOps = operation(t)
               val valueNext = getNewVal(values, tOps, (o) => "")
               val bnext = blocked ++ Set((s, snext))
-              worklist.push((snext, pnext, bnext, valueNext, beginMatched, endMatched))
+              worklist.push((snext, pnext, bnext, valueNext))
             }
           }
 
@@ -317,8 +315,8 @@ extends StreamingTransducer {
     // trace
     // prohibition set
     // blocked e-transition
-    // ^ allowed?
-    // $ allowed?
+    // ^ allowed? => sigma trans. happened
+    // $ occurred? => no sigma trans. allowed
     // state of preimage aut to add new transitions from
     val worklist = new MStack[(State,
                                Trace,
@@ -330,13 +328,13 @@ extends StreamingTransducer {
 
     // transducer state, trace, automaton state set
     def getState(ts : State, tr : Trace, as : ProhibitionSet, bs : Set[(State, State)],
-      beginAllowed : Boolean, endAllowed : Boolean) = {
-      sMapRev.getOrElseUpdate((ts, tr, as, bs, beginAllowed, endAllowed), {
+      beginAllowed : Boolean, endOccurred : Boolean) = {
+      sMapRev.getOrElseUpdate((ts, tr, as, bs, beginAllowed, endOccurred), {
         val ps = preBuilder.getNewState
-        // bs, beginAllowed and endAllowed only restricts the run,
+        // bs, beginAllowed and endOccurred only restricts the run,
         // they are irrelevant to the acceptance of a run.
         preBuilder.setAccept(ps, isAcceptingPreState(ts, tr, as))
-        worklist.push((ts, tr, as, bs, beginAllowed, endAllowed, ps))
+        worklist.push((ts, tr, as, bs, beginAllowed, endOccurred, ps))
         ps
       })
     }
@@ -344,7 +342,7 @@ extends StreamingTransducer {
     val newInitState = getState(initialState, initTrace,
       Set.empty[(State, Boolean, Boolean)],
       Set.empty[(State, State)],
-      true, true)
+      true, false)
     preBuilder setInitialState newInitState
 
     // collect silent transitions during main loop and eliminate them after
@@ -460,7 +458,7 @@ extends StreamingTransducer {
     while (!worklist.isEmpty) {
       ap.util.Timeout.check
 
-      val (ts, tr, blocked, etrans, beginAllowed, endAllowed, ps) = worklist.pop()
+      val (ts, tr, blocked, etrans, beginAllowed, endOccurred, ps) = worklist.pop()
 
       (lblTrans get ts) match {
         case None => // nothing
@@ -472,40 +470,43 @@ extends StreamingTransducer {
             val newBlocked = blocked ++ epsClosure(
               (for ((_, priority2, s) <- pre.iterator;
                 if (priority2 > priority) && !etrans.contains((ts, s)) )
-                  yield (s, beginAllowed, endAllowed)), etrans)
+                  yield (s, beginAllowed, endOccurred)), etrans)
             val newEtrans = etrans ++ Set((ts, nextState))
 
             // epsilon transitions does not alter anchor usability status.
-            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endAllowed))
+            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endOccurred))
           }
 
           // if the end anchor $ is already matched, it signifies the end of the run!
           // thus only when endAllowed is true, sigma transitions are allowed.
-          if (endAllowed) {
+          //if (endAllowed) {
+
             // sigma transitions
             for ((l, ops, priority, nextState) <- transitions) {
               l match {
                 case NormalLabel(lbl) => {
+                  if (!endOccurred) {
+                    val preBlock = blocked ++ epsClosure(
+                      (for ((_, _, s) <- pre.iterator)
+                        yield (s, beginAllowed, endOccurred)), etrans)
 
-                  val preBlock = blocked ++ epsClosure(
-                    (for ((_, _, s) <- pre.iterator)
-                      yield (s, beginAllowed, endAllowed)), etrans)
-
-                  for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if BricsTLabelOps.isNonEmptyLabel(nlbl)) {
-                    // nlbl : (Char, Char)
-                    val newTrace = getNewTrace(tr, ops, (o) => {
-                      offsetTraceCache.getOrElseUpdate((nlbl, o), {
-                        (for (s <- aut.states;
-                              (target, lbl) <- aut.outgoingTransitions(s);
-                              shiftLbl = aut.LabelOps.shift(lbl, -o);
-                              if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
-                              yield (s, target)).toSet
+                    for (nlbl <- splitLabels(lbl, findOffset(ops), preBlock, priority, transitions); if BricsTLabelOps.isNonEmptyLabel(nlbl)) {
+                      // nlbl : (Char, Char)
+                      val newTrace = getNewTrace(tr, ops, (o) => {
+                        offsetTraceCache.getOrElseUpdate((nlbl, o), {
+                          (for (s <- aut.states;
+                                (target, lbl) <- aut.outgoingTransitions(s);
+                                shiftLbl = aut.LabelOps.shift(lbl, -o);
+                                if aut.LabelOps.labelsOverlap(shiftLbl, nlbl.asInstanceOf[aut.TLabel]))
+                                yield (s, target)).toSet
+                        })
                       })
-                    })
-                    val newBlocked = postStates(preBlock, nlbl, priority, transitions)
-                    preBuilder.addTransition(ps,
-                                          nlbl.asInstanceOf[aut.TLabel],
-                                          getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, endAllowed)) // sigma transition always disable the start anchor ^
+                      val newBlocked = postStates(preBlock, nlbl, priority, transitions)
+                      preBuilder.addTransition(ps,
+                                            nlbl.asInstanceOf[aut.TLabel],
+                                            getState(nextState, newTrace, newBlocked, Set.empty[(State, State)], false, endOccurred)) // sigma transition always disable the start anchor ^
+
+                    }
                   }
                 }
                 case BeginAnchor => {
@@ -517,43 +518,43 @@ extends StreamingTransducer {
                     // should ^ and $ be considered as epsilon transitions when
                     // computing the blocked set???
                     val itr = (for ((_, _, s) <- pre.iterator)
-                      yield (s, beginAllowed, endAllowed)) ++
+                      yield (s, true, endOccurred)) ++
                     (for ((lbl, _, priority2, s) <- transitions; if lbl == BeginAnchor && priority2 > priority)
-                      yield (s, false, endAllowed))
+                      yield (s, true, endOccurred))
 
                     val preBlock = blocked ++ epsClosure(itr, etrans)
-                    silentTransitions.addBinding(ps, getState(nextState, newTrace, preBlock, Set.empty[(State, State)], false, endAllowed))
+                    silentTransitions.addBinding(ps, getState(nextState, newTrace, preBlock, Set.empty[(State, State)], true, endOccurred))
                   }
                 }
                 case EndAnchor => {
                   // likewise for $
                   val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
                   val itr = (for ((_, _, s) <- pre.iterator)
-                    yield (s, beginAllowed, endAllowed)) ++
+                    yield (s, beginAllowed, endOccurred)) ++
                   (for ((lbl, _, priority2, s) <- transitions; if lbl == EndAnchor && priority2 > priority)
-                    yield (s, false, false))
+                    yield (s, beginAllowed, true))
 
                   val preBlock = blocked ++ epsClosure(itr, etrans)
-                  silentTransitions.addBinding(ps, getState(nextState, newTrace, preBlock, Set.empty[(State, State)], false, false)) // $ disables both ^ and $
+                  silentTransitions.addBinding(ps, getState(nextState, newTrace, preBlock, Set.empty[(State, State)], beginAllowed, true)) // $ disables sigma
                 }
               }
             }
-          }
+         
 
           // the postfix group of epsilon transitions
           for ((ops, priority, nextState) <- post; if !etrans.contains((ts, nextState))) {
             val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
             val itr : Iterator[(State, Boolean, Boolean)] =
               (for ((_, _, s) <- pre; if !etrans.contains((ts, s)))
-                  yield (s, beginAllowed, endAllowed)).iterator ++
+                  yield (s, beginAllowed, endOccurred)).iterator ++
               (for ((_, priority2, s) <- post;
                 if (priority2 > priority) && !etrans.contains((ts, s)) )
-                  yield (s, beginAllowed, endAllowed))
+                  yield (s, beginAllowed, endOccurred))
 
-            val newBlocked : ProhibitionSet = blocked ++ epsClosure(itr, etrans) ++ Set((ts, beginAllowed, endAllowed))
+            val newBlocked : ProhibitionSet = blocked ++ epsClosure(itr, etrans) ++ Set((ts, beginAllowed, endOccurred))
             val newEtrans = etrans ++ Set((ts, nextState))
 
-            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endAllowed))
+            silentTransitions.addBinding(ps, getState(nextState, newTrace, newBlocked, newEtrans, beginAllowed, endOccurred))
           }
         }
       }
@@ -575,7 +576,8 @@ extends StreamingTransducer {
                          trans: Iterable[SigmaTransition]) : ProhibitionSet = {
       val targetStates =
         // 'advance' the old blocked states with 'label'
-        (for ((s, _, end) <- states.iterator; if end;
+        // only consider trace where $ has not occurred
+        (for ((s, _, endOccurred) <- states.iterator; if !endOccurred;
               (_, transitions, _) <- (lblTrans get s).iterator;
               (sLabel, _, _, target) <- transitions.iterator;
               l <- LabelOps.weaken(sLabel).iterator;
@@ -583,13 +585,13 @@ extends StreamingTransducer {
                 // ^ is always disabled by a sigma transition
                 // as for $, it is guaranteed to be enabled, otherwise
                 // current transition is impossible
-         yield (target, false, true)) ++
+         yield (target, false, false)) ++
         // add new blocked states
         (for ((l, _, priority2, s) <- trans;
           lbl <- LabelOps.weaken(l).iterator;
           if (priority2 > priority)
           && BricsTLabelOps.labelsOverlap(lbl, label))
-          yield (s, false, true)) //likewise
+          yield (s, false, false)) //likewise
       (epsClosure(targetStates, Set.empty[(State, State)]))
     }
 
@@ -602,15 +604,15 @@ extends StreamingTransducer {
         todo push s
 
     while (!todo.isEmpty) {
-      val (s, beginAllowed, endAllowed) = todo.pop
+      val (s, beginAllowed, endOccurred) = todo.pop
       for ((pre, transitions, post) <- (lblTrans get s).iterator) {
         for ((_, _, t) <- pre; if !Lambda.contains((s, t))) {
-          val ts = (t, beginAllowed, endAllowed)
+          val ts = (t, beginAllowed, endOccurred)
           if (res add ts)
             todo push ts
         }
         for ((_, _, t) <- post; if !Lambda.contains((s, t))) {
-          val ts = (t, beginAllowed, endAllowed)
+          val ts = (t, beginAllowed, endOccurred)
           if (res add ts)
             todo push ts
         }
@@ -618,17 +620,15 @@ extends StreamingTransducer {
           lbl match {
             case BeginAnchor => {
               if (beginAllowed) {
-                val ts = (s, false, endAllowed)
+                val ts = (s, true, endOccurred)
                 if (res add ts)
                   todo push ts
               }
             }
             case EndAnchor => {
-              if (endAllowed) {
-                val ts = (s, false, false)
-                if (res add ts)
-                  todo push ts
-              }
+              val ts = (s, beginAllowed, true)
+              if (res add ts)
+                todo push ts
             }
             case _ =>
           }
@@ -657,12 +657,12 @@ extends StreamingTransducer {
       for (arrow <- pre) {
         val (op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
-        sb.append("[label=\"epsilon /" + prio + "\"];\n")
+        sb.append("[label=\"epsilon /" + prio + "/" + op + "\"];\n")
       }
       for (arrow <- post) {
         val (op, prio, dest) = arrow
         sb.append(state + " -> " + dest);
-        sb.append("[label=\"epsilon /" + prio + "\"];\n")
+        sb.append("[label=\"epsilon /" + prio + "/" + op + "\"];\n")
       }
     }
 

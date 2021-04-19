@@ -101,7 +101,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     val wordExtractor = theory.WordExtractor(goal)
     val regexExtractor = theory.RegexExtractor(goal)
-    val cgTranslator = new Regex2PFA(theory)
+    val cgTranslator = new Regex2PFA(theory, new JavascriptPFABuilder)
 
 //    Console.err.println(atoms)
 
