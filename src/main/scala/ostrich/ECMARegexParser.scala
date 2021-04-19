@@ -49,7 +49,9 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
   def string2Term(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
-    TranslationVisitor(pat)
+    val res = TranslationVisitor(pat)
+    println(res)
+    res
   }
 
   def parseRegex(inputString : String) : Pattern = {
@@ -521,6 +523,8 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (IFunApp(`re_charrange`, Seq(Const(lower), _)),
           IFunApp(`re_charrange`, Seq(_, Const(upper)))) =>
       re_charrange(lower, upper)
+    case _ =>
+      throw new Exception("Illformed character range in a regular expression")
   }
 
   private def parseDecimalDigits(digits : Seq[DecimalDigit]) : IdealInt =
