@@ -47,9 +47,10 @@ class ECMARegexParser(theory : OstrichStringTheory) {
   import IExpression._
   val printer = new PrettyPrinterNonStatic
 
-  def string2Term(inputString : String) : ITerm = {
+  def string2Term(inputString : String,
+                  convertCaptureGroups : Boolean = false) : ITerm = {
     val pat = parseRegex(inputString)
-    val visitor = new TranslationVisitor
+    val visitor = new TranslationVisitor(convertCaptureGroups)
     visitor(pat)
   }
 
@@ -78,10 +79,16 @@ class ECMARegexParser(theory : OstrichStringTheory) {
   // is outermost or not.
   type VisitorArg = Boolean
 
-  val LookAhead  = new IFunction("LookAhead",  1, false, false)
-  val LookBehind = new IFunction("LookBehind", 1, false, false)
+  val LookAhead       = new IFunction("LookAhead",  1, false, false)
+  val LookBehind      = new IFunction("LookBehind", 1, false, false)
+  val WordBoundary    = new IFunction("WordBoundary", 0, false, false)
+  val NonWordBoundary = new IFunction("NonWordBoundary", 0, false, false)
 
-  class TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
+  /**
+   * Visitor to translate a regex AST to a term.
+   */
+  class TranslationVisitor(convertCaptureGroups : Boolean)
+        extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
 
@@ -97,7 +104,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.Alternative,
                        outermost : VisitorArg) = {
-      val terms = p.listtermc_ map (_.accept(this, false))
+      val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
 
       if (outermost) {
         // handle leading look-aheads and trailing look-behinds
@@ -105,32 +112,82 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         var midTerms = terms filterNot (_ == EPS)
 
         val lookAheads = midTerms takeWhile {
-          case IFunApp(LookAhead, _) => true
+          case IFunApp(LookAhead | WordBoundary | NonWordBoundary, _) => true
           case _ => false
         }
 
         midTerms = midTerms drop lookAheads.size
 
         val newEnd = midTerms lastIndexWhere {
-          case IFunApp(LookBehind, _) => false
+          case IFunApp(LookBehind | WordBoundary | NonWordBoundary, _) => false
           case _ => true
         }
 
         val lookBehinds = midTerms takeRight (midTerms.size - newEnd - 1)
         midTerms = midTerms dropRight (midTerms.size - newEnd - 1)
 
-        reInterStar(List(reCatStar(dropLookAheadBehinds(midTerms) : _*)) ++
-                      (for (IFunApp(LookAhead, Seq(t)) <- lookAheads)
-                       yield t) ++
-                      (for (IFunApp(LookBehind, Seq(t)) <- lookBehinds)
-                       yield t) : _*)
+        reInterStar(List(reCatStar(dropAssertions(midTerms) : _*)) ++
+                      (for (s <- lookAheads) yield s match {
+                         case IFunApp(LookAhead, Seq(t)) =>
+                           t
+                         case IFunApp(WordBoundary, _) =>
+                           re_++(word, ALL)
+                         case IFunApp(NonWordBoundary, _) =>
+                           re_comp(re_++(word, ALL))
+                       }) ++
+                      (for (s <- lookBehinds) yield s match {
+                         case IFunApp(LookBehind, Seq(t)) =>
+                           t
+                         case IFunApp(WordBoundary, _) =>
+                           re_++(ALL, word)
+                         case IFunApp(NonWordBoundary, _) =>
+                           re_comp(re_++(ALL, word))
+                       }) : _*)
 
       } else {
-        reCatStar(dropLookAheadBehinds(terms) : _*)
+        reCatStar(dropAssertions(terms) : _*)
       }
     }
 
-    private def dropLookAheadBehinds(ts : Seq[ITerm]) : Seq[ITerm] =
+    private def expandGroups(ts : Seq[ecma2020regex.Absyn.TermC])
+                                         : Seq[ecma2020regex.Absyn.TermC] = {
+      if (convertCaptureGroups)
+        return ts
+
+      var changed = false
+      val newTS =
+        for (t <- ts;
+             s <- (t match {
+               case t : AtomTerm => t.atomc_ match {
+                 case g : ecma2020regex.Absyn.GroupAtom
+                     if g.listalternativec_.size == 1 => {
+                       changed = true
+                       altToTerms(g.listalternativec_)
+                     }
+                 case g : ecma2020regex.Absyn.NonCaptGroup
+                     if g.listalternativec_.size == 1 => {
+                       changed = true
+                       altToTerms(g.listalternativec_)
+                     }
+                 case _ =>
+                   List(t)
+               }
+               case t =>
+                 List(t)
+             }))
+        yield s
+
+      if (changed) expandGroups(newTS) else ts
+    }
+
+    private def altToTerms(a : Seq[ecma2020regex.Absyn.AlternativeC])
+                         : Seq[ecma2020regex.Absyn.TermC] = {
+      assert(a.size == 1)
+      val alt = a.head.asInstanceOf[ecma2020regex.Absyn.Alternative]
+      alt.listtermc_.toList
+    }
+
+    private def dropAssertions(ts : Seq[ITerm]) : Seq[ITerm] =
       ts filter {
         case IFunApp(LookAhead, _) => {
           Console.err.println("Warning: ignoring look-ahead")
@@ -138,6 +195,14 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         }
         case IFunApp(LookBehind, _) => {
           Console.err.println("Warning: ignoring look-behind")
+          false
+        }
+        case IFunApp(WordBoundary, _) => {
+          Console.err.println("Warning: ignoring anchor \\b")
+          false
+        }
+        case IFunApp(NonWordBoundary, _) => {
+          Console.err.println("Warning: ignoring anchor \\B")
           false
         }
         case _ =>
@@ -238,15 +303,11 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.EndAnchor, arg : VisitorArg) =
       re_end_anchor()
 
-    override def visit(p : ecma2020regex.Absyn.WordAnchor, arg : VisitorArg) = {
-      Console.err.println("Warning: ignoring anchor \\b")
-      EPS
-    }
+    override def visit(p : ecma2020regex.Absyn.WordAnchor, arg : VisitorArg) =
+      WordBoundary()
 
-    override def visit(p : ecma2020regex.Absyn.NonWordAnchor, arg : VisitorArg) = {
-      Console.err.println("Warning: ignoring anchor \\B")
-      EPS
-    }
+    override def visit(p : ecma2020regex.Absyn.NonWordAnchor, arg : VisitorArg) =
+      NonWordBoundary()
 
     override def visit(p : ecma2020regex.Absyn.NegClass, arg : VisitorArg) =
       charComplement(p.classrangesc_.accept(this, arg))
@@ -313,6 +374,10 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       toSingleCharRegex(printer print p)
     override def visit(p : ecma2020regex.Absyn.NegAtom, arg : VisitorArg) =
       toSingleCharRegex(printer print p)
+    override def visit(p : ecma2020regex.Absyn.NegAtomND, arg : VisitorArg) =
+      toSingleCharRegex(printer print p)
+    override def visit(p : ecma2020regex.Absyn.DashAtomNN, arg : VisitorArg) =
+      toSingleCharRegex(printer print p)
     
     override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg1, arg : VisitorArg)=
       toSingleCharRegex(p.normalchar_)
@@ -362,8 +427,19 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       charSet(0x000D)
 
     override def visit(p : ecma2020regex.Absyn.HexEscapeSequence, arg : VisitorArg) =
-      charSet(IdealInt((printer print p.hexdigit_1) +
-                         (printer print p.hexdigit_2), 16).intValue)
+      charSet(Integer.parseInt((printer print p.hexdigit_1) +
+                                 (printer print p.hexdigit_2), 16))
+
+    override def visit(p : ecma2020regex.Absyn.Hex4UniEscapeSequence, arg : VisitorArg) =
+      charSet(Integer.parseInt((printer print p.hexdigit_1) +
+                                 (printer print p.hexdigit_2) +
+                                 (printer print p.hexdigit_3) +
+                                 (printer print p.hexdigit_4), 16))
+
+    override def visit(p : ecma2020regex.Absyn.CodepointUniEscapeSequence, arg : VisitorArg) = {
+      val str = printer print p
+      charSet(Integer.parseInt(str.substring(2, str.size - 1), 16))
+    }
 
     override def visit(p : ecma2020regex.Absyn.IdentityEscape, arg : VisitorArg) =
       toSingleCharRegex(printer print p)

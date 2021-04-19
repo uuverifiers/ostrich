@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -47,19 +47,22 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   Console.withOut(Console.err) {
     println
     println("Loading " + name + ", a solver for string constraints")
-    println("(c) Matthew Hague, Philipp Rümmer, 2018-2020")
+    println("(c) Matthew Hague, Philipp Rümmer, 2018-2021")
+    println("With contributions by Riccardo De Masellis, Zhilei Han.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward = false
+  private var eager, forward, minimizeAuts = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
       eager = value
+    case CmdlParser.Opt("minimizeAutomata", value) =>
+      minimizeAuts = value
     case CmdlParser.ValueOpt("length", "off") =>
       useLen = OFlags.LengthOptions.Off
     case CmdlParser.ValueOpt("length", "on") =>
@@ -102,8 +105,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
     new OstrichStringTheory (symTransducers,
                              OFlags(eagerAutomataOperations = eager,
-                                    useLength = useLen,
-                                    forwardApprox = forward))
+                                    useLength               = useLen,
+                                    forwardApprox           = forward,
+                                    minimizeAutomata        = minimizeAuts))
   }
 
 }
