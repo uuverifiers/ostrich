@@ -441,7 +441,7 @@ object AutomataUtils {
     builder.setInitialState(smap1(aut1.initialState))
     for (sf <- aut2.acceptingStates)
       builder.setAccept(smap2(sf), true)
-    if (aut1.isAccept(aut1.initialState))
+    if (aut2.isAccept(aut2.initialState))
       for (sf <- aut1.acceptingStates)
         builder.setAccept(smap1(sf), true)
 

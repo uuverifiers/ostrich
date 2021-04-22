@@ -264,6 +264,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         // check whether this problem can be solved through
         // forward propagation
 
+        val allConsts = new MHashSet[ConstantTerm]
         val termConsts = new MHashMap[Int, ConstantTerm]
 
         def term2Const(t : Term) : ConstantTerm = t match {
@@ -281,6 +282,60 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
              }
            }).toList
 
+        for ((a, (b, c)) <- concats)
+          allConsts ++= List(a, b, c)
+
+        val regexes = new MHashMap[ConstantTerm, Automaton]
+        val todo = new LinkedHashSet[ConstantTerm]
+        var foundInconsistency = false
+
+        for (c <- allConsts)
+          regexes.put(c, BricsAutomaton.makeAnyString)
+
+        def addAut(c : ConstantTerm, aut : Automaton) : Unit = {
+          val newAut = regexes(c) & aut
+          regexes.put(c, newAut)
+          if (newAut.isEmpty) {
+            foundInconsistency = true
+          } else {
+            todo += c
+          }
+        }
+
+        for ((v, aut) <- initialConstraints) {
+          val c = term2Const(v)
+          addAut(c, aut)
+        }
+
+        for (id <- stringConsts) {
+          val c = termConsts(id)
+          val aut = BricsAutomaton fromString strDatabase.id2Str(id)
+          addAut(c, aut)
+        }
+
+        def concatAuts(aut1 : Automaton, aut2 : Automaton) : Automaton =
+          AutomataUtils.concat(aut1.asInstanceOf[AtomicStateAutomaton],
+                               aut2.asInstanceOf[AtomicStateAutomaton])
+
+        while (!foundInconsistency && !todo.isEmpty) {
+          val c = todo.iterator.next
+          todo -= c
+
+          val aut = regexes(c)
+
+          for (cc@(res, (`c`, arg)) <- concats) {
+            val aut2 = regexes(arg)
+            addAut(res, concatAuts(aut, aut2))
+          }
+
+          for (cc@(res, (arg, `c`)) <- concats; if arg != c) {
+            val aut2 = regexes(arg)
+            addAut(res, concatAuts(aut2, aut))
+          }
+        }
+
+
+/*
         val todo = new Queue[(ConstantTerm, Automaton)]
 
         for ((v, aut) <- initialConstraints) {
@@ -294,12 +349,18 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           todo += ((c, aut))
         }
 
+        // make sure that we have initial constraints for all constants
+        for (c <- allConsts)
+          if (!(todo exists { p => p._1 == c }))
+            todo += ((c, BricsAutomaton.makeAnyString))
+
         val regexes = new MHashMap[ConstantTerm, List[Automaton]]
         var foundInconsistency = false
 
         def addAut(c : ConstantTerm, aut : Automaton) : Unit = {
           val newAuts = aut :: regexes.getOrElse(c, List())
           regexes.put(c, newAuts)
+          println("adding aut for " + c)
           if (!AutomataUtils.areConsistentAutomata(newAuts))
             foundInconsistency = true
         }
@@ -311,17 +372,21 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         while (!foundInconsistency && !todo.isEmpty) {
           val (c, aut) = todo.dequeue
           addAut(c, aut)
-
-          for ((res, (`c`, arg)) <- concats;
-               aut2 <- regexes.getOrElse(arg, List()))
+println("checking " + c)
+          for (cc@(res, (`c`, arg)) <- concats;
+               aut2 <- regexes.getOrElse(arg, List())) {
+            println(cc)
             todo += ((res, concatAuts(aut, aut2)))
+          }
 
-          for ((res, (arg, `c`)) <- concats;
+          for (cc@(res, (arg, `c`)) <- concats;
                if arg != c;
-               aut2 <- regexes.getOrElse(arg, List()))
+               aut2 <- regexes.getOrElse(arg, List())) {
+            println(cc)
             todo += ((res, concatAuts(aut2, aut)))
+          }
         }
-
+ */
         println
 
         if (foundInconsistency)
