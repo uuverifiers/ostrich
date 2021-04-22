@@ -49,9 +49,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
   def string2Term(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
-    val res = TranslationVisitor(pat)
-    println(res)
-    res
+    TranslationVisitor(pat)
   }
 
   def parseRegex(inputString : String) : Pattern = {
