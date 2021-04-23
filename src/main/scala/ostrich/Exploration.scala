@@ -137,6 +137,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   if (flags.writeSL && StraightLineStore.straightlineFormula.isDefined) {
     Console.err.println("more than one disjunct found")
+    StraightLineStore.extractionError = true
     throw OstrichStringTheory.NotStraightlineException
   }
 

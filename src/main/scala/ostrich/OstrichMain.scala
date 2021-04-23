@@ -48,26 +48,34 @@ object OstrichMain {
   val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
 
   def main(args: Array[String]) : Unit = {
-    StraightLineStore.straightlineFormula = None
+    StraightLineStore.reset
 
     ap.CmdlMain.main((options ++ args).toArray)
-    for (f <- StraightLineStore.straightlineFormula) {
-      val slOutfile = StraightLineStore.slFile.get
-      Console.err.println("Writing straightline constraints to " + slOutfile)
-      val stream = new java.io.FileOutputStream(slOutfile)
-      Console.withOut(stream) {
-        println(f)
+
+    if (!StraightLineStore.extractionError)
+      for (f <- StraightLineStore.straightlineFormula) {
+        val slOutfile = StraightLineStore.slFile.get
+        Console.err.println("Writing straightline constraints to " + slOutfile)
+        val stream = new java.io.FileOutputStream(slOutfile)
+        Console.withOut(stream) {
+          println(f)
+        }
+        stream.close
       }
-      stream.close
-      StraightLineStore.straightlineFormula = None
-    }
   }
 
 }
 
 object StraightLineStore {
 
-  var slFile : Option[String] = None
+  var slFile : Option[String]              = None
   var straightlineFormula : Option[String] = None
+  var extractionError : Boolean            = false
+
+  def reset = {
+    slFile = None
+    straightlineFormula = None
+    extractionError = false
+  }
 
 }
