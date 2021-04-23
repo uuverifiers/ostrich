@@ -156,6 +156,91 @@ abstract class PFABuilder {
   def optional(aut : PFA) : PFA = {
     alternate(aut, epsilon)
   }
+
+  // return a deep copy of `base` and update the Regex2PFA database
+  // which means
+  // 1) if state s is related to capture group i
+  // then the copyed state s' should be related to i too
+  // 2) if state s is an initial state of some automaton corresponding
+  // to capture group i, so is the copyed state s'
+  def duplicate(base : PFA) : PFA = {
+    import Regex2PFA.{capState, stateCap, capInit}
+    import PFA.getNewState
+
+    base match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+
+        // map from base.state to copy.state
+        val sMap = new MHashMap[State, State]
+        // states of old automaton
+        val worklist = new MStack[State]
+
+        def mapState(oldstate : State, newstate : State) = {
+          sMap += (oldstate -> newstate)
+        }
+        def getState(oldstate : State) : State = {
+          sMap.getOrElse(oldstate, {
+            val newstate = getNewState
+            mapState(oldstate, newstate)
+            worklist.push(oldstate)
+            newstate
+          })
+        }
+
+        val newinit = getState(init1)
+
+        val newf1 = new MHashSet[State]
+        val newf2 = new MHashSet[State]
+        val newtrans = new MHashMap[State, Seq[SigmaTransition]]
+        val newpre = new MHashMap[State, Seq[ETransition]]
+        val newpost = new MHashMap[State, Seq[ETransition]]
+
+        // we use a DFS here to exclude unreachable states
+        while (!worklist.isEmpty) {
+          // note a state is visited only once
+          val oldstate = worklist.pop()
+          val newstate = getState(oldstate)
+          if (f1 contains oldstate) {
+            newf1 += newstate
+          }
+          if (f2 contains oldstate) {
+            newf2 += newstate
+          }
+          for (trans <- t1.get(oldstate).iterator) {
+            // trans : Seq[(label, nextState)]
+            val t = trans.map(sigmaTrans => {
+              val (label, next) = sigmaTrans
+              (label, getState(next))
+            })
+            newtrans += ((newstate, t))
+          }
+          for (trans <- pre1.get(oldstate).iterator) {
+            // trans : Seq[nextState]
+            val t = trans.map(s => getState(s))
+            newpre += ((newstate, t))
+          }
+          for (trans <- post1.get(oldstate).iterator) {
+            // trans : Seq[nextState]
+            val t = trans.map(s => getState(s))
+            newpost += ((newstate, t))
+          }
+
+          // now the database ...
+          for (caps <- stateCap.get(oldstate).iterator; cap <- caps) {
+            stateCap.addBinding(newstate, cap)
+            capState.addBinding(cap, newstate)
+            if (capInit.getOrElse(cap, MSet()) contains oldstate) {
+              capInit.addBinding(cap, newstate)
+            }
+          }
+        }
+        val newend = (f1, f2)
+
+        PFA(newtrans, newpre, newpost, newinit, (newf1, newf2))
+      }
+    }
+  }
+
 }
 
 class PythonPFABuilder extends PFABuilder {
@@ -314,88 +399,6 @@ class JavascriptPFABuilder extends PFABuilder {
   // we need to duplicate automaton at times
 
   import PFA.getNewState
-
-  // return a deep copy of `base` and update the Regex2PFA database
-  // which means
-  // 1) if state s is related to capture group i
-  // then the copyed state s' should be related to i too
-  // 2) if state s is an initial state of some automaton corresponding
-  // to capture group i, so is the copyed state s'
-  def duplicate(base : PFA) : PFA = {
-    import Regex2PFA.{capState, stateCap, capInit}
-    base match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
-
-        // map from base.state to copy.state
-        val sMap = new MHashMap[State, State]
-        // states of old automaton
-        val worklist = new MStack[State]
-
-        def mapState(oldstate : State, newstate : State) = {
-          sMap += (oldstate -> newstate)
-        }
-        def getState(oldstate : State) : State = {
-          sMap.getOrElse(oldstate, {
-            val newstate = getNewState
-            mapState(oldstate, newstate)
-            worklist.push(oldstate)
-            newstate
-          })
-        }
-
-        val newinit = getState(init1)
-
-        val newf1 = new MHashSet[State]
-        val newf2 = new MHashSet[State]
-        val newtrans = new MHashMap[State, Seq[SigmaTransition]]
-        val newpre = new MHashMap[State, Seq[ETransition]]
-        val newpost = new MHashMap[State, Seq[ETransition]]
-
-        // we use a DFS here to exclude unreachable states
-        while (!worklist.isEmpty) {
-          // note a state is visited only once
-          val oldstate = worklist.pop()
-          val newstate = getState(oldstate)
-          if (f1 contains oldstate) {
-            newf1 += newstate
-          }
-          if (f2 contains oldstate) {
-            newf2 += newstate
-          }
-          for (trans <- t1.get(oldstate).iterator) {
-            // trans : Seq[(label, nextState)]
-            val t = trans.map(sigmaTrans => {
-              val (label, next) = sigmaTrans
-              (label, getState(next))
-            })
-            newtrans += ((newstate, t))
-          }
-          for (trans <- pre1.get(oldstate).iterator) {
-            // trans : Seq[nextState]
-            val t = trans.map(s => getState(s))
-            newpre += ((newstate, t))
-          }
-          for (trans <- post1.get(oldstate).iterator) {
-            // trans : Seq[nextState]
-            val t = trans.map(s => getState(s))
-            newpost += ((newstate, t))
-          }
-
-          // now the database ...
-          for (caps <- stateCap.get(oldstate).iterator; cap <- caps) {
-            stateCap.addBinding(newstate, cap)
-            capState.addBinding(cap, newstate)
-            if (capInit.getOrElse(cap, MSet()) contains oldstate) {
-              capInit.addBinding(cap, newstate)
-            }
-          }
-        }
-        val newend = (f1, f2)
-
-        PFA(newtrans, newpre, newpost, newinit, (newf1, newf2))
-      }
-    }
-  }
 
   def none() : PFA = {
       val init = getNewState
@@ -728,31 +731,22 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
         }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
           val (autA, capA) = buildPatternImpl(a)
-          if (capA.isEmpty) {
-            // too inefficient
-            // maybe there's some other way
-            var aut = builder.none
-            var i = n1
-            while (i <= n2) {
-              var j = 0
-              var disjunct = builder.epsilon
-              while (j < i) {
-                val (copy, _) = buildPatternImpl(a)
-                disjunct = builder.concat(copy, disjunct)
-                j = j + 1
-              }
-              aut = builder.alternate(disjunct, aut)
-              i = i + 1
+          // too inefficient
+          // maybe there's some other way
+          var aut = builder.none
+          var i = n1
+          while (i <= n2) {
+            var j = 0
+            var disjunct = builder.epsilon
+            while (j < i) {
+              val copy = builder.duplicate(autA)
+              disjunct = builder.concat(copy, disjunct)
+              j = j + 1
             }
-            (aut, capA)
-          } else {
-            // NOTE
-            // It is possible to support this
-            // the crux is to find a way to construct a PFA
-            // which allows bounded match of a
-            throw new IllegalArgumentException(
-              "regex with capture groups does not support loop (yet!) " + t)
+            aut = builder.alternate(disjunct, aut)
+            i = i + 1
           }
+          (aut, capA)
         }
         case IFunApp(`re_capture`, Seq(IIntLit(IdealInt(litCaptureNum)), a)) => {
           val localCaptureNum = numCapture

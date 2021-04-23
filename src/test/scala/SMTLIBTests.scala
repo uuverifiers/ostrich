@@ -147,6 +147,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/loop2.smt2", "unsat")
   property("loop-cg.smt2") =
     checkFile("tests/loop-cg.smt2", "sat")
+  property("loop-cg2.smt2") =
+    checkFile("tests/loop-cg2.smt2", "sat")
 
   property("cg-star.smt2") =
     checkFile("tests/cg-star.smt2", "sat")
