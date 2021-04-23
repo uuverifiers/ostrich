@@ -285,6 +285,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         for ((a, (b, c)) <- concats)
           allConsts ++= List(a, b, c)
 
+        for ((v, aut) <- initialConstraints)
+          allConsts += term2Const(v)
+
+        for (id <- stringConsts)
+          allConsts += termConsts(id)
+
         val regexes = new MHashMap[ConstantTerm, Automaton]
         val todo = new LinkedHashSet[ConstantTerm]
         var foundInconsistency = false
