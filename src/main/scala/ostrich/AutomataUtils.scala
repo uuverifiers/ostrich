@@ -453,7 +453,7 @@ object AutomataUtils {
       if (s1 == aut2.initialState)
         for (sf <- aut1.acceptingStates)
           builder.addTransition(smap1(sf), convL, smap2(s2))
-      builder.addTransition(smap2(s2), convL, smap2(s1))
+      builder.addTransition(smap2(s1), convL, smap2(s2))
     }
 
     builder.getAutomaton
