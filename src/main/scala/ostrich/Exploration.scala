@@ -325,6 +325,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                                aut2.asInstanceOf[AtomicStateAutomaton])
 
         while (!foundInconsistency && !todo.isEmpty) {
+          ap.util.Timeout.check
+
           val c = todo.iterator.next
           todo -= c
 
