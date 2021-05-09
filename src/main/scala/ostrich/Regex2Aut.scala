@@ -49,7 +49,7 @@ object Regex2Aut {
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
   private val LookAheadBehind = """\(\?[=!<]""".r
 
-  private object SmartConst {
+  object SmartConst {
     import IExpression._
     def unapply(t : ITerm) : Option[IdealInt] = t match {
       case Const(value) =>
@@ -72,14 +72,14 @@ object Regex2Aut {
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
                    re_begin_anchor, re_end_anchor, re_from_ecma2020}
-    import StringTheory.ConcreteString
+    import theory.strDatabase.EncodedString
 
     def apply(t : ITerm) = Rewriter.rewrite(t, rewrTerm _).asInstanceOf[ITerm]
 
     private def rewrTerm(t : IExpression) : IExpression = t match {
 
       case IFunApp(`str_to_re`,
-                   Seq(ConcreteString(str))) if str.size == 1 =>
+                   Seq(EncodedString(str))) if str.size == 1 =>
         re_charrange(str(0), str(0))
 
       case IFunApp(`re_inter`,
@@ -168,6 +168,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
           "[\\" + numToUnicode(a) + "-" + "\\" + numToUnicode(b) + "]")
 
       case IFunApp(`str_to_re`, Seq(a)) => {
+        System.out.println(a);
         val res =
           StringTheory.term2List(a) match {
             case Seq() =>
@@ -181,6 +182,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       }
 
       case IFunApp(`re_from_str`, Seq(a)) => {
+        System.out.println(a);
         // TODO: this translation has to be checked more carefully, there might
         // be problems due to escaping. The processing of regexes can also
         // only be done correctly within a proper regex parser.
@@ -230,28 +232,30 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   //////////////////////////////////////////////////////////////////////////////
 
+  import theory.strDatabase.EncodedString
+
   private def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
-                 Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
+    Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
 
-    case IFunApp(`str_to_re`, Seq(a)) =>
-      BasicAutomata.makeString(StringTheory.term2String(a))
+    case IFunApp(`str_to_re`, Seq(EncodedString(str))) =>
+      BasicAutomata.makeString(str)
 
-    case IFunApp(`re_from_str`, Seq(a)) => {
+    case IFunApp(`re_from_str`, Seq(EncodedString(str))) => {
       // TODO: this translation has to be checked more carefully, there might
       // be problems due to escaping. The processing of regexes can also
       // only be done correctly within a proper regex parser.
   
-      val bricsPattern = jsRegex2BricsRegex(StringTheory.term2String(a))
+      val bricsPattern = jsRegex2BricsRegex(str)
       new RegExp(bricsPattern).toAutomaton(minimize)
     }
 
-    case IFunApp(`re_from_ecma2020`, Seq(a)) => {
+    case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
       val parser = new ECMARegexParser(theory)
-      val t = parser.string2Term(StringTheory.term2String(a))
-      toBAutomaton(t, minimize)
+      val s = parser.string2Term(str)
+      toBAutomaton(s, minimize)
     }
 
     case IFunApp(`re_case_insensitive`, Seq(a)) => {
@@ -291,8 +295,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
           List()
         } else {
           val strings =
-            (for (IFunApp(_, Seq(a)) <- singletons)
-             yield StringTheory.term2String(a)).toArray
+            (for (IFunApp(_, Seq(EncodedString(str))) <- singletons)
+             yield str).toArray
           List(BasicAutomata.makeStringUnion(strings : _*))
         }
 
@@ -534,8 +538,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
   def buildBricsAut(t : ITerm) : BAutomaton =
     toBAutomaton(t, true)
 
-  def buildAut(t : ITerm) : AtomicStateAutomaton =
-    new BricsAutomaton(toBAutomaton(t, true))
+  def buildAut(t : ITerm,
+               minimize : Boolean = true) : AtomicStateAutomaton =
+    new BricsAutomaton(toBAutomaton(t, minimize))
 
   private def numToUnicode(num : Int) : String =
     new String(Character.toChars(num))

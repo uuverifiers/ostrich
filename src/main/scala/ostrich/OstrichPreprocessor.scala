@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -189,6 +189,10 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           str_cons(code, str_empty()),
           str_empty())
 
+    case (IFunApp(`str_from_char`, _), Seq(c : ITerm)) =>
+      str_cons(c, str_empty())
+
+
 /*
     // Currently we just under-approximate and assume that the considered
     // string is "0"
@@ -258,3 +262,30 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
   }
 
 }
+
+/**
+ * Stores constant string to strDatabase for easy access.
+ */
+class OstrichStringEncoder(theory : OstrichStringTheory)
+  extends ContextAwareVisitor[Unit, IExpression] {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula =
+    this.visit(f, Context(())).asInstanceOf[IFormula]
+
+  def postVisit(t : IExpression,
+                ctxt : Context[Unit],
+                subres : Seq[IExpression]) : IExpression =
+    (t update subres) match {
+
+      case emptyStr @ IFunApp(this.theory.str_empty, _) =>
+        this.theory.strDatabase.iTerm2Id(emptyStr)
+
+      case consStr @ IFunApp(this.theory.str_cons, _) =>
+        this.theory.strDatabase.iTerm2Id(consStr)
+
+      case t => t
+    }
+}
+

@@ -29,7 +29,29 @@
         (= (str.in_re w (re.from_ecma2020 '(?=.*[a-z])X.*[A-Z].*'))
            (str.in_re w (re.inter (re.++ (re.from_ecma2020 '.*[a-z]') re.all)
                                   (re.from_ecma2020 'X.*[A-Z].*'))))
+
+        (= (str.in_re w (re.from_ecma2020 '\,'))
+           (str.in_re w (str.to.re ",")))
+
+        (= (str.in_re w (re.from_ecma2020 '[\u{61}-\u007A0-9]'))
+           (str.in_re w (re.union (re.range "a" "z") (re.range "0" "9"))))
+
+        (= (str.in_re w (re.from_ecma2020 '((?=.*?[A-Z])).{8,}'))
+           (and (str.in_re w (re.from_ecma2020 '.{8,}'))
+                (str.in_re w (re.++ re.all (re.range "A" "Z") re.all))))
            
+        (= (str.in_re w (re.from_ecma2020 '()'))
+           (str.in_re w (str.to.re "")))
+
+        (= (str.in_re w (re.from_ecma2020 '\b[ ab]*\b'))
+           (and (str.in_re w (re.from_ecma2020 '[ ab]+'))
+                (not (str.prefixof " " w))
+                (not (str.suffixof " " w))))
+
+        (= (str.in_re w (re.from_ecma2020 '\B[ a]*'))
+           (and (str.in_re w (re.from_ecma2020 '[ a]*'))
+                (not (str.prefixof "a" w))))
+
  )))
 
 (check-sat)

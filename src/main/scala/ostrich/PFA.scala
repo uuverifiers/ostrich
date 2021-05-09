@@ -690,6 +690,7 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
     re_loop, str_to_re, re_from_str,
     re_begin_anchor, re_end_anchor,
     re_capture, re_reference, re_from_ecma2020}
+  import theory.strDatabase.EncodedString
 
   private val simplifier = new Regex2Aut.DiffEliminator(theory)
 
@@ -840,9 +841,9 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
         case IFunApp(`str_to_re`, Seq(a)) => {
           (builder.constant(StringTheory.term2List(a)), Set())
         }
-        case IFunApp(`re_from_ecma2020`, Seq(a)) => {
+        case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
           val parser = new ECMARegexParser(theory)
-          val t = parser.string2Term(StringTheory.term2String(a))
+          val t = parser.string2Term(str, convertCaptureGroups = true)
           buildPatternImpl(simplifier(t))
         }
         case _ =>
@@ -878,8 +879,7 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
           case Some(localCaptureNum) => List(RefVariable(localCaptureNum))
         }
       }
-      case IFunApp(`str_to_re`, Seq(a)) => {
-        val str = StringTheory.term2List(a)
+      case IFunApp(`str_to_re`, Seq(EncodedString(str))) => {
         (for (v <- str)
           yield Constant(v.toChar)).toSeq
       }
