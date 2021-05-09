@@ -157,6 +157,8 @@ abstract class PFABuilder {
     alternate(aut, epsilon)
   }
 
+  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
+
   // return a deep copy of `base` and update the Regex2PFA database
   // which means
   // 1) if state s is related to capture group i
@@ -390,6 +392,25 @@ class PythonPFABuilder extends PFABuilder {
     }
   }
 
+  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    // too inefficient
+    // maybe there's some other way
+    var aut = none
+    var i = n1
+    while (i <= n2) {
+      var j = 0
+      var disjunct = epsilon
+      while (j < i) {
+        val copy = duplicate(autA)
+        disjunct = concat(copy, disjunct)
+        j = j + 1
+      }
+      aut = alternate(disjunct, aut)
+      i = i + 1
+    }
+    aut
+  }
+
 }
 
 class JavascriptPFABuilder extends PFABuilder {
@@ -574,6 +595,52 @@ class JavascriptPFABuilder extends PFABuilder {
     val staraut = lazystar(aut)
     concat(autcopy, staraut)
   }
+
+  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    var front = epsilon
+    // firstly, we should match `n1` times,
+    // that is, concat autA n1 times
+    var i = 1
+    while (i <= n1) {
+      val copy = duplicate(autA)
+      front = concat(front, copy)
+      i = i + 1
+    }
+    // now, we can continue to match `n2 - n1` times
+    // which is greedy (we assume loop is greedy)
+    // and disallow matching of empty string.
+
+    // To achieve this, we clear the field F1
+    // (standing for empty string) of autA
+    // and get autANonEmpty:
+    val autANonEmpty = autA match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+        val f1new = new MHashSet[State]
+        PFA(t1, pre1, post1, init1, (f1new, f2))
+      }
+    }
+    // now, we construct e^{n2 - n1} + ... + e^{0}
+    // where e = autANonEmpty
+    var behind = none
+    i = 0 // from 0 to n2 - n1
+    while (i <= n2 - n1) {
+      var j = 0
+      var disjunct = epsilon // e^{i}
+      while (j < i) {
+        val copy = duplicate(autANonEmpty)
+        disjunct = concat(copy, disjunct)
+        j = j + 1
+      }
+      behind = alternate(disjunct, behind)
+      i = i + 1
+    }
+    // 'front' is the PFA representing the first n1-th
+    // match of autA, while 'behind' is the PFA representing
+    // the (n1+1)-th to (at most) n2-th match of autA
+    // we now combine them:
+    val aut = concat(front, behind)
+    aut
+  }
 }
 
 object Regex2PFA {
@@ -731,21 +798,7 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
         }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
           val (autA, capA) = buildPatternImpl(a)
-          // too inefficient
-          // maybe there's some other way
-          var aut = builder.none
-          var i = n1
-          while (i <= n2) {
-            var j = 0
-            var disjunct = builder.epsilon
-            while (j < i) {
-              val copy = builder.duplicate(autA)
-              disjunct = builder.concat(copy, disjunct)
-              j = j + 1
-            }
-            aut = builder.alternate(disjunct, aut)
-            i = i + 1
-          }
+          val aut = builder.loop(autA, n1, n2)
           (aut, capA)
         }
         case IFunApp(`re_capture`, Seq(IIntLit(IdealInt(litCaptureNum)), a)) => {
