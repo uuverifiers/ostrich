@@ -177,6 +177,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case (IFunApp(`str_at`, _), Seq(bigStr : ITerm, Const(_))) =>
       t update subres
 
+    // keep str.at_last with concrete index, we will later translate it
+    // to a transducer
+    case (IFunApp(`str_at`, _),
+          Seq(bigStr : ITerm,
+              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))))
+        if bigStr == bigStr2 && offset >= 1 =>
+      str_at_right(bigStr, offset - 1)
+
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm, index : ITerm)) => {
       val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)

@@ -91,6 +91,55 @@ object BricsTransducer {
     }
 
   /**
+   * Construct a transducer that extracts the <code>n</code>th-last character
+   * of a string.
+   */
+  def getStrAtRightTransducer(n : Int) : BricsTransducer =
+    synchronized {
+      strAtRightTransducer.getOrElseUpdate(
+        n, 
+        if (n < 0) {
+          SilentTransducer
+        } else {
+          import Transducer._
+
+          val builder = BricsTransducer.getBuilder
+
+          val initState      = builder.getNewState
+          val repeatState    = builder.getNewState
+          val tailStates     = for (i <- 0 to n)    yield builder.getNewState
+          val shortStrStates = for (i <- 1 until n) yield builder.getNewState
+
+          for (Seq(s1, s2) <- (tailStates sliding 2) ++
+                              ((List(initState) ++ shortStrStates) sliding 2) ++
+                              Iterator(List(repeatState, repeatState),
+                                       List(initState, repeatState)))
+            builder.addTransition(s1,
+                                  builder.LabelOps.sigmaLabel,
+                                  OutputOp("", NOP, ""),
+                                  s2)
+
+          builder.addTransition(initState,
+                                builder.LabelOps.sigmaLabel,
+                                OutputOp("", Plus(0), ""),
+                                tailStates.head)
+          builder.addTransition(repeatState,
+                                builder.LabelOps.sigmaLabel,
+                                OutputOp("", Plus(0), ""),
+                                tailStates.head)
+
+          builder.setInitialState(initState)
+          builder.setAccept(initState, true)
+          builder.setAccept(tailStates.last, true)
+
+          for (s <- shortStrStates)
+            builder.setAccept(s, true)
+
+          builder.getTransducer
+        })
+    }
+
+  /**
    * Construct a transducer that removes the first <code>trimLeft</code>
    * and the last <code>trimRight</code> characters of a string.
    */
@@ -148,7 +197,8 @@ object BricsTransducer {
     builder.getTransducer
   }
 
-  private val strAtTransducer = new MHashMap[Int, BricsTransducer]
+  private val strAtTransducer, strAtRightTransducer =
+    new MHashMap[Int, BricsTransducer]
 }
 
 class TransducerState extends BState {

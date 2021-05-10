@@ -44,7 +44,7 @@ import ap.basetypes.IdealInt
 class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                                       facts : Conjunction) {
   import theory.{FunPred, strDatabase, autDatabase,
-                 str_++, str_at, str_trim,
+                 str_++, str_at, str_at_right, str_trim,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere}
 
@@ -52,7 +52,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
-                    str_replacere, str_replaceallre, str_at, str_trim) ++
+                    str_replacere, str_replaceallre,
+                    str_at, str_at_right, str_trim) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
@@ -94,6 +95,14 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
         // TODO: generate length information
         TransducerPreOp(BricsTransducer.getStrAtTransducer(ind))
+      }
+      Some((op, List(a(0)), a(2)))
+    }
+    case FunPred(`str_at_right`) => {
+      val op = () => {
+        val LinearCombination.Constant(IdealInt(ind)) = a(1)
+        // TODO: generate length information
+        TransducerPreOp(BricsTransducer.getStrAtRightTransducer(ind))
       }
       Some((op, List(a(0)), a(2)))
     }
