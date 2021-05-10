@@ -86,12 +86,15 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val asRE = re_++(str_to_re(subStr), re_all())
       str_in_re(bigStr, asRE)
     }
+
+/*
     case (IAtom(`str_prefixof`, _),
           Seq(subStr : ITerm, bigStr : ITerm)) if ctxt.polarity < 0 => {
       val s = VariableShiftVisitor(subStr, 0, 1)
       val t = VariableShiftVisitor(bigStr, 0, 1)
       StringSort.ex(str_++(s, v(0, StringSort)) === t)
     }
+ */
 
     case (IAtom(`str_suffixof`, _),
           Seq(subStr@ConcreteString(_), bigStr : ITerm)) => {
@@ -132,6 +135,25 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
            !str_in_re(v(0, StringSort), containingOrSuffix))
       )))
     }
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              Const(begin),
+              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(end))))
+        if bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
+      str_trim(bigStr, begin, end - begin)
+
+      // TODO: need proper condition for length
+/*
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              begin : ITerm,
+              Difference(IFunApp(`str_len`, Seq(bigStr2)), end : ITerm)))
+        if bigStr == bigStr2 =>
+      ite(begin >= 0,
+          str_trim(bigStr, begin, end - begin),
+          "")
+ */
 
     case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {

@@ -64,6 +64,8 @@ class AutDatabase(theory : OstrichStringTheory,
 
   private val regex2Aut  = new Regex2Aut(theory)
 
+  private var nextId     = 0
+
   private val regexes    = new MHashMap[ITerm, Int]
   private val id2Regex   = new MHashMap[Int, ITerm]
   private val id2Aut     = new MHashMap[Int, Automaton]
@@ -78,9 +80,21 @@ class AutDatabase(theory : OstrichStringTheory,
   def regex2Id(regexTerm : ITerm) : Int =
     synchronized {
       regexes.getOrElseUpdate(regexTerm, {
-                                val id = regexes.size
+                                val id = nextId
+                                nextId = nextId + 1
                                 id2Regex.put(id, regexTerm)
                                 id })
+    }
+
+  /**
+   * Add a new automaton to the database.
+   */
+  def automaton2Id(aut : Automaton) : Int =
+    synchronized {
+      val id = nextId
+      nextId = nextId + 1
+      id2Aut.put(id, aut)
+      id
     }
 
   /**

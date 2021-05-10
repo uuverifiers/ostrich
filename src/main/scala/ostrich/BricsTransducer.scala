@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -89,6 +89,44 @@ object BricsTransducer {
           builder.getTransducer
         })
     }
+
+  /**
+   * Construct a transducer that removes the first <code>trimLeft</code>
+   * and the last <code>trimRight</code> characters of a string.
+   */
+  def getTrimTransducer(trimLeft : Int, trimRight : Int) : BricsTransducer = {
+    assert(trimLeft >= 0 && trimRight >= 0)
+
+    import Transducer._
+ 
+    val builder = BricsTransducer.getBuilder
+
+    val delStates =
+      for (i <- 0 to (trimLeft + trimRight)) yield builder.getNewState
+    val copyStates =
+      for (i <- 0 to trimRight) yield builder.getNewState
+
+    for (Seq(s1, s2) <- (delStates sliding 2) ++ (copyStates sliding 2))
+      builder.addTransition(s1,
+                            builder.LabelOps.sigmaLabel,
+                            OutputOp("", NOP, ""),
+                            s2)
+
+    for (s <- List(delStates(trimLeft), copyStates.head))
+      builder.addTransition(s,
+                            builder.LabelOps.sigmaLabel,
+                            OutputOp("", Plus(0), ""),
+                            copyStates.head)
+
+    builder.setInitialState(delStates(0))
+
+    for (s <- delStates)
+      builder.setAccept(s, true)
+
+    builder.setAccept(copyStates.last, true)
+
+    builder.getTransducer
+  }
 
   /**
    * Transducer that eats every input and produces no output.

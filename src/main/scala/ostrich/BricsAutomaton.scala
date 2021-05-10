@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -68,6 +68,29 @@ object BricsAutomaton {
    */
   def fromString(str : String) : BricsAutomaton =
     new BricsAutomaton(BasicAutomata makeString str)
+
+  /**
+   * Build brics automaton that accepts exactly the prefixes of the given
+   * string.
+   */
+  def prefixAutomaton(str : String) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to str.size) yield builder.getNewState).toIndexedSeq
+
+    builder setInitialState states(0)
+
+    for ((c, n) <- str.iterator.zipWithIndex)
+      builder.addTransition(states(n),
+                            builder.LabelOps singleton c,
+                            states(n+1))
+
+    for (s <- states)
+      builder.setAccept(s, true)
+
+    builder.getAutomaton
+  }
 
   /**
    * A new automaton that accepts any string

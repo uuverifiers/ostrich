@@ -44,7 +44,7 @@ import ap.basetypes.IdealInt
 class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                                       facts : Conjunction) {
   import theory.{FunPred, strDatabase, autDatabase,
-                 str_++, str_at,
+                 str_++, str_at, str_trim,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere}
 
@@ -52,7 +52,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
-                    str_replacere, str_replaceallre, str_at) ++
+                    str_replacere, str_replaceallre, str_at, str_trim) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
@@ -92,9 +92,19 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
+        // TODO: generate length information
         TransducerPreOp(BricsTransducer.getStrAtTransducer(ind))
       }
       Some((op, List(a(0)), a(2)))
+    }
+    case FunPred(`str_trim`) => {
+      val op = () => {
+        val LinearCombination.Constant(IdealInt(trimLeft))  = a(1)
+        val LinearCombination.Constant(IdealInt(trimRight)) = a(2)
+        // TODO: generate length information
+        TransducerPreOp(BricsTransducer.getTrimTransducer(trimLeft, trimRight))
+      }
+      Some((op, List(a(0)), a(3)))
     }
     case FunPred(f) if theory.extraFunctionPreOps contains f => {
       val (op, argSelector, resSelector) = theory.extraFunctionPreOps(f)
