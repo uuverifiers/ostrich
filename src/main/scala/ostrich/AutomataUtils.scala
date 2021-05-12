@@ -223,6 +223,20 @@ object AutomataUtils {
                            len)
 
   /**
+   * Product of a number of given automata
+   * The minimize argument enable minimization of the product automaton.
+   */
+  def product(auts : Seq[Automaton],
+              minimize : Boolean = false) : Automaton =
+    if (auts forall { _.isInstanceOf[AtomicStateAutomaton] }) {
+      productWithMap(auts map (_.asInstanceOf[AtomicStateAutomaton]),
+                     minimize)._1
+    } else {
+      // TODO: minimize?
+      auts reduceLeft (_ & _)
+    }
+
+  /**
    * Product of a number of given automata.  Returns
    * new automaton.  Returns map from new states of result to (q0, [q1,
    * ..., qn]) giving states of this and auts respectively

@@ -339,8 +339,11 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
 class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
+  import OFlags.debug
 
-//  Console.err.println("Automata states: " + underlying.getNumberOfStates)
+  if (debug)
+    Console.err.println("New automaton with " + underlying.getNumberOfStates +
+                          " states")
 
   type State = BState
   type TLabel = (Char, Char)
