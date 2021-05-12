@@ -155,6 +155,53 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           "")
  */
 
+/*
+    Some attempts to rewrite substr to replace; needs more thinking
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              Const(IdealInt.ZERO),
+              IFunApp(`str_indexof`,
+                      Seq(bigStr2,
+                          ConcreteString(searchStr),
+                          Const(IdealInt.ZERO)))))
+        if bigStr == bigStr2 =>
+      ite(str_in_re(bigStr, reCat(re_all(), str_to_re(searchStr), re_all())),
+          str_replacere(bigStr, reCat(str_to_re(searchStr), re_all()), ""),
+          "")
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              Const(IdealInt.ZERO),
+              Difference(IFunApp(`str_indexof`,
+                                 Seq(bigStr2,
+                                     ConcreteString(searchStr),
+                                     Const(IdealInt.ZERO))),
+                         Const(IdealInt(offset)))))
+        if bigStr == bigStr2 && (-offset) >= 1 && (-offset) <= searchStr.size =>
+      // TODO
+      ite(str_in_re(bigStr, reCat(re_all(), str_to_re(searchStr), re_all())),
+          str_replacere(bigStr,
+                        reCat(str_to_re(searchStr), re_all()),
+                        searchStr take (-offset)),
+          "")
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              start@Difference(IFunApp(`str_indexof`,
+                                       Seq(bigStr2,
+                                           ConcreteString(searchStr),
+                                           Const(IdealInt.ZERO))),
+                               Const(IdealInt.MINUS_ONE)),
+              Difference(IFunApp(`str_len`, Seq(bigStr3)), start2)))
+        if bigStr == bigStr2 && bigStr == bigStr3 && searchStr.size == 1 &&
+           start == start2 =>
+      str_replacere(bigStr,
+                    reCat(re_*(re_comp(str_to_re(searchStr))),
+                          str_to_re(searchStr)),
+                    "")
+*/
+
     case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
       val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
