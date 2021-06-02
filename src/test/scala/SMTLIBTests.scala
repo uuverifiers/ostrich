@@ -263,6 +263,12 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str.at.smt2", "sat")
   property("str.at-2.smt2") =
     checkFile("tests/str.at-2.smt2", "unsat")
+  property("str.at-3.smt2") =
+    checkFile("tests/str.at-3.smt2", "sat")
+  property("str.at-3b.smt2") =
+    checkFile("tests/str.at-3b.smt2", "unsat")
+  property("str.at-3c.smt2") =
+    checkFile("tests/str.at-3c.smt2", "unsat")
   property("str.at-bug.smt2") =
     checkFile("tests/str.at-bug.smt2", "sat")
 
@@ -279,6 +285,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/substring.smt2", "sat")
   property("substring-bug.smt2") =
     checkFile("tests/substring-bug.smt2", "sat")
+  property("substring2.smt2") =
+    checkFile("tests/substring2.smt2", "unsat")
+  property("substring2b.smt2") =
+    checkFile("tests/substring2b.smt2", "sat")
 
   property("parse-regex.smt2") =
     checkFile("tests/parse-regex.smt2", "sat")
