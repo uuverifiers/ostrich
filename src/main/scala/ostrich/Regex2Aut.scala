@@ -329,11 +329,11 @@ class Regex2Aut(theory : OstrichStringTheory) {
       maybeMin(toBAutomaton(t, minimize).repeat, minimize)
     case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat(1), minimize)
-    case IFunApp(`re_opt`, Seq(t)) =>
+    case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).optional, minimize)
     case IFunApp(`re_comp`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).complement, minimize)
-    case IFunApp(`re_loop`,
+    case IFunApp(`re_loop` | `re_loop_?`,
                  Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat(n1, n2), minimize)
 
