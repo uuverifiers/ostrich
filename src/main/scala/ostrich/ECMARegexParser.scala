@@ -288,19 +288,20 @@ class ECMARegexParser(theory : OstrichStringTheory) {
           if (greedy) re_*(t) else re_*?(t)
         case _ : PlusQuantifier  =>
           if (greedy) re_+(t) else re_+?(t)
-        case _ : OptQuantifier   => re_opt(t)
+        case _ : OptQuantifier   =>
+          if (greedy) re_opt(t) else re_opt_?(t)
         case q : Loop1Quantifier => {
           val n = parseDecimalDigits(q.listdecimaldigit_)
           re_loop(n, n, t)
         }
         case q : Loop2Quantifier => {
           val n = parseDecimalDigits(q.listdecimaldigit_)
-          reCat(re_loop(n, n, t), re_*(t))
+          reCat(re_loop(n, n, t), if (greedy) re_*(t) else re_*?(t))
         }
         case q : Loop3Quantifier => {
           val n1 = parseDecimalDigits(q.listdecimaldigit_1)
           val n2 = parseDecimalDigits(q.listdecimaldigit_2)
-          re_loop(n1, n2, t)
+          if (greedy) re_loop(n1, n2, t) else re_loop_?(n1, n2, t)
         }
       }
     }
