@@ -597,17 +597,23 @@ class JavascriptPFABuilder extends PFABuilder {
   }
 
   def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
-    var front = epsilon
+    var current = epsilon
     // firstly, we should match `n1` times,
     // that is, concat autA n1 times
     var i = 1
     while (i <= n1) {
       val copy = duplicate(autA)
-      front = concat(front, copy)
+      current = concat(current, copy)
       i = i + 1
     }
+
+    // record the accepting traces
+    val current_f1 = current.accepting._1.toSet
+    var current_f2 = new MHashSet[State]
+    current_f2 ++= current.accepting._2
+
     // now, we can continue to match `n2 - n1` times
-    // which is greedy (we assume loop is greedy)
+    // which is greedy (we assume `loop` is greedy)
     // and disallow matching of empty string.
 
     // To achieve this, we clear the field F1
@@ -619,27 +625,46 @@ class JavascriptPFABuilder extends PFABuilder {
         PFA(t1, pre1, post1, init1, (f1new, f2))
       }
     }
-    // now, we construct e^{n2 - n1} + ... + e^{0}
-    // where e = autANonEmpty
-    var behind = none
-    i = 0 // from 0 to n2 - n1
-    while (i <= n2 - n1) {
-      var j = 0
-      var disjunct = epsilon // e^{i}
-      while (j < i) {
-        val copy = duplicate(autANonEmpty)
-        disjunct = concat(copy, disjunct)
-        j = j + 1
-      }
-      behind = alternate(disjunct, behind)
+
+    // we then concat autANonEmpty n2 - n1 times
+    i = 0
+    while (i < n2 - n1) {
+      val copy = duplicate(autANonEmpty)
+      current = concat(current, copy)
+      // during the iteration, we record all the final states occurred
+      // (since autANonEmpty definitely reject empty string,
+      // we just need to record F2)
+      current_f2 ++= current.accepting._2
       i = i + 1
     }
-    // 'front' is the PFA representing the first n1-th
-    // match of autA, while 'behind' is the PFA representing
-    // the (n1+1)-th to (at most) n2-th match of autA
-    // we now combine them:
-    val aut = concat(front, behind)
-    aut
+
+    val res = current match {
+      case PFA(t1, pre1, post1, init1, (_, _)) => {
+        // form the final automaton by
+        // creating two final states and add transitions
+        val newf1 = new MHashSet[State]
+        if (!current_f1.isEmpty) {
+          val f1 = getNewState
+          for (s <- current_f1) {
+            post1 += ((s, Seq(f1)))
+          }
+          newf1 += f1
+        }
+
+        val newf2 = new MHashSet[State]
+        if (!current_f2.isEmpty) {
+          val f2 = getNewState
+          for (s <- current_f2) {
+            post1 += ((s, Seq(f2)))
+          }
+          newf2 += f2
+        }
+
+        PFA(t1, pre1, post1, init1, (newf1, newf2))
+      }
+    }
+
+    res
   }
 }
 
