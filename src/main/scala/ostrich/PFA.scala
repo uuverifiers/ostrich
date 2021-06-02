@@ -153,9 +153,7 @@ abstract class PFABuilder {
   def plus(aut : PFA) : PFA
   def lazyplus(aut : PFA) : PFA
 
-  def optional(aut : PFA) : PFA = {
-    alternate(aut, epsilon)
-  }
+  def optional(aut : PFA) : PFA
 
   def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
 
@@ -292,6 +290,10 @@ class PythonPFABuilder extends PFABuilder {
     } else {
       none
     }
+  }
+
+  def optional(aut : PFA) : PFA = {
+    alternate(aut, epsilon)
   }
 
   def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
@@ -528,6 +530,13 @@ class JavascriptPFABuilder extends PFABuilder {
         }
       }
     }
+  }
+
+  def optional(aut : PFA) : PFA = {
+    // NOTE: in ECMA, e? requires that e does not match empty string
+    // so here we remove the field F1 from aut
+    aut.accepting._1.clear
+    alternate(aut, epsilon)
   }
 
   def star(aut : PFA) : PFA = {
