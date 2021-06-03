@@ -154,8 +154,10 @@ abstract class PFABuilder {
   def lazyplus(aut : PFA) : PFA
 
   def optional(aut : PFA) : PFA
+  def lazyoptional(aut : PFA) : PFA
 
   def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
+  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
 
   // return a deep copy of `base` and update the Regex2PFA database
   // which means
@@ -296,6 +298,10 @@ class PythonPFABuilder extends PFABuilder {
     alternate(aut, epsilon)
   }
 
+  def lazyoptional(aut : PFA) : PFA = {
+    alternate(epsilon, aut)
+  }
+
   def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
     (aut1, aut2) match {
       case (PFA(t1, pre1, post1, init1, (f1_1, _)), PFA(t2, pre2, post2, init2, (f1_2, _))) => {
@@ -408,6 +414,23 @@ class PythonPFABuilder extends PFABuilder {
         j = j + 1
       }
       aut = alternate(disjunct, aut)
+      i = i + 1
+    }
+    aut
+  }
+
+  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    var aut = none
+    var i = n1
+    while (i <= n2) {
+      var j = 0
+      var disjunct = epsilon
+      while (j < i) {
+        val copy = duplicate(autA)
+        disjunct = concat(copy, disjunct)
+        j = j + 1
+      }
+      aut = alternate(aut, disjunct) // changed
       i = i + 1
     }
     aut
@@ -537,6 +560,11 @@ class JavascriptPFABuilder extends PFABuilder {
     // so here we remove the field F1 from aut
     aut.accepting._1.clear
     alternate(aut, epsilon)
+  }
+
+  def lazyoptional(aut : PFA) : PFA = {
+    aut.accepting._1.clear
+    alternate(epsilon, aut)
   }
 
   def star(aut : PFA) : PFA = {
@@ -675,6 +703,66 @@ class JavascriptPFABuilder extends PFABuilder {
 
     res
   }
+
+  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    var current = epsilon
+    var i = 1
+    while (i <= n1) {
+      val copy = duplicate(autA)
+      current = concat(current, copy)
+      i = i + 1
+    }
+
+    val current_f1 = current.accepting._1.toSet
+    var current_f2 = new MHashSet[State]
+    current_f2 ++= current.accepting._2
+
+    val autANonEmpty = autA match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+        val f1new = new MHashSet[State]
+        PFA(t1, pre1, post1, init1, (f1new, f2))
+      }
+    }
+
+    i = 0
+    while (i < n2 - n1) {
+      val copy = duplicate(autANonEmpty)
+      current = concat(current, copy)
+      // during the iteration, we record all the final states occurred
+      // (since autANonEmpty definitely rejects empty string,
+      // we just need to record F2)
+      current_f2 ++= current.accepting._2
+      i = i + 1
+    }
+
+    val res = current match {
+      case PFA(t1, pre1, post1, init1, (_, _)) => {
+        val newf1 = new MHashSet[State]
+        if (!current_f1.isEmpty) {
+          val f1 = getNewState
+          for (s <- current_f1) {
+            val old_succs = pre1.getOrElse(s, Seq())
+            pre1(s) = (f1 +: old_succs)
+          }
+          newf1 += f1
+        }
+
+        val newf2 = new MHashSet[State]
+        if (!current_f2.isEmpty) {
+          val f2 = getNewState
+          for (s <- current_f2) {
+            val old_succs = pre1.getOrElse(s, Seq())
+            pre1(s) = (f2 +: old_succs)
+          }
+          newf2 += f2
+        }
+
+        PFA(t1, pre1, post1, init1, (newf1, newf2))
+      }
+    }
+
+    res
+  }
 }
 
 object Regex2PFA {
@@ -720,8 +808,8 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
   import Regex2PFA._
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
-    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_comp,
-    re_loop, str_to_re, re_from_str,
+    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp,
+    re_loop, re_loop_?, str_to_re, re_from_str,
     re_begin_anchor, re_end_anchor,
     re_capture, re_reference, re_from_ecma2020}
   import theory.strDatabase.EncodedString
@@ -831,9 +919,18 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
           val (autA, capA) = buildPatternImpl(a)
           (builder.optional(autA), capA)
         }
+        case IFunApp(`re_opt_?`, Seq(a)) => {
+          val (autA, capA) = buildPatternImpl(a)
+          (builder.lazyoptional(autA), capA)
+        }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
           val (autA, capA) = buildPatternImpl(a)
           val aut = builder.loop(autA, n1, n2)
+          (aut, capA)
+        }
+        case IFunApp(`re_loop_?`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
+          val (autA, capA) = buildPatternImpl(a)
+          val aut = builder.lazyloop(autA, n1, n2)
           (aut, capA)
         }
         case IFunApp(`re_capture`, Seq(IIntLit(IdealInt(litCaptureNum)), a)) => {
