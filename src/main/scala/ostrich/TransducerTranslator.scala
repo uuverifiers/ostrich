@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -161,6 +161,10 @@ object TransducerTranslator {
                   lBound = Some(bound.intValueSafe.toChar)
                 case Geq(Const(bound), `inputC`) =>
                   uBound = Some(bound.intValueSafe.toChar)
+                case INot(Geq(`inputC`, Const(bound))) => // inputC < bound
+                  uBound = Some((bound.intValueSafe - 1).toChar)
+                case INot(Geq(Const(bound), `inputC`)) => // bound < inputC
+                  lBound = Some((bound.intValueSafe + 1).toChar)
                 case EqLit(`inputC`, value) => {
                   lBound = Some(value.intValueSafe.toChar)
                   uBound = Some(value.intValueSafe.toChar)

@@ -128,6 +128,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
   val re_case_insensitive =
     MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
+  val str_at_right =
+    MonoSortedIFunction("str.at_right",
+                        List(SSo, Sort.Integer), SSo, true, false)
+  val str_trim =
+    MonoSortedIFunction("str.trim",
+                        List(SSo, Sort.Integer, Sort.Integer), SSo, true, false)
 
   // Replacement with regular expression and capture groups
   val str_replacecg =
@@ -142,6 +148,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     new MonoSortedIFunction("re.*?", List(RSo), RSo, true, false)
   val re_+? =
     new MonoSortedIFunction("re.+?", List(RSo), RSo, true, false)
+  val re_opt_? =
+    new MonoSortedIFunction("re.opt?", List(RSo), RSo, true, false)
+  val re_loop_? =
+    new MonoSortedIFunction("re.loop?", List(Integer, Integer, RSo), RSo,
+                            true, false)
 
   // Capture groups and references
   val re_capture =
@@ -166,14 +177,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val extraRegexFunctions =
     List(re_begin_anchor, re_end_anchor, re_from_ecma2020, re_case_insensitive,
+         str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
-         re_*?, re_+?)
+         re_*?, re_+?, re_opt_?)
 
   val extraIndexedFunctions =
     List((re_capture, 1),
          (re_reference, 1),
          (str_match, 2),
-         (str_extract, 1))
+         (str_extract, 1),
+         (re_loop_?, 2))
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
@@ -249,7 +262,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id) ++
+    Set(str_in_re, str_in_re_id, str_prefixof) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_replaceallcg, 

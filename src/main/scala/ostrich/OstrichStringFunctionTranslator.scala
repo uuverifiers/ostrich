@@ -32,7 +32,7 @@
 
 package ostrich
 
-import ap.terfor.Term
+import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
@@ -44,7 +44,7 @@ import ap.basetypes.IdealInt
 class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                                       facts : Conjunction) {
   import theory.{FunPred, strDatabase, autDatabase,
-                 str_++, str_at,
+                 str_++, str_at, str_at_right, str_trim,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere,
                  str_replaceallcg, str_replacecg, str_extract}
@@ -54,7 +54,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
-                    str_replacere, str_replaceallre, str_at) ++
+                    str_replacere, str_replaceallre,
+                    str_at, str_at_right, str_trim) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
@@ -121,13 +122,65 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       }
       Some((op, List(a(1)), a(3)))
     }
+
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        TransducerPreOp(BricsTransducer.getStrAtTransducer(ind))
+        // TODO: generate length information
+        new TransducerPreOp(BricsTransducer.getStrAtTransducer(ind)) {
+          override def toString = "str.at[" + ind + "]"
+          override def lengthApproximation(arguments : Seq[Term], result : Term,
+                                           order : TermOrder) : Formula = {
+            import TerForConvenience._
+            implicit val _ = order
+            result >= 0 & result <= 1 &
+            ((arguments(0)) <= ind <=> (result === 0))
+          }
+        }
       }
       Some((op, List(a(0)), a(2)))
     }
+
+    case FunPred(`str_at_right`) => {
+      val op = () => {
+        val LinearCombination.Constant(IdealInt(ind)) = a(1)
+        // TODO: generate length information
+        new TransducerPreOp(BricsTransducer.getStrAtRightTransducer(ind)) {
+          override def toString = "str.at-right[" + ind + "]"
+          override def lengthApproximation(arguments : Seq[Term], result : Term,
+                                           order : TermOrder) : Formula = {
+            import TerForConvenience._
+            implicit val _ = order
+            result >= 0 & result <= 1 &
+            ((arguments(0)) <= ind <=> (result === 0))
+          }
+        }
+      }
+      Some((op, List(a(0)), a(2)))
+    }
+
+    case FunPred(`str_trim`) => {
+      val op = () => {
+        val LinearCombination.Constant(IdealInt(trimLeft))  = a(1)
+        val LinearCombination.Constant(IdealInt(trimRight)) = a(2)
+        // TODO: generate length information
+        new TransducerPreOp(BricsTransducer.getTrimTransducer(trimLeft,
+                                                              trimRight)) {
+          override def toString = "str.trim[" + trimLeft + ", " + trimRight +"]"
+          override def lengthApproximation(arguments : Seq[Term], result : Term,
+                                           order : TermOrder) : Formula = {
+            import TerForConvenience._
+            implicit val _ = order
+            ((arguments(0) >= trimLeft + trimRight) &
+               result === arguments(0) - (trimLeft + trimRight)) |
+            ((arguments(0) < trimLeft + trimRight) &
+               result === 0)
+          }
+        }
+      }
+      Some((op, List(a(0)), a(3)))
+    }
+
     case FunPred(f) if theory.extraFunctionPreOps contains f => {
       val (op, argSelector, resSelector) = theory.extraFunctionPreOps(f)
       Some((() => op, argSelector(a), resSelector(a)))

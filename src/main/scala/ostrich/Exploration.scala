@@ -132,6 +132,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            flags : OFlags) {
 
   import Exploration._
+  import OFlags.debug
 
   def measure[A](op : String)(comp : => A) : A =
     if (flags.measureTimes)
@@ -336,6 +337,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                       : ConflictSet = apps match {
 
     case List() => {
+      if (debug)
+        Console.err.println("Trying to contruct model")
+
       // we are finished and just have to construct a model
       val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
 
@@ -416,9 +420,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       }
       throw FoundModel(model.toMap)
     }
-    case (op, args, res) :: otherApps =>
+    case (op, args, res) :: otherApps => {
+      if (debug)
+        Console.err.println("dfExplore, depth " + apps.size)
       dfExploreOp(op, args, res, constraintStores(res).getContents,
                   otherApps)
+    }
   }
 
   private def dfExploreOp(op : PreOp,
@@ -431,6 +438,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       dfExplore(nextApps)
 
     case resAut :: otherAuts => {
+      if (debug)
+        Console.err.println("dfExploreOp, #constraints " + resConstraints.size)
+
       ap.util.Timeout.check
 
       val argConstraints =
@@ -528,6 +538,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private def checkLengthConsistency : Option[Seq[TermConstraint]] =
     for (p <- lengthProver;
          if {
+           if (debug)
+             Console.err.println("checking length consistency")
            measure("check length consistency") {p.???} == ProverStatus.Unsat
          }) yield {
       for (n <- p.getUnsatCore.toList.sorted;
@@ -766,7 +778,8 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def getCompleteContents : List[Automaton] =
       constraints.toList
 
-    private def intersection : Automaton = constraints reduceLeft (_ & _)
+    private def intersection : Automaton =
+      AutomataUtils.product(constraints, _flags.minimizeAutomata)
 
     def ensureCompleteLengthConstraints : Unit =
       constraints match {

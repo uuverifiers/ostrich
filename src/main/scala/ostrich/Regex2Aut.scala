@@ -144,6 +144,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+                 re_opt_?, re_loop_?,
                  re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
                  re_begin_anchor, re_end_anchor, re_from_ecma2020,
                  re_case_insensitive}
@@ -215,11 +216,11 @@ class Regex2Aut(theory : OstrichStringTheory) {
         "(" + subres(0) + ")*"
       case IFunApp(`re_+` | `re_+?`, _) =>
         "(" + subres(0) + ")+"
-      case IFunApp(`re_opt`, _) =>
+      case IFunApp(`re_opt` | `re_opt_?`, _) =>
         "(" + subres(0) + ")?"
       case IFunApp(`re_comp`, _) =>
         "~(" + subres(0) + ")"
-      case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), _)) =>
+      case IFunApp(`re_loop` | `re_loop_?`, Seq(IIntLit(n1), IIntLit(n2), _)) =>
         "(" + subres(2) + "){" + n1 + "," + n2 + "}"
       case IFunApp(`re_capture`, _) => // ignored here
         subres(1)
@@ -328,11 +329,11 @@ class Regex2Aut(theory : OstrichStringTheory) {
       maybeMin(toBAutomaton(t, minimize).repeat, minimize)
     case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat(1), minimize)
-    case IFunApp(`re_opt`, Seq(t)) =>
+    case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).optional, minimize)
     case IFunApp(`re_comp`, Seq(t)) =>
       maybeMin(toBAutomaton(t, minimize).complement, minimize)
-    case IFunApp(`re_loop`,
+    case IFunApp(`re_loop` | `re_loop_?`,
                  Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)) =>
       maybeMin(toBAutomaton(t, minimize).repeat(n1, n2), minimize)
 
