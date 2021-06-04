@@ -134,7 +134,7 @@ abstract class PFABuilder {
   def none() : PFA
   def epsilon() : PFA
   def single(lbl : TLabel) : PFA
-  def constant(str: Seq[Int]) : PFA = {
+  def constant(str: String) : PFA = {
     if (str.isEmpty) {
       epsilon
     } else {
@@ -969,8 +969,8 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
           (autA, capA + localCaptureNum)
         }
-        case IFunApp(`str_to_re`, Seq(a)) => {
-          (builder.constant(StringTheory.term2List(a)), Set())
+        case IFunApp(`str_to_re`, Seq(EncodedString(a))) => {
+          (builder.constant(a), Set())
         }
         case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
           val parser = new ECMARegexParser(theory)
