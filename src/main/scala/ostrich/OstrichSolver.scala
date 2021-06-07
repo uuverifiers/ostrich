@@ -56,13 +56,13 @@ class OstrichSolver(theory : OstrichStringTheory,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  str_prefixof,
                  re_none, re_all, re_allchar, re_charrange,
-                 re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt,
-                 re_comp, re_loop, re_eps, re_capture, re_reference,
+                 re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
+                 re_comp, re_loop, re_loop_?, re_eps, re_capture, re_reference,
                  re_begin_anchor, re_end_anchor, FunPred, strDatabase}
 
   val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
-        re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_comp, re_loop, re_eps, str_to_re,
+        re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps, str_to_re,
         re_from_str, re_capture, re_reference, re_begin_anchor, re_end_anchor,
         re_from_ecma2020, re_case_insensitive)
 

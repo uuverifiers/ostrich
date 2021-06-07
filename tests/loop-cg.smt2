@@ -8,7 +8,7 @@
                 re.all))))
 
 (assert (str.in.re x (str.to.re "aaaabb")))
-;(assert (str.in.re y (str.to.re "")))
+(assert (str.in.re y (str.to.re "aaa")))
 
 (check-sat)
 (get-model)

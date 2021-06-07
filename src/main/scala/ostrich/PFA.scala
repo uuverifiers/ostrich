@@ -134,7 +134,7 @@ abstract class PFABuilder {
   def none() : PFA
   def epsilon() : PFA
   def single(lbl : TLabel) : PFA
-  def constant(str: Seq[Int]) : PFA = {
+  def constant(str: String) : PFA = {
     if (str.isEmpty) {
       epsilon
     } else {
@@ -153,9 +153,96 @@ abstract class PFABuilder {
   def plus(aut : PFA) : PFA
   def lazyplus(aut : PFA) : PFA
 
-  def optional(aut : PFA) : PFA = {
-    alternate(aut, epsilon)
+  def optional(aut : PFA) : PFA
+  def lazyoptional(aut : PFA) : PFA
+
+  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
+  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
+
+  // return a deep copy of `base` and update the Regex2PFA database
+  // which means
+  // 1) if state s is related to capture group i
+  // then the copyed state s' should be related to i too
+  // 2) if state s is an initial state of some automaton corresponding
+  // to capture group i, so is the copyed state s'
+  def duplicate(base : PFA) : PFA = {
+    import Regex2PFA.{capState, stateCap, capInit}
+    import PFA.getNewState
+
+    base match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+
+        // map from base.state to copy.state
+        val sMap = new MHashMap[State, State]
+        // states of old automaton
+        val worklist = new MStack[State]
+
+        def mapState(oldstate : State, newstate : State) = {
+          sMap += (oldstate -> newstate)
+        }
+        def getState(oldstate : State) : State = {
+          sMap.getOrElse(oldstate, {
+            val newstate = getNewState
+            mapState(oldstate, newstate)
+            worklist.push(oldstate)
+            newstate
+          })
+        }
+
+        val newinit = getState(init1)
+
+        val newf1 = new MHashSet[State]
+        val newf2 = new MHashSet[State]
+        val newtrans = new MHashMap[State, Seq[SigmaTransition]]
+        val newpre = new MHashMap[State, Seq[ETransition]]
+        val newpost = new MHashMap[State, Seq[ETransition]]
+
+        // we use a DFS here to exclude unreachable states
+        while (!worklist.isEmpty) {
+          // note a state is visited only once
+          val oldstate = worklist.pop()
+          val newstate = getState(oldstate)
+          if (f1 contains oldstate) {
+            newf1 += newstate
+          }
+          if (f2 contains oldstate) {
+            newf2 += newstate
+          }
+          for (trans <- t1.get(oldstate).iterator) {
+            // trans : Seq[(label, nextState)]
+            val t = trans.map(sigmaTrans => {
+              val (label, next) = sigmaTrans
+              (label, getState(next))
+            })
+            newtrans += ((newstate, t))
+          }
+          for (trans <- pre1.get(oldstate).iterator) {
+            // trans : Seq[nextState]
+            val t = trans.map(s => getState(s))
+            newpre += ((newstate, t))
+          }
+          for (trans <- post1.get(oldstate).iterator) {
+            // trans : Seq[nextState]
+            val t = trans.map(s => getState(s))
+            newpost += ((newstate, t))
+          }
+
+          // now the database ...
+          for (caps <- stateCap.get(oldstate).iterator; cap <- caps) {
+            stateCap.addBinding(newstate, cap)
+            capState.addBinding(cap, newstate)
+            if (capInit.getOrElse(cap, MSet()) contains oldstate) {
+              capInit.addBinding(cap, newstate)
+            }
+          }
+        }
+        val newend = (f1, f2)
+
+        PFA(newtrans, newpre, newpost, newinit, (newf1, newf2))
+      }
+    }
   }
+
 }
 
 class PythonPFABuilder extends PFABuilder {
@@ -205,6 +292,14 @@ class PythonPFABuilder extends PFABuilder {
     } else {
       none
     }
+  }
+
+  def optional(aut : PFA) : PFA = {
+    alternate(aut, epsilon)
+  }
+
+  def lazyoptional(aut : PFA) : PFA = {
+    alternate(epsilon, aut)
   }
 
   def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
@@ -305,6 +400,42 @@ class PythonPFABuilder extends PFABuilder {
     }
   }
 
+  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    // too inefficient
+    // maybe there's some other way
+    var aut = none
+    var i = n1
+    while (i <= n2) {
+      var j = 0
+      var disjunct = epsilon
+      while (j < i) {
+        val copy = duplicate(autA)
+        disjunct = concat(copy, disjunct)
+        j = j + 1
+      }
+      aut = alternate(disjunct, aut)
+      i = i + 1
+    }
+    aut
+  }
+
+  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    var aut = none
+    var i = n1
+    while (i <= n2) {
+      var j = 0
+      var disjunct = epsilon
+      while (j < i) {
+        val copy = duplicate(autA)
+        disjunct = concat(copy, disjunct)
+        j = j + 1
+      }
+      aut = alternate(aut, disjunct) // changed
+      i = i + 1
+    }
+    aut
+  }
+
 }
 
 class JavascriptPFABuilder extends PFABuilder {
@@ -314,88 +445,6 @@ class JavascriptPFABuilder extends PFABuilder {
   // we need to duplicate automaton at times
 
   import PFA.getNewState
-
-  // return a deep copy of `base` and update the Regex2PFA database
-  // which means
-  // 1) if state s is related to capture group i
-  // then the copyed state s' should be related to i too
-  // 2) if state s is an initial state of some automaton corresponding
-  // to capture group i, so is the copyed state s'
-  def duplicate(base : PFA) : PFA = {
-    import Regex2PFA.{capState, stateCap, capInit}
-    base match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
-
-        // map from base.state to copy.state
-        val sMap = new MHashMap[State, State]
-        // states of old automaton
-        val worklist = new MStack[State]
-
-        def mapState(oldstate : State, newstate : State) = {
-          sMap += (oldstate -> newstate)
-        }
-        def getState(oldstate : State) : State = {
-          sMap.getOrElse(oldstate, {
-            val newstate = getNewState
-            mapState(oldstate, newstate)
-            worklist.push(oldstate)
-            newstate
-          })
-        }
-
-        val newinit = getState(init1)
-
-        val newf1 = new MHashSet[State]
-        val newf2 = new MHashSet[State]
-        val newtrans = new MHashMap[State, Seq[SigmaTransition]]
-        val newpre = new MHashMap[State, Seq[ETransition]]
-        val newpost = new MHashMap[State, Seq[ETransition]]
-
-        // we use a DFS here to exclude unreachable states
-        while (!worklist.isEmpty) {
-          // note a state is visited only once
-          val oldstate = worklist.pop()
-          val newstate = getState(oldstate)
-          if (f1 contains oldstate) {
-            newf1 += newstate
-          }
-          if (f2 contains oldstate) {
-            newf2 += newstate
-          }
-          for (trans <- t1.get(oldstate).iterator) {
-            // trans : Seq[(label, nextState)]
-            val t = trans.map(sigmaTrans => {
-              val (label, next) = sigmaTrans
-              (label, getState(next))
-            })
-            newtrans += ((newstate, t))
-          }
-          for (trans <- pre1.get(oldstate).iterator) {
-            // trans : Seq[nextState]
-            val t = trans.map(s => getState(s))
-            newpre += ((newstate, t))
-          }
-          for (trans <- post1.get(oldstate).iterator) {
-            // trans : Seq[nextState]
-            val t = trans.map(s => getState(s))
-            newpost += ((newstate, t))
-          }
-
-          // now the database ...
-          for (caps <- stateCap.get(oldstate).iterator; cap <- caps) {
-            stateCap.addBinding(newstate, cap)
-            capState.addBinding(cap, newstate)
-            if (capInit.getOrElse(cap, MSet()) contains oldstate) {
-              capInit.addBinding(cap, newstate)
-            }
-          }
-        }
-        val newend = (f1, f2)
-
-        PFA(newtrans, newpre, newpost, newinit, (newf1, newf2))
-      }
-    }
-  }
 
   def none() : PFA = {
       val init = getNewState
@@ -506,6 +555,18 @@ class JavascriptPFABuilder extends PFABuilder {
     }
   }
 
+  def optional(aut : PFA) : PFA = {
+    // NOTE: in ECMA, e? requires that e does not match empty string
+    // so here we remove the field F1 from aut
+    aut.accepting._1.clear
+    alternate(aut, epsilon)
+  }
+
+  def lazyoptional(aut : PFA) : PFA = {
+    aut.accepting._1.clear
+    alternate(epsilon, aut)
+  }
+
   def star(aut : PFA) : PFA = {
     aut match {
       case PFA(t1, pre1, post1, init1, (f1, f2)) => {
@@ -571,6 +632,137 @@ class JavascriptPFABuilder extends PFABuilder {
     val staraut = lazystar(aut)
     concat(autcopy, staraut)
   }
+
+  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    var current = epsilon
+    // firstly, we should match `n1` times,
+    // that is, concat autA n1 times
+    var i = 1
+    while (i <= n1) {
+      val copy = duplicate(autA)
+      current = concat(current, copy)
+      i = i + 1
+    }
+
+    // record the accepting traces
+    val current_f1 = current.accepting._1.toSet
+    var current_f2 = new MHashSet[State]
+    current_f2 ++= current.accepting._2
+
+    // now, we can continue to match `n2 - n1` times
+    // which is greedy (we assume `loop` is greedy)
+    // and disallow matching of empty string.
+
+    // To achieve this, we clear the field F1
+    // (standing for empty string) of autA
+    // and get autANonEmpty:
+    val autANonEmpty = autA match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+        val f1new = new MHashSet[State]
+        PFA(t1, pre1, post1, init1, (f1new, f2))
+      }
+    }
+
+    // we then concat autANonEmpty n2 - n1 times
+    i = 0
+    while (i < n2 - n1) {
+      val copy = duplicate(autANonEmpty)
+      current = concat(current, copy)
+      // during the iteration, we record all the final states occurred
+      // (since autANonEmpty definitely reject empty string,
+      // we just need to record F2)
+      current_f2 ++= current.accepting._2
+      i = i + 1
+    }
+
+    val res = current match {
+      case PFA(t1, pre1, post1, init1, (_, _)) => {
+        // form the final automaton by
+        // creating two final states and add transitions
+        val newf1 = new MHashSet[State]
+        if (!current_f1.isEmpty) {
+          val f1 = getNewState
+          for (s <- current_f1) {
+            post1 += ((s, Seq(f1)))
+          }
+          newf1 += f1
+        }
+
+        val newf2 = new MHashSet[State]
+        if (!current_f2.isEmpty) {
+          val f2 = getNewState
+          for (s <- current_f2) {
+            post1 += ((s, Seq(f2)))
+          }
+          newf2 += f2
+        }
+
+        PFA(t1, pre1, post1, init1, (newf1, newf2))
+      }
+    }
+
+    res
+  }
+
+  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+    var current = epsilon
+    var i = 1
+    while (i <= n1) {
+      val copy = duplicate(autA)
+      current = concat(current, copy)
+      i = i + 1
+    }
+
+    val current_f1 = current.accepting._1.toSet
+    var current_f2 = new MHashSet[State]
+    current_f2 ++= current.accepting._2
+
+    val autANonEmpty = autA match {
+      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+        val f1new = new MHashSet[State]
+        PFA(t1, pre1, post1, init1, (f1new, f2))
+      }
+    }
+
+    i = 0
+    while (i < n2 - n1) {
+      val copy = duplicate(autANonEmpty)
+      current = concat(current, copy)
+      // during the iteration, we record all the final states occurred
+      // (since autANonEmpty definitely rejects empty string,
+      // we just need to record F2)
+      current_f2 ++= current.accepting._2
+      i = i + 1
+    }
+
+    val res = current match {
+      case PFA(t1, pre1, post1, init1, (_, _)) => {
+        val newf1 = new MHashSet[State]
+        if (!current_f1.isEmpty) {
+          val f1 = getNewState
+          for (s <- current_f1) {
+            val old_succs = pre1.getOrElse(s, Seq())
+            pre1(s) = (f1 +: old_succs)
+          }
+          newf1 += f1
+        }
+
+        val newf2 = new MHashSet[State]
+        if (!current_f2.isEmpty) {
+          val f2 = getNewState
+          for (s <- current_f2) {
+            val old_succs = pre1.getOrElse(s, Seq())
+            pre1(s) = (f2 +: old_succs)
+          }
+          newf2 += f2
+        }
+
+        PFA(t1, pre1, post1, init1, (newf1, newf2))
+      }
+    }
+
+    res
+  }
 }
 
 object Regex2PFA {
@@ -616,8 +808,8 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
   import Regex2PFA._
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
-    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_comp,
-    re_loop, str_to_re, re_from_str,
+    re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp,
+    re_loop, re_loop_?, str_to_re, re_from_str,
     re_begin_anchor, re_end_anchor,
     re_capture, re_reference, re_from_ecma2020}
   import theory.strDatabase.EncodedString
@@ -727,33 +919,19 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
           val (autA, capA) = buildPatternImpl(a)
           (builder.optional(autA), capA)
         }
+        case IFunApp(`re_opt_?`, Seq(a)) => {
+          val (autA, capA) = buildPatternImpl(a)
+          (builder.lazyoptional(autA), capA)
+        }
         case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
           val (autA, capA) = buildPatternImpl(a)
-          if (capA.isEmpty) {
-            // too inefficient
-            // maybe there's some other way
-            var aut = builder.none
-            var i = n1
-            while (i <= n2) {
-              var j = 0
-              var disjunct = builder.epsilon
-              while (j < i) {
-                val (copy, _) = buildPatternImpl(a)
-                disjunct = builder.concat(copy, disjunct)
-                j = j + 1
-              }
-              aut = builder.alternate(disjunct, aut)
-              i = i + 1
-            }
-            (aut, capA)
-          } else {
-            // NOTE
-            // It is possible to support this
-            // the crux is to find a way to construct a PFA
-            // which allows bounded match of a
-            throw new IllegalArgumentException(
-              "regex with capture groups does not support loop (yet!) " + t)
-          }
+          val aut = builder.loop(autA, n1, n2)
+          (aut, capA)
+        }
+        case IFunApp(`re_loop_?`, Seq(IIntLit(n1), IIntLit(n2), a)) => {
+          val (autA, capA) = buildPatternImpl(a)
+          val aut = builder.lazyloop(autA, n1, n2)
+          (aut, capA)
         }
         case IFunApp(`re_capture`, Seq(IIntLit(IdealInt(litCaptureNum)), a)) => {
           val localCaptureNum = numCapture
@@ -791,8 +969,8 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
           (autA, capA + localCaptureNum)
         }
-        case IFunApp(`str_to_re`, Seq(a)) => {
-          (builder.constant(StringTheory.term2List(a)), Set())
+        case IFunApp(`str_to_re`, Seq(EncodedString(a))) => {
+          (builder.constant(a), Set())
         }
         case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
           val parser = new ECMARegexParser(theory)
