@@ -374,7 +374,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   /**
    * Check whether this automaton describes the empty language.
    */
-  def isEmpty : Boolean =
+  override def isEmpty : Boolean =
     underlying.isEmpty
 
   /**

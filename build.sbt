@@ -9,7 +9,7 @@ lazy val commonSettings = Seq(
     //"-Xfatal-warnings",
     "-unchecked",
     "-Xlint",
-    "-Xelide-below", "FINE",
+    "-Xelide-below", "INFO",
     // "-feature",
     // "-optimize",
     "-Ywarn-dead-code",
