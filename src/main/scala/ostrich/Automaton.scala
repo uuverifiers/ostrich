@@ -41,7 +41,8 @@ import scala.collection.mutable.{HashMap => MHashMap,
 
 import uuverifiers.parikh_theory.{
   Automaton => OtherAutomaton,
-  LengthCounting
+  LengthCounting,
+  SymbolicLabel
 }
 
 /**
@@ -84,6 +85,8 @@ trait Automaton {
    * Compute the length abstraction of this automaton and assert it into a prover.
    */
   def assertLengthConstraint(lengthTerm: Term, prover: SimpleAPI) : Unit
+
+  def toAmandaAutomaton(): OtherAutomaton
 
 }
 
@@ -154,6 +157,8 @@ trait TLabelOps[TLabel] {
    * Get representation of interval [min,max]
    */
   def interval(min : Char, max : Char) : TLabel
+
+  def labelToSymbolicLabel(label: TLabel): SymbolicLabel
 }
 
 /**
@@ -193,7 +198,7 @@ trait TLabelEnumerator[TLabel] {
  * don't have any structure and are not composite, there is a unique
  * initial state, and a set of accepting states.
  */
-trait AtomicStateAutomaton extends Automaton with OtherAutomaton {
+trait AtomicStateAutomaton extends Automaton {
   /**
    * Type of states
    */
@@ -204,7 +209,7 @@ trait AtomicStateAutomaton extends Automaton with OtherAutomaton {
    */
   type TLabel
 
-  type Label = TLabel
+  
 
   /**
    * Operations on labels
@@ -259,10 +264,38 @@ trait AtomicStateAutomaton extends Automaton with OtherAutomaton {
   //////////////////////////////////////////////////////////////////////////
   // Derived methods
 
+
+
+  /**
+    * I gave up and made these
+    */
+  override lazy val toAmandaAutomaton: OtherAutomaton = {
+    val parent = this
+
+    object AutomatonAdapter extends OtherAutomaton {
+      import uuverifiers.parikh_theory.AutomataTypes.{State => OtherState}
+
+      // This really is not exactly a beautiful solution but let's go.
+      val stateToIndex: Map[parent.State, OtherState] = parent.states.zipWithIndex.toMap
+      lazy val indexToState: Map[OtherState, parent.State] = stateToIndex.map(_.swap)
+
+      val initialState: OtherState = stateToIndex(parent.initialState)
+      def isAccept(s: OtherState): Boolean = parent.isAccept(indexToState(s))
+      def outgoingTransitions(from: OtherState): Iterator[(OtherState, SymbolicLabel)] =
+        parent.outgoingTransitions(indexToState(from)).map{
+          case(s, l) =>
+            (stateToIndex(s), parent.LabelOps.labelToSymbolicLabel(l))
+        }
+      def states: Iterable[OtherState] = parent.states.map(stateToIndex)
+    }
+
+    AutomatonAdapter
+  }
+
   /**
    * Iterate over all transitions
    */
-  override def transitions : Iterator[(State, TLabel, State)] =
+  def transitions : Iterator[(State, TLabel, State)] =
     for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
     yield (s1, lbl, s2)
 
@@ -340,7 +373,7 @@ trait AtomicStateAutomaton extends Automaton with OtherAutomaton {
   }
 
   // Spare us running multiple instantiations (it might be expensive)
-  lazy private val lengthTheory = LengthCounting(IndexedSeq(this))
+  lazy private val lengthTheory = LengthCounting(IndexedSeq(toAmandaAutomaton))
 
   /**
     * Compute the length abstraction of this automaton.

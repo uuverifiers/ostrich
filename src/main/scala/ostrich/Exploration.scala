@@ -518,7 +518,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                                     sources : Seq[Automaton]) : Unit = {
     // FIXME cache the theory using Princess LRUcache and/or move to AutomataUtils
     // FIXME change the type to require AtomicStateAutomaton here
-    val automata = sources.map(_.asInstanceOf[AtomicStateAutomaton]).toIndexedSeq
+    val automata = sources.map(_.toAmandaAutomaton()).toIndexedSeq
     val lengthTheory = LengthCounting(automata)
 
     for (prover <- lengthProver) {

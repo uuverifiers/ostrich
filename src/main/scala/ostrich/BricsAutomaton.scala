@@ -43,6 +43,7 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  MultiMap => MMultiMap,
                                  Set => MSet}
 import scala.jdk.CollectionConverters._
+import uuverifiers.parikh_theory.SymbolicLabel
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -212,6 +213,9 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    * Get representation of interval [min,max]
    */
   def interval(min : Char, max : Char) : (Char, Char) = (min, max)
+
+  def labelToSymbolicLabel(label: (Char, Char)): SymbolicLabel =
+    SymbolicLabel(label._1, label._2)
 }
 
 class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
