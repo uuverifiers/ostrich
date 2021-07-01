@@ -210,7 +210,7 @@ object TransducerTranslator {
         new Iterator[IdealInt] {
           def hasNext : Boolean =
             (??? == ProverStatus.Sat)
-          def next : IdealInt = {
+          def next(): IdealInt = {
             ???
             val res = eval(outputC)
             !! (outputC =/= res)

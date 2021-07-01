@@ -226,7 +226,7 @@ object AutomataUtils {
    * Product of a number of given automata
    * The minimize argument enable minimization of the product automaton.
    */
-  def product(auts : Seq[Automaton],
+  def product(auts : Iterable[Automaton],
               minimize : Boolean = false) : Automaton =
     if (auts forall { _.isInstanceOf[AtomicStateAutomaton] }) {
       productWithMap(auts map (_.asInstanceOf[AtomicStateAutomaton]),
@@ -244,7 +244,7 @@ object AutomataUtils {
    * The minimize argument enable minimization of the product automaton,
    * which should only be used if the returned maps are not used.
    */
-  def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
+  def productWithMap(auts : Iterable[AtomicStateAutomaton], minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
     productWithMaps(auts.map((_, idMap)), minimize)
@@ -259,7 +259,7 @@ object AutomataUtils {
    * The minimize argument enable minimization of the product automaton,
    * which should only be used if the returned maps are not used.
    */
-  private def productWithMaps(auts : Seq[(AtomicStateAutomaton,
+  private def productWithMaps(auts : Iterable[(AtomicStateAutomaton,
                                          Map[Any, Seq[Any]])],
                               minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
@@ -288,7 +288,7 @@ object AutomataUtils {
    * The minimize argument enable minimization of the product automaton,
    * which should only be used if the returned maps are not used.
    */
-  private def fullProductWithMaps(auts : Seq[(AtomicStateAutomaton,
+  private def fullProductWithMaps(auts : Iterable[(AtomicStateAutomaton,
                                              Map[Any, Seq[Any]])],
                                   minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
@@ -387,7 +387,7 @@ object AutomataUtils {
    * Form product of this automaton with given auts, returns a new
    * automaton
    */
-  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
+  def product(auts : Iterable[AtomicStateAutomaton]) : AtomicStateAutomaton =
     productWithMap(auts, true)._1
 
   /**

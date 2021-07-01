@@ -100,7 +100,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
           override def lengthApproximation(arguments : Seq[Term], result : Term,
                                            order : TermOrder) : Formula = {
             import TerForConvenience._
-            implicit val _ = order
+            implicit val o = order
             result >= 0 & result <= 1 &
             ((arguments(0)) <= ind <=> (result === 0))
           }
@@ -118,7 +118,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
           override def lengthApproximation(arguments : Seq[Term], result : Term,
                                            order : TermOrder) : Formula = {
             import TerForConvenience._
-            implicit val _ = order
+            implicit val o = order
             result >= 0 & result <= 1 &
             ((arguments(0)) <= ind <=> (result === 0))
           }
@@ -138,7 +138,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
           override def lengthApproximation(arguments : Seq[Term], result : Term,
                                            order : TermOrder) : Formula = {
             import TerForConvenience._
-            implicit val _ = order
+            implicit val o = order
             ((arguments(0) >= trimLeft + trimRight) &
                result === arguments(0) - (trimLeft + trimRight)) |
             ((arguments(0) < trimLeft + trimRight) &

@@ -679,7 +679,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     return None
   }
 
-  override def toDot() : String = {
+  override def toDot: String = {
     val sb = new StringBuilder()
     sb.append("digraph transducer {\n")
 
