@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2021 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,8 @@ import ap.basetypes.IdealInt
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
 import ap.terfor.{Term, TerForConvenience}
+import ap.terfor.linearcombination.LinearCombination
+import ap.types.SortedPredicate
 import ap.theories.TheoryRegistry
 import ap.util.Seqs
 
@@ -45,6 +47,8 @@ import ap.util.Seqs
  */
 class OstrichEqualityPropagator(theory : OstrichStringTheory) {
 
+  import theory.{StringSort, strDatabase}
+
   private implicit val seqOrdering = new Ordering[Seq[Int]] {
     def compare(a : Seq[Int], b : Seq[Int]) : Int =
       Seqs.lexCompare(a.iterator, b.iterator)
@@ -53,16 +57,6 @@ class OstrichEqualityPropagator(theory : OstrichStringTheory) {
   def handleSolution(goal : Goal,
                      model : Map[Term, Either[IdealInt, Seq[Int]]])
                    : Seq[Plugin.Action] = {
-    // we need to check whether the solution maps distinct variables
-    // to the same string; in case such variables also occur in
-    // other formulas, then we need to do explicit case splits
-
-    val variableClasses =
-      (for ((t, Right(w)) <- model.iterator) yield (t, w)).toList groupBy (_._2)
-
-    if (variableClasses forall { case (_, c) => c.size <= 1 })
-      return List()
-
     val predConj = goal.facts.predConj
     val allAtoms = predConj.positiveLits ++ predConj.negativeLits
     val nonTheoryAtoms =
@@ -72,6 +66,28 @@ class OstrichEqualityPropagator(theory : OstrichStringTheory) {
           case _ => false
         }
       }
+
+    // we need to add strings encoded as integers to the model
+    val encodedStrings =
+      (for (a <- nonTheoryAtoms.iterator;
+            sorts = SortedPredicate argumentSorts a;
+            (t@LinearCombination.Constant(IdealInt(id)), `StringSort`) <-
+              a.iterator zip sorts.iterator)
+       yield (t, Right(strDatabase id2List id))).toVector
+
+    val extModel =
+      (model ++ encodedStrings).toMap
+
+    // we need to check whether the solution maps distinct variables
+    // to the same string; in case such variables also occur in
+    // other formulas, then we need to do explicit case splits
+
+    val variableClasses =
+      (for ((t, Right(w)) <- extModel.iterator)
+       yield (t, w)).toList groupBy (_._2)
+
+    if (variableClasses forall { case (_, c) => c.size <= 1 })
+      return List()
 
     // relevant are only constants which also occur in atoms that do not
     // belong to string constraints
@@ -88,9 +104,11 @@ class OstrichEqualityPropagator(theory : OstrichStringTheory) {
     (for (w <- variableClasses.keySet.toSeq.sorted.iterator;
           terms = variableClasses(w) map (_._1);
           interestingTerms = terms filter {
-            t => !Seqs.disjoint(t.constants, interestingConstants)
+            t => t.constants.isEmpty ||
+                 !Seqs.disjoint(t.constants, interestingConstants)
           };
-          if interestingTerms.size > 1) yield {
+          if interestingTerms.size > 1 &&
+             interestingTerms.exists(!_.constants.isEmpty)) yield {
        val allEq =
          conj(for (Seq(t1, t2) <- interestingTerms sliding 2) yield t1 === t2)
        Plugin.AxiomSplit(List(),
