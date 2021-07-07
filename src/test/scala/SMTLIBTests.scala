@@ -44,6 +44,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("model-bug.smt2") =
+    checkFileOpts("tests/model-bug.smt2", "sat", "", "+model")
+
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
   property("subsumption.smt2") =

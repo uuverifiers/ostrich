@@ -342,7 +342,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                 if x.constants subsetOf order.orderedConstants)
               yield l(x - len))
 
-        Some(stringAssignments & lenAssignments)
+        val otherFormulas =
+          (goal.facts.iterator filter {
+             f => Seqs.disjointSeq(f.predicates, predicates)
+           }).toList
+
+        Some(stringAssignments & lenAssignments & conj(otherFormulas))
       }
 
   })
