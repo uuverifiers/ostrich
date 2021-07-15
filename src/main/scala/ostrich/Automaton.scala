@@ -42,7 +42,8 @@ import scala.collection.mutable.{HashMap => MHashMap,
 import uuverifiers.parikh_theory.{
   Automaton => OtherAutomaton,
   LengthCounting,
-  SymbolicLabel
+  SymbolicLabel, 
+  Tracing
 }
 
 /**
@@ -198,7 +199,7 @@ trait TLabelEnumerator[TLabel] {
  * don't have any structure and are not composite, there is a unique
  * initial state, and a set of accepting states.
  */
-trait AtomicStateAutomaton extends Automaton {
+trait AtomicStateAutomaton extends Automaton with Tracing {
   /**
    * Type of states
    */
@@ -269,9 +270,8 @@ trait AtomicStateAutomaton extends Automaton {
   /**
     * I gave up and made these
     */
-  override lazy val toAmandaAutomaton: OtherAutomaton = {
+  override lazy val toAmandaAutomaton: OtherAutomaton = trace("toAmandaAutomaton"){
     val parent = this
-
     object AutomatonAdapter extends OtherAutomaton {
       import uuverifiers.parikh_theory.AutomataTypes.{State => OtherState}
 
@@ -288,7 +288,6 @@ trait AtomicStateAutomaton extends Automaton {
         }
       def states: Iterable[OtherState] = parent.states.map(stateToIndex)
     }
-
     AutomatonAdapter
   }
 

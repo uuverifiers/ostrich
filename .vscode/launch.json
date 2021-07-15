@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "scala",
+            "request": "launch",
+            "name": "Run tests",
+            "testClass": "ostrich.APITest",
+            "buildTarget": "root"
+        },
+        {
+            "type": "scala",
+            "name": "Debug ostrich.OstrichMain",
+            "request": "launch",
+            "mainClass": "ostrich.OstrichMain",
+            "buildTarget": "root",
+            "args": ["+quiet", "-stringSolver=ostrich.OstrichStringTheory:+eager", "tests/concat-regex.smt2"]
+        }
+    ]
+}

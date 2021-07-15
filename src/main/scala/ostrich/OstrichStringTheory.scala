@@ -242,28 +242,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       new ap.util.LRUCache[Conjunction,
                            Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
-    override def handleGoal(goal : Goal)
-                       : Seq[Plugin.Action] = goalState(goal) match {
-
-      case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
-
-        breakCyclicEquations(goal) match {
-          case Some(actions) =>
-            actions
-          case None =>
-            modelCache(goal.facts) {
-              ostrichSolver.findStringModel(goal)
-            } match {
-              case Some(m) =>
-                equalityPropagator.handleSolution(goal, m)
-              case None =>
-                List(Plugin.AddFormula(Conjunction.TRUE))
-            }
+    override def handleGoal(goal: Goal): Seq[Plugin.Action] =
+      if (goalState(goal) == Plugin.GoalState.Final) {
+        breakCyclicEquations(goal).getOrElse {
+          modelCache(goal.facts)(ostrichSolver.findStringModel(goal))
+            .map(equalityPropagator.handleSolution(goal, _))
+            .getOrElse(List(Plugin.AddFormula(Conjunction.TRUE)))
         }
-      }
-
-      case _ => List()
-    }
+      } else List()
 
     override def generateModel(goal : Goal) : Option[Conjunction] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {

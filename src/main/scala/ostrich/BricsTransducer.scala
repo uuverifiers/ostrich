@@ -39,9 +39,7 @@ import scala.collection.mutable.{HashSet => MHashSet,
                                  MultiMap => MMultiMap,
                                  Set => MSet}
 
-import dk.brics.automaton.{Automaton => BAutomaton,
-                           State => BState,
-                           Transition => BTransition}
+import dk.brics.automaton.{State => BState}
 
 
 import java.lang.StringBuilder

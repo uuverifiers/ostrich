@@ -230,7 +230,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
-    SimpleAPI.withProver(dumpSMT = true) { lengthProver =>
+    SimpleAPI.withProver() { lengthProver =>
       val lProver =
         if (useLength) {
           lengthProver setConstructProofs true

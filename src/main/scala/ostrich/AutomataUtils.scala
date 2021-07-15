@@ -154,7 +154,7 @@ object AutomataUtils {
    * The automata are required to all have the same label type (though this is
    * not checked statically)
    */
-  def findAcceptedWordAtomic(auts : Seq[AtomicStateAutomaton],
+  def findAcceptedWordAtomic(auts : Iterable[AtomicStateAutomaton],
                              len : Int) : Option[Seq[Int]] = {
     val autsList = auts.toList
     val headAut = autsList.head
@@ -216,7 +216,7 @@ object AutomataUtils {
    * Check whether there is some word of length <code>len</code> accepted
    * by all of the given automata.
    */
-  def findAcceptedWord(auts : Seq[Automaton],
+  def findAcceptedWord(auts : Iterable[Automaton],
                        len : Int) : Option[Seq[Int]] =
     findAcceptedWordAtomic(for (aut <- auts)
                              yield aut.asInstanceOf[AtomicStateAutomaton],

@@ -279,8 +279,6 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         aut.assertLengthConstraint(lengthVars(t), p)
 
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat) {
-        Console.err.println("hello!")
-        Console.err.println(p.certificateAsString(Map(), ap.parameters.Param.InputFormat.SMTLIB))
         return None
       }
     }
@@ -332,7 +330,6 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
                       : ConflictSet = apps match {
-
     case List() => {
       if (debug)
         Console.err.println("Trying to contruct model")
@@ -442,7 +439,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       while (measure("pre-op hasNext") {newConstraintsIt.hasNext}) {
         ap.util.Timeout.check
 
-        val argCS = measure("pre-op next") {newConstraintsIt.next}
+        val argCS = measure("pre-op next") {newConstraintsIt.next()}
 
         for (a <- args)
           constraintStores(a).push
@@ -515,7 +512,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private val lengthPartitions = new ArrayBuffer[Seq[TermConstraint]]
 
   protected def addLengthConstraint(lengthTerm : Term,
-                                    sources : Seq[Automaton]) : Unit = {
+                                    sources : Seq[Automaton]): Unit = {
     // FIXME cache the theory using Princess LRUcache and/or move to AutomataUtils
     // FIXME change the type to require AtomicStateAutomaton here
     val automata = sources.map(_.toAmandaAutomaton()).toIndexedSeq
@@ -528,14 +525,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   }
 
   private def checkLengthConsistency : Option[Seq[TermConstraint]] = {
-    Console.err.println("checkLengthConsistency")
     for (p <- lengthProver;
          if {
-           if (debug)
-             Console.err.println("checking length consistency")
-           measure("check length consistency") {p.???} == ProverStatus.Unsat
+           measure("check length consistency") {p.???}
+           p.??? == ProverStatus.Unsat
          }) yield {
-      Console.err.println(p.certificateAsString(Map(), ap.parameters.Param.InputFormat.SMTLIB))
       for (n <- p.getUnsatCore.toList.sorted;
            if n > 0;
            c <- lengthPartitions(n - 1))
@@ -609,14 +603,14 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
             } else {
               constraints += aut
               currentConstraint = Some(newAut)
-              addLengthConstraint(lengthVars(t), constraints.toIndexedSeq)
+              addLengthConstraint(t, constraints.toIndexedSeq)
               None
             }
           }
           case None => {
             constraints += aut
             currentConstraint = Some(aut)
-            addLengthConstraint(lengthVars(t), IndexedSeq(aut))
+            addLengthConstraint(t, IndexedSeq(aut))
             None
           }
         }
@@ -752,7 +746,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           case None => {
             constraints += aut
             constraintSet += aut
-            addLengthConstraint(lengthVars(t), IndexedSeq(aut))
+            lengthVars.get(t).foreach(addLengthConstraint(_, IndexedSeq(aut)))
             None
           }
         }
@@ -774,14 +768,15 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def getAcceptedWord : Seq[Int] =
       constraints match {
         case _ if constraints.isEmpty => List()
-        case auts  => intersection.getAcceptedWord.get.toSeq
+        case _  => intersection.getAcceptedWord.get
       }
 
     def getAcceptedWordLen(len : Int) : Seq[Int] =
-      constraints match {
-        case _ if constraints.isEmpty => for (_ <- 0 until len) yield 0
-        case auts  => AutomataUtils.findAcceptedWord(auts.toSeq, len).get
-      }
+    if(constraints.isEmpty) {
+      for (_ <- 0 until len) yield 0}
+    else {
+      AutomataUtils.findAcceptedWord(constraints, len).get
+    }
   }
 
 }
