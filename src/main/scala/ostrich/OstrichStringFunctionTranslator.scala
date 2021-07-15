@@ -32,6 +32,7 @@
 
 package ostrich
 
+import ap.parser.ITerm
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
@@ -49,6 +50,13 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_replaceallre, str_replacere}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
+
+  private def regexAsTerm(t : Term) : Option[ITerm] =
+    try {
+      Some(regexExtractor regexAsTerm t)
+    } catch {
+      case _ : theory.IllegalRegexException => None
+    }
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
@@ -74,27 +82,26 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
-    case FunPred(`str_replaceallre`) => {
-      val op = () => {
-        val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-        ReplaceAllPreOp(aut)
+    case FunPred(`str_replaceallre`) =>
+      for (regex <- regexAsTerm(a(1))) yield {
+        val op = () => {
+          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
+          ReplaceAllPreOp(aut)
+        }
+        (op, List(a(0), a(2)), a(3))
       }
-      Some((op, List(a(0), a(2)), a(3)))
-    }
-    case FunPred(`str_replacere`) => {
-      val op = () => {
-        val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-        ReplacePreOp(aut)
+    case FunPred(`str_replacere`) =>
+      for (regex <- regexAsTerm(a(1))) yield {
+        val op = () => {
+          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
+          ReplacePreOp(aut)
+        }
+        (op, List(a(0), a(2)), a(3))
       }
-      Some((op, List(a(0), a(2)), a(3)))
-    }
 
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        // TODO: generate length information
         new TransducerPreOp(BricsTransducer.getStrAtTransducer(ind)) {
           override def toString = "str.at[" + ind + "]"
           override def lengthApproximation(arguments : Seq[Term], result : Term,
@@ -112,7 +119,6 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
     case FunPred(`str_at_right`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        // TODO: generate length information
         new TransducerPreOp(BricsTransducer.getStrAtRightTransducer(ind)) {
           override def toString = "str.at-right[" + ind + "]"
           override def lengthApproximation(arguments : Seq[Term], result : Term,
