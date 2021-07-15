@@ -48,19 +48,21 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
     println("Loading " + name + ", a solver for string constraints")
     println("(c) Matthew Hague, Philipp Rümmer, 2018-2021")
-    println("With contributions by Riccardo de Masellis.")
+    println("With contributions by Riccardo De Masellis.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward = false
+  private var eager, forward, minimizeAuts = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
       eager = value
+    case CmdlParser.Opt("minimizeAutomata", value) =>
+      minimizeAuts = value
     case CmdlParser.ValueOpt("length", "off") =>
       useLen = OFlags.LengthOptions.Off
     case CmdlParser.ValueOpt("length", "on") =>
@@ -101,10 +103,11 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
         (name, aut)
       }
 
-    new OstrichStringTheory (symTransducers,
+    new OstrichStringTheory (symTransducers.toSeq,
                              OFlags(eagerAutomataOperations = eager,
-                                    useLength = useLen,
-                                    forwardApprox = forward))
+                                    useLength               = useLen,
+                                    forwardApprox           = forward,
+                                    minimizeAutomata        = minimizeAuts))
   }
 
 }

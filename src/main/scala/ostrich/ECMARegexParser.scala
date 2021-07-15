@@ -39,12 +39,21 @@ import ecma2020regex._
 import ecma2020regex.Absyn._
 import ecma2020regex.Absyn.{Quantifier => ECMAQuantifier}
 
-import scala.collection.JavaConversions.{asScalaBuffer, asScalaIterator}
+// import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
+
+object ECMARegexParser {
+
+  val OctalEscape = """[0-7]{1,3}""".r
+
+}
 
 class ECMARegexParser(theory : OstrichStringTheory) {
 
   import theory._
   import IExpression._
+  import ECMARegexParser._
+
   val printer = new PrettyPrinterNonStatic
 
   def string2Term(inputString : String) : ITerm = {
@@ -96,11 +105,11 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     def combine(x : ITerm, y : ITerm, arg : VisitorArg) : ITerm = reCat(x, y)
 
     override def visit(p : ecma2020regex.Absyn.Pattern, arg : VisitorArg) =
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)
 
     override def visit(p : ecma2020regex.Absyn.Alternative,
                        outermost : VisitorArg) = {
-      val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
+      val terms = expandGroups(p.listtermc_.asScala.toSeq) map (_.accept(this, false))
 
       if (outermost) {
         // handle leading look-aheads and trailing look-behinds
@@ -155,12 +164,12 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                  case g : ecma2020regex.Absyn.GroupAtom
                      if g.listalternativec_.size == 1 => {
                        changed = true
-                       altToTerms(g.listalternativec_)
+                       altToTerms(g.listalternativec_.asScala.toSeq)
                      }
                  case g : ecma2020regex.Absyn.NonCaptGroup
                      if g.listalternativec_.size == 1 => {
                        changed = true
-                       altToTerms(g.listalternativec_)
+                       altToTerms(g.listalternativec_.asScala.toSeq)
                      }
                  case _ =>
                    List(t)
@@ -177,7 +186,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                          : Seq[ecma2020regex.Absyn.TermC] = {
       assert(a.size == 1)
       val alt = a.head.asInstanceOf[ecma2020regex.Absyn.Alternative]
-      alt.listtermc_.toList
+      alt.listtermc_.asScala.toList
     }
 
     private def dropAssertions(ts : Seq[ITerm]) : Seq[ITerm] =
@@ -204,31 +213,31 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.GroupAtom, arg : VisitorArg) =
       // capture group
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)
     override def visit(p : ecma2020regex.Absyn.NonCaptGroup, arg : VisitorArg) =
       // non-capture group
-      reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
+      reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)
 
     override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) =
       LookAhead(
-        reCat(reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*),
+        reCat(reUnionStar(p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*),
               ALL))
     override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) =
       LookAhead(
         re_comp(reCat(reUnionStar(
-          p.listalternativec_ map (_.accept(this, arg)) : _*), ALL)))
+          p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*), ALL)))
 
     override def visit(p : ecma2020regex.Absyn.PosLookbehind,
                        arg : VisitorArg) =
       LookBehind(
         reCat(ALL, reUnionStar(
-                p.listalternativec_ map (_.accept(this, arg)) : _*)))
+                p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*)))
 
     override def visit(p : ecma2020regex.Absyn.NegLookbehind,
                        arg : VisitorArg) =
       LookBehind(
         re_comp(reCat(ALL, reUnionStar(
-                  p.listalternativec_ map (_.accept(this, arg)) : _*))))
+                  p.listalternativec_.asScala.toSeq map (_.accept(this, arg)) : _*))))
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
       charComplement(lineTerminator) // . is anything apart from a line term.
@@ -269,16 +278,16 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         case _ : PlusQuantifier  => re_+(t)
         case _ : OptQuantifier   => re_opt(t)
         case q : Loop1Quantifier => {
-          val n = parseDecimalDigits(q.listdecimaldigit_)
+          val n = parseDecimalDigits(q.listdecimaldigit_.asScala.toSeq)
           re_loop(n, n, t)
         }
         case q : Loop2Quantifier => {
-          val n = parseDecimalDigits(q.listdecimaldigit_)
+          val n = parseDecimalDigits(q.listdecimaldigit_.asScala.toSeq)
           reCat(re_loop(n, n, t), re_*(t))
         }
         case q : Loop3Quantifier => {
-          val n1 = parseDecimalDigits(q.listdecimaldigit_1)
-          val n2 = parseDecimalDigits(q.listdecimaldigit_2)
+          val n1 = parseDecimalDigits(q.listdecimaldigit_1.asScala.toSeq)
+          val n2 = parseDecimalDigits(q.listdecimaldigit_2.asScala.toSeq)
           re_loop(n1, n2, t)
         }
       }
@@ -289,149 +298,213 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       EPS
     }
 
-    override def visit(p : ecma2020regex.Absyn.EndAnchor, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.EndAnchor,
+                       arg : VisitorArg) = {
       Console.err.println("Warning: ignoring anchor $")
       EPS
     }
 
-    override def visit(p : ecma2020regex.Absyn.WordAnchor, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.WordAnchor,
+                       arg : VisitorArg) =
       WordBoundary()
 
-    override def visit(p : ecma2020regex.Absyn.NonWordAnchor, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.NonWordAnchor,
+                       arg : VisitorArg) =
       NonWordBoundary()
 
-    override def visit(p : ecma2020regex.Absyn.NegClass, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.NegClass,
+                       arg : VisitorArg) =
       charComplement(p.classrangesc_.accept(this, arg))
 
-    override def visit(p : ecma2020regex.Absyn.EmptyRange, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.EmptyRange,
+                       arg : VisitorArg) =
       NONE
 
-    override def visit(p : ecma2020regex.Absyn.ClassCont, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.ClassCont,
+                       arg : VisitorArg) = {
       val left = p.classatomc_.accept(this, arg)
       val rest = p.neclassrangesnodashc_.accept(this, arg)
       reUnion(left, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassCharRange, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.ClassCharRange,
+                       arg : VisitorArg) = {
       val r = regexRange(p.classatomc_1.accept(this, arg),
                          p.classatomc_2.accept(this, arg))
       val rest = p.classrangesc_.accept(this, arg)
       reUnion(r, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassContNN, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.ClassContNN,
+                       arg : VisitorArg) = {
       val left = p.classatomnonegc_.accept(this, arg)
       val rest = p.neclassrangesnodashc_.accept(this, arg)
       reUnion(left, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassCharRangeNN, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.ClassCharRangeNN,
+                       arg : VisitorArg) = {
       val r = regexRange(p.classatomnonegc_.accept(this, arg),
                          p.classatomc_.accept(this, arg))
       val rest = p.classrangesc_.accept(this, arg)
       reUnion(r, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassContND, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.ClassContND,
+                       arg : VisitorArg) = {
       val left = p.classatomnodashc_.accept(this, arg)
       val rest = p.neclassrangesnodashc_.accept(this, arg)
       reUnion(left, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ClassCharRangeND, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.ClassCharRangeND,
+                       arg : VisitorArg) = {
       val r = regexRange(p.classatomnodashc_.accept(this, arg),
                          p.classatomc_.accept(this, arg))
       val rest = p.classrangesc_.accept(this, arg)
       reUnion(r, rest)
     }
 
-    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter1, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter1,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
-    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter2, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter2,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
-    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter3, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter3,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
-    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter4, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.SyntaxCharacter4,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
 
-    override def visit(p : ecma2020regex.Absyn.NormalCharPat, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.NormalCharPat,
+                       arg : VisitorArg) =
       toSingleCharRegex(p.normalchar_)
-    override def visit(p : ecma2020regex.Absyn.DecimalDigitPat, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.DecimalDigitPat,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
-    override def visit(p : ecma2020regex.Absyn.DashPat, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.DashPat,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
 
-    override def visit(p : ecma2020regex.Absyn.DashAtom, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.DashAtom,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
-    override def visit(p : ecma2020regex.Absyn.NegAtom, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.NegAtom,
+                       arg : VisitorArg) =
+      toSingleCharRegex(printer print p)
+    override def visit(p : ecma2020regex.Absyn.NegAtomND,
+                       arg : VisitorArg) =
+      toSingleCharRegex(printer print p)
+    override def visit(p : ecma2020regex.Absyn.DashAtomNN,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
     
-    override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg1, arg : VisitorArg)=
+    override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg1,
+                       arg : VisitorArg)=
       toSingleCharRegex(p.normalchar_)
-    override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg2, arg : VisitorArg)=
+    override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg2,
+                       arg : VisitorArg)=
       toSingleCharRegex(printer print p)
-    override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg3, arg : VisitorArg)=
+    override def visit(p : ecma2020regex.Absyn.ClassAtomNoDashNeg3,
+                       arg : VisitorArg)=
       toSingleCharRegex(printer print p)
 
     // Different escape sequences
 
-    override def visit(p : ecma2020regex.Absyn.DecAtomEscape, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.DecAtomEscape,
+                       arg : VisitorArg) = {
       val firstDigit =
-        p.positivedecimal_
+        printer print p.decimaldigit_
       val tailDigits =
         p.maybedecimaldigits_ match {
           case _ : NoDecimalDigits => ""
           case ds : SomeDecimalDigits =>
-            (for (d <- ds.listdecimaldigit_)
+            (for (d <- ListHasAsScala(ds.listdecimaldigit_).asScala)
              yield (printer print d)).mkString("")
         }
-      val captureGroupNum = IdealInt(firstDigit + tailDigits)
-      Console.err.println("Warning: over-approximating back-reference as .*")
-      ALL
+      val allDigits =
+        firstDigit + tailDigits
+
+      allDigits match {
+        case OctalEscape() =>
+          charSet(Integer.parseInt(allDigits, 8))
+        case _ => {
+          val captureGroupNum = IdealInt(allDigits)
+          Console.err.println(
+            "Warning: over-approximating back-reference as re.any")
+          ALL
+        }
+      }
     }
 
-    override def visit(p : ecma2020regex.Absyn.BClassEscape, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.BClassEscape,
+                       arg : VisitorArg) =
       charSet(0x0008)
-    override def visit(p : ecma2020regex.Absyn.DashClassEscape, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.DashClassEscape,
+                       arg : VisitorArg) =
       charSet(0x002D)
-    override def visit(p : ecma2020regex.Absyn.NullCharEscape, arg : VisitorArg) =
-      charSet(0x0000)
 
-    override def visit(p : ecma2020regex.Absyn.LetterCharEscape, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.LetterCharEscape,
+                       arg : VisitorArg) = {
       val letter = printer print p.controlletter_
       assert(letter.size == 1)
       charSet(letter(0).toInt % 32)
     }
 
-    override def visit(p : ecma2020regex.Absyn.ControlEscapeT, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeT,
+                       arg : VisitorArg) =
       charSet(0x0009)
-    override def visit(p : ecma2020regex.Absyn.ControlEscapeN, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeN,
+                       arg : VisitorArg) =
       charSet(0x000A)
-    override def visit(p : ecma2020regex.Absyn.ControlEscapeV, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeV,
+                       arg : VisitorArg) =
       charSet(0x000B)
-    override def visit(p : ecma2020regex.Absyn.ControlEscapeF, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeF,
+                       arg : VisitorArg) =
       charSet(0x000C)
-    override def visit(p : ecma2020regex.Absyn.ControlEscapeR, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.ControlEscapeR,
+                       arg : VisitorArg) =
       charSet(0x000D)
 
-    override def visit(p : ecma2020regex.Absyn.HexEscapeSequence, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.HexEscapeSequence,
+                       arg : VisitorArg) =
       charSet(Integer.parseInt((printer print p.hexdigit_1) +
                                  (printer print p.hexdigit_2), 16))
 
-    override def visit(p : ecma2020regex.Absyn.Hex4UniEscapeSequence, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.Hex4UniEscapeSequence,
+                       arg : VisitorArg) =
       charSet(Integer.parseInt((printer print p.hexdigit_1) +
                                  (printer print p.hexdigit_2) +
                                  (printer print p.hexdigit_3) +
                                  (printer print p.hexdigit_4), 16))
 
-    override def visit(p : ecma2020regex.Absyn.CodepointUniEscapeSequence, arg : VisitorArg) = {
+    override def visit(p : ecma2020regex.Absyn.CodepointUniEscapeSequence,
+                       arg : VisitorArg) = {
       val str = printer print p
       charSet(Integer.parseInt(str.substring(2, str.size - 1), 16))
     }
 
-    override def visit(p : ecma2020regex.Absyn.IdentityEscape, arg : VisitorArg) =
+    override def visit(p : ecma2020regex.Absyn.IdentityEscape,
+                       arg : VisitorArg) =
       toSingleCharRegex(printer print p)
 
+    override def visit(p : ecma2020regex.Absyn.OctClassEscape1,
+                       arg : VisitorArg) =
+      charSet(Integer.parseInt(printer print p.octaldigit_, 8))
+
+    override def visit(p : ecma2020regex.Absyn.OctClassEscape2,
+                       arg : VisitorArg) =
+      charSet(Integer.parseInt((printer print p.octaldigit_1) +
+                               (printer print p.octaldigit_2), 8))
+
+    override def visit(p : ecma2020regex.Absyn.OctClassEscape3,
+                       arg : VisitorArg) =
+      charSet(Integer.parseInt((printer print p.octaldigit_1) +
+                               (printer print p.octaldigit_2) +
+                               (printer print p.octaldigit_3), 8))
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -447,7 +520,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (x,     y    ) => re_++(x, y)
   }
 
-  private def reCatStar(xs : ITerm*) = (EPS /: xs) (reCat _)
+  private def reCatStar(xs : ITerm*) = xs.foldLeft(EPS) (reCat _)
 
   private def reUnion(x : ITerm, y : ITerm) = (x, y) match {
     case (`NONE`, y    ) => y
@@ -455,7 +528,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (x,     y     ) => re_union(x, y)
   }
 
-  private def reUnionStar(xs : ITerm*) = (NONE /: xs) (reUnion _)
+  private def reUnionStar(xs : ITerm*) = xs.foldLeft(NONE) (reUnion _)
 
   private def reInter(x : ITerm, y : ITerm) = (x, y) match {
     case (`ALL`, y    ) => y
@@ -463,7 +536,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (x,     y    ) => re_inter(x, y)
   }
 
-  private def reInterStar(xs : ITerm*) = (ALL /: xs) (reInter _)
+  private def reInterStar(xs : ITerm*) = xs.foldLeft(ALL) (reInter _)
 
   private lazy val decimal =
     re_charrange(48, 57)
@@ -517,6 +590,8 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     case (IFunApp(`re_charrange`, Seq(Const(lower), _)),
           IFunApp(`re_charrange`, Seq(_, Const(upper)))) =>
       re_charrange(lower, upper)
+    case _ =>
+      throw new Exception("Illformed character range in a regular expression")
   }
 
   private def parseDecimalDigits(digits : Seq[DecimalDigit]) : IdealInt =

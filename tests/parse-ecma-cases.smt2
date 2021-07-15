@@ -52,6 +52,14 @@
            (and (str.in_re w (re.from_ecma2020 '[ a]*'))
                 (not (str.prefixof "a" w))))
 
+        (= (str.in_re w (re.from_ecma2020 '\74abc\076'))
+           (str.in_re w (str.to.re "<abc>")))
+
+        (= (str.in_re w (re.from_ecma2020 '[^\0744\76]*'))
+           (and (not (str.contains w "<"))
+                (not (str.contains w ">"))
+                (not (str.contains w "4"))))
+
  )))
 
 (check-sat)

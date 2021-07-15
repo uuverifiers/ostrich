@@ -57,11 +57,14 @@ object AutDatabase {
  * regular expressions. The database will assign a unique id to regular
  * expressions, and will compute the resulting automaton on demand.
  */
-class AutDatabase(theory : OstrichStringTheory) {
+class AutDatabase(theory : OstrichStringTheory,
+                  minimizeAutomata : Boolean) {
 
   import AutDatabase._
 
   private val regex2Aut  = new Regex2Aut(theory)
+
+  private var nextId     = 0
 
   private val regexes    = new MHashMap[ITerm, Int]
   private val id2Regex   = new MHashMap[Int, ITerm]
@@ -77,9 +80,21 @@ class AutDatabase(theory : OstrichStringTheory) {
   def regex2Id(regexTerm : ITerm) : Int =
     synchronized {
       regexes.getOrElseUpdate(regexTerm, {
-                                val id = regexes.size
+                                val id = nextId
+                                nextId = nextId + 1
                                 id2Regex.put(id, regexTerm)
                                 id })
+    }
+
+  /**
+   * Add a new automaton to the database.
+   */
+  def automaton2Id(aut : Automaton) : Int =
+    synchronized {
+      val id = nextId
+      nextId = nextId + 1
+      id2Aut.put(id, aut)
+      id
     }
 
   /**
@@ -100,7 +115,7 @@ class AutDatabase(theory : OstrichStringTheory) {
         case None =>
           (id2Regex get id) match {
             case Some(regex) => {
-              val aut = regex2Aut buildAut regex
+              val aut = regex2Aut.buildAut(regex, minimizeAutomata)
               id2Aut.put(id, aut)
               Some(aut)
             }
@@ -109,6 +124,13 @@ class AutDatabase(theory : OstrichStringTheory) {
           }
       }
     }
+
+  /**
+   * Query the automaton that belongs to the regular expression with given id;
+   * return the automaton only if it is already in the database.
+   */
+  def id2AutomatonBE(id : Int) : Option[Automaton] =
+    synchronized { id2Aut get id }
 
   /**
    * Query the complemented automaton that belongs to the regular
@@ -132,12 +154,30 @@ class AutDatabase(theory : OstrichStringTheory) {
     }
 
   /**
+   * Query the complemented automaton that belongs to the regular
+   * expression with given id;
+   * return the automaton only if it is already in the database.
+   */
+  def id2ComplementedAutomatonBE(id : Int) : Option[Automaton] =
+    synchronized { id2CompAut get id }
+
+  /**
    * Query the automaton that belongs to the regular expression with
    * given id.
    */
   def id2Automaton(id : NamedAutomaton) : Option[Automaton] = id match {
     case PositiveAut(id)     => id2Automaton(id)
     case ComplementedAut(id) => id2ComplementedAutomaton(id)
+  }
+
+  /**
+   * Query the automaton that belongs to the regular expression with
+   * given id;
+   * return the automaton only if it is already in the database.
+   */
+  def id2AutomatonBE(id : NamedAutomaton) : Option[Automaton] = id match {
+    case PositiveAut(id)     => id2AutomatonBE(id)
+    case ComplementedAut(id) => id2ComplementedAutomatonBE(id)
   }
 
   /**
@@ -158,6 +198,30 @@ class AutDatabase(theory : OstrichStringTheory) {
       isSubsetOf(aut2.complement, aut1.complement)
     } else {
       true
+    }
+
+  /**
+   * Check whether <code>aut1</code> specifies a subset of <code>aut2</code>;
+   * the check is only carried out when all required automata are already in
+   * the database.
+   */
+  def isSubsetOfBE(aut1 : NamedAutomaton,
+                   aut2 : NamedAutomaton) : Option[Boolean] =
+    if (aut1.id < aut2.id) {
+      synchronized {
+        // aut1 <= aut2
+        //  <==>
+        // (aut1 & aut2.complement) = empty
+        for (a1 <- id2AutomatonBE(aut1);
+             a2 <- id2AutomatonBE(aut2.complement)) yield 
+          subsetRel.getOrElseUpdate((aut1, aut2),
+                                    !AutomataUtils.areConsistentAutomata(
+                                      List(a1, a2)))
+      }
+    } else if (aut1.id > aut2.id) {
+      isSubsetOfBE(aut2.complement, aut1.complement)
+    } else {
+      Some(true)
     }
 
   /**

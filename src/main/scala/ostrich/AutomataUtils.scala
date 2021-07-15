@@ -128,11 +128,11 @@ object AutomataUtils {
     consideredAuts += newAut
 
     // add automata until we encounter a conflict
-    var cont = areConsistentAutomata(consideredAuts)
+    var cont = areConsistentAutomata(consideredAuts.toSeq)
     val oldAutsIt = oldAuts.iterator
     while (cont && oldAutsIt.hasNext) {
       consideredAuts += oldAutsIt.next
-      cont = areConsistentAutomata(consideredAuts)
+      cont = areConsistentAutomata(consideredAuts.toSeq)
     }
 
     if (cont)
@@ -141,11 +141,11 @@ object AutomataUtils {
     // remove automata to get a small core
     for (i <- (consideredAuts.size - 2) to 1 by -1) {
       val removedAut = consideredAuts remove i
-      if (areConsistentAutomata(consideredAuts))
+      if (areConsistentAutomata(consideredAuts.toSeq))
         consideredAuts.insert(i, removedAut)
     }
 
-    Some(consideredAuts)
+    Some(consideredAuts.toSeq)
   }
 
   /**
@@ -154,7 +154,7 @@ object AutomataUtils {
    * The automata are required to all have the same label type (though this is
    * not checked statically)
    */
-  def findAcceptedWordAtomic(auts : Seq[AtomicStateAutomaton],
+  def findAcceptedWordAtomic(auts : Iterable[AtomicStateAutomaton],
                              len : Int) : Option[Seq[Int]] = {
     val autsList = auts.toList
     val headAut = autsList.head
@@ -205,7 +205,7 @@ object AutomataUtils {
           if (isAccepting(reached) && wSize + 1 == len)
             return Some(newW.reverse)
           if (wSize + 1 < len)
-            todo push (reached, newW)
+            todo push ((reached, newW))
         }
     }
 
@@ -216,11 +216,25 @@ object AutomataUtils {
    * Check whether there is some word of length <code>len</code> accepted
    * by all of the given automata.
    */
-  def findAcceptedWord(auts : Seq[Automaton],
+  def findAcceptedWord(auts : Iterable[Automaton],
                        len : Int) : Option[Seq[Int]] =
     findAcceptedWordAtomic(for (aut <- auts)
                              yield aut.asInstanceOf[AtomicStateAutomaton],
                            len)
+
+  /**
+   * Product of a number of given automata
+   * The minimize argument enable minimization of the product automaton.
+   */
+  def product(auts : Iterable[Automaton],
+              minimize : Boolean = false) : Automaton =
+    if (auts forall { _.isInstanceOf[AtomicStateAutomaton] }) {
+      productWithMap(auts map (_.asInstanceOf[AtomicStateAutomaton]),
+                     minimize)._1
+    } else {
+      // TODO: minimize?
+      auts reduceLeft (_ & _)
+    }
 
   /**
    * Product of a number of given automata.  Returns
@@ -230,7 +244,7 @@ object AutomataUtils {
    * The minimize argument enable minimization of the product automaton,
    * which should only be used if the returned maps are not used.
    */
-  def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
+  def productWithMap(auts : Iterable[AtomicStateAutomaton], minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
     productWithMaps(auts.map((_, idMap)), minimize)
@@ -245,7 +259,7 @@ object AutomataUtils {
    * The minimize argument enable minimization of the product automaton,
    * which should only be used if the returned maps are not used.
    */
-  private def productWithMaps(auts : Seq[(AtomicStateAutomaton,
+  private def productWithMaps(auts : Iterable[(AtomicStateAutomaton,
                                          Map[Any, Seq[Any]])],
                               minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
@@ -274,7 +288,7 @@ object AutomataUtils {
    * The minimize argument enable minimization of the product automaton,
    * which should only be used if the returned maps are not used.
    */
-  private def fullProductWithMaps(auts : Seq[(AtomicStateAutomaton,
+  private def fullProductWithMaps(auts : Iterable[(AtomicStateAutomaton,
                                              Map[Any, Seq[Any]])],
                                   minimize : Boolean = false) :
     (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
@@ -373,7 +387,7 @@ object AutomataUtils {
    * Form product of this automaton with given auts, returns a new
    * automaton
    */
-  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
+  def product(auts : Iterable[AtomicStateAutomaton]) : AtomicStateAutomaton =
     productWithMap(auts, true)._1
 
   /**
@@ -385,7 +399,7 @@ object AutomataUtils {
         states : Iterable[(A#State, A#State)]) : AtomicStateAutomaton = {
     val builder = aut.getBuilder
     val smap : Map[A#State, aut.State] =
-      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+      aut.states.iterator.map(s => (s -> builder.getNewState)).toMap
 
     for ((s1, lbl, s2) <- aut.transitions)
       for (newLbl <- aut.LabelOps.subtractLetter(a, lbl))
@@ -410,7 +424,7 @@ object AutomataUtils {
     val builder = aut.getBuilder
 
     val smap : Map[aut.State, aut.State] =
-      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+      aut.states.iterator.map(s => (s -> builder.getNewState)).toMap
 
     val initState = builder.initialState
     builder.setAccept(smap(aut.initialState), true)
@@ -434,9 +448,9 @@ object AutomataUtils {
     val builder = aut1.getBuilder
 
     val smap1 : Map[aut1.State, aut1.State] =
-      aut1.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+      aut1.states.iterator.map(s => (s -> builder.getNewState)).toMap
     val smap2 : Map[aut2.State, aut1.State] =
-      aut2.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+      aut2.states.iterator.map(s => (s -> builder.getNewState)).toMap
 
     builder.setInitialState(smap1(aut1.initialState))
     for (sf <- aut2.acceptingStates)
@@ -476,9 +490,9 @@ object AutomataUtils {
     val builder = autOuter.getBuilder
 
     val smapOuter : Map[autOuter.State, autOuter.State] =
-      autOuter.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+      autOuter.states.iterator.map(s => (s -> builder.getNewState)).toMap
     val smapInner : Map[autInner.State, autOuter.State] =
-      autInner.states.map(s => (s -> builder.getNewState))(collection.breakOut)
+      autInner.states.iterator.map(s => (s -> builder.getNewState)).toMap
 
     val innerInit = smapInner(autInner.initialState)
     val innerFinal = autInner.acceptingStates.map(smapInner)

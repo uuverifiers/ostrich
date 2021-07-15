@@ -37,10 +37,9 @@ import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
 import ap.terfor.{Term, ConstantTerm, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.substitutions.VariableSubst
 import ap.util.Seqs
+import uuverifiers.parikh_theory.LengthCounting
 
-import scala.collection.breakOut
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
                                  BitSet => MBitSet}
@@ -122,11 +121,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
                            strDatabase : StrDatabase,
                            lengthProver : Option[SimpleAPI],
-                           lengthVars : Map[Term, Term],
+                           val lengthVars : Map[Term, Term],
                            strictLengths : Boolean,
                            flags : OFlags) {
 
   import Exploration._
+  import OFlags.debug
 
   def measure[A](op : String)(comp : => A) : A =
     if (flags.measureTimes)
@@ -221,7 +221,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     // check whether any of the terms have concrete definitions
     for (t <- allTerms)
       for (w <- strDatabase.term2List(t)) {
-        val str : String = w.map(i => i.toChar)(breakOut)
+        val str = w.iterator.map(i => i.toChar).mkString
         additionalConstraints += ((t, BricsAutomaton fromString str))
         for (ind <- term2Index get t)
           coveredTerms += ind
@@ -263,6 +263,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
    * to an integer, and each string variable to a list of characters.
    */
   def findModel : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+    Console.err.println("findModel")
     for (t <- allTerms)
       constraintStores.put(t, newStore(t))
 
@@ -275,11 +276,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
     for (p <- lengthProver) {
       for ((t, aut) <- allInitialConstraints)
-        p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                               aut.getLengthAbstraction)
+        aut.assertLengthConstraint(lengthVars(t), p)
 
-      if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
+      if (measure("check length consistency") { p.??? } == ProverStatus.Unsat) {
         return None
+      }
     }
 
     if (flags.forwardApprox)
@@ -329,8 +330,10 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
                       : ConflictSet = apps match {
-
     case List() => {
+      if (debug)
+        Console.err.println("Trying to contruct model")
+
       // we are finished and just have to construct a model
       val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
 
@@ -395,7 +398,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             throw new Exception(
               "Could not satisfy length constraints for " + res +
                 " with solution " +
-                resValue.right.get.map(i => i.toChar)(breakOut) +
+                resValue.right.get.iterator.map(i => i.toChar).mkString +
                 "; length is " + resValue.right.get.size +
                 " but should be " + resLen)
 
@@ -403,9 +406,12 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       }
       throw FoundModel(model.toMap)
     }
-    case (op, args, res) :: otherApps =>
+    case (op, args, res) :: otherApps => {
+      if (debug)
+        Console.err.println("dfExplore, depth " + apps.size)
       dfExploreOp(op, args, res, constraintStores(res).getContents,
                   otherApps)
+    }
   }
 
   private def dfExploreOp(op : PreOp,
@@ -418,6 +424,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       dfExplore(nextApps)
 
     case resAut :: otherAuts => {
+      if (debug)
+        Console.err.println("dfExploreOp, #constraints " + resConstraints.size)
+
       ap.util.Timeout.check
 
       val argConstraints =
@@ -430,7 +439,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       while (measure("pre-op hasNext") {newConstraintsIt.hasNext}) {
         ap.util.Timeout.check
 
-        val argCS = measure("pre-op next") {newConstraintsIt.next}
+        val argCS = measure("pre-op next") {newConstraintsIt.next()}
 
         for (a <- args)
           constraintStores(a).push
@@ -502,26 +511,31 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private val lengthPartitionStack = new ArrayStack[Int]
   private val lengthPartitions = new ArrayBuffer[Seq[TermConstraint]]
 
-  protected def addLengthConstraint(constraint : TermConstraint,
-                                    sources : Seq[TermConstraint]) : Unit =
-    for (p <- lengthProver) {
-      lengthPartitions += sources
-      p setPartitionNumber lengthPartitions.size
-      val TermConstraint(t, aut) = constraint
-      p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                                  aut.getLengthAbstraction)
-    }
+  protected def addLengthConstraint(lengthTerm : Term,
+                                    sources : Seq[Automaton]): Unit = {
+    // FIXME cache the theory using Princess LRUcache and/or move to AutomataUtils
+    // FIXME change the type to require AtomicStateAutomaton here
+    val automata = sources.map(_.toAmandaAutomaton()).toIndexedSeq
+    val lengthTheory = LengthCounting(automata)
 
-  private def checkLengthConsistency : Option[Seq[TermConstraint]] =
+    for (prover <- lengthProver) {
+      prover addTheory lengthTheory
+      prover addAssertion (lengthTheory.allowsMonoidValues(Seq(lengthTerm))(prover.order))
+    }
+  }
+
+  private def checkLengthConsistency : Option[Seq[TermConstraint]] = {
     for (p <- lengthProver;
          if {
-           measure("check length consistency") {p.???} == ProverStatus.Unsat
+           measure("check length consistency") {p.???}
+           p.??? == ProverStatus.Unsat
          }) yield {
       for (n <- p.getUnsatCore.toList.sorted;
            if n > 0;
            c <- lengthPartitions(n - 1))
       yield c
     }
+  }
 
   private def pushLengthConstraints : Unit =
     for (p <- lengthProver) {
@@ -532,7 +546,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private def popLengthConstraints : Unit =
     for (p <- lengthProver) {
       p.pop
-      lengthPartitions reduceToSize lengthPartitionStack.pop
+      lengthPartitions dropRightInPlace (lengthPartitions.size - lengthPartitionStack.pop())
     }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -568,11 +582,11 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     private val constraintStack = new ArrayStack[(Int, Option[Automaton])]
 
     def push : Unit =
-      constraintStack push (constraints.size, currentConstraint)
+      constraintStack push((constraints.size, currentConstraint))
 
     def pop : Unit = {
-      val (oldSize, lastCC) = constraintStack.pop
-      constraints reduceToSize oldSize
+      val (oldSize, lastCC) = constraintStack.pop()
+      constraints dropRightInPlace (constraints.size - oldSize)
       currentConstraint = lastCC
     }
 
@@ -589,17 +603,14 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
             } else {
               constraints += aut
               currentConstraint = Some(newAut)
-              addLengthConstraint(TermConstraint(t, newAut),
-                                  for (a <- constraints)
-                                  yield TermConstraint(t, a))
+              addLengthConstraint(t, constraints.toIndexedSeq)
               None
             }
           }
           case None => {
             constraints += aut
             currentConstraint = Some(aut)
-            val c = TermConstraint(t, aut)
-            addLengthConstraint(c, List(c))
+            addLengthConstraint(t, IndexedSeq(aut))
             None
           }
         }
@@ -691,10 +702,10 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def push : Unit = constraintStack push constraints.size
 
     def pop : Unit = {
-      val oldSize = constraintStack.pop
+      val oldSize = constraintStack.pop()
       while (constraints.size > oldSize) {
         constraintSet -= constraints.last
-        constraints reduceToSize (constraints.size - 1)
+        constraints dropRightInPlace (1)
       }
     }
 
@@ -727,7 +738,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           potentialConflicts = potentialConflicts.tail
         }
 
-        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints, aut) } match {
+        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints.toSeq, aut) } match {
           case Some(core) => {
             addIncAutomata(core)
             Some(for (a <- core.toList) yield TermConstraint(t, a))
@@ -735,8 +746,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           case None => {
             constraints += aut
             constraintSet += aut
-            val c = TermConstraint(t, aut)
-            addLengthConstraint(c, List(c))
+            lengthVars.get(t).foreach(addLengthConstraint(_, IndexedSeq(aut)))
             None
           }
         }
@@ -747,29 +757,26 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def getCompleteContents : List[Automaton] =
       constraints.toList
 
-    private def intersection : Automaton = constraints reduceLeft (_ & _)
+    private def intersection : Automaton =
+      AutomataUtils.product(constraints, _flags.minimizeAutomata)
 
     def ensureCompleteLengthConstraints : Unit =
-      constraints match {
-        case Seq() | Seq(_) =>
-          // nothing, all length constraints already pushed
-        case auts =>
-          addLengthConstraint(TermConstraint(t, intersection),
-                              for (a <- constraints)
-                              yield TermConstraint(t, a))
-      }
+      if (!constraints.isEmpty) addLengthConstraint(lengthVars(t), constraints.toIndexedSeq)
 
+    // FIXME: how do we delegate this to the theory? I guess we need to be able
+    // to ask the theory with its currently filtered automaton etc etc
     def getAcceptedWord : Seq[Int] =
       constraints match {
-        case Seq() => List()
-        case auts  => intersection.getAcceptedWord.get
+        case _ if constraints.isEmpty => List()
+        case _  => intersection.getAcceptedWord.get
       }
 
     def getAcceptedWordLen(len : Int) : Seq[Int] =
-      constraints match {
-        case Seq() => for (_ <- 0 until len) yield 0
-        case auts  => AutomataUtils.findAcceptedWord(auts, len).get
-      }
+    if(constraints.isEmpty) {
+      for (_ <- 0 until len) yield 0}
+    else {
+      AutomataUtils.findAcceptedWord(constraints, len).get
+    }
   }
 
 }

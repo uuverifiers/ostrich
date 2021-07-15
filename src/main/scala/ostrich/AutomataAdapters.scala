@@ -67,7 +67,7 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
   def unary_! : Automaton =
     !intern(this)
 
-  def isEmpty : Boolean =
+  override def isEmpty : Boolean =
     !AutomataUtils.areConsistentAtomicAutomata(List(this))
 
   def apply(word : Seq[Int]) : Boolean =

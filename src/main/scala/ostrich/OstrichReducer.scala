@@ -82,7 +82,7 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
       extends ReducerPluginFactory {
   import OstrichReducer.extractLanguageConstraints
 
-  import theory.{str_len, int_to_str, str_to_int, FunPred}
+  import theory.{str_len, int_to_str, str_to_int, str_prefixof, FunPred}
 
   def apply(conj : Conjunction, order : TermOrder) =
     new OstrichReducer(theory,
@@ -90,9 +90,9 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
                        List(extractLanguageConstraints(conj.predConj, theory)),
                        this)
 
-  val _str_len    = FunPred(str_len)
-  val _int_to_str = FunPred(int_to_str)
-  val _str_to_int = FunPred(str_to_int)
+  val _str_len      = FunPred(str_len)
+  val _int_to_str   = FunPred(int_to_str)
+  val _str_to_int   = FunPred(str_to_int)
 }
 
 /**
@@ -108,7 +108,9 @@ class OstrichReducer protected[ostrich]
 
   import OstrichReducer._
   import theory.{_str_empty, _str_cons, _str_++,
-                 str_empty, str_cons, str_in_re_id, strDatabase, autDatabase}
+                 str_empty, str_cons, str_in_re_id, str_prefixof,
+                 re_++, str_to_re, re_all,
+                 strDatabase, autDatabase}
   import factory.{_str_len, _int_to_str, _str_to_int}
 
   def passQuantifiers(num : Int) = this
@@ -158,7 +160,8 @@ class OstrichReducer protected[ostrich]
     ReducerPlugin.rewritePreds(predConj,
                                List(_str_empty, _str_cons,
                                     str_in_re_id, _str_len,
-                                    _int_to_str, _str_to_int) ++
+                                    _int_to_str, _str_to_int,
+                                    str_prefixof) ++
                                  funTranslator.translatablePredicates,
                                order,
                                logger) { a =>
@@ -234,6 +237,23 @@ class OstrichReducer protected[ostrich]
             a
           }
 
+        case `str_prefixof` =>
+          if (isConcrete(a(0))) {
+            assert(a(0).isConstant)
+            val asRE  = IFunApp(re_++,
+                                List(IFunApp(str_to_re, List(a(0).constant)),
+                                     IFunApp(re_all, List())))
+            val autId = autDatabase.regex2Id(asRE)
+            str_in_re_id(List(a(1), l(autId)))
+          } else if (isConcrete(a(1))) {
+            val str   = strDatabase.term2Str(a(1)).get
+            val autId = autDatabase.automaton2Id(
+                          BricsAutomaton.prefixAutomaton(str))
+            str_in_re_id(List(a(0), l(autId)))
+          } else {
+            a
+          }
+
         case p => {
           assert(funTranslator.translatablePredicates contains p)
           funTranslator(a) match {
@@ -275,7 +295,7 @@ class OstrichReducer protected[ostrich]
 
           val newPos, newNeg, curPos, curNeg = new ArrayBuffer[Atom]
 
-          import autDatabase.{isSubsetOf, emptyIntersection}
+          import autDatabase.{isSubsetOf, isSubsetOfBE, emptyIntersection}
 
           def pickNextTerm : Term =
             if (posIt.hasNext) {
@@ -298,22 +318,26 @@ class OstrichReducer protected[ostrich]
 
           def isFwdSubsumed(aut : NamedAutomaton) : Boolean =
             (curPos exists { a =>
-               isSubsetOf(PositiveAut(regexAtomToId(a)), aut) }) ||
+               isSubsetOfBE(PositiveAut(regexAtomToId(a)), aut) ==
+               Some(true) }) ||
             (curNeg exists { a =>
-               isSubsetOf(ComplementedAut(regexAtomToId(a)), aut) })
+               isSubsetOfBE(ComplementedAut(regexAtomToId(a)), aut) ==
+               Some(true) })
 
           def removeBwdSubsumed(aut : NamedAutomaton) : Unit = {
             var n = 0
 
             while (n < curPos.size)
-              if (isSubsetOf(aut, PositiveAut(regexAtomToId(curPos(n)))))
+              if (isSubsetOfBE(aut, PositiveAut(regexAtomToId(curPos(n)))) ==
+                    Some(true))
                 curPos remove n
               else
                 n = n + 1
 
             n = 0
             while (n < curNeg.size)
-              if (isSubsetOf(aut, ComplementedAut(regexAtomToId(curNeg(n)))))
+              if (isSubsetOfBE(aut, ComplementedAut(regexAtomToId(curNeg(n))))==
+                    Some(true))
                 curNeg remove n
               else
                 n = n + 1

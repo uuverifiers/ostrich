@@ -34,9 +34,6 @@ package ostrich
 
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 
-import scala.collection.JavaConversions.{asScalaIterator,
-                                         iterableAsScalaIterable}
-
 /**
  * Pre-image computation for the concatenation operator.
  */
@@ -113,7 +110,7 @@ object ConcatPreOp extends PreOp {
   override def lengthApproximation(arguments : Seq[Term], result : Term,
                                    order : TermOrder) : Formula = {
     import TerForConvenience._
-    implicit val _ = order
+    implicit val o = order
     result === arguments(0) + arguments(1)
   }
 

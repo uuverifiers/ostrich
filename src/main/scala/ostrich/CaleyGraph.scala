@@ -35,8 +35,7 @@ package ostrich
 import java.util.Objects
 
 import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
-import scala.collection.JavaConversions._
-import scala.collection.IterableView
+import scala.collection.MapView
 
 object Box {
   /**
@@ -171,10 +170,10 @@ object CaleyGraph {
   }
 
   private def getCharacterBoxes[A <: AtomicStateAutomaton](aut : A)
-      : Map[Box[A], Iterable[A#TLabel]] = {
+      : MapView[Box[A], Iterable[A#TLabel]] = {
     val ae = aut.labelEnumerator
     val boxes : Map[A#TLabel,Box[A]] =
-      ae.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
+      ae.enumDisjointLabels.iterator.map(i => i -> new Box[A]).toMap
 
     for ((q1, i, q2) <- aut.transitions;
          i2 <- ae.enumLabelOverlap(i))

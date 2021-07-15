@@ -122,6 +122,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
   val re_case_insensitive =
     MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
+  val str_at_right =
+    MonoSortedIFunction("str.at_right",
+                        List(SSo, Sort.Integer), SSo, true, false)
+  val str_trim =
+    MonoSortedIFunction("str.trim",
+                        List(SSo, Sort.Integer, Sort.Integer), SSo, true, false)
 
   // List of user-defined functions on strings that can be extended
   val extraStringFunctions : Seq[(String, IFunction, PreOp,
@@ -147,14 +153,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
       yield (name, Right(p))) ++
-     Iterator((re_from_ecma2020.name, Left(re_from_ecma2020)),
-              (re_case_insensitive.name, Left(re_case_insensitive)))).toMap
+     Iterator((re_from_ecma2020.name,    Left(re_from_ecma2020)),
+              (re_case_insensitive.name, Left(re_case_insensitive)),
+              (str_at_right.name,        Left(str_at_right)),
+              (str_trim.name,            Left(str_trim)))).toMap
 
   val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] = Map()
 
   //////////////////////////////////////////////////////////////////////////////
 
-  val autDatabase = new AutDatabase(this)
+  val autDatabase = new AutDatabase(this, flags.minimizeAutomata)
 
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
@@ -168,7 +176,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val functions =
     predefFunctions ++ List(str_empty, str_cons, str_head, str_tail) ++
     (extraStringFunctions map (_._2)) ++
-    List(re_from_ecma2020, re_case_insensitive)
+    List(re_from_ecma2020, re_case_insensitive, str_at_right, str_trim)
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
@@ -201,7 +209,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id) ++
+    Set(str_in_re, str_in_re_id, str_prefixof) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_to_re,
@@ -234,28 +242,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       new ap.util.LRUCache[Conjunction,
                            Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
-    override def handleGoal(goal : Goal)
-                       : Seq[Plugin.Action] = goalState(goal) match {
-
-      case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
-
-        breakCyclicEquations(goal) match {
-          case Some(actions) =>
-            actions
-          case None =>
-            modelCache(goal.facts) {
-              ostrichSolver.findStringModel(goal)
-            } match {
-              case Some(m) =>
-                equalityPropagator.handleSolution(goal, m)
-              case None =>
-                List(Plugin.AddFormula(Conjunction.TRUE))
-            }
+    override def handleGoal(goal: Goal): Seq[Plugin.Action] =
+      if (goalState(goal) == Plugin.GoalState.Final) {
+        breakCyclicEquations(goal).getOrElse {
+          modelCache(goal.facts)(ostrichSolver.findStringModel(goal))
+            .map(equalityPropagator.handleSolution(goal, _))
+            .getOrElse(List(Plugin.AddFormula(Conjunction.TRUE)))
         }
-      }
-
-      case _ => List()
-    }
+      } else List()
 
     override def generateModel(goal : Goal) : Option[Conjunction] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {

@@ -43,7 +43,6 @@ import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
-import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 class OstrichSolver(theory : OstrichStringTheory,
@@ -54,6 +53,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  str_in_re_id, str_to_re, re_from_str, re_from_ecma2020,
                  re_case_insensitive,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
+                 str_prefixof,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_+, re_opt,
                  re_comp, re_loop, re_eps, FunPred, strDatabase}
@@ -146,6 +146,10 @@ class OstrichSolver(theory : OstrichStringTheory,
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
       }
+      case `str_prefixof` => {
+        val rightVar = theory.StringSort.newConstant("rhs")
+        funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
+      }
       case FunPred(f) if rexOps contains f =>
         // nothing
       case p if (theory.predicates contains p) =>
@@ -226,7 +230,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
-    SimpleAPI.withProver { lengthProver =>
+    SimpleAPI.withProver() { lengthProver =>
       val lProver =
         if (useLength) {
           lengthProver setConstructProofs true
@@ -248,10 +252,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps, regexes, strDatabase,
+          Exploration.eagerExp(funApps.toSeq, regexes.toSeq, strDatabase,
                                lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps, regexes, strDatabase,
+          Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
       exploration.findModel

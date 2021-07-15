@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,8 +35,6 @@ package ostrich
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
                            Automaton => BAutomaton, State => BState}
 
-import scala.collection.JavaConversions.{asScalaIterator,
-                                         iterableAsScalaIterable}
 import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
                                  LinkedHashSet => MLinkedHashSet,
@@ -44,6 +42,8 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  TreeSet => MTreeSet,
                                  MultiMap => MMultiMap,
                                  Set => MSet}
+import scala.jdk.CollectionConverters._
+import uuverifiers.parikh_theory.SymbolicLabel
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -68,6 +68,29 @@ object BricsAutomaton {
    */
   def fromString(str : String) : BricsAutomaton =
     new BricsAutomaton(BasicAutomata makeString str)
+
+  /**
+   * Build brics automaton that accepts exactly the prefixes of the given
+   * string.
+   */
+  def prefixAutomaton(str : String) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to str.size) yield builder.getNewState).toIndexedSeq
+
+    builder setInitialState states(0)
+
+    for ((c, n) <- str.iterator.zipWithIndex)
+      builder.addTransition(states(n),
+                            builder.LabelOps singleton c,
+                            states(n+1))
+
+    for (s <- states)
+      builder.setAccept(s, true)
+
+    builder.getAutomaton
+  }
 
   /**
    * A new automaton that accepts any string
@@ -190,6 +213,9 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
    * Get representation of interval [min,max]
    */
   def interval(min : Char, max : Char) : (Char, Char) = (min, max)
+
+  def labelToSymbolicLabel(label: (Char, Char)): SymbolicLabel =
+    SymbolicLabel(label._1, label._2)
 }
 
 class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
@@ -230,8 +256,8 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
   def enumLabelOverlap(lbl : (Char, Char)) : Iterable[(Char, Char)] = {
     val (lMin, lMax) = lbl
     disjointLabels.
-      from((lMin, Char.MinValue)).
-      to((lMax, Char.MaxValue)).
+      rangeFrom((lMin, Char.MinValue)).
+      rangeTo((lMax, Char.MaxValue)).
       toIterable
   }
 
@@ -316,8 +342,11 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
 class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
+  import OFlags.debug
 
-//  Console.err.println("Automata states: " + underlying.getNumberOfStates)
+  if (debug)
+    Console.err.println("New automaton with " + underlying.getNumberOfStates +
+                          " states")
 
   type State = BState
   type TLabel = (Char, Char)
@@ -349,7 +378,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   /**
    * Check whether this automaton describes the empty language.
    */
-  def isEmpty : Boolean =
+  override def isEmpty : Boolean =
     underlying.isEmpty
 
   /**
@@ -399,7 +428,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
     val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
-    for (t <- from.getTransitions)
+    for (t <- from.getTransitions.asScala)
       dests.addBinding((t.getMin, t.getMax), t.getDest)
 
     val outgoing = new MLinkedHashSet[(State, TLabel)]
@@ -408,9 +437,9 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
       def sortingFn(s1 : State, s2 : State) : Boolean = {
         // sort by lowest outgoing transition
-        for ((t1, t2) <- s1.getSortedTransitions(false)
+        for ((t1, t2) <- s1.getSortedTransitions(false).asScala
                          zip
-                         s2.getSortedTransitions(false)) {
+                         s2.getSortedTransitions(false).asScala) {
           import scala.math.Ordering.Implicits._
           val lbl1 = (t1.getMin, t1.getMax)
           val lbl2 = (t2.getMin, t2.getMax)
@@ -514,7 +543,7 @@ class BricsAutomatonBuilder
 
   def outgoingTransitions(q : BricsAutomaton#State)
         : Iterator[(BricsAutomaton#State, BricsAutomaton#TLabel)] =
-    for (t <- q.getTransitions.iterator)
+    for (t <- q.getTransitions.asScala.iterator)
       yield (t.getDest, (t.getMin, t.getMax))
 
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =

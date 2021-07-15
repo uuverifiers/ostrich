@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,14 +38,22 @@ object OFlags {
     val Off, On, Auto = Value
   }
 
+  /**
+   * Compile-time flag that can be used to switch on debugging output
+   * throughout the theory.
+   */
+  protected[ostrich] val debug = false
+
 }
 
 case class OFlags(
 
   // Pre-image specific options
   eagerAutomataOperations : Boolean = false,
-  measureTimes : Boolean = false,
-  useLength : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto,
-  forwardApprox : Boolean = false
+  measureTimes            : Boolean = false,
+  useLength               : OFlags.LengthOptions.Value =
+                                      OFlags.LengthOptions.Auto,
+  forwardApprox           : Boolean = false,
+  minimizeAutomata        : Boolean = false
 
 )
