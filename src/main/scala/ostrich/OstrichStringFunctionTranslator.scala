@@ -32,6 +32,7 @@
 
 package ostrich
 
+import ap.parser.ITerm
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
@@ -51,6 +52,13 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
   private val cgTranslator   = new Regex2PFA(theory, new JavascriptPFABuilder)
+
+  private def regexAsTerm(t : Term) : Option[ITerm] =
+    try {
+      Some(regexExtractor regexAsTerm t)
+    } catch {
+      case _ : theory.IllegalRegexException => None
+    }
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
@@ -76,57 +84,56 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
-    case FunPred(`str_replaceallre`) => {
-      val op = () => {
-        val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-        ReplaceAllPreOp(aut)
-      }
-      Some((op, List(a(0), a(2)), a(3)))
-    }
-    case FunPred(`str_replacere`) => {
-      val op = () => {
-        val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-        ReplacePreOp(aut)
-      }
-      Some((op, List(a(0), a(2)), a(3)))
-    }
-    case FunPred(`str_replaceallcg`) => {
-      val op = () => {
-        val pat = regexExtractor regexAsTerm a(1)
-        val rep = regexExtractor regexAsTerm a(2)
-        val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
-        ReplaceAllCGPreOp(info, repStr)
-      }
-      Some((op, List(a(0)), a(3)))
-    }
-    case FunPred(`str_replacecg`) => {
-      val op = () => {
-        val pat = regexExtractor regexAsTerm a(1)
-        val rep = regexExtractor regexAsTerm a(2)
-        val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
-        ReplaceCGPreOp(info, repStr)
-      }
-      Some((op, List(a(0)), a(3)))
-    }
-    case FunPred(`str_extract`) => {
-      val op = () => {
-        val index = a(0) match {
-          case LinearCombination.Constant(IdealInt(v)) => v
-          case _ => throw new IllegalArgumentException("Not an integer")
+    case FunPred(`str_replaceallre`) =>
+      for (regex <- regexAsTerm(a(1))) yield {
+        val op = () => {
+          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
+          ReplaceAllPreOp(aut)
         }
-        val regex = regexExtractor regexAsTerm a(2)
-        val (newindex, info) = cgTranslator.buildExtractInfo(index, regex)
-        ExtractPreOp(newindex, info)
+        (op, List(a(0), a(2)), a(3))
       }
-      Some((op, List(a(1)), a(3)))
-    }
+    case FunPred(`str_replacere`) =>
+      for (regex <- regexAsTerm(a(1))) yield {
+        val op = () => {
+          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
+          ReplacePreOp(aut)
+        }
+        (op, List(a(0), a(2)), a(3))
+      }
+    case FunPred(`str_replaceallcg`) =>
+      for (pat <- regexAsTerm(a(1));
+           rep <- regexAsTerm(a(2))) yield {
+        val op = () => {
+          val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
+          ReplaceAllCGPreOp(info, repStr)
+        }
+        (op, List(a(0)), a(3))
+      }
+    case FunPred(`str_replacecg`) =>
+      for (pat <- regexAsTerm(a(1));
+           rep <- regexAsTerm(a(2))) yield {
+        val op = () => {
+          val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
+          ReplaceCGPreOp(info, repStr)
+        }
+        (op, List(a(0)), a(3))
+      }
+    case FunPred(`str_extract`) =>
+      for (regex <- regexAsTerm(a(2))) yield {
+        val op = () => {
+          val index = a(0) match {
+            case LinearCombination.Constant(IdealInt(v)) => v
+            case _ => throw new IllegalArgumentException("Not an integer")
+          }
+          val (newindex, info) = cgTranslator.buildExtractInfo(index, regex)
+          ExtractPreOp(newindex, info)
+        }
+        (op, List(a(1)), a(3))
+      }
 
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        // TODO: generate length information
         new TransducerPreOp(BricsTransducer.getStrAtTransducer(ind)) {
           override def toString = "str.at[" + ind + "]"
           override def lengthApproximation(arguments : Seq[Term], result : Term,
@@ -144,7 +151,6 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
     case FunPred(`str_at_right`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        // TODO: generate length information
         new TransducerPreOp(BricsTransducer.getStrAtRightTransducer(ind)) {
           override def toString = "str.at-right[" + ind + "]"
           override def lengthApproximation(arguments : Seq[Term], result : Term,
