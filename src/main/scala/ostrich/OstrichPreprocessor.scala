@@ -87,12 +87,15 @@ class OstrichPreprocessor(theory : OstrichStringTheory,
       val asRE = re_++(str_to_re(subStr), re_all())
       str_in_re(bigStr, asRE)
     }
+
+/*
     case (IAtom(`str_prefixof`, _),
           Seq(subStr : ITerm, bigStr : ITerm)) if ctxt.polarity < 0 => {
       val s = VariableShiftVisitor(subStr, 0, 1)
       val t = VariableShiftVisitor(bigStr, 0, 1)
       StringSort.ex(str_++(s, v(0, StringSort)) === t)
     }
+ */
 
     case (IAtom(`str_suffixof`, _),
           Seq(subStr@ConcreteString(_), bigStr : ITerm)) => {
@@ -135,6 +138,72 @@ class OstrichPreprocessor(theory : OstrichStringTheory,
     }
 
     case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              Const(begin),
+              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(end))))
+        if bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
+      str_trim(bigStr, begin, end - begin)
+
+      // TODO: need proper condition for length
+/*
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              begin : ITerm,
+              Difference(IFunApp(`str_len`, Seq(bigStr2)), end : ITerm)))
+        if bigStr == bigStr2 =>
+      ite(begin >= 0,
+          str_trim(bigStr, begin, end - begin),
+          "")
+ */
+
+/*
+    Some attempts to rewrite substr to replace; needs more thinking
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              Const(IdealInt.ZERO),
+              IFunApp(`str_indexof`,
+                      Seq(bigStr2,
+                          ConcreteString(searchStr),
+                          Const(IdealInt.ZERO)))))
+        if bigStr == bigStr2 =>
+      ite(str_in_re(bigStr, reCat(re_all(), str_to_re(searchStr), re_all())),
+          str_replacere(bigStr, reCat(str_to_re(searchStr), re_all()), ""),
+          "")
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              Const(IdealInt.ZERO),
+              Difference(IFunApp(`str_indexof`,
+                                 Seq(bigStr2,
+                                     ConcreteString(searchStr),
+                                     Const(IdealInt.ZERO))),
+                         Const(IdealInt(offset)))))
+        if bigStr == bigStr2 && (-offset) >= 1 && (-offset) <= searchStr.size =>
+      // TODO
+      ite(str_in_re(bigStr, reCat(re_all(), str_to_re(searchStr), re_all())),
+          str_replacere(bigStr,
+                        reCat(str_to_re(searchStr), re_all()),
+                        searchStr take (-offset)),
+          "")
+
+    case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm,
+              start@Difference(IFunApp(`str_indexof`,
+                                       Seq(bigStr2,
+                                           ConcreteString(searchStr),
+                                           Const(IdealInt.ZERO))),
+                               Const(IdealInt.MINUS_ONE)),
+              Difference(IFunApp(`str_len`, Seq(bigStr3)), start2)))
+        if bigStr == bigStr2 && bigStr == bigStr3 && searchStr.size == 1 &&
+           start == start2 =>
+      str_replacere(bigStr,
+                    reCat(re_*(re_comp(str_to_re(searchStr))),
+                          str_to_re(searchStr)),
+                    "")
+*/
+
+    case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
       val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
       val shBegin3  = VariableShiftVisitor(begin, 0, 3)
@@ -155,6 +224,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory,
     // to a transducer
     case (IFunApp(`str_at`, _), Seq(bigStr : ITerm, Const(_))) =>
       t update subres
+
+    // keep str.at_last with concrete index, we will later translate it
+    // to a transducer
+    case (IFunApp(`str_at`, _),
+          Seq(bigStr : ITerm,
+              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))))
+        if bigStr == bigStr2 && offset >= 1 =>
+      str_at_right(bigStr, offset - 1)
 
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm, index : ITerm)) => {

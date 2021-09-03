@@ -70,6 +70,29 @@ object BricsAutomaton {
     new BricsAutomaton(BasicAutomata makeString str)
 
   /**
+   * Build brics automaton that accepts exactly the prefixes of the given
+   * string.
+   */
+  def prefixAutomaton(str : String) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to str.size) yield builder.getNewState).toIndexedSeq
+
+    builder setInitialState states(0)
+
+    for ((c, n) <- str.iterator.zipWithIndex)
+      builder.addTransition(states(n),
+                            builder.LabelOps singleton c,
+                            states(n+1))
+
+    for (s <- states)
+      builder.setAccept(s, true)
+
+    builder.getAutomaton
+  }
+
+  /**
    * A new automaton that accepts any string
    */
   def makeAnyString() : BricsAutomaton =
@@ -316,8 +339,11 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
 class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
+  import OFlags.debug
 
-//  Console.err.println("Automata states: " + underlying.getNumberOfStates)
+  if (debug)
+    Console.err.println("New automaton with " + underlying.getNumberOfStates +
+                          " states")
 
   type State = BState
   type TLabel = (Char, Char)

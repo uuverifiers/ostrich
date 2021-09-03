@@ -54,6 +54,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  str_in_re_id, str_to_re, re_from_str, re_from_ecma2020,
                  re_case_insensitive,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
+                 str_prefixof,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_+, re_opt,
                  re_comp, re_loop, re_eps, FunPred, strDatabase}
@@ -145,6 +146,10 @@ class OstrichSolver(theory : OstrichStringTheory,
         lengthVars.put(a(0), a(1))
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
+      }
+      case `str_prefixof` => {
+        val rightVar = theory.StringSort.newConstant("rhs")
+        funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
       }
       case FunPred(f) if rexOps contains f =>
         // nothing

@@ -38,6 +38,12 @@ object OFlags {
     val Off, On, Auto = Value
   }
 
+  /**
+   * Compile-time flag that can be used to switch on debugging output
+   * throughout the theory.
+   */
+  protected[ostrich] val debug = false
+
 }
 
 case class OFlags(

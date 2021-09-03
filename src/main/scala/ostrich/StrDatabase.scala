@@ -47,6 +47,7 @@ class StrDatabase(theory : OstrichStringTheory) {
 
   private val id2StrMap = new MHashMap[Int, IFunApp]
   private val str2IdMap = new MHashMap[IFunApp, Int]
+  private var idCnt     = 0
 
   /**
    * Check whether the given id belongs to a string.
@@ -113,6 +114,8 @@ class StrDatabase(theory : OstrichStringTheory) {
       case Some(IFunApp(`str_cons`,
                         Seq(head, IIntLit(IdealInt(tail))))) =>
         str_cons(head, id2ITerm(tail))
+      case None =>
+        id2FreshITerm(id)
       case _ =>
         throw new RuntimeException("Riccardo, this should not happen!")
     }
@@ -157,10 +160,44 @@ class StrDatabase(theory : OstrichStringTheory) {
   private def atomic2Id(atomicStr : IFunApp) : Int = synchronized {
     str2IdMap.getOrElseUpdate(atomicStr,
                               {
-                                val id = str2IdMap.size
+                                val id = nextFreeId
                                 id2StrMap.put(id, atomicStr)
                                 id
                               })
+  }
+
+  /**
+   * Determine the next free id for storing a string.
+   */
+  private def nextFreeId : Int = synchronized {
+    val res = idCnt
+    idCnt = idCnt + 1
+    if (id2StrMap contains res)
+      nextFreeId
+    else
+      res
+  }
+
+  /**
+   * If the given id is not mapped to a string yet, find a fresh
+   * string and add it to the database.
+   */
+  private def id2FreshITerm(id : Int) : ITerm = synchronized {
+    val emptyStrId = atomic2Id(str_empty())
+
+    if (id2StrMap contains id) {
+      id2ITerm(id)
+    } else {
+      var c = 0
+
+      while (str2IdMap contains str_cons(c, emptyStrId))
+        c = c + 1
+
+      str2IdMap.put(str_cons(c, emptyStrId), id)
+      id2StrMap.put(id, str_cons(c, emptyStrId))
+
+      str_cons(c, str_empty())
+    }
   }
 
   /**
