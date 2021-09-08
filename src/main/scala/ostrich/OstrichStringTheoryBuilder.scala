@@ -44,6 +44,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
 
+  /*
   Console.withOut(Console.err) {
     println
     println("Loading " + name + ", a solver for string constraints")
@@ -52,10 +53,11 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
+   */
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward, minimizeAuts, wSL = false
+  private var eager, forward, minimizeAuts, wSL, cert = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
@@ -75,6 +77,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       wSL = true
       StraightLineStore.slFile = Some(filename)
     }
+    case CmdlParser.Opt("certifiedSolver", value) =>
+      cert = value
     case str =>
       super.parseParameter(str)
   }
@@ -112,7 +116,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     useLength               = useLen,
                                     forwardApprox           = forward,
                                     minimizeAutomata        = minimizeAuts,
-                                    writeSL = wSL))
+                                    writeSL                 = wSL,
+                                    certifiedSolver         = cert))
   }
 
 }

@@ -56,6 +56,7 @@ object OstrichStringTheory {
 
   object NotStraightlineException extends Exception("input is not straightline")
   object CancelledException       extends Exception("solving cancelled")
+  object UnknownException         extends Exception("unknown")
 
   class OstrichStringSort extends ProxySort(Sort.Integer) {
     override val name = "String"
@@ -266,6 +267,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           } catch {
             case OstrichStringTheory.CancelledException =>
               List(Plugin.AddFormula(Conjunction.TRUE))
+            case OstrichStringTheory.UnknownException =>
+              List()
           }
         }
       }
@@ -350,7 +353,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   }
 
   override val reducerPlugin =
-    if (flags.writeSL)
+    if (flags.writeSL || flags.certifiedSolver)
       IdentityReducerPluginFactory
     else
       new OstrichReducerFactory(this)

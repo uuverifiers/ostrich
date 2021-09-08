@@ -55,6 +55,7 @@ case class OFlags(
                                       OFlags.LengthOptions.Auto,
   forwardApprox           : Boolean = false,
   minimizeAutomata        : Boolean = false,
-  writeSL : Boolean = false
+  writeSL                 : Boolean = false,
+  certifiedSolver         : Boolean = false
 
 )

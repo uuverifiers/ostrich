@@ -46,6 +46,9 @@ import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
                                  BitSet => MBitSet, Queue}
 
+import java.io.{File, PrintWriter, OutputStreamWriter,
+                BufferedReader, InputStreamReader}
+
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
 
@@ -112,6 +115,8 @@ object Exploration {
 
   private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
           extends Exception
+
+  val certSolverExecutable = "forward_analysis"
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -141,9 +146,6 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     StraightLineStore.extractionError = true
     throw OstrichStringTheory.NotStraightlineException
   }
-
-  Console.err.println
-  Console.err.println("Running OSTRICH")
 
   // topological sorting of the function applications
   private val (allTerms, sortedFunApps)
@@ -214,199 +216,207 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  if (flags.writeSL) {
+  /*
+   * Check whether this problem can be solved through
+   * forward propagation
+   */
+  def checkFwd(stringConsts : Set[Int]) : Boolean = {
+    val allConsts = new MHashSet[ConstantTerm]
+    val termConsts = new MHashMap[Int, ConstantTerm]
+
+    def term2Const(t : Term) : ConstantTerm = t match {
+      case LinearCombination.Constant(IdealInt(id)) =>
+        termConsts.getOrElseUpdate(id, new ConstantTerm("const" + id))
+      case LinearCombination.SingleTerm(c : ConstantTerm) =>
+        c
+    }
+
+    val concats : Seq[(ConstantTerm, (ConstantTerm, ConstantTerm))] =
+      (for ((apps, res) <- sortedFunApps.reverse; app <- apps) yield {
+         app match {
+           case (ConcatPreOp, Seq(arg1, arg2)) =>
+             (term2Const(res), (term2Const(arg1), term2Const(arg2)))
+         }
+       }).toList
+
+    for ((a, (b, c)) <- concats)
+      allConsts ++= List(a, b, c)
+
+    for ((v, aut) <- initialConstraints)
+      allConsts += term2Const(v)
+
+    for (id <- stringConsts)
+      allConsts += termConsts(id)
+
+    val regexes = new MHashMap[ConstantTerm, Automaton]
+    val todo = new LinkedHashSet[ConstantTerm]
+    var foundInconsistency = false
+
+    for (c <- allConsts)
+      regexes.put(c, BricsAutomaton.makeAnyString)
+
+    def addAut(c : ConstantTerm, aut : Automaton) : Unit = {
+      val newAut = regexes(c) & aut
+      regexes.put(c, newAut)
+      if (newAut.isEmpty) {
+        foundInconsistency = true
+      } else {
+        todo += c
+      }
+    }
+
+    for ((v, aut) <- initialConstraints) {
+      val c = term2Const(v)
+      addAut(c, aut)
+    }
+
+    for (id <- stringConsts) {
+      val c = termConsts(id)
+      val aut = BricsAutomaton fromString strDatabase.id2Str(id)
+      addAut(c, aut)
+    }
+
+    def concatAuts(aut1 : Automaton, aut2 : Automaton) : Automaton =
+      AutomataUtils.concat(aut1.asInstanceOf[AtomicStateAutomaton],
+                           aut2.asInstanceOf[AtomicStateAutomaton])
+
+    while (!foundInconsistency && !todo.isEmpty) {
+      ap.util.Timeout.check
+
+      val c = todo.iterator.next
+      todo -= c
+
+      val aut = regexes(c)
+
+      for (cc@(res, (`c`, arg)) <- concats) {
+        val aut2 = regexes(arg)
+        addAut(res, concatAuts(aut, aut2))
+      }
+
+      for (cc@(res, (arg, `c`)) <- concats; if arg != c) {
+        val aut2 = regexes(arg)
+        addAut(res, concatAuts(aut2, aut))
+      }
+    }
+
+    foundInconsistency
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  def genCertProverInput(tryProve : Boolean) : String = {
     def term2String(t : Term) : String =
       t match {
         case LinearCombination.Constant(id) => "const" + id
         case t => t.toString
       }
 
-    StraightLineStore.straightlineFormula = Some(
-      ap.DialogUtil.asString {
-        val stringConsts = new MHashSet[Int]
+    ap.DialogUtil.asString {
+      val stringConsts = new MHashSet[Int]
 
-        def declareConst(t : Term) : Unit =
-          t match {
-            case LinearCombination.Constant(IdealInt(id)) =>
-              if (stringConsts add id) {
-                val str = strDatabase id2Str id
-                println("const" + id + " == \"" +
-                          SMTLineariser.escapeString(str) + "\";")
-              }
-            case _ =>
-              // nothing
-          }
-
-        for ((apps, res) <- sortedFunApps.reverse) {
-          declareConst(res)
-          for ((_, args) <- apps; t <- args)
-            declareConst(t)
-        }
-
-        for ((v, _) <- initialConstraints)
-          declareConst(v)
-
-        println
-
-        for ((apps, res) <- sortedFunApps.reverse; app <- apps) {
-          print("" + term2String(res) + " := ")
-          app match {
-            case (ConcatPreOp, args) =>
-              println("concat(" + ((args map term2String) mkString ", ") + ");")
-          }
-        }
-
-        for ((v, aut) <- initialConstraints) {
-          println
-          println("" + term2String(v) + " in {")
-          print(aut)
-          println("};")
-        }
-
-        // check whether this problem can be solved through
-        // forward propagation
-
-        val allConsts = new MHashSet[ConstantTerm]
-        val termConsts = new MHashMap[Int, ConstantTerm]
-
-        def term2Const(t : Term) : ConstantTerm = t match {
+      def declareConst(t : Term) : Unit =
+        t match {
           case LinearCombination.Constant(IdealInt(id)) =>
-            termConsts.getOrElseUpdate(id, new ConstantTerm("const" + id))
-          case LinearCombination.SingleTerm(c : ConstantTerm) =>
-            c
+            if (stringConsts add id) {
+              val str = strDatabase id2Str id
+              println("const" + id + " == \"" +
+                        SMTLineariser.escapeString(str) + "\";")
+            }
+          case _ =>
+            // nothing
         }
 
-        val concats : Seq[(ConstantTerm, (ConstantTerm, ConstantTerm))] =
-          (for ((apps, res) <- sortedFunApps.reverse; app <- apps) yield {
-             app match {
-               case (ConcatPreOp, Seq(arg1, arg2)) =>
-                 (term2Const(res), (term2Const(arg1), term2Const(arg2)))
-             }
-           }).toList
+      for ((apps, res) <- sortedFunApps.reverse) {
+        declareConst(res)
+        for ((_, args) <- apps; t <- args)
+          declareConst(t)
+      }
 
-        for ((a, (b, c)) <- concats)
-          allConsts ++= List(a, b, c)
+      for ((v, _) <- initialConstraints)
+        declareConst(v)
 
-        for ((v, aut) <- initialConstraints)
-          allConsts += term2Const(v)
+      println
 
-        for (id <- stringConsts)
-          allConsts += termConsts(id)
-
-        val regexes = new MHashMap[ConstantTerm, Automaton]
-        val todo = new LinkedHashSet[ConstantTerm]
-        var foundInconsistency = false
-
-        for (c <- allConsts)
-          regexes.put(c, BricsAutomaton.makeAnyString)
-
-        def addAut(c : ConstantTerm, aut : Automaton) : Unit = {
-          val newAut = regexes(c) & aut
-          regexes.put(c, newAut)
-          if (newAut.isEmpty) {
-            foundInconsistency = true
-          } else {
-            todo += c
-          }
+      for ((apps, res) <- sortedFunApps.reverse; app <- apps) {
+        print("" + term2String(res) + " := ")
+        app match {
+          case (ConcatPreOp, args) =>
+            println("concat(" + ((args map term2String) mkString ", ") + ");")
         }
+      }
 
-        for ((v, aut) <- initialConstraints) {
-          val c = term2Const(v)
-          addAut(c, aut)
-        }
-
-        for (id <- stringConsts) {
-          val c = termConsts(id)
-          val aut = BricsAutomaton fromString strDatabase.id2Str(id)
-          addAut(c, aut)
-        }
-
-        def concatAuts(aut1 : Automaton, aut2 : Automaton) : Automaton =
-          AutomataUtils.concat(aut1.asInstanceOf[AtomicStateAutomaton],
-                               aut2.asInstanceOf[AtomicStateAutomaton])
-
-        while (!foundInconsistency && !todo.isEmpty) {
-          ap.util.Timeout.check
-
-          val c = todo.iterator.next
-          todo -= c
-
-          val aut = regexes(c)
-
-          for (cc@(res, (`c`, arg)) <- concats) {
-            val aut2 = regexes(arg)
-            addAut(res, concatAuts(aut, aut2))
-          }
-
-          for (cc@(res, (arg, `c`)) <- concats; if arg != c) {
-            val aut2 = regexes(arg)
-            addAut(res, concatAuts(aut2, aut))
-          }
-        }
-
-
-/*
-        val todo = new Queue[(ConstantTerm, Automaton)]
-
-        for ((v, aut) <- initialConstraints) {
-          val c = term2Const(v)
-          todo += ((c, aut))
-        }
-
-        for (id <- stringConsts) {
-          val c = termConsts(id)
-          val aut = BricsAutomaton fromString strDatabase.id2Str(id)
-          todo += ((c, aut))
-        }
-
-        // make sure that we have initial constraints for all constants
-        for (c <- allConsts)
-          if (!(todo exists { p => p._1 == c }))
-            todo += ((c, BricsAutomaton.makeAnyString))
-
-        val regexes = new MHashMap[ConstantTerm, List[Automaton]]
-        var foundInconsistency = false
-
-        def addAut(c : ConstantTerm, aut : Automaton) : Unit = {
-          val newAuts = aut :: regexes.getOrElse(c, List())
-          regexes.put(c, newAuts)
-          println("adding aut for " + c)
-          if (!AutomataUtils.areConsistentAutomata(newAuts))
-            foundInconsistency = true
-        }
-
-        def concatAuts(aut1 : Automaton, aut2 : Automaton) : Automaton =
-          AutomataUtils.concat(aut1.asInstanceOf[AtomicStateAutomaton],
-                               aut2.asInstanceOf[AtomicStateAutomaton])
-
-        while (!foundInconsistency && !todo.isEmpty) {
-          val (c, aut) = todo.dequeue
-          addAut(c, aut)
-println("checking " + c)
-          for (cc@(res, (`c`, arg)) <- concats;
-               aut2 <- regexes.getOrElse(arg, List())) {
-            println(cc)
-            todo += ((res, concatAuts(aut, aut2)))
-          }
-
-          for (cc@(res, (arg, `c`)) <- concats;
-               if arg != c;
-               aut2 <- regexes.getOrElse(arg, List())) {
-            println(cc)
-            todo += ((res, concatAuts(aut2, aut)))
-          }
-        }
- */
+      for ((v, aut) <- initialConstraints) {
         println
+        println("" + term2String(v) + " in {")
+        print(aut)
+        println("};")
+      }
 
-        if (foundInconsistency)
+      if (tryProve) {
+        println
+        if (checkFwd(stringConsts.toSet))
           println("// Forward propagation can prove that the constraints are unsat")
         else
           println("// Forward propagation is inconclusive")
+      }
+    }
+  }
 
-    })
+  //////////////////////////////////////////////////////////////////////////////
 
+  if (flags.writeSL) {
+    StraightLineStore.straightlineFormula = Some(genCertProverInput(true))
     throw OstrichStringTheory.CancelledException
+  }
+
+  def callCertifiedSolver : Option[Boolean] = {
+    Console.err.print("Running certified string solver on proof branch ... ")
+
+    val constraintsFile = File.createTempFile("cert-input", ".sl")
+
+    val fileStream = new java.io.FileOutputStream(constraintsFile)
+    Console.withOut(fileStream) { println(genCertProverInput(false)) }
+    fileStream.close
+
+    val process =
+      Runtime.getRuntime.exec(Array(certSolverExecutable, "" + constraintsFile))
+    val processStdout =
+      process.getInputStream
+    val processOutReader =
+      new BufferedReader (new InputStreamReader(processStdout))
+
+    val exitValue = process.waitFor
+
+    constraintsFile.delete
+
+    processOutReader.readLine match {
+      case "sat" => {
+        Console.err.println("sat")
+        Some(true)
+      }
+      case "unsat" => {
+        Console.err.println("unsat")
+        Some(false)
+      }
+      case "unknown" => {
+        Console.err.println("unknown")
+        None
+      }
+      case null => {
+        Console.err.println("error")
+        val processStderr = process.getErrorStream
+        val processErrReader =
+          new BufferedReader (new InputStreamReader(processStderr))
+        throw new Exception(
+          "Unexpected answer from the certified solver: " +
+            processErrReader.readLine)
+      }
+      case str => {
+        Console.err.println("error")
+        throw new Exception(
+          "Unexpected answer from the certified solver: " + str)
+      }
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -472,6 +482,9 @@ println("checking " + c)
    * to an integer, and each string variable to a list of characters.
    */
   def findModel : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+    Console.err.println
+    Console.err.println("Running OSTRICH")
+
     for (t <- allTerms)
       constraintStores.put(t, newStore(t))
 

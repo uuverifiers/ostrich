@@ -262,7 +262,24 @@ class OstrichSolver(theory : OstrichStringTheory,
           Exploration.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
-      exploration.findModel
+      if (flags.certifiedSolver) {
+        exploration.callCertifiedSolver match {
+          case Some(false) => { // unsat
+            None
+          }
+          case Some(true) =>  { // sat
+            // we need to check whether the goal contained further formulas
+            // that were ignored, or whether we can trust the output of the
+            // certified solver
+            throw OstrichStringTheory.UnknownException
+          }
+          case None =>        { // unknown
+            throw OstrichStringTheory.UnknownException
+          }
+        }
+      } else {
+        exploration.findModel
+      }
     }
   }
 
