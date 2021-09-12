@@ -158,12 +158,16 @@ class OstrichSolver(theory : OstrichStringTheory,
         val rightVar = theory.StringSort.newConstant("rhs")
         funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
       }
+      case FunPred(`str_empty`) =>
+        regexes += ((a(0), BricsAutomaton fromString ""))
       case FunPred(f) if rexOps contains f =>
         // nothing
       case p if (theory.predicates contains p) =>
         stringFunctionTranslator(a) match {
           case Some((op, args, res)) =>
             funApps += ((op(), args, res))
+          case _ if flags.certifiedSolver =>
+            containsNonStringConstraints = true
           case _ =>
             throw new Exception ("Cannot handle literal " + a)
         }
@@ -185,10 +189,16 @@ class OstrichSolver(theory : OstrichStringTheory,
       case `str_in_re_id` =>
         decodeRegexId(a, true)
       case pred if theory.transducerPreOps contains pred =>
-        throw new Exception ("Cannot handle negated transducer constraint " + a)
+        if (flags.certifiedSolver)
+          containsNonStringConstraints = true
+        else
+          throw new Exception ("Cannot handle negated transducer constraint " + a)
       case p if (theory.predicates contains p) =>
         // Console.err.println("Warning: ignoring !" + a)
-        throw new Exception ("Cannot handle negative literal " + a)
+        if (flags.certifiedSolver)
+          containsNonStringConstraints = true
+        else
+          throw new Exception ("Cannot handle negative literal " + a)
       case p if p.arity == 0 =>
         // nothing
       case _ =>
@@ -231,8 +241,11 @@ class OstrichSolver(theory : OstrichStringTheory,
         case lc if useLength && (lc.constants forall lengthConstants) =>
           // nothing
         case lc if lc.constants exists stringConstants =>
-          throw new Exception ("Cannot handle negative string equation " +
-                                 (lc =/= 0))
+          if (flags.certifiedSolver)
+            containsNonStringConstraints = true
+          else
+            throw new Exception ("Cannot handle negative string equation " +
+                                   (lc =/= 0))
         case _ =>
           containsNonStringConstraints = true
       }

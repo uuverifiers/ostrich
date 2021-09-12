@@ -252,7 +252,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
 
-        breakCyclicEquations(goal) match {
+        (if (!flags.certifiedSolver)
+           breakCyclicEquations(goal)
+         else
+           None) match {
           case Some(actions) =>
             actions
           case None => try {

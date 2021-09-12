@@ -304,14 +304,16 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  def genCertProverInput(tryProve : Boolean) : String = {
+  def genCertProverInput(tryProve : Boolean) : (String, Boolean) = {
+    var unhandledConstraints = false
+
     def term2String(t : Term) : String =
       t match {
         case LinearCombination.Constant(id) => "const" + id
         case t => t.toString
       }
 
-    ap.DialogUtil.asString {
+    val res = ap.DialogUtil.asString {
       val stringConsts = new MHashSet[Int]
 
       def declareConst(t : Term) : Unit =
@@ -338,12 +340,13 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       println
 
       for ((apps, res) <- sortedFunApps.reverse; app <- apps) {
-        print("" + term2String(res) + " := ")
         app match {
-          case (ConcatPreOp, args) =>
+          case (ConcatPreOp, args) => {
+            print("" + term2String(res) + " := ")
             println("concat(" + ((args map term2String) mkString ", ") + ");")
+          }
           case (op, _) =>
-            throw new Exception("Certified solver cannot handle " + op)
+            unhandledConstraints = true
         }
       }
 
@@ -362,12 +365,18 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           println("// Forward propagation is inconclusive")
       }
     }
+
+    (res, unhandledConstraints)
   }
 
   //////////////////////////////////////////////////////////////////////////////
 
   if (flags.writeSL) {
-    StraightLineStore.straightlineFormula = Some(genCertProverInput(true))
+    val (constraints, unhandledConstraints) = genCertProverInput(true)
+    if (unhandledConstraints)
+      Console.err.println(
+        "Warning: ignored constraints that cannot be handled by certified solver")
+    StraightLineStore.straightlineFormula = Some(constraints)
     throw OstrichStringTheory.CancelledException
   }
 
@@ -382,7 +391,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       val constraintsFile = File.createTempFile("cert-input", ".sl")
 
       val fileStream = new java.io.FileOutputStream(constraintsFile)
-      Console.withOut(fileStream) { println(genCertProverInput(false)) }
+      val (constraints, unhandledConstraints) = genCertProverInput(false)
+      Console.withOut(fileStream) { println(constraints ) }
       fileStream.close
 
       Console.err.print("Running certified string solver on proof goal ... ")
@@ -398,6 +408,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       val exitValue = process.waitFor
 
       processOutReader.readLine match {
+        case "sat" if unhandledConstraints => {
+          Console.err.println("sat, but ignored constraints")
+          constraintsFile.delete
+          None
+        }
         case "sat" => {
           Console.err.println("sat")
           constraintsFile.delete
