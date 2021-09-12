@@ -259,6 +259,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
             modelCache(goal.facts) {
               ostrichSolver.findStringModel(goal)
             } match {
+              case Some(_) if flags.certifiedSolver =>
+                List(Plugin.RemoveFacts(goal.facts))
               case Some(m) =>
                 equalityPropagator.handleSolution(goal, m)
               case None =>
@@ -267,8 +269,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           } catch {
             case OstrichStringTheory.CancelledException =>
               List(Plugin.AddFormula(Conjunction.TRUE))
-            case OstrichStringTheory.UnknownException =>
+            case OstrichStringTheory.UnknownException => {
+              // signal that we cannot handle this problem
+              ap.util.Timeout.raise
               List()
+            }
           }
         }
       }

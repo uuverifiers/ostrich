@@ -1,0 +1,38 @@
+#!/bin/bash
+
+if [ $(uname) = "Linux" ]; then
+    pathCmd="readlink -f"
+elif [ $(uname) = "Darwin" ]; then
+    pathCmd="stat -f %N"
+else
+    pathCmd="realpath"
+fi
+
+BASEDIR=`dirname $($pathCmd $0)`
+TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
+LIBDIR=$BASEDIR/lib
+SCALA=scala
+JAVA=java
+export JAVA_OPTS="-Xss20000k -Xmx2000m"
+
+princessParams=()
+ostrichParams="+certifiedSolver"
+
+for p; do
+    case "$p" in
+#        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | -writeSL=*)
+#            if [ x"$ostrichParams" = x"" ]; then
+#                ostrichParams=$p
+#            else
+#                ostrichParams=$ostrichParams,$p
+#            fi
+#            ;;
+        *)
+            princessParams+=("$p")
+            ;;
+    esac
+done
+
+exec $JAVA $JAVA_OPTS -cp $TARGET \
+     ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+     "${princessParams[@]}"

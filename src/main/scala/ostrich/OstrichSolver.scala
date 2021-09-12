@@ -70,6 +70,11 @@ class OstrichSolver(theory : OstrichStringTheory,
 
   def findStringModel(goal : Goal)
                     : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+    if (flags.certifiedSolver) {
+      Console.err.println
+      Console.err.println("Handling goal: " + goal.facts)
+    }
+
     val atoms = goal.facts.predConj
     val order = goal.order
 
@@ -134,6 +139,8 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Collect positive literals
 
+    var containsNonStringConstraints = false
+
     for (a <- atoms.positiveLits) a.pred match {
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
@@ -160,8 +167,10 @@ class OstrichSolver(theory : OstrichStringTheory,
           case _ =>
             throw new Exception ("Cannot handle literal " + a)
         }
-      case _ =>
+      case p if p.arity == 0 =>
         // nothing
+      case _ =>
+        containsNonStringConstraints = true
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -180,12 +189,18 @@ class OstrichSolver(theory : OstrichStringTheory,
       case p if (theory.predicates contains p) =>
         // Console.err.println("Warning: ignoring !" + a)
         throw new Exception ("Cannot handle negative literal " + a)
-      case _ =>
+      case p if p.arity == 0 =>
         // nothing
+      case _ =>
+        containsNonStringConstraints = true
     }
 
     ////////////////////////////////////////////////////////////////////////////
     // Check whether any of the negated equations talk about strings
+
+    if (!goal.facts.arithConj.positiveEqs.isEmpty ||
+          !goal.facts.arithConj.inEqs.isEmpty)
+      containsNonStringConstraints = true
 
     if (!goal.facts.arithConj.negativeEqs.isEmpty) {
       import TerForConvenience._
@@ -219,7 +234,7 @@ class OstrichSolver(theory : OstrichStringTheory,
           throw new Exception ("Cannot handle negative string equation " +
                                  (lc =/= 0))
         case _ =>
-          // nothing
+          containsNonStringConstraints = true
       }
     }
 
@@ -271,7 +286,12 @@ class OstrichSolver(theory : OstrichStringTheory,
             // we need to check whether the goal contained further formulas
             // that were ignored, or whether we can trust the output of the
             // certified solver
-            throw OstrichStringTheory.UnknownException
+            if (containsNonStringConstraints || containsLength) {
+              Console.err.println(
+                "Some constraints could not be handled by certified solver")
+              throw OstrichStringTheory.UnknownException
+            }
+            Some(Map())
           }
           case None =>        { // unknown
             throw OstrichStringTheory.UnknownException

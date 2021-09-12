@@ -191,7 +191,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   for ((ops, t) <- sortedFunApps)
     if (ops.size > 1 && !(strDatabase isConcrete t)) {
       Console.err.println("multiple definitions found for " + t)
-      if (!flags.writeSL)
+      if (!flags.writeSL && !flags.certifiedSolver)
         throw OstrichStringTheory.NotStraightlineException
     }
 //      throw new Exception("Multiple definitions found for " + t +
@@ -342,6 +342,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         app match {
           case (ConcatPreOp, args) =>
             println("concat(" + ((args map term2String) mkString ", ") + ");")
+          case (op, _) =>
+            throw new Exception("Certified solver cannot handle " + op)
         }
       }
 
@@ -369,55 +371,66 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     throw OstrichStringTheory.CancelledException
   }
 
-  def callCertifiedSolver : Option[Boolean] = {
-    Console.err.print("Running certified string solver on proof branch ... ")
+  def emptyConstraints : Boolean =
+    sortedFunApps.isEmpty && initialConstraints.isEmpty
 
-    val constraintsFile = File.createTempFile("cert-input", ".sl")
+  def callCertifiedSolver : Option[Boolean] =
+    if (emptyConstraints) {
+      Console.err.print("No string constraints to be solved")
+      Some(true)
+    } else {
+      val constraintsFile = File.createTempFile("cert-input", ".sl")
 
-    val fileStream = new java.io.FileOutputStream(constraintsFile)
-    Console.withOut(fileStream) { println(genCertProverInput(false)) }
-    fileStream.close
+      val fileStream = new java.io.FileOutputStream(constraintsFile)
+      Console.withOut(fileStream) { println(genCertProverInput(false)) }
+      fileStream.close
 
-    val process =
-      Runtime.getRuntime.exec(Array(certSolverExecutable, "" + constraintsFile))
-    val processStdout =
-      process.getInputStream
-    val processOutReader =
-      new BufferedReader (new InputStreamReader(processStdout))
+      Console.err.print("Running certified string solver on proof goal ... ")
 
-    val exitValue = process.waitFor
+      val process =
+        Runtime.getRuntime.exec(Array(certSolverExecutable,
+                                      "" + constraintsFile))
+      val processStdout =
+        process.getInputStream
+      val processOutReader =
+        new BufferedReader (new InputStreamReader(processStdout))
 
-    constraintsFile.delete
+      val exitValue = process.waitFor
 
-    processOutReader.readLine match {
-      case "sat" => {
-        Console.err.println("sat")
-        Some(true)
-      }
-      case "unsat" => {
-        Console.err.println("unsat")
-        Some(false)
-      }
-      case "unknown" => {
-        Console.err.println("unknown")
-        None
-      }
-      case null => {
-        Console.err.println("error")
-        val processStderr = process.getErrorStream
-        val processErrReader =
-          new BufferedReader (new InputStreamReader(processStderr))
-        throw new Exception(
-          "Unexpected answer from the certified solver: " +
-            processErrReader.readLine)
-      }
-      case str => {
-        Console.err.println("error")
-        throw new Exception(
-          "Unexpected answer from the certified solver: " + str)
+      processOutReader.readLine match {
+        case "sat" => {
+          Console.err.println("sat")
+          constraintsFile.delete
+          Some(true)
+        }
+        case "unsat" => {
+          Console.err.println("unsat")
+          constraintsFile.delete
+          Some(false)
+        }
+        case "unknown" => {
+          Console.err.println("unknown")
+          constraintsFile.delete
+          None
+        }
+        case null => {
+          Console.err.println("error (could not handle " +
+                                constraintsFile + ")")
+          val processStderr = process.getErrorStream
+          val processErrReader =
+            new BufferedReader (new InputStreamReader(processStderr))
+          throw new Exception(
+            "Unexpected answer from the certified solver: " +
+              processErrReader.readLine)
+        }
+        case str => {
+          Console.err.println("error (could not handle " +
+                                constraintsFile + ")")
+          throw new Exception(
+            "Unexpected answer from the certified solver: " + str)
+        }
       }
     }
-  }
 
   //////////////////////////////////////////////////////////////////////////////
 
