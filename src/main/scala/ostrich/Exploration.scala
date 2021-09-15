@@ -306,11 +306,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   def genCertProverInput(tryProve : Boolean) : (String, Boolean) = {
     var unhandledConstraints = false
+    
+    val badStringChar = """[^a-zA-Z_0-9']""".r
+  
+    def sanitiseHelp(s : String) : String =
+      badStringChar.replaceAllIn(s, (m : scala.util.matching.Regex.Match) =>
+                                       ('a' + (m.toString()(0) % 26)).toChar.toString)
 
     def term2String(t : Term) : String =
       t match {
         case LinearCombination.Constant(id) => "const" + id
-        case t => t.toString
+        case t => sanitiseHelp(t.toString)
       }
 
     val res = ap.DialogUtil.asString {
