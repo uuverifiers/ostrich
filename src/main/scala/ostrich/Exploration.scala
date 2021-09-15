@@ -386,18 +386,22 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     throw OstrichStringTheory.CancelledException
   }
 
-  def emptyConstraints : Boolean =
-    sortedFunApps.isEmpty && initialConstraints.isEmpty
-
-  def callCertifiedSolver : Option[Boolean] =
-    if (emptyConstraints) {
-      Console.err.print("No string constraints to be solved")
-      Some(true)
-    } else {
+  def callCertifiedSolver : Option[Boolean] = {
       val constraintsFile = File.createTempFile("cert-input", ".sl")
 
-      val fileStream = new java.io.FileOutputStream(constraintsFile)
       val (constraints, unhandledConstraints) = genCertProverInput(false)
+
+      if (!(constraints contains ";")) {
+        Console.err.println("No string constraints to be solved")
+        if (unhandledConstraints) {
+          Console.err.println("sat, but ignored constraints")
+          return None
+        } else {
+          return Some(true)
+        }
+      }
+
+      val fileStream = new java.io.FileOutputStream(constraintsFile)
       Console.withOut(fileStream) { println(constraints ) }
       fileStream.close
 
