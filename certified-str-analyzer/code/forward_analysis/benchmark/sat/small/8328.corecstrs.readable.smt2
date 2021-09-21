@@ -1,0 +1,50 @@
+
+
+var_0xINPUT_107738 in {
+initial state: 0
+state 0 [accept]:
+  n -> 4
+  \u0000-m -> 8
+  o-\uffff -> 8
+state 1 [accept]:
+  3-\uffff -> 8
+  \u0000-1 -> 8
+  2 -> 9
+state 2 [accept]:
+  U -> 6
+  V-\uffff -> 8
+  \u0000-T -> 8
+state 3 [accept]:
+  \u0000-G -> 8
+  H -> 7
+  I-\uffff -> 8
+state 4 [accept]:
+  \u0000-K -> 8
+  M-\uffff -> 8
+  L -> 5
+state 5 [accept]:
+  \u0000-R -> 8
+  T-\uffff -> 8
+  S -> 11
+state 6 [accept]:
+  \u0000-B -> 8
+  D-\uffff -> 8
+  C -> 10
+state 7 [reject]:
+  \u0000-\uffff -> 8
+state 8 [accept]:
+  \u0000-\uffff -> 8
+state 9 [accept]:
+  t -> 2
+  u-\uffff -> 8
+  \u0000-s -> 8
+state 10 [accept]:
+  E -> 3
+  F-\uffff -> 8
+  \u0000-D -> 8
+state 11 [accept]:
+  c-\uffff -> 8
+  \u0000-a -> 8
+  b -> 1
+};
+

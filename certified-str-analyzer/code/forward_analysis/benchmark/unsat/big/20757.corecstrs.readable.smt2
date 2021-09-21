@@ -1,0 +1,533 @@
+
+
+PCTEMP_LHS_1 in {
+initial state: 0
+state 0 [reject]:
+  s -> 3
+state 1 [reject]:
+  i -> 6
+state 2 [accept]:
+state 3 [reject]:
+  t -> 5
+state 4 [reject]:
+  g -> 2
+state 5 [reject]:
+  r -> 1
+state 6 [reject]:
+  n -> 4
+};
+
+PCTEMP_LHS_1 in {
+initial state: 0
+state 0 [accept]:
+};
+
+PCTEMP_LHS_1 in {
+initial state: 20
+state 0 [reject]:
+  a -> 67
+state 1 [reject]:
+  t -> 104
+state 2 [reject]:
+  d -> 70
+state 3 [reject]:
+  r -> 50
+state 4 [reject]:
+  w -> 30
+state 5 [reject]:
+  e -> 85
+state 6 [reject]:
+  h -> 11
+state 7 [reject]:
+  i -> 21
+state 8 [reject]:
+  & -> 48
+state 9 [reject]:
+  / -> 90
+state 10 [reject]:
+  o -> 73
+state 11 [reject]:
+  % -> 94
+state 12 [reject]:
+  r -> 75
+state 13 [reject]:
+  r -> 89
+state 14 [reject]:
+  / -> 98
+state 15 [reject]:
+  h -> 34
+state 16 [reject]:
+  r -> 52
+state 17 [reject]:
+  o -> 93
+state 18 [reject]:
+  r -> 80
+state 19 [reject]:
+  f -> 13
+state 20 [reject]:
+  h -> 1
+state 21 [reject]:
+  g -> 72
+state 22 [reject]:
+  r -> 5
+state 23 [reject]:
+  e -> 102
+state 24 [reject]:
+  n -> 76
+state 25 [reject]:
+  u -> 44
+state 26 [reject]:
+  p -> 88
+state 27 [reject]:
+  % -> 12
+state 28 [reject]:
+  r -> 47
+state 29 [reject]:
+  e -> 33
+state 30 [reject]:
+  w -> 55
+state 31 [reject]:
+  d -> 71
+state 32 [reject]:
+  u -> 64
+state 33 [reject]:
+  M -> 56
+state 34 [reject]:
+  = -> 27
+state 35 [reject]:
+  t -> 81
+state 36 [reject]:
+  a -> 62
+state 37 [reject]:
+  % -> 103
+state 38 [reject]:
+  = -> 43
+state 39 [reject]:
+  s -> 6
+state 40 [reject]:
+  t -> 106
+state 41 [reject]:
+  e -> 109
+state 42 [reject]:
+  n -> 82
+state 43 [reject]:
+  % -> 51
+state 44 [reject]:
+  r -> 84
+state 45 [reject]:
+  e -> 63
+state 46 [reject]:
+  r -> 23
+state 47 [reject]:
+  o -> 57
+state 48 [reject]:
+  g -> 36
+state 49 [reject]:
+  % -> 118
+state 50 [reject]:
+  i -> 87
+state 51 [reject]:
+  g -> 97
+state 52 [reject]:
+  % -> 100
+state 53 [reject]:
+  g -> 96
+state 54 [reject]:
+  e -> 69
+state 55 [reject]:
+  w -> 107
+state 56 [reject]:
+  i -> 99
+state 57 [reject]:
+  x -> 61
+state 58 [reject]:
+  n -> 35
+state 59 [reject]:
+  w -> 25
+state 60 [reject]:
+  / -> 108
+state 61 [reject]:
+  y -> 116
+state 62 [reject]:
+  d -> 95
+state 63 [reject]:
+  % -> 8
+state 64 [reject]:
+  l -> 54
+state 65 [reject]:
+  a -> 2
+state 66 [reject]:
+  r -> 91
+state 67 [reject]:
+  i -> 114
+state 68 [reject]:
+  c -> 112
+state 69 [reject]:
+  s -> 101
+state 70 [reject]:
+  g -> 77
+state 71 [reject]:
+  g -> 41
+state 72 [reject]:
+  . -> 53
+state 73 [reject]:
+  d -> 32
+state 74 [reject]:
+  o -> 58
+state 75 [reject]:
+  e -> 19
+state 76 [reject]:
+  e -> 16
+state 77 [reject]:
+  e -> 40
+state 78 [reject]:
+  e -> 66
+state 79 [reject]:
+  e -> 113
+state 80 [reject]:
+  a -> 59
+state 81 [reject]:
+  a -> 117
+state 82 [reject]:
+  t -> 0
+state 83 [reject]:
+  c -> 17
+state 84 [reject]:
+  l -> 86
+state 85 [reject]:
+  w -> 3
+state 86 [reject]:
+  % -> 115
+state 87 [reject]:
+  t -> 29
+state 88 [reject]:
+  : -> 60
+state 89 [reject]:
+  e -> 39
+state 90 [reject]:
+  g -> 65
+state 91 [reject]:
+  = -> 37
+state 92 [reject]:
+  r -> 105
+state 93 [reject]:
+  m -> 9
+state 94 [reject]:
+  & -> 68
+state 95 [reject]:
+  g -> 79
+state 96 [reject]:
+  m -> 10
+state 97 [reject]:
+  a -> 31
+state 98 [reject]:
+  p -> 28
+state 99 [reject]:
+  m -> 45
+state 100 [reject]:
+  % -> 22
+state 101 [reject]:
+  . -> 83
+state 102 [reject]:
+  f -> 92
+state 103 [reject]:
+  c -> 74
+state 104 [reject]:
+  t -> 26
+state 105 [reject]:
+  e -> 111
+state 106 [reject]:
+  s -> 14
+state 107 [reject]:
+  . -> 7
+state 108 [reject]:
+  / -> 4
+state 109 [reject]:
+  t -> 49
+state 110 [reject]:
+  % -> 18
+state 111 [reject]:
+  s -> 15
+state 112 [reject]:
+  o -> 42
+state 113 [reject]:
+  t -> 38
+state 114 [reject]:
+  n -> 78
+state 115 [accept]:
+state 116 [reject]:
+  / -> 46
+state 117 [reject]:
+  i -> 24
+state 118 [reject]:
+  / -> 110
+};
+
+PCTEMP_LHS_1 in {
+initial state: 6
+state 0 [accept]:
+  s-\uffff -> 12
+  \u0000-q -> 12
+  r -> 7
+state 1 [accept]:
+  m -> 3
+  \u0000-l -> 12
+  n-\uffff -> 12
+state 2 [accept]:
+  M -> 11
+  \u0000-L -> 12
+  N-\uffff -> 12
+state 3 [accept]:
+  e -> 5
+  f-\uffff -> 12
+  \u0000-d -> 12
+state 4 [accept]:
+  j-\uffff -> 12
+  \u0000-h -> 12
+  i -> 9
+state 5 [accept]:
+  % -> 13
+  &-\uffff -> 12
+  \u0000-$ -> 12
+state 6 [accept]:
+  % -> 0
+  &-\uffff -> 12
+  \u0000-$ -> 12
+state 7 [accept]:
+  e -> 8
+  f-\uffff -> 12
+  \u0000-d -> 12
+state 8 [accept]:
+  \u0000-v -> 12
+  w -> 10
+  x-\uffff -> 12
+state 9 [accept]:
+  u-\uffff -> 12
+  t -> 14
+  \u0000-s -> 12
+state 10 [accept]:
+  s-\uffff -> 12
+  \u0000-q -> 12
+  r -> 4
+state 11 [accept]:
+  j-\uffff -> 12
+  \u0000-h -> 12
+  i -> 1
+state 12 [accept]:
+  \u0000-\uffff -> 12
+state 13 [reject]:
+  \u0000-\uffff -> 12
+state 14 [accept]:
+  e -> 2
+  f-\uffff -> 12
+  \u0000-d -> 12
+};
+
+PCTEMP_LHS_1 in {
+initial state: 3
+state 0 [accept]:
+  e -> 1
+  f-\uffff -> 11
+  \u0000-d -> 11
+state 1 [accept]:
+  s-\uffff -> 11
+  \u0000-q -> 11
+  r -> 2
+state 2 [accept]:
+  % -> 5
+  &-\uffff -> 11
+  \u0000-$ -> 11
+state 3 [accept]:
+  % -> 9
+  &-\uffff -> 11
+  \u0000-$ -> 11
+state 4 [accept]:
+  j-\uffff -> 11
+  \u0000-h -> 11
+  i -> 8
+state 5 [reject]:
+  \u0000-\uffff -> 11
+state 6 [accept]:
+  \u0000-n -> 11
+  o -> 10
+  p-\uffff -> 11
+state 7 [accept]:
+  u-\uffff -> 11
+  t -> 12
+  \u0000-s -> 11
+state 8 [accept]:
+  n -> 0
+  \u0000-m -> 11
+  o-\uffff -> 11
+state 9 [accept]:
+  \u0000-b -> 11
+  d-\uffff -> 11
+  c -> 6
+state 10 [accept]:
+  n -> 7
+  \u0000-m -> 11
+  o-\uffff -> 11
+state 11 [accept]:
+  \u0000-\uffff -> 11
+state 12 [accept]:
+  \u0000-` -> 11
+  b-\uffff -> 11
+  a -> 4
+};
+
+PCTEMP_LHS_1 in {
+initial state: 7
+state 0 [accept]:
+  \u0000-\uffff -> 0
+state 1 [accept]:
+  u-\uffff -> 0
+  t -> 3
+  \u0000-s -> 0
+state 2 [accept]:
+  \u0000-` -> 0
+  b-\uffff -> 0
+  a -> 5
+state 3 [accept]:
+  % -> 4
+  &-\uffff -> 0
+  \u0000-$ -> 0
+state 4 [reject]:
+  \u0000-\uffff -> 0
+state 5 [accept]:
+  e-\uffff -> 0
+  d -> 8
+  \u0000-c -> 0
+state 6 [accept]:
+  \u0000-f -> 0
+  g -> 2
+  h-\uffff -> 0
+state 7 [accept]:
+  % -> 6
+  &-\uffff -> 0
+  \u0000-$ -> 0
+state 8 [accept]:
+  \u0000-f -> 0
+  g -> 9
+  h-\uffff -> 0
+state 9 [accept]:
+  e -> 1
+  f-\uffff -> 0
+  \u0000-d -> 0
+};
+
+PCTEMP_LHS_1 in {
+initial state: 7
+state 0 [accept]:
+  e -> 5
+  f-\uffff -> 1
+  \u0000-d -> 1
+state 1 [accept]:
+  \u0000-\uffff -> 1
+state 2 [accept]:
+  s-\uffff -> 1
+  \u0000-q -> 1
+  r -> 0
+state 3 [accept]:
+  g-\uffff -> 1
+  f -> 2
+  \u0000-e -> 1
+state 4 [accept]:
+  e -> 3
+  f-\uffff -> 1
+  \u0000-d -> 1
+state 5 [accept]:
+  \u0000-r -> 1
+  t-\uffff -> 1
+  s -> 9
+state 6 [accept]:
+  s-\uffff -> 1
+  \u0000-q -> 1
+  r -> 4
+state 7 [accept]:
+  % -> 6
+  &-\uffff -> 1
+  \u0000-$ -> 1
+state 8 [accept]:
+  % -> 10
+  &-\uffff -> 1
+  \u0000-$ -> 1
+state 9 [accept]:
+  \u0000-g -> 1
+  h -> 8
+  i-\uffff -> 1
+state 10 [reject]:
+  \u0000-\uffff -> 1
+};
+
+PCTEMP_LHS_1 in {
+initial state: 1
+state 0 [accept]:
+  s-\uffff -> 2
+  \u0000-q -> 2
+  r -> 7
+state 1 [accept]:
+  % -> 4
+  &-\uffff -> 2
+  \u0000-$ -> 2
+state 2 [accept]:
+  \u0000-\uffff -> 2
+state 3 [reject]:
+  \u0000-\uffff -> 2
+state 4 [accept]:
+  s-\uffff -> 2
+  \u0000-q -> 2
+  r -> 8
+state 5 [accept]:
+  \u0000-v -> 2
+  w -> 6
+  x-\uffff -> 2
+state 6 [accept]:
+  u -> 0
+  v-\uffff -> 2
+  \u0000-t -> 2
+state 7 [accept]:
+  \u0000-k -> 2
+  m-\uffff -> 2
+  l -> 9
+state 8 [accept]:
+  \u0000-` -> 2
+  b-\uffff -> 2
+  a -> 5
+state 9 [accept]:
+  % -> 3
+  &-\uffff -> 2
+  \u0000-$ -> 2
+};
+
+PCTEMP_LHS_1 in {
+initial state: 7
+state 0 [accept]:
+  \u0000-\uffff -> 0
+state 1 [accept]:
+  \u0000-r -> 0
+  t-\uffff -> 0
+  s -> 3
+state 2 [accept]:
+  \u0000-n -> 0
+  o -> 1
+  p-\uffff -> 0
+state 3 [accept]:
+  u-\uffff -> 0
+  t -> 6
+  \u0000-s -> 0
+state 4 [reject]:
+  \u0000-\uffff -> 0
+state 5 [accept]:
+  \u0000-g -> 0
+  h -> 2
+  i-\uffff -> 0
+state 6 [accept]:
+  % -> 4
+  &-\uffff -> 0
+  \u0000-$ -> 0
+state 7 [accept]:
+  % -> 5
+  &-\uffff -> 0
+  \u0000-$ -> 0
+};
+

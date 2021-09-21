@@ -1,0 +1,646 @@
+   0  $accept : %entry% $end
+
+   1  strCons : strConss Lresult LEOF
+   2          | strConss LEOF
+
+   3  strConss : strCon
+   4           | strCon strConss
+
+   5  Lid : Lvar
+   6      | Label
+
+   7  strCon : Lid Lassign Lconcat LLleft Lid Lcomm Lid LRright Lsepa
+   8         | Lid Leq Lstr Lsepa
+   9         | Lid Lin automaton
+
+  10  automataEnd : automata LEOF
+
+  11  automata : automaton
+  12           | automaton automata
+
+  13  automaton : LBleft initstate transitions LBrightComm
+  14            | LBleft Lsingle LBrightComm
+
+  15  initstate : LInitial LState Lsep Lint
+
+  16  tlabel : LAccept
+  17         | LReject
+
+  18  transitions : epsilon
+  19              | transition transitions
+
+  20  epsilon :
+
+  21  transition : LState Lint Lleft tlabel Lright Lsep ttos
+
+  22  ttos : emptyto
+  23       | tto ttos
+
+  24  emptyto :
+
+  25  tto : sspec LArrow Lint
+  26      | range LArrow Lint
+  27      | sspec LArrow LArrow Lint
+
+  28  sspec : Lrange
+  29        | Lright
+  30        | Lleft
+  31        | LLleft
+  32        | LRright
+  33        | Lcomm
+  34        | LBleft
+  35        | LBright
+  36        | Lsep
+  37        | Lsepa
+  38        | Label
+  39        | Lint
+
+  40  range : sspec Lrange sspec
+
+  41  %entry% : '\001' strCons
+
+state 0
+	$accept : . %entry% $end  (0)
+
+	'\001'  shift 1
+	.  error
+
+	%entry%  goto 2
+
+
+state 1
+	%entry% : '\001' . strCons  (41)
+
+	Label  shift 3
+	Lvar  shift 4
+	.  error
+
+	strCons  goto 5
+	strConss  goto 6
+	strCon  goto 7
+	Lid  goto 8
+
+
+state 2
+	$accept : %entry% . $end  (0)
+
+	$end  accept
+
+
+state 3
+	Lid : Label .  (6)
+
+	.  reduce 6
+
+
+state 4
+	Lid : Lvar .  (5)
+
+	.  reduce 5
+
+
+state 5
+	%entry% : '\001' strCons .  (41)
+
+	.  reduce 41
+
+
+state 6
+	strCons : strConss . Lresult LEOF  (1)
+	strCons : strConss . LEOF  (2)
+
+	LEOF  shift 9
+	Lresult  shift 10
+	.  error
+
+
+state 7
+	strConss : strCon .  (3)
+	strConss : strCon . strConss  (4)
+
+	Label  shift 3
+	Lvar  shift 4
+	LEOF  reduce 3
+	Lresult  reduce 3
+
+	strConss  goto 11
+	strCon  goto 7
+	Lid  goto 8
+
+
+state 8
+	strCon : Lid . Lassign Lconcat LLleft Lid Lcomm Lid LRright Lsepa  (7)
+	strCon : Lid . Leq Lstr Lsepa  (8)
+	strCon : Lid . Lin automaton  (9)
+
+	Lin  shift 12
+	Lassign  shift 13
+	Leq  shift 14
+	.  error
+
+
+state 9
+	strCons : strConss LEOF .  (2)
+
+	.  reduce 2
+
+
+state 10
+	strCons : strConss Lresult . LEOF  (1)
+
+	LEOF  shift 15
+	.  error
+
+
+state 11
+	strConss : strCon strConss .  (4)
+
+	.  reduce 4
+
+
+state 12
+	strCon : Lid Lin . automaton  (9)
+
+	LBleft  shift 16
+	.  error
+
+	automaton  goto 17
+
+
+state 13
+	strCon : Lid Lassign . Lconcat LLleft Lid Lcomm Lid LRright Lsepa  (7)
+
+	Lconcat  shift 18
+	.  error
+
+
+state 14
+	strCon : Lid Leq . Lstr Lsepa  (8)
+
+	Lstr  shift 19
+	.  error
+
+
+state 15
+	strCons : strConss Lresult LEOF .  (1)
+
+	.  reduce 1
+
+
+state 16
+	automaton : LBleft . initstate transitions LBrightComm  (13)
+	automaton : LBleft . Lsingle LBrightComm  (14)
+
+	Lsingle  shift 20
+	LInitial  shift 21
+	.  error
+
+	initstate  goto 22
+
+
+state 17
+	strCon : Lid Lin automaton .  (9)
+
+	.  reduce 9
+
+
+state 18
+	strCon : Lid Lassign Lconcat . LLleft Lid Lcomm Lid LRright Lsepa  (7)
+
+	LLleft  shift 23
+	.  error
+
+
+state 19
+	strCon : Lid Leq Lstr . Lsepa  (8)
+
+	Lsepa  shift 24
+	.  error
+
+
+state 20
+	automaton : LBleft Lsingle . LBrightComm  (14)
+
+	LBrightComm  shift 25
+	.  error
+
+
+state 21
+	initstate : LInitial . LState Lsep Lint  (15)
+
+	LState  shift 26
+	.  error
+
+
+state 22
+	automaton : LBleft initstate . transitions LBrightComm  (13)
+	epsilon : .  (20)
+
+	LState  shift 27
+	LBrightComm  reduce 20
+
+	transitions  goto 28
+	epsilon  goto 29
+	transition  goto 30
+
+
+state 23
+	strCon : Lid Lassign Lconcat LLleft . Lid Lcomm Lid LRright Lsepa  (7)
+
+	Label  shift 3
+	Lvar  shift 4
+	.  error
+
+	Lid  goto 31
+
+
+state 24
+	strCon : Lid Leq Lstr Lsepa .  (8)
+
+	.  reduce 8
+
+
+state 25
+	automaton : LBleft Lsingle LBrightComm .  (14)
+
+	.  reduce 14
+
+
+state 26
+	initstate : LInitial LState . Lsep Lint  (15)
+
+	Lsep  shift 32
+	.  error
+
+
+state 27
+	transition : LState . Lint Lleft tlabel Lright Lsep ttos  (21)
+
+	Lint  shift 33
+	.  error
+
+
+state 28
+	automaton : LBleft initstate transitions . LBrightComm  (13)
+
+	LBrightComm  shift 34
+	.  error
+
+
+state 29
+	transitions : epsilon .  (18)
+
+	.  reduce 18
+
+
+state 30
+	transitions : transition . transitions  (19)
+	epsilon : .  (20)
+
+	LState  shift 27
+	LBrightComm  reduce 20
+
+	transitions  goto 35
+	epsilon  goto 29
+	transition  goto 30
+
+
+state 31
+	strCon : Lid Lassign Lconcat LLleft Lid . Lcomm Lid LRright Lsepa  (7)
+
+	Lcomm  shift 36
+	.  error
+
+
+state 32
+	initstate : LInitial LState Lsep . Lint  (15)
+
+	Lint  shift 37
+	.  error
+
+
+state 33
+	transition : LState Lint . Lleft tlabel Lright Lsep ttos  (21)
+
+	Lleft  shift 38
+	.  error
+
+
+state 34
+	automaton : LBleft initstate transitions LBrightComm .  (13)
+
+	.  reduce 13
+
+
+state 35
+	transitions : transition transitions .  (19)
+
+	.  reduce 19
+
+
+state 36
+	strCon : Lid Lassign Lconcat LLleft Lid Lcomm . Lid LRright Lsepa  (7)
+
+	Label  shift 3
+	Lvar  shift 4
+	.  error
+
+	Lid  goto 39
+
+
+state 37
+	initstate : LInitial LState Lsep Lint .  (15)
+
+	.  reduce 15
+
+
+state 38
+	transition : LState Lint Lleft . tlabel Lright Lsep ttos  (21)
+
+	LReject  shift 40
+	LAccept  shift 41
+	.  error
+
+	tlabel  goto 42
+
+
+state 39
+	strCon : Lid Lassign Lconcat LLleft Lid Lcomm Lid . LRright Lsepa  (7)
+
+	LRright  shift 43
+	.  error
+
+
+state 40
+	tlabel : LReject .  (17)
+
+	.  reduce 17
+
+
+state 41
+	tlabel : LAccept .  (16)
+
+	.  reduce 16
+
+
+state 42
+	transition : LState Lint Lleft tlabel . Lright Lsep ttos  (21)
+
+	Lright  shift 44
+	.  error
+
+
+state 43
+	strCon : Lid Lassign Lconcat LLleft Lid Lcomm Lid LRright . Lsepa  (7)
+
+	Lsepa  shift 45
+	.  error
+
+
+state 44
+	transition : LState Lint Lleft tlabel Lright . Lsep ttos  (21)
+
+	Lsep  shift 46
+	.  error
+
+
+state 45
+	strCon : Lid Lassign Lconcat LLleft Lid Lcomm Lid LRright Lsepa .  (7)
+
+	.  reduce 7
+
+
+state 46
+	transition : LState Lint Lleft tlabel Lright Lsep . ttos  (21)
+	emptyto : .  (24)
+
+	Lrange  shift 47
+	Label  shift 48
+	Lint  shift 49
+	Lleft  shift 50
+	LLleft  shift 51
+	Lright  shift 52
+	LRright  shift 53
+	Lcomm  shift 54
+	LBleft  shift 55
+	LBright  shift 56
+	Lsep  shift 57
+	Lsepa  shift 58
+	LState  reduce 24
+	LBrightComm  reduce 24
+
+	ttos  goto 59
+	emptyto  goto 60
+	tto  goto 61
+	sspec  goto 62
+	range  goto 63
+
+
+state 47
+	sspec : Lrange .  (28)
+
+	.  reduce 28
+
+
+state 48
+	sspec : Label .  (38)
+
+	.  reduce 38
+
+
+state 49
+	sspec : Lint .  (39)
+
+	.  reduce 39
+
+
+state 50
+	sspec : Lleft .  (30)
+
+	.  reduce 30
+
+
+state 51
+	sspec : LLleft .  (31)
+
+	.  reduce 31
+
+
+state 52
+	sspec : Lright .  (29)
+
+	.  reduce 29
+
+
+state 53
+	sspec : LRright .  (32)
+
+	.  reduce 32
+
+
+state 54
+	sspec : Lcomm .  (33)
+
+	.  reduce 33
+
+
+state 55
+	sspec : LBleft .  (34)
+
+	.  reduce 34
+
+
+state 56
+	sspec : LBright .  (35)
+
+	.  reduce 35
+
+
+state 57
+	sspec : Lsep .  (36)
+
+	.  reduce 36
+
+
+state 58
+	sspec : Lsepa .  (37)
+
+	.  reduce 37
+
+
+state 59
+	transition : LState Lint Lleft tlabel Lright Lsep ttos .  (21)
+
+	.  reduce 21
+
+
+state 60
+	ttos : emptyto .  (22)
+
+	.  reduce 22
+
+
+state 61
+	ttos : tto . ttos  (23)
+	emptyto : .  (24)
+
+	Lrange  shift 47
+	Label  shift 48
+	Lint  shift 49
+	Lleft  shift 50
+	LLleft  shift 51
+	Lright  shift 52
+	LRright  shift 53
+	Lcomm  shift 54
+	LBleft  shift 55
+	LBright  shift 56
+	Lsep  shift 57
+	Lsepa  shift 58
+	LState  reduce 24
+	LBrightComm  reduce 24
+
+	ttos  goto 64
+	emptyto  goto 60
+	tto  goto 61
+	sspec  goto 62
+	range  goto 63
+
+
+state 62
+	tto : sspec . LArrow Lint  (25)
+	tto : sspec . LArrow LArrow Lint  (27)
+	range : sspec . Lrange sspec  (40)
+
+	Lrange  shift 65
+	LArrow  shift 66
+	.  error
+
+
+state 63
+	tto : range . LArrow Lint  (26)
+
+	LArrow  shift 67
+	.  error
+
+
+state 64
+	ttos : tto ttos .  (23)
+
+	.  reduce 23
+
+
+state 65
+	range : sspec Lrange . sspec  (40)
+
+	Lrange  shift 47
+	Label  shift 48
+	Lint  shift 49
+	Lleft  shift 50
+	LLleft  shift 51
+	Lright  shift 52
+	LRright  shift 53
+	Lcomm  shift 54
+	LBleft  shift 55
+	LBright  shift 56
+	Lsep  shift 57
+	Lsepa  shift 58
+	.  error
+
+	sspec  goto 68
+
+
+state 66
+	tto : sspec LArrow . Lint  (25)
+	tto : sspec LArrow . LArrow Lint  (27)
+
+	Lint  shift 69
+	LArrow  shift 70
+	.  error
+
+
+state 67
+	tto : range LArrow . Lint  (26)
+
+	Lint  shift 71
+	.  error
+
+
+state 68
+	range : sspec Lrange sspec .  (40)
+
+	.  reduce 40
+
+
+state 69
+	tto : sspec LArrow Lint .  (25)
+
+	.  reduce 25
+
+
+state 70
+	tto : sspec LArrow LArrow . Lint  (27)
+
+	Lint  shift 72
+	.  error
+
+
+state 71
+	tto : range LArrow Lint .  (26)
+
+	.  reduce 26
+
+
+state 72
+	tto : sspec LArrow LArrow Lint .  (27)
+
+	.  reduce 27
+
+
+Rules never reduced:
+	automataEnd : automata LEOF  (10)
+	automata : automaton  (11)
+	automata : automaton automata  (12)
+
+
+32 terminals, 19 nonterminals
+42 grammar rules, 73 states

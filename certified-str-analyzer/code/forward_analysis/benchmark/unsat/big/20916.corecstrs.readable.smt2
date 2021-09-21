@@ -1,0 +1,174 @@
+
+var_0xINPUT_9760 := concat(T0_2, T1_2);
+var_0xINPUT_9760 := concat(T0_10, T1_10);
+
+T0_2 in {
+initial state: 0
+state 0 [accept]:
+};
+
+T0_10 in {
+initial state: 0
+state 0 [accept]:
+};
+
+var_0xINPUT_9760 in {
+initial state: 0
+state 0 [reject]:
+  \u0000-\uffff -> 1
+state 1 [accept]:
+  \u0000-\uffff -> 1
+};
+
+T1_2 in {
+initial state: 3
+state 0 [accept]:
+  4 -> 2
+  5-\uffff -> 9
+  \u0000-3 -> 9
+state 1 [accept]:
+  {-\uffff -> 9
+  z -> 12
+  \u0000-y -> 9
+state 2 [accept]:
+  \u0000-0 -> 9
+  2-\uffff -> 9
+  1 -> 4
+state 3 [accept]:
+  \u0000-^ -> 9
+  _ -> 18
+  `-\uffff -> 9
+state 4 [accept]:
+  \u0000-2 -> 9
+  4-\uffff -> 9
+  3 -> 13
+state 5 [accept]:
+  :-\uffff -> 9
+  \u0000-8 -> 9
+  9 -> 0
+state 6 [accept]:
+  :-\uffff -> 9
+  \u0000-8 -> 9
+  9 -> 7
+state 7 [accept]:
+  . -> 14
+  \u0000-- -> 9
+  /-\uffff -> 9
+state 8 [accept]:
+  u -> 11
+  v-\uffff -> 9
+  \u0000-t -> 9
+state 9 [accept]:
+  \u0000-\uffff -> 9
+state 10 [accept]:
+  \u0000-0 -> 9
+  2-\uffff -> 9
+  1 -> 17
+state 11 [accept]:
+  u-\uffff -> 9
+  t -> 15
+  \u0000-s -> 9
+state 12 [accept]:
+  = -> 10
+  \u0000-< -> 9
+  >-\uffff -> 9
+state 13 [accept]:
+  \u0000-0 -> 9
+  2-\uffff -> 9
+  1 -> 16
+state 14 [reject]:
+  \u0000-\uffff -> 9
+state 15 [accept]:
+  m -> 1
+  \u0000-l -> 9
+  n-\uffff -> 9
+state 16 [accept]:
+  7-\uffff -> 9
+  6 -> 6
+  \u0000-5 -> 9
+state 17 [accept]:
+  7-\uffff -> 9
+  6 -> 5
+  \u0000-5 -> 9
+state 18 [accept]:
+  \u0000-^ -> 9
+  _ -> 8
+  `-\uffff -> 9
+};
+
+T1_10 in {
+initial state: 9
+state 0 [accept]:
+  :-\uffff -> 10
+  \u0000-8 -> 10
+  9 -> 1
+state 1 [accept]:
+  . -> 14
+  \u0000-- -> 10
+  /-\uffff -> 10
+state 2 [accept]:
+  u -> 4
+  v-\uffff -> 10
+  \u0000-t -> 10
+state 3 [accept]:
+  \u0000-0 -> 10
+  2-\uffff -> 10
+  1 -> 16
+state 4 [accept]:
+  u-\uffff -> 10
+  t -> 15
+  \u0000-s -> 10
+state 5 [accept]:
+  \u0000-` -> 10
+  b-\uffff -> 10
+  a -> 17
+state 6 [accept]:
+  \u0000-2 -> 10
+  4-\uffff -> 10
+  3 -> 13
+state 7 [accept]:
+  5-\uffff -> 10
+  4 -> 12
+  \u0000-3 -> 10
+state 8 [accept]:
+  :-\uffff -> 10
+  \u0000-8 -> 10
+  9 -> 7
+state 9 [accept]:
+  \u0000-^ -> 10
+  _ -> 11
+  `-\uffff -> 10
+state 10 [accept]:
+  \u0000-\uffff -> 10
+state 11 [accept]:
+  \u0000-^ -> 10
+  _ -> 2
+  `-\uffff -> 10
+state 12 [accept]:
+  \u0000-0 -> 10
+  2-\uffff -> 10
+  1 -> 6
+state 13 [accept]:
+  \u0000-0 -> 10
+  2-\uffff -> 10
+  1 -> 18
+state 14 [reject]:
+  \u0000-\uffff -> 10
+state 15 [accept]:
+  m -> 5
+  \u0000-l -> 10
+  n-\uffff -> 10
+state 16 [accept]:
+  7-\uffff -> 10
+  6 -> 8
+  \u0000-5 -> 10
+state 17 [accept]:
+  = -> 3
+  \u0000-< -> 10
+  >-\uffff -> 10
+state 18 [accept]:
+  7-\uffff -> 10
+  6 -> 0
+  \u0000-5 -> 10
+};
+

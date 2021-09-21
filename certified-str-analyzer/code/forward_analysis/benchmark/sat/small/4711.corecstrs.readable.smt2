@@ -1,0 +1,75 @@
+
+
+var_0xINPUT_77071 in {
+initial state: 5
+state 0 [reject]:
+  6 -> 7
+state 1 [reject]:
+  E -> 10
+state 2 [accept]:
+state 3 [reject]:
+  N -> 6
+state 4 [reject]:
+  d -> 2
+state 5 [reject]:
+  A -> 8
+state 6 [reject]:
+  D -> 0
+state 7 [reject]:
+  M -> 1
+state 8 [reject]:
+  A -> 9
+state 9 [reject]:
+  1 -> 3
+state 10 [reject]:
+  X -> 4
+};
+
+var_0xINPUT_77071 in {
+initial state: 7
+state 0 [accept]:
+  \u0000-P -> 11
+  R-\uffff -> 11
+  Q -> 4
+state 1 [accept]:
+  \u0000-B -> 11
+  D-\uffff -> 11
+  C -> 8
+state 2 [accept]:
+  5 -> 6
+  6-\uffff -> 11
+  \u0000-4 -> 11
+state 3 [reject]:
+  \u0000-\uffff -> 11
+state 4 [accept]:
+  \u0000-@ -> 11
+  B-\uffff -> 11
+  A -> 5
+state 5 [accept]:
+  \u0000-K -> 11
+  M-\uffff -> 11
+  L -> 10
+state 6 [accept]:
+  T -> 9
+  U-\uffff -> 11
+  \u0000-S -> 11
+state 7 [accept]:
+  \u0000-B -> 11
+  D-\uffff -> 11
+  C -> 0
+state 8 [accept]:
+  P -> 2
+  Q-\uffff -> 11
+  \u0000-O -> 11
+state 9 [accept]:
+  C-\uffff -> 11
+  \u0000-A -> 11
+  B -> 3
+state 10 [accept]:
+  \u0000-b -> 11
+  d-\uffff -> 11
+  c -> 1
+state 11 [accept]:
+  \u0000-\uffff -> 11
+};
+

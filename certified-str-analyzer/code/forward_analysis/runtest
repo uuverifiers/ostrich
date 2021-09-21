@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ $1 = "unsat_big" ]
+then
+    Benchdir="unsat/big"
+elif [ $1 = "unsat_small" ]
+then
+    Benchdir="unsat/small"
+elif [ $1 = "sat_small" ]
+then
+    Benchdir="sat/small"
+elif [ $1 = "sat_big" ]
+then
+    Benchdir="sat/big"
+fi
+
+for f in benchmark/$Benchdir/*.smt2; do
+    echo "$f                                                                                                                      
+    "
+    echo $f >> experiment/result_$1
+    (timeout 1000s /usr/bin/time src/forward_analysis $f) 2>&1 |  cat >>  experiment/result_$1
+    
+done
+
+
