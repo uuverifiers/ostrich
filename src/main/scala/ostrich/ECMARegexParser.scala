@@ -86,6 +86,8 @@ class ECMARegexParser(theory : OstrichStringTheory) {
   // is outermost or not.
   type VisitorArg = Boolean
 
+  val BeginAnchor     = new IFunction("BeginAnchor",  0, false, false)
+  val EndAnchor       = new IFunction("EndAnchor",  0, false, false)
   val LookAhead       = new IFunction("LookAhead",  1, false, false)
   val LookBehind      = new IFunction("LookBehind", 1, false, false)
   val WordBoundary    = new IFunction("WordBoundary", 0, false, false)
@@ -98,7 +100,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     import IExpression._
     import theory._
 
-    def apply(pat : Pattern) = this.visit(pat, true)
+    def apply(pat : Pattern) = dropAssertions(this.visit(pat, true))
 
     def leaf(arg : VisitorArg) : ITerm = EPS
     def combine(x : ITerm, y : ITerm, arg : VisitorArg) : ITerm = reCat(x, y)
@@ -116,22 +118,32 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         var midTerms = terms filterNot (_ == EPS)
 
         val lookAheads = midTerms takeWhile {
-          case IFunApp(LookAhead | WordBoundary | NonWordBoundary, _) => true
-          case _ => false
+          case IFunApp(BeginAnchor | EndAnchor | 
+                         LookAhead | WordBoundary | NonWordBoundary, _)
+              => true
+          case _
+              => false
         }
 
         midTerms = midTerms drop lookAheads.size
 
         val newEnd = midTerms lastIndexWhere {
-          case IFunApp(LookBehind | WordBoundary | NonWordBoundary, _) => false
-          case _ => true
+          case IFunApp(BeginAnchor | EndAnchor |
+                         LookBehind | WordBoundary | NonWordBoundary, _)
+              => false
+          case _
+              => true
         }
 
         val lookBehinds = midTerms takeRight (midTerms.size - newEnd - 1)
         midTerms = midTerms dropRight (midTerms.size - newEnd - 1)
 
-        reInterStar(List(reCatStar(dropAssertions(midTerms) : _*)) ++
+        reInterStar(List(reCatStar(midTerms : _*)) ++
                       (for (s <- lookAheads) yield s match {
+                         case IFunApp(BeginAnchor, _) =>
+                           ALL
+                         case IFunApp(EndAnchor, _) =>
+                           EPS
                          case IFunApp(LookAhead, Seq(t)) =>
                            t
                          case IFunApp(WordBoundary, _) =>
@@ -140,6 +152,10 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                            re_comp(re_++(word, ALL))
                        }) ++
                       (for (s <- lookBehinds) yield s match {
+                         case IFunApp(BeginAnchor, _) =>
+                           EPS
+                         case IFunApp(EndAnchor, _) =>
+                           ALL
                          case IFunApp(LookBehind, Seq(t)) =>
                            t
                          case IFunApp(WordBoundary, _) =>
@@ -149,7 +165,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                        }) : _*)
 
       } else {
-        reCatStar(dropAssertions(terms) : _*)
+        reCatStar(terms : _*)
       }
     }
 
@@ -188,27 +204,60 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       alt.listtermc_.toList
     }
 
-    private def dropAssertions(ts : Seq[ITerm]) : Seq[ITerm] =
-      ts filter {
-        case IFunApp(LookAhead, _) => {
-          Console.err.println("Warning: ignoring look-ahead")
-          false
-        }
-        case IFunApp(LookBehind, _) => {
-          Console.err.println("Warning: ignoring look-behind")
-          false
-        }
-        case IFunApp(WordBoundary, _) => {
-          Console.err.println("Warning: ignoring anchor \\b")
-          false
-        }
-        case IFunApp(NonWordBoundary, _) => {
-          Console.err.println("Warning: ignoring anchor \\B")
-          false
-        }
-        case _ =>
-          true
+    private def dropAssertions(t : ITerm,
+                               negative : Boolean = false) : ITerm = t match {
+      case IFunApp(BeginAnchor, _) => {
+        Console.err.println("Warning: ignoring anchor ^")
+        if (negative) NONE else EPS
       }
+      case IFunApp(EndAnchor, _) => {
+        Console.err.println("Warning: ignoring anchor $")
+        if (negative) NONE else EPS
+      }
+      case IFunApp(LookAhead, _) => {
+        Console.err.println("Warning: ignoring look-ahead")
+        if (negative) NONE else EPS
+      }
+      case IFunApp(LookBehind, _) => {
+        Console.err.println("Warning: ignoring look-behind")
+        if (negative) NONE else EPS
+      }
+      case IFunApp(WordBoundary, _) => {
+        Console.err.println("Warning: ignoring anchor \\b")
+        if (negative) NONE else EPS
+      }
+      case IFunApp(NonWordBoundary, _) => {
+        Console.err.println("Warning: ignoring anchor \\B")
+        if (negative) NONE else EPS
+      }
+      case IFunApp(`re_comp`, Seq(arg)) =>
+        re_comp(dropAssertions(arg, !negative))
+      case IFunApp(f, args) =>
+        f((for (arg <- args) yield dropAssertions(arg, negative)) : _*)
+      case t =>
+        t
+    }
+
+    private def translateLookAhead(t : ITerm) : ITerm = {
+      val ts = catToList(t) filterNot (_ == EPS)
+      ts.lastOption match {
+        case Some(IFunApp(EndAnchor, _)) => reCatStar(ts.init : _*)
+        case _                           => reCatStar(ts ++ List(ALL) : _*)
+      }
+    }
+
+    private def translateLookBehind(t : ITerm) : ITerm = {
+      val ts = catToList(t) filterNot (_ == EPS)
+      ts.headOption match {
+        case Some(IFunApp(BeginAnchor, _)) => reCatStar(ts.tail : _*)
+        case _                             => reCatStar(List(ALL) ++ ts : _*)
+      }
+    }
+
+    private def catToList(t : ITerm) : Seq[ITerm] = t match {
+      case IFunApp(`re_++`, Seq(a, b)) => catToList(a) ++ catToList(b)
+      case t                         => List(t)
+    }
 
     override def visit(p : ecma2020regex.Absyn.GroupAtom, arg : VisitorArg) =
       // capture group
@@ -219,23 +268,24 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) =
       LookAhead(
-        reCat(reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*),
-              ALL))
+        translateLookAhead(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)))
+
     override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) =
       LookAhead(
-        re_comp(reCat(reUnionStar(
-          p.listalternativec_ map (_.accept(this, arg)) : _*), ALL)))
+        re_comp(translateLookAhead(reUnionStar(
+          p.listalternativec_ map (_.accept(this, arg)) : _*))))
 
     override def visit(p : ecma2020regex.Absyn.PosLookbehind,
                        arg : VisitorArg) =
       LookBehind(
-        reCat(ALL, reUnionStar(
-                p.listalternativec_ map (_.accept(this, arg)) : _*)))
+        translateLookBehind(reUnionStar(
+                              p.listalternativec_ map (_.accept(this, arg)) : _*)))
 
     override def visit(p : ecma2020regex.Absyn.NegLookbehind,
                        arg : VisitorArg) =
       LookBehind(
-        re_comp(reCat(ALL, reUnionStar(
+        re_comp(translateLookBehind(reUnionStar(
                   p.listalternativec_ map (_.accept(this, arg)) : _*))))
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
@@ -292,16 +342,12 @@ class ECMARegexParser(theory : OstrichStringTheory) {
       }
     }
 
-    override def visit(p : ecma2020regex.Absyn.BegAnchor, arg : VisitorArg) = {
-      Console.err.println("Warning: ignoring anchor ^")
-      EPS
-    }
+    override def visit(p : ecma2020regex.Absyn.BegAnchor, arg : VisitorArg) =
+      BeginAnchor()
 
     override def visit(p : ecma2020regex.Absyn.EndAnchor,
-                       arg : VisitorArg) = {
-      Console.err.println("Warning: ignoring anchor $")
-      EPS
-    }
+                       arg : VisitorArg) =
+      EndAnchor()
 
     override def visit(p : ecma2020regex.Absyn.WordAnchor,
                        arg : VisitorArg) =

@@ -60,6 +60,19 @@
                 (not (str.contains w ">"))
                 (not (str.contains w "4"))))
 
+        (= (str.in_re w (re.from_ecma2020 '^(?![0-9]*$)[a-z0-9\.]+$'))
+           (and (str.in_re w (re.from_ecma2020 '[a-z0-9\.]+'))
+                (not (str.in_re w (re.from_ecma2020 '[0-9]*')))))
+
+        (= (str.in_re w (re.from_ecma2020 '^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$'))
+           (and (>= (str.len w) 8)
+                (str.in_re w (re.++ re.all (re.union (re.range "A" "Z")
+                                                     (re.range "a" "z")) re.all))
+                (str.in_re w (re.++ re.all (re.range "0" "9") re.all))
+                (str.in_re w (re.* (re.union (re.range "A" "Z")
+                                             (re.range "a" "z")
+                                             (re.range "0" "9"))))))
+
  )))
 
 (check-sat)
