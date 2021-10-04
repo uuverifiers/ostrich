@@ -84,30 +84,7 @@ definition "rs_lts_image_filter \<equiv> ltsga_image_filter rs_lts_empty rs_lts_
 definition "rs_lts_image \<equiv> ltsga_image rs_lts_image_filter"
 
 lemmas rs_lts_defs_raw = 
-(*  rs_lts_defs.ltsbm_empty_def_raw 
-  rs_lts_defs.ltsbm_add_def_raw 
-  rs_lts_defs.ltsbm_add_succs_def_raw 
-  rs_lts_defs.ltsbm_delete_def_raw 
-  rs_lts_defs.ltsbm_it_alt_def 
-  rs_lts_defs.ltsbm_filter_it_alt_def 
-  rs_lts_defs.ltsbm_succ_it_def_raw *)
   rs_lts_defs.ltsbm_succ_label_it_alt_def
-(*  rs_lts_defs.ltsbm_pre_it_alt_def 
-  rs_lts_defs.ltsbm_pre_label_it_alt_def 
-  rs_lts_defs.ltsbm_is_weak_det_def_raw 
-  ltsga_from_list_def_raw 
-  ltsga_to_list_def_raw 
-  ltsga_to_collect_list_def_raw 
-  ltsga_succ_ball_def_raw 
-  ltsga_succ_bex_def_raw 
-  ltsga_pre_ball_def_raw 
-  ltsga_pre_bex_def_raw 
-  ltsga_reverse_def_raw  
-  ltsga_image_filter_def_raw 
-  ltsga_image_def_raw 
-  ltsga_filter_def_raw 
-  iterate_to_list_def_raw o_def
-  iterate_ball_def_raw iterate_bex_def *)
 
 lemmas rs_lts_defs = 
   rs_lts_\<alpha>_def
@@ -322,12 +299,5 @@ definition "rs_lts_is_reachable \<equiv> rs_ltsr.is_reachable_impl"
 lemmas rs_lts_is_reachable_code[code] = 
       rs_ltsr.is_reachable_impl.simps [folded rs_lts_is_reachable_def rs_lts_defs, unfolded rs_lts_ops_unfold]
 declare rs_lts_is_reachable_def [symmetric, code_unfold]
-
-(*
-definition "rs_lts_is_reachable \<equiv> rs_ltsr.is_reachable_impl"
-lemmas rs_lts_is_reachable_code[code] = 
-      rs_ltsr.is_reachable_impl.simps [folded rs_lts_is_reachable_def rs_lts_defs, unfolded rs_lts_ops_unfold]
-declare rs_lts_is_reachable_def [symmetric, code_unfold]
-*)
 
 end

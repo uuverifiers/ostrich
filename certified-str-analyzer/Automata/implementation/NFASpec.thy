@@ -1389,48 +1389,6 @@ locale nfa_concat_rename_same = nfa_concat_rename \<alpha> invar \<alpha> invar 
 
   end
 
-  
-
- 
-(*
-  locale nfa_right_quotient_lists = n1: nfa \<alpha>1 invar1 + n2: nfa \<alpha>2 invar2    
-    for \<alpha>1 :: "('q1,'a,'nfa1) nfa_\<alpha>" and invar1 and
-        \<alpha>2 :: "('q2,'a,'nfa2) nfa_\<alpha>" and invar2 +
-    fixes right_quotient_lists :: "('a \<Rightarrow> bool) \<Rightarrow> 'nfa1 \<Rightarrow> 'nfa2"
-    assumes right_quotient_lists_correct_aux:
-      "invar1 n \<Longrightarrow> invar2 (right_quotient_lists AP n) \<and> 
-       NFA_isomorphic_wf (\<alpha>2 (right_quotient_lists AP n)) (NFA_right_quotient_lists (\<alpha>1 n) {a. AP a})"
-  begin
-    lemma right_quotient_lists_correct:
-      "invar1 n \<Longrightarrow> invar2 (right_quotient_lists AP n)"
-      "invar1 n \<Longrightarrow> NFA_isomorphic_wf (\<alpha>2 (right_quotient_lists AP n)) (NFA_right_quotient_lists (\<alpha>1 n) {a. AP a})"
-      using right_quotient_lists_correct_aux by (simp_all)
-
-    lemma right_quotient_lists_correct___isomorphic:
-      "invar1 n \<Longrightarrow> invar2 (right_quotient_lists AP n)"
-      "invar1 n \<Longrightarrow> NFA_isomorphic_wf (\<alpha>1 n) \<A> \<Longrightarrow> (AS \<inter> \<Sigma> \<A> = {a. AP a} \<inter>  \<Sigma> \<A>) \<Longrightarrow>
-       NFA_isomorphic_wf (\<alpha>2 (right_quotient_lists AP n)) (NFA_right_quotient_lists \<A> AS)"
-    proof -
-      assume invar: "invar1 n"
-      from right_quotient_lists_correct(1)[OF invar] 
-      show "invar2 (right_quotient_lists AP n)" by simp
-
-      assume iso: "NFA_isomorphic_wf (\<alpha>1 n) \<A>"
-      assume AS_eq: "(AS \<inter> \<Sigma> \<A> = {a. AP a} \<inter>  \<Sigma> \<A>)"
-
-      from right_quotient_lists_correct(2)[OF invar, of AP]
-           NFA_isomorphic_right_quotient [OF iso, of "lists {a. AP a}"]
-      have "NFA_isomorphic_wf (\<alpha>2 (right_quotient_lists AP n)) 
-                              (NFA_right_quotient_lists \<A> {a. AP a})" 
-        by (rule NFA_isomorphic_wf_trans)
- 
-      with NFA_right_quotient_lists_inter [of \<A> "{a. AP a}"]
-           NFA_right_quotient_lists_inter [of \<A> AS] AS_eq
-      show "NFA_isomorphic_wf (\<alpha>2 (right_quotient_lists AP n)) (NFA_right_quotient_lists \<A> AS)"
-        by simp
-    qed
-  end
-*)
 
   subsection \<open>  Record Based Interface \<close>
 
@@ -1440,93 +1398,26 @@ locale nfa_concat_rename_same = nfa_concat_rename \<alpha> invar \<alpha> invar 
     nfa_op_nfa_from_list_interval :: "('q,'a::linorder,'nfa) nfa_from_list_interval"
     nfa_op_bool_comb :: "(bool \<Rightarrow> bool \<Rightarrow> bool) \<Rightarrow> 'nfa \<Rightarrow> 'nfa \<Rightarrow> 'nfa"
     nfa_op_concate :: "'nfa \<Rightarrow> 'nfa \<Rightarrow> 'nfa"
- (*   nfa_op_nfa_from_list :: "('q,'a,'nfa) nfa_from_list" *)
- (*
-    nfa_op_dfa_from_list :: "('q,'a,'nfa) nfa_from_list"
-    nfa_op_to_list :: "('q,'a,'nfa) nfa_to_list"
-    nfa_op_states_no :: "'nfa \<Rightarrow> nat"
-    nfa_op_labels_no :: "'nfa \<Rightarrow> nat"
-    nfa_op_trans_no :: "'nfa \<Rightarrow> nat"
-    nfa_op_initial_no :: "'nfa \<Rightarrow> nat"
-    nfa_op_final_no :: "'nfa \<Rightarrow> nat"
-    nfa_op_accept :: "('q,'a,'nfa) nfa_accept"
-    nfa_op_is_deterministic :: "'nfa \<Rightarrow> bool"
-    nfa_op_rename_labels :: "('a,'a,'nfa,'nfa) nfa_rename_labels"
-    nfa_op_normalise :: "'nfa \<Rightarrow> 'nfa"
-    nfa_op_reverse :: "'nfa \<Rightarrow> 'nfa"
-    nfa_op_complement :: "'nfa \<Rightarrow> 'nfa"
-    
-    nfa_op_determinise :: "'nfa \<Rightarrow> 'nfa"
-    nfa_op_minimise_Brzozowski :: "'nfa \<Rightarrow> 'nfa" 
-    nfa_op_minimise_Hopcroft :: "'nfa \<Rightarrow> 'nfa" 
-    nfa_op_minimise_Hopcroft_NFA :: "'nfa \<Rightarrow> 'nfa" 
-    nfa_op_right_quotient_lists :: "('a \<Rightarrow> bool) \<Rightarrow> 'nfa \<Rightarrow> 'nfa"
-*)
 
   locale StdNFADefs =
     fixes ops :: "('q::{NFA_states},'a ::linorder ,'nfa) nfa_ops"
   begin
     abbreviation \<alpha> where "\<alpha> \<equiv> nfa_op_\<alpha> ops"
     abbreviation invar where "invar \<equiv> nfa_op_invar ops"
-(*  abbreviation nfa_from_list where "nfa_from_list \<equiv> nfa_op_nfa_from_list ops" *)
     abbreviation nfa_from_list_interval where "nfa_from_list_interval \<equiv> nfa_op_nfa_from_list_interval ops"
-(*    abbreviation dfa_from_list where "dfa_from_list \<equiv> nfa_op_dfa_from_list ops"
-    abbreviation to_list where "to_list \<equiv> nfa_op_to_list ops"
-    abbreviation accept where "accept \<equiv> nfa_op_accept ops"
-    abbreviation is_deterministic where "is_deterministic \<equiv> nfa_op_is_deterministic ops"
-    abbreviation rename_labels where "rename_labels \<equiv> nfa_op_rename_labels ops"
-    abbreviation normalise where "normalise \<equiv> nfa_op_normalise ops"
-    abbreviation reverse where "reverse \<equiv> nfa_op_reverse ops"
-    abbreviation complement where "complement \<equiv> nfa_op_complement ops"
-    abbreviation bool_comb where "bool_comb \<equiv> nfa_op_bool_comb ops"
-    abbreviation product where "product \<equiv> bool_comb (\<and>)"
-    abbreviation determinise where "determinise \<equiv> nfa_op_determinise ops"
-    abbreviation minimise_Brzozowski where "minimise_Brzozowski \<equiv> nfa_op_minimise_Brzozowski ops"
-    abbreviation minimise_Hopcroft where "minimise_Hopcroft \<equiv> nfa_op_minimise_Hopcroft ops"
-    abbreviation minimise_Hopcroft_NFA where "minimise_Hopcroft_NFA \<equiv> nfa_op_minimise_Hopcroft_NFA ops"
-    abbreviation right_quotient_lists where "right_quotient_lists \<equiv> nfa_op_right_quotient_lists ops"
-    abbreviation states_no where "states_no \<equiv> nfa_op_states_no ops"
-    abbreviation labels_no where "labels_no \<equiv> nfa_op_labels_no ops"
-    abbreviation trans_no where "trans_no \<equiv> nfa_op_trans_no ops"
-    abbreviation initial_no where "initial_no \<equiv> nfa_op_initial_no ops"
-    abbreviation final_no where "final_no \<equiv> nfa_op_final_no ops" *)
 end
 
 
 
   locale StdNFA = StdNFADefs +
     nfa \<alpha> invar +
-    (* nfa_from_list \<alpha> invar nfa_from_list + *)
     nfa_from_list_interval \<alpha> invar nfa_from_list_interval 
-(*
-    nfa_to_list \<alpha> invar to_list +
-    nfa_stats \<alpha> invar states_no trans_no initial_no final_no +
-    nfa_accept \<alpha> invar accept +
-    nfa_rename_labels \<alpha> invar \<alpha> invar rename_labels +
-    nfa_normalise \<alpha> invar normalise +
-    nfa_reverse \<alpha> invar \<alpha> invar reverse +
-    nfa_bool_comb_same \<alpha> invar bool_comb *)
   begin
   
-    lemmas correct = nfa_from_list_interval_correct (*to_list_correct
-                     stats_correct
-                     accept_correct  rename_labels_correct
-                     normalise_correct reverse_correct 
-                     bool_comb_correct 
-                     bool_comb_correct bool_comb_correct___same(2)
-                     *)
+    lemmas correct = nfa_from_list_interval_correct 
 
     lemmas correct_isomorphic = 
        nfa_from_list_interval_correct___isomorphic 
-       (*to_list_correct___isomorphic
-       stats_correct___isomorphic
-       accept_correct___isomorphic
-       rename_labels_correct___isomorphic
-       normalise_correct___isomorphic 
-       reverse_correct___isomorphic
-       bool_comb_correct___isomorphic
-       bool_comb_correct___same_isomorphic(2)
-       nfa_is_wellformed NFA_isomorphic_wf_refl
-       NFA_isomorphic_wf___NFA_normalise_states_cong *)
+  
   end
 end

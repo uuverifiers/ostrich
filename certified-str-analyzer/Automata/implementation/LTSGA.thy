@@ -277,133 +277,12 @@ term iterate_bex
     unfolding lts_filter_def lts_image_filter_def ltsga_filter_def
     by simp
 
-(*
-  lemma dltsga_image_filter_correct :
-    fixes \<alpha>1 :: "('V1,'W1,'L1) lts_\<alpha>"
-    fixes \<alpha>2 :: "('V2,'W2,'L2) lts_\<alpha>"
-    assumes "lts_empty \<alpha>2 invar2 e"
-    assumes "dlts_add \<alpha>2 invar2 a"
-    assumes "lts_filter_it \<alpha>1 invar1 it"
-    shows "dlts_image_filter \<alpha>1 invar1 \<alpha>2 invar2 (ltsga_image_filter e a it)"
-  proof
-    interpret 
-      lts_empty \<alpha>2 invar2 e + 
-      dlts_add \<alpha>2 invar2 a +
-      lts_filter_it \<alpha>1 invar1 it
-      by fact+
 
-    fix l P_v1 P_e P_v2 P and f :: "('V1 \<times> 'W1 \<times> 'V1) \<Rightarrow> ('V2 \<times> 'W2 \<times> 'V2)"
-    assume invar: "invar1 l"
-       and weak_det: "is_weak_det (f ` {(v1, e, v2). (v1, e, v2) \<in> \<alpha>1 l \<and> P_v1 v1 \<and> P_e e \<and> P_v2 v2 \<and> P (v1, e, v2)})"
-
-    def D \<equiv> "{(v1, e, v2). (v1, e, v2) \<in> \<alpha>1 l \<and> P_v1 v1 \<and> P_e e \<and> P_v2 v2 \<and> P (v1, e, v2)}"
-
-    interpret it: set_iterator_no_sel "(it P_v1 P_e P_v2 P l)" D 
-      using lts_filter_it_correct [of l P_v1 P_e P_v2 P, OF invar] unfolding D_def .
-
-    let ?I = "\<lambda>S \<sigma>. invar2 \<sigma> \<and> \<alpha>2 \<sigma> = f ` S" 
-
-    have "?I D (ltsga_image_filter e a it f P_v1 P_e P_v2 P l)"
-      unfolding ltsga_image_filter_def
-      apply (rule it.iterate_no_cond_sel_rule_insert_P [where I = "?I"])
-      apply (simp_all add: lts_empty_correct Let_def split: prod.splits)
-      apply clarify
-      apply (rename_tac S \<sigma> v1 w v2 v1' w' v2')
-      proof -
-        fix S \<sigma> v1 w v2 v1' w' v2'
-        assume "S \<subseteq> D" and in_D: "(v1, w, v2) \<in> D" and "(v1, w, v2) \<notin> S" and
-               invar: "invar2 \<sigma>" and \<alpha>2_\<sigma>: "\<alpha>2 \<sigma> = f ` S" and
-               f_eq: "f (v1, w, v2) = (v1', w', v2')"
-
-        { fix v'' 
-          assume "(v1', w', v'') \<in> \<alpha>2 \<sigma>" 
-          with \<alpha>2_\<sigma> `S \<subseteq> D` have "(v1', w', v'') \<in> f ` D" by auto
-          moreover
-            from in_D f_eq have "(v1', w', v2') \<in> f ` D" by (simp add: image_iff Bex_def) metis
-          ultimately have "v'' = v2'" 
-            using weak_det[folded D_def]
-            unfolding is_weak_det_def by metis
-        } note dist = this
-
-        from dlts_add_correct[OF invar, of v2' v1' w'] dist \<alpha>2_\<sigma>
-        show "invar2 (a v1' w' v2' \<sigma>) \<and> \<alpha>2 (a v1' w' v2' \<sigma>) = insert (v1', w', v2') (f ` S)" 
-          by metis
-      qed
-    
-    thus "invar2 (ltsga_image_filter e a it f P_v1 P_e P_v2 P l)"
-         "\<alpha>2 (ltsga_image_filter e a it f P_v1 P_e P_v2 P l) =
-          f ` {(v1, e, v2). (v1, e, v2) \<in> \<alpha>1 l \<and> P_v1 v1 \<and> P_e e \<and> P_v2 v2 \<and> P (v1, e, v2)}" 
-      by (simp_all add: D_def[symmetric])
-  qed
-
-  lemma dltsga_inj_image_filter_correct :
-    fixes \<alpha>1 :: "('V1,'W1,'L1) lts_\<alpha>"
-    fixes \<alpha>2 :: "('V2,'W2,'L2) lts_\<alpha>"
-    assumes e_OK: "lts_empty \<alpha>2 invar2 e"
-    assumes a_OK: "dlts_add \<alpha>2 invar2 a"
-    assumes it_OK: "lts_filter_it \<alpha>1 invar1 it"
-    assumes dlts: "dlts \<alpha>1 invar1"
-    shows "lts_inj_image_filter \<alpha>1 invar1 \<alpha>2 invar2 (ltsga_image_filter e a it)"
-  proof 
-    interpret 
-      dlts_image_filter \<alpha>1 invar1 \<alpha>2 invar2 "ltsga_image_filter e a it"
-      using dltsga_image_filter_correct [OF e_OK a_OK it_OK] .
-
-    fix l P_v1 P_e P_v2 P and f :: "('V1 \<times> 'W1 \<times> 'V1) \<Rightarrow> ('V2 \<times> 'W2 \<times> 'V2)"
-    assume invar: "invar1 l"
-       and f_inj_on: "lts_image_filter_inj_on f {(v1, e, v2). (v1, e, v2) \<in> \<alpha>1 l \<and> P_v1 v1 \<and> P_e e \<and> P_v2 v2 \<and> P (v1, e, v2)}"
-
-    def D \<equiv> "{(v1, e, v2). (v1, e, v2) \<in> \<alpha>1 l \<and> P_v1 v1 \<and> P_e e \<and> P_v2 v2 \<and> P (v1, e, v2)}"
-
-    have D_subset: "D \<subseteq> \<alpha>1 l" unfolding D_def by (simp add: subset_iff)
-    from dlts invar have weak_det: "is_weak_det (\<alpha>1 l)"
-      unfolding dlts_def by simp   
-
-    have weak_det': "is_weak_det (f ` D)"
-    proof 
-      fix v1 w1 v2 v3
-      assume v2_in: "(v1, w1, v2) \<in> f ` D" 
-      assume v3_in: "(v1, w1, v3) \<in> f ` D"
-
-      from v2_in obtain v1' w1' v2' where 
-         v2_in': "(v1', w1', v2') \<in> D" and f_v2: "f (v1', w1', v2') = (v1, w1, v2)" by auto
-      from v3_in obtain v1'' w1'' v3'' where 
-         v3_in': "(v1'', w1'', v3'') \<in> D" and f_v3: "f (v1'', w1'', v3'') = (v1, w1, v3)" by auto
-
-      from f_inj_on f_v3 f_v2 v2_in' v3_in' have v1''_eq[simp]: "v1'' = v1'"  and w1''_eq[simp]: "w1'' = w1'"
-        unfolding lts_image_filter_inj_on_def_raw D_def[symmetric]
-        by (simp_all add: Bex_def Ball_def)
-
-      with weak_det D_subset v2_in' v3_in' have v3''_eq[simp]: "v3'' = v2'"
-        unfolding is_weak_det_def by (simp add: subset_iff) metis
- 
-      from f_v2 f_v3 show "v2 = v3" by simp
-    qed
-
-    from dlts_image_filter_correct [OF invar, of f P_v1 P_e P_v2 P, folded D_def, OF weak_det']
-    show "invar2 (ltsga_image_filter e a it f P_v1 P_e P_v2 P l)"
-         "\<alpha>2 (ltsga_image_filter e a it f P_v1 P_e P_v2 P l) =
-          f ` {(v1, e, v2). (v1, e, v2) \<in> \<alpha>1 l \<and> P_v1 v1 \<and> P_e e \<and> P_v2 v2 \<and> P (v1, e, v2)}" 
-      by (simp_all add: D_def[symmetric])
-  qed
-*)
 
   lemma lts_image_filter_inj_on_id:
     "lts_image_filter_inj_on id S"
     unfolding lts_image_filter_inj_on_def by auto
 
-(*
-  lemma dltsga_filter_correct :
-    fixes \<alpha> :: "('V,'W,'L) lts_\<alpha>"
-    assumes e_OK: "lts_empty \<alpha> invar e"
-    assumes a_OK: "dlts_add \<alpha> invar a"
-    assumes it_OK: "lts_filter_it \<alpha> invar it"
-    assumes dlts: "dlts \<alpha> invar"
-    shows "lts_filter \<alpha> invar (ltsga_filter e a it)"
-    using dltsga_inj_image_filter_correct [OF e_OK a_OK it_OK dlts]
-    unfolding lts_filter_def lts_inj_image_filter_def ltsga_filter_def
-    by (simp add: lts_image_filter_inj_on_id)
-*)
 
   definition ltsga_image where
     "ltsga_image imf f = imf f (\<lambda>_. True) (\<lambda>_. True) (\<lambda>_. True) (\<lambda>_. True)"
@@ -413,12 +292,7 @@ term iterate_bex
      lts_image \<alpha>1 invar1 \<alpha>2 invar2 (ltsga_image imf)"
   unfolding lts_image_filter_def lts_image_def ltsga_image_def by simp
 
-(*
-  lemma dltsga_image_correct :
-    "dlts_image_filter \<alpha>1 invar1 \<alpha>2 invar2 imf \<Longrightarrow>
-     dlts_image \<alpha>1 invar1 \<alpha>2 invar2 (ltsga_image imf)"
-  unfolding dlts_image_filter_def dlts_image_def ltsga_image_def by simp    
-*)
+
 
 type_synonym
   ('s,'a,'\<sigma>) iteratori = "'s \<Rightarrow> ('a,'\<sigma>) set_iterator"

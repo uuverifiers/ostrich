@@ -387,42 +387,6 @@ lemma list_set_eq : "\<And> l a. finite a \<longrightarrow> (l = set (SOME l. se
 lemma S_S: "S = {q. q \<in>S}"
   by auto
 
-(*
-lemma NFA_construct_exists :
-fixes \<A> :: "('q, 'a::linorder) NFA_rec"
-assumes wf_A: "NFA \<A>" and
-    finite_\<Delta>: "finite (\<Delta> \<A>)"
-  shows "\<exists> Q D I F. 
-   NFA_construct_interval (Q, D, I, F) = \<A> "
-proof -
-  interpret NFA_A: NFA \<A> by (fact wf_A)
-
-  from finite_list[OF NFA_A.finite_\<Q>] guess Q .. note set_Q = this 
-  from finite_list[OF NFA_A.finite_\<I>] guess I .. note set_I = this 
-  from finite_list[OF NFA_A.finite_\<F>] guess F .. note set_F = this 
-  from finite_list[OF finite_\<Delta>] guess DD .. note set_DD = this
-
-  
-  let ?D = "map (\<lambda>qaq. (fst qaq, set_to_list (fst (snd qaq)), snd (snd qaq))) DD"
-
-  have "\<A> = NFA_construct (Q, ?D, I, F)"
-    apply (rule NFA_rec.equality)
-    apply (simp_all add: NFA_construct_alt_def set_Q set_I set_F set_DD o_def)
-        apply (insert NFA_A.\<Delta>_consistent NFA_A.\<I>_consistent NFA_A.\<F>_consistent) []
-        apply auto[]
-      apply (insert NFA_A.\<Delta>_consistent) []
-     apply auto []
-    apply (metis finite_\<Delta> infinite_super set_set_to_list subset_eq set_to_list_def)
-    apply (auto simp add: 
-         image_iff Bex_def ex_simps[symmetric] set_to_list_def some_eq_ex  S_S)
-     apply (metis NFA_A.\<Delta>_consistent NFA_A.finite_\<Sigma> 
-          infinite_super set_set_to_list set_to_list_def)
-    by (metis NFA_A.\<Delta>_consistent NFA_A.finite_\<Sigma> infinite_super set_set_to_list set_to_list_def)
-  thus ?thesis by blast
-qed
-
-*)
-
 
 subsection \<open> Removing states \<close>
   

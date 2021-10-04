@@ -3,7 +3,23 @@
 
 OSTRICH is an SMT solver for string constraints.
 
-For the [POPL 2019 version](https://dblp.uni-trier.de/rec/journals/pacmpl/ChenHLRW19.html?view=bibtex), please use the popl2019 branch.
+
+## CertiStr: Certified String Analyzer
+
+CertiStr (in certified-string-analyzer) certified backend for string constraint solving.
+It uses OSTRICH front-end to parse SMT files.
+
+
+## Running CertiStr
+
+1. install OSTRICH by ``sbt assembly``
+
+2. in the folder: certified-str-analyzer/code/forward_analysis,
+    run ``make`` to generate executable ''forward_analysis'' file.
+	and add the file ''forward_analysis" to your PATH.
+	
+3. you can run any test by the command ``CertiStr `` + inputfile.
+    For example, ``./CertiStr tests/loop.smt2``
 
 ## Using Ostrich
 
