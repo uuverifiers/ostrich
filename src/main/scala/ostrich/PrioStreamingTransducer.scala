@@ -254,6 +254,7 @@ extends StreamingTransducer {
 
     type Trace = Seq[Set[(aut.State,aut.State)]]
     val preBuilder = aut.getBuilder
+    preBuilder.setMinimize(false)
 
     // just a cast:
     val internal2 =
@@ -466,6 +467,7 @@ extends StreamingTransducer {
 
           // the prefix group of epsilon transitions
           for ((ops, priority, nextState) <- pre; if !etrans.contains((ts, nextState))) {
+            ap.util.Timeout.check
             val newTrace = getNewTrace(tr, ops, (o) => defaultTrace)
             val newBlocked = blocked ++ epsClosure(
               (for ((_, priority2, s) <- pre.iterator;
