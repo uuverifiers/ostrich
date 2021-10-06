@@ -146,6 +146,8 @@ extends StreamingTransducer {
     // push configurations to stack by priority,
     // configuration with highest priority is pushed last thus processed first
     while (!worklist.isEmpty) {
+      ap.util.Timeout.check
+
       val (s, pos, blocked, values) = worklist.pop
 
       if (pos >= input.size && isAccept(s))
