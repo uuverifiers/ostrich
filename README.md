@@ -20,6 +20,11 @@ It uses OSTRICH front-end to parse SMT files.
 	
 3. you can run any test by the command ``CertiStr `` + inputfile.
     For example, ``./CertiStr tests/loop.smt2``
+    
+## Benchmark of CertiStr
+
+The benchmark is in the folder certified-str-analyzer/code/forward_analysis/benchmark.
+It contains the tests of the format after the parsing of the front-end.
 
 ## Using Ostrich
 
