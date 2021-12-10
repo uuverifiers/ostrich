@@ -296,12 +296,24 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case (t, _) =>
       // TODO: generalise
       (t update subres) match {
+        case Geq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound < 0 =>
+          false
         case Geq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound <= 1000 =>
           // encode an upper bound using a regular expression
           str_in_re(w, re_loop(0, bound, re_allchar()))
         case Geq(IFunApp(`str_len`, Seq(w)), Const(bound)) if bound <= 1000 =>
           // encode a lower bound using a regular expression
           str_in_re(w, re_++(re_loop(bound, bound, re_allchar()), re_all()))
+        case Eq(IFunApp(`str_len`, Seq(w)), Const(bound)) if bound < 0 =>
+          false
+        case Eq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound < 0 =>
+          false
+        case Eq(IFunApp(`str_len`, Seq(w)), Const(bound)) if bound <= 1000 =>
+          // encode length constraint using regular expression
+          str_in_re(w, re_loop(bound, bound, re_allchar()))
+        case Eq(Const(bound), IFunApp(`str_len`, Seq(w))) if bound <= 1000 =>
+          // encode length constraint using regular expression
+          str_in_re(w, re_loop(bound, bound, re_allchar()))
         case newT =>
           newT
       }
