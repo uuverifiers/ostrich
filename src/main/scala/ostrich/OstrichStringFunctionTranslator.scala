@@ -60,13 +60,6 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       case _ : theory.IllegalRegexException => None
     }
 
-  private def regexAsTerm(t : Term) : Option[ITerm] =
-    try {
-      Some(regexExtractor regexAsTerm t)
-    } catch {
-      case _ : theory.IllegalRegexException => None
-    }
-
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
                     str_replacere, str_replaceallre,
