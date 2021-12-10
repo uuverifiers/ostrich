@@ -211,6 +211,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
     private def dropAssertions(t : ITerm,
                                negative : Boolean = false) : ITerm = t match {
+/*
       case IFunApp(`re_begin_anchor`, _) => {
         Console.err.println("Warning: ignoring anchor ^")
         if (negative) NONE else EPS
@@ -219,6 +220,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
         Console.err.println("Warning: ignoring anchor $")
         if (negative) NONE else EPS
       }
+ */
       case IFunApp(LookAhead, _) => {
         Console.err.println("Warning: ignoring look-ahead")
         if (negative) NONE else EPS
