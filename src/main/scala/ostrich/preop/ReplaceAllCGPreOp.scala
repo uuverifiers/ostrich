@@ -32,7 +32,7 @@
 
 package ostrich.preop
 
-import ostrich.automata.{Regex2PFA, PrioStreamingTransducer, PFA,
+import ostrich.automata.{Regex2PFA, PrioStreamingTransducer, PrioAutomaton,
                          StreamingTransducer, TLabelOps, AnchoredLabels}
 import StreamingTransducer._
 import AnchoredLabels._
@@ -64,8 +64,8 @@ object ReplaceAllCGPreOp {
     val builder = PrioStreamingTransducer.getBuilder(numCap + 1)
 
     type tranState = PrioStreamingTransducer#State
-    type autState = PFA.State
-    type TLabel = PFA.TLabel
+    type autState = PrioAutomaton.State
+    type TLabel = PrioAutomaton.TLabel
     val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
 
     // some common update operations

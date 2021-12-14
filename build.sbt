@@ -4,6 +4,7 @@ lazy val commonSettings = Seq(
   version := "1.0",
   scalaVersion := "2.11.12",
   crossScalaVersions := Seq("2.11.12", "2.12.10"),
+  maxErrors := 5,
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) ),
   scalacOptions += "-deprecation",
   resolvers += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),

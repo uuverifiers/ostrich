@@ -55,7 +55,7 @@ import scala.collection.mutable.{HashMap => MHashMap,
 
 import java.lang.StringBuilder
 
-object PFA {
+object PrioAutomaton {
   type State = BricsAutomaton#State
   type TLabel = AnchoredLabel
   val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
@@ -75,11 +75,12 @@ object PFA {
 // 2. no input transition into `initial`
 // 3. no transition going out of any accepting state
 // The construction method is manifold, depending on the PFA builder chosen
-case class PFA(val sTran: MMap[PFA.State, Seq[PFA.SigmaTransition]],
-  val preTran: MMap[PFA.State, Seq[PFA.ETransition]],
-  val postTran: MMap[PFA.State, Seq[PFA.ETransition]],
-  val initial: PFA.State,
-  val accepting: (MSet[PFA.State], MSet[PFA.State]))
+case class PrioAutomaton(
+  val sTran: MMap[PrioAutomaton.State, Seq[PrioAutomaton.SigmaTransition]],
+  val preTran: MMap[PrioAutomaton.State, Seq[PrioAutomaton.ETransition]],
+  val postTran: MMap[PrioAutomaton.State, Seq[PrioAutomaton.ETransition]],
+  val initial: PrioAutomaton.State,
+  val accepting: (MSet[PrioAutomaton.State], MSet[PrioAutomaton.State]))
 {
     def toDot() : String = {
       val sb = new StringBuilder()
@@ -127,18 +128,18 @@ case class PFA(val sTran: MMap[PFA.State, Seq[PFA.SigmaTransition]],
 
 // A PFA builder constructs PFA based on regular expression structure
 // following *certain* semantics of regex.
-abstract class PFABuilder {
+abstract class PrioAutomatonBuilder {
 
-  type State = PFA.State
-  type TLabel = PFA.TLabel
-  val LabelOps : TLabelOps[TLabel] = PFA.LabelOps
-  type SigmaTransition = PFA.SigmaTransition
-  type ETransition = PFA.ETransition
+  type State = PrioAutomaton.State
+  type TLabel = PrioAutomaton.TLabel
+  val LabelOps : TLabelOps[TLabel] = PrioAutomaton.LabelOps
+  type SigmaTransition = PrioAutomaton.SigmaTransition
+  type ETransition = PrioAutomaton.ETransition
 
-  def none() : PFA
-  def epsilon() : PFA
-  def single(lbl : TLabel) : PFA
-  def constant(str: String) : PFA = {
+  def none() : PrioAutomaton
+  def epsilon() : PrioAutomaton
+  def single(lbl : TLabel) : PrioAutomaton
+  def constant(str: String) : PrioAutomaton = {
     if (str.isEmpty) {
       epsilon
     } else {
@@ -149,19 +150,19 @@ abstract class PFABuilder {
     }
   }
 
-  def alternate(aut1 : PFA, aut2 : PFA) : PFA
-  def concat(aut1 : PFA, aut2 : PFA) : PFA
+  def alternate(aut1 : PrioAutomaton, aut2 : PrioAutomaton) : PrioAutomaton
+  def concat(aut1 : PrioAutomaton, aut2 : PrioAutomaton) : PrioAutomaton
 
-  def star(aut : PFA) : PFA
-  def lazystar(aut : PFA) : PFA
-  def plus(aut : PFA) : PFA
-  def lazyplus(aut : PFA) : PFA
+  def star(aut : PrioAutomaton) : PrioAutomaton
+  def lazystar(aut : PrioAutomaton) : PrioAutomaton
+  def plus(aut : PrioAutomaton) : PrioAutomaton
+  def lazyplus(aut : PrioAutomaton) : PrioAutomaton
 
-  def optional(aut : PFA) : PFA
-  def lazyoptional(aut : PFA) : PFA
+  def optional(aut : PrioAutomaton) : PrioAutomaton
+  def lazyoptional(aut : PrioAutomaton) : PrioAutomaton
 
-  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
-  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA
+  def loop(autA : PrioAutomaton, n1 : IdealInt, n2 : IdealInt) : PrioAutomaton
+  def lazyloop(autA : PrioAutomaton, n1 : IdealInt, n2 : IdealInt) : PrioAutomaton
 
   // return a deep copy of `base` and update the Regex2PFA database
   // which means
@@ -169,12 +170,12 @@ abstract class PFABuilder {
   // then the copyed state s' should be related to i too
   // 2) if state s is an initial state of some automaton corresponding
   // to capture group i, so is the copyed state s'
-  def duplicate(base : PFA) : PFA = {
+  def duplicate(base : PrioAutomaton) : PrioAutomaton = {
     import Regex2PFA.{capState, stateCap, capInit}
-    import PFA.getNewState
+    import PrioAutomaton.getNewState
 
     base match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (f1, f2)) => {
 
         // map from base.state to copy.state
         val sMap = new MHashMap[State, State]
@@ -242,31 +243,31 @@ abstract class PFABuilder {
         }
         val newend = (f1, f2)
 
-        PFA(newtrans, newpre, newpost, newinit, (newf1, newf2))
+        PrioAutomaton(newtrans, newpre, newpost, newinit, (newf1, newf2))
       }
     }
   }
 
 }
 
-class PythonPFABuilder extends PFABuilder {
+class PythonPrioAutomatonBuilder extends PrioAutomatonBuilder {
   // In python mode, we don't use the second component
   // of the accepted states because we don't differentiate these two types of acceptance condition
   // thus, **all accepting states are in F1**
   private val F2_dummy = new MHashSet[State]
 
-  import PFA.getNewState
+  import PrioAutomaton.getNewState
 
-  def none() : PFA = {
+  def none() : PrioAutomaton = {
       val init = getNewState
       val end = (new MHashSet[State], F2_dummy)
       val trans = new MHashMap[State, Seq[SigmaTransition]]
       val pre = new MHashMap[State, Seq[ETransition]]
       val post = new MHashMap[State, Seq[ETransition]]
-      PFA(trans, pre, post, init, end)
+      PrioAutomaton(trans, pre, post, init, end)
   }
 
-  def epsilon() : PFA = {
+  def epsilon() : PrioAutomaton = {
       val init = getNewState
       val F1 = new MHashSet[State]
       val newaccepting = getNewState
@@ -276,10 +277,10 @@ class PythonPFABuilder extends PFABuilder {
       val pre = new MHashMap[State, Seq[ETransition]]
       pre += ((init, Seq(newaccepting)))
       val post = new MHashMap[State, Seq[ETransition]]
-      PFA(trans, pre, post, init, end)
+      PrioAutomaton(trans, pre, post, init, end)
   }
 
-  def single(lbl : TLabel) : PFA = {
+  def single(lbl : TLabel) : PrioAutomaton = {
     if (LabelOps isNonEmptyLabel lbl) {
       val init = getNewState
       val intermediate = getNewState
@@ -292,23 +293,23 @@ class PythonPFABuilder extends PFABuilder {
       val pre = new MHashMap[State, Seq[ETransition]]
       pre += ((init, Seq(intermediate)))
       val post = new MHashMap[State, Seq[ETransition]]
-      PFA(trans, pre, post, init, end)
+      PrioAutomaton(trans, pre, post, init, end)
     } else {
       none
     }
   }
 
-  def optional(aut : PFA) : PFA = {
+  def optional(aut : PrioAutomaton) : PrioAutomaton = {
     alternate(aut, epsilon)
   }
 
-  def lazyoptional(aut : PFA) : PFA = {
+  def lazyoptional(aut : PrioAutomaton) : PrioAutomaton = {
     alternate(epsilon, aut)
   }
 
-  def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
+  def alternate(aut1 : PrioAutomaton, aut2 : PrioAutomaton) : PrioAutomaton = {
     (aut1, aut2) match {
-      case (PFA(t1, pre1, post1, init1, (f1_1, _)), PFA(t2, pre2, post2, init2, (f1_2, _))) => {
+      case (PrioAutomaton(t1, pre1, post1, init1, (f1_1, _)), PrioAutomaton(t2, pre2, post2, init2, (f1_2, _))) => {
         val init = getNewState
         val f1 = f1_1 ++ f1_2
         val trans = t1 ++ t2
@@ -316,14 +317,14 @@ class PythonPFABuilder extends PFABuilder {
         pre += ((init, Seq(init1, init2)))
         val post = post1 ++ post2
 
-        PFA(trans, pre, post, init, (f1, F2_dummy))
+        PrioAutomaton(trans, pre, post, init, (f1, F2_dummy))
       }
     }
   }
 
-  def concat(aut1 : PFA, aut2 : PFA) : PFA = {
+  def concat(aut1 : PrioAutomaton, aut2 : PrioAutomaton) : PrioAutomaton = {
     (aut1, aut2) match {
-      case (PFA(t1, pre1, post1, init1, (end1, _)), PFA(t2, pre2, post2, init2, (end2, _))) => {
+      case (PrioAutomaton(t1, pre1, post1, init1, (end1, _)), PrioAutomaton(t2, pre2, post2, init2, (end2, _))) => {
         val trans = t1 ++ t2
         val pre = pre1 ++ pre2
         for (s <- end1) {
@@ -331,14 +332,14 @@ class PythonPFABuilder extends PFABuilder {
         }
         val post = post1 ++ post2
 
-        PFA(trans, pre, post, init1, (end2, F2_dummy))
+        PrioAutomaton(trans, pre, post, init1, (end2, F2_dummy))
       }
     }
   }
 
-  def star(aut : PFA) : PFA = {
+  def star(aut : PrioAutomaton) : PrioAutomaton = {
     aut match {
-      case PFA(t1, pre1, post1, init1, (end1, _)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (end1, _)) => {
         val init = getNewState
         val end = getNewState
         for (s <- end1) {
@@ -349,14 +350,14 @@ class PythonPFABuilder extends PFABuilder {
         val f1 = new MHashSet[State]
         f1 += end
 
-        PFA(t1, pre1, post1, init, (f1, F2_dummy))
+        PrioAutomaton(t1, pre1, post1, init, (f1, F2_dummy))
       }
     }
   }
 
-  def lazystar(aut : PFA) : PFA = {
+  def lazystar(aut : PrioAutomaton) : PrioAutomaton = {
     aut match {
-      case PFA(t1, pre1, post1, init1, (end1, _)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (end1, _)) => {
         val init = getNewState
         val end = getNewState
         for (s <- end1) {
@@ -367,14 +368,14 @@ class PythonPFABuilder extends PFABuilder {
         val f1 = new MHashSet[State]
         f1 += end
 
-        PFA(t1, pre1, post1, init, (f1, F2_dummy))
+        PrioAutomaton(t1, pre1, post1, init, (f1, F2_dummy))
       }
     }
   }
 
-  def plus(aut : PFA) : PFA = {
+  def plus(aut : PrioAutomaton) : PrioAutomaton = {
     aut match {
-      case PFA(t1, pre1, post1, init1, (end1, _)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (end1, _)) => {
         val end = getNewState
         val init = getNewState
         pre1 += ((init, Seq(init1)))
@@ -384,14 +385,14 @@ class PythonPFABuilder extends PFABuilder {
         val f1 = new MHashSet[State]
         f1 += end
 
-        PFA(t1, pre1, post1, init, (f1, F2_dummy))
+        PrioAutomaton(t1, pre1, post1, init, (f1, F2_dummy))
       }
     }
   }
 
-  def lazyplus(aut : PFA) : PFA = {
+  def lazyplus(aut : PrioAutomaton) : PrioAutomaton = {
     aut match {
-      case PFA(t1, pre1, post1, init1, (end1, _)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (end1, _)) => {
         val end = getNewState
         for (s <- end1) {
           pre1.+=((s, Seq(end, init1)))
@@ -399,12 +400,12 @@ class PythonPFABuilder extends PFABuilder {
         val f1 = new MHashSet[State]
         f1 += end
 
-        PFA(t1, pre1, post1, init1, (f1, F2_dummy))
+        PrioAutomaton(t1, pre1, post1, init1, (f1, F2_dummy))
       }
     }
   }
 
-  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+  def loop(autA : PrioAutomaton, n1 : IdealInt, n2 : IdealInt) : PrioAutomaton = {
     // too inefficient
     // maybe there's some other way
     var aut = none
@@ -423,7 +424,7 @@ class PythonPFABuilder extends PFABuilder {
     aut
   }
 
-  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+  def lazyloop(autA : PrioAutomaton, n1 : IdealInt, n2 : IdealInt) : PrioAutomaton = {
     var aut = none
     var i = n1
     while (i <= n2) {
@@ -442,24 +443,24 @@ class PythonPFABuilder extends PFABuilder {
 
 }
 
-class JavascriptPFABuilder extends PFABuilder {
+class JavascriptPrioAutomatonBuilder extends PrioAutomatonBuilder {
   // In js mode, we use the first component F1 (res. F2) to denote accepting
   // states which only accepts empty (res. nonempty) traces.
   // to approximate the js semantics as precisely as possible,
   // we need to duplicate automaton at times
 
-  import PFA.getNewState
+  import PrioAutomaton.getNewState
 
-  def none() : PFA = {
+  def none() : PrioAutomaton = {
       val init = getNewState
       val end = (new MHashSet[State], new MHashSet[State])
       val trans = new MHashMap[State, Seq[SigmaTransition]]
       val pre = new MHashMap[State, Seq[ETransition]]
       val post = new MHashMap[State, Seq[ETransition]]
-      PFA(trans, pre, post, init, end)
+      PrioAutomaton(trans, pre, post, init, end)
   }
 
-  def epsilon() : PFA = {
+  def epsilon() : PrioAutomaton = {
       val init = getNewState
       val F1 = new MHashSet[State]
       val newaccepting = getNewState
@@ -470,10 +471,10 @@ class JavascriptPFABuilder extends PFABuilder {
       val pre = new MHashMap[State, Seq[ETransition]]
       pre += ((init, Seq(newaccepting)))
       val post = new MHashMap[State, Seq[ETransition]]
-      PFA(trans, pre, post, init, end)
+      PrioAutomaton(trans, pre, post, init, end)
   }
 
-  def single(lbl : TLabel) : PFA = {
+  def single(lbl : TLabel) : PrioAutomaton = {
     if (LabelOps isNonEmptyLabel lbl) {
       val init = getNewState
       val intermediate = getNewState
@@ -487,15 +488,15 @@ class JavascriptPFABuilder extends PFABuilder {
       val pre = new MHashMap[State, Seq[ETransition]]
       pre += ((init, Seq(intermediate)))
       val post = new MHashMap[State, Seq[ETransition]]
-      PFA(trans, pre, post, init, end)
+      PrioAutomaton(trans, pre, post, init, end)
     } else {
       none
     }
   }
 
-  def alternate(aut1 : PFA, aut2 : PFA) : PFA = {
+  def alternate(aut1 : PrioAutomaton, aut2 : PrioAutomaton) : PrioAutomaton = {
     (aut1, aut2) match {
-      case (PFA(t1, pre1, post1, init1, (f1_1, f2_1)), PFA(t2, pre2, post2, init2, (f1_2, f2_2))) => {
+      case (PrioAutomaton(t1, pre1, post1, init1, (f1_1, f2_1)), PrioAutomaton(t2, pre2, post2, init2, (f1_2, f2_2))) => {
         val init = getNewState
         val f1 = f1_1 ++ f1_2
         val f2 = f2_1 ++ f2_2
@@ -504,15 +505,15 @@ class JavascriptPFABuilder extends PFABuilder {
         pre += ((init, Seq(init1, init2)))
         val post = post1 ++ post2
 
-        PFA(trans, pre, post, init, (f1, f2))
+        PrioAutomaton(trans, pre, post, init, (f1, f2))
       }
     }
   }
 
-  def concat(aut1 : PFA, aut2 : PFA) : PFA = {
+  def concat(aut1 : PrioAutomaton, aut2 : PrioAutomaton) : PrioAutomaton = {
     (aut1, aut2) match {
-      case (PFA(t1, pre1, post1, init1, (f1_1, f2_1)),
-        PFA(t2, pre2, post2, init2, (f1_2, f2_2))) => {
+      case (PrioAutomaton(t1, pre1, post1, init1, (f1_1, f2_1)),
+        PrioAutomaton(t2, pre2, post2, init2, (f1_2, f2_2))) => {
           // for performance, we only copy aut2 when both aut1 and aut2 accept
           // empty string.
           if (f1_1.isEmpty || f1_2.isEmpty) {
@@ -530,13 +531,13 @@ class JavascriptPFABuilder extends PFABuilder {
             val f1 = new MHashSet[State]
             val f2 = f1_2 ++ f2_2
 
-            PFA(trans, pre, post, init1, (f1, f2))
+            PrioAutomaton(trans, pre, post, init1, (f1, f2))
           } else {
             // the hard part
             // first make a copy of aut2
             val aut2copy = duplicate(aut2)
             aut2copy match {
-              case PFA(t2copy, pre2copy, post2copy, init2copy, (f1_2copy, f2_2copy)) => {
+              case PrioAutomaton(t2copy, pre2copy, post2copy, init2copy, (f1_2copy, f2_2copy)) => {
                 val trans = t1 ++ t2 ++ t2copy
                 val pre = pre1 ++ pre2 ++ pre2copy
                 // empty trace from aut1 continues in aut2
@@ -551,7 +552,7 @@ class JavascriptPFABuilder extends PFABuilder {
                 val f1 = f1_2
                 val f2 = f2_2 ++ f1_2copy ++ f2_2copy
 
-                PFA(trans, pre, post, init1, (f1, f2))
+                PrioAutomaton(trans, pre, post, init1, (f1, f2))
             }
           }
         }
@@ -559,21 +560,21 @@ class JavascriptPFABuilder extends PFABuilder {
     }
   }
 
-  def optional(aut : PFA) : PFA = {
+  def optional(aut : PrioAutomaton) : PrioAutomaton = {
     // NOTE: in ECMA, e? requires that e does not match empty string
     // so here we remove the field F1 from aut
     aut.accepting._1.clear
     alternate(aut, epsilon)
   }
 
-  def lazyoptional(aut : PFA) : PFA = {
+  def lazyoptional(aut : PrioAutomaton) : PrioAutomaton = {
     aut.accepting._1.clear
     alternate(epsilon, aut)
   }
 
-  def star(aut : PFA) : PFA = {
+  def star(aut : PrioAutomaton) : PrioAutomaton = {
     aut match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (f1, f2)) => {
         val init = getNewState
         val end_empty = getNewState
         val end_nonempty = getNewState
@@ -592,14 +593,14 @@ class JavascriptPFABuilder extends PFABuilder {
         val newf2 = new MHashSet[State]
         newf2 += end_nonempty
 
-        PFA(t1, pre1, post1, init, (newf1, newf2))
+        PrioAutomaton(t1, pre1, post1, init, (newf1, newf2))
       }
     }
   }
 
-  def lazystar(aut : PFA) : PFA = {
+  def lazystar(aut : PrioAutomaton) : PrioAutomaton = {
     aut match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (f1, f2)) => {
         val init = getNewState
         val end_empty = getNewState
         val end_nonempty = getNewState
@@ -618,12 +619,12 @@ class JavascriptPFABuilder extends PFABuilder {
         val newf2 = new MHashSet[State]
         newf2 += end_nonempty
 
-        PFA(t1, pre1, post1, init, (newf1, newf2))
+        PrioAutomaton(t1, pre1, post1, init, (newf1, newf2))
       }
     }
   }
 
-  def plus(aut : PFA) : PFA = {
+  def plus(aut : PrioAutomaton) : PrioAutomaton = {
     // aut will be modified during recursion
     // so we must make a copy here
     val autcopy = duplicate(aut)
@@ -631,13 +632,13 @@ class JavascriptPFABuilder extends PFABuilder {
     concat(autcopy, staraut)
   }
 
-  def lazyplus(aut : PFA) : PFA = {
+  def lazyplus(aut : PrioAutomaton) : PrioAutomaton = {
     val autcopy = duplicate(aut)
     val staraut = lazystar(aut)
     concat(autcopy, staraut)
   }
 
-  def loop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+  def loop(autA : PrioAutomaton, n1 : IdealInt, n2 : IdealInt) : PrioAutomaton = {
     var current = epsilon
     // firstly, we should match `n1` times,
     // that is, concat autA n1 times
@@ -661,9 +662,9 @@ class JavascriptPFABuilder extends PFABuilder {
     // (standing for empty string) of autA
     // and get autANonEmpty:
     val autANonEmpty = autA match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (f1, f2)) => {
         val f1new = new MHashSet[State]
-        PFA(t1, pre1, post1, init1, (f1new, f2))
+        PrioAutomaton(t1, pre1, post1, init1, (f1new, f2))
       }
     }
 
@@ -680,7 +681,7 @@ class JavascriptPFABuilder extends PFABuilder {
     }
 
     val res = current match {
-      case PFA(t1, pre1, post1, init1, (_, _)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (_, _)) => {
         // form the final automaton by
         // creating two final states and add transitions
         val newf1 = new MHashSet[State]
@@ -701,14 +702,14 @@ class JavascriptPFABuilder extends PFABuilder {
           newf2 += f2
         }
 
-        PFA(t1, pre1, post1, init1, (newf1, newf2))
+        PrioAutomaton(t1, pre1, post1, init1, (newf1, newf2))
       }
     }
 
     res
   }
 
-  def lazyloop(autA : PFA, n1 : IdealInt, n2 : IdealInt) : PFA = {
+  def lazyloop(autA : PrioAutomaton, n1 : IdealInt, n2 : IdealInt) : PrioAutomaton = {
     var current = epsilon
     var i = 1
     while (i <= n1) {
@@ -722,9 +723,9 @@ class JavascriptPFABuilder extends PFABuilder {
     current_f2 ++= current.accepting._2
 
     val autANonEmpty = autA match {
-      case PFA(t1, pre1, post1, init1, (f1, f2)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (f1, f2)) => {
         val f1new = new MHashSet[State]
-        PFA(t1, pre1, post1, init1, (f1new, f2))
+        PrioAutomaton(t1, pre1, post1, init1, (f1new, f2))
       }
     }
 
@@ -740,7 +741,7 @@ class JavascriptPFABuilder extends PFABuilder {
     }
 
     val res = current match {
-      case PFA(t1, pre1, post1, init1, (_, _)) => {
+      case PrioAutomaton(t1, pre1, post1, init1, (_, _)) => {
         val newf1 = new MHashSet[State]
         if (!current_f1.isEmpty) {
           val f1 = getNewState
@@ -761,7 +762,7 @@ class JavascriptPFABuilder extends PFABuilder {
           newf2 += f2
         }
 
-        PFA(t1, pre1, post1, init1, (newf1, newf2))
+        PrioAutomaton(t1, pre1, post1, init1, (newf1, newf2))
       }
     }
 
@@ -770,15 +771,15 @@ class JavascriptPFABuilder extends PFABuilder {
 }
 
 object Regex2PFA {
-  type State = PFA.State
-  type TLabel = PFA.TLabel
-  val LabelOps : TLabelOps[TLabel] = PFA.LabelOps
+  type State = PrioAutomaton.State
+  type TLabel = PrioAutomaton.TLabel
+  val LabelOps : TLabelOps[TLabel] = PrioAutomaton.LabelOps
 
   // the automaton,
   // number of capture groups,
   // map from state to the capture groups it's in,
   // map from capture group to initial states of its PFA counterpart
-  type completeInfo = (PFA, Int, Map[State, Set[Int]], Map[Int, Set[State]])
+  type completeInfo = (PrioAutomaton, Int, Map[State, Set[Int]], Map[Int, Set[State]])
 
   def printInfo(info : completeInfo) = {
     val (aut, numCap, state2Caps, cap2Init) = info
@@ -808,7 +809,7 @@ object Regex2PFA {
     with MMultiMap[Int, State]
 }
 
-class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
+class Regex2PFA(theory : OstrichStringTheory, builder : PrioAutomatonBuilder) {
 
   import Regex2PFA._
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
@@ -859,7 +860,7 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PFABuilder) {
 
     var numCapture : Int = 0
 
-    def buildPatternImpl(t : ITerm) : (PFA, Set[Int]) = { // returns PFA and capture groups within
+    def buildPatternImpl(t : ITerm) : (PrioAutomaton, Set[Int]) = { // returns PFA and capture groups within
       t match {
         case IFunApp(`re_none`, _) =>
           (builder.none, Set())

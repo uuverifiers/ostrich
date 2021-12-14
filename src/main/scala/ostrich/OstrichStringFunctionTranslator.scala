@@ -32,7 +32,7 @@
 
 package ostrich
 
-import ostrich.automata.{Regex2PFA, JavascriptPFABuilder,
+import ostrich.automata.{Regex2PFA, JavascriptPrioAutomatonBuilder,
                          AtomicStateAutomaton, BricsTransducer}
 import ostrich.preop._
 
@@ -55,7 +55,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_replaceallcg, str_replacecg, str_extract}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
-  private val cgTranslator   = new Regex2PFA(theory, new JavascriptPFABuilder)
+  private val cgTranslator   = new Regex2PFA(theory,
+                                             new JavascriptPrioAutomatonBuilder)
 
   private def regexAsTerm(t : Term) : Option[ITerm] =
     try {

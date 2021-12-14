@@ -32,7 +32,7 @@
 
 package ostrich.preop
 
-import ostrich.automata.{Regex2PFA, PrioStreamingTransducer, PFA,
+import ostrich.automata.{Regex2PFA, PrioStreamingTransducer, PrioAutomaton,
                          TLabelOps, AnchoredLabels, StreamingTransducer}
 import StreamingTransducer._
 import AnchoredLabels._
@@ -62,8 +62,8 @@ object ExtractPreOp {
     val builder = PrioStreamingTransducer.getBuilder(1)
 
     type tranState = PrioStreamingTransducer#State
-    type autState = PFA.State
-    type TLabel = PFA.TLabel
+    type autState = PrioAutomaton.State
+    type TLabel = PrioAutomaton.TLabel
     val LabelOps : TLabelOps[TLabel] = AnchoredLabelOps
 
     // some common update operations
