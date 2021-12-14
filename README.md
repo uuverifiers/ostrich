@@ -38,10 +38,19 @@ Finite-state transducers can be defined as (mutually) recursive functions, see [
 
 OSTRICH can also process regular expressions that include capture groups, lazy quantifiers, and anchors, although this is more experimental. For this functionality, OSTRICH understands a number of additional regular expression operators:
 
-| Name                 | Explanation                |
-|----------------------|----------------------------|
-| re.*?                | Non-greedy star, similar to re.* but matching as few characters as possible |
-| re.+?                | Non-greedy plus            |
-| re.opt?              | Non-greedy option          |
-| (_ re.loop? <a> <b>) | Non-greedy loop            |
-| (_ re.capture <n>)   | Capture group with index n |
+| Name                 | Explanation                                                                 |
+|----------------------|-----------------------------------------------------------------------------|
+| re.*?                | Non-greedy star: similar to re.* but matching as few characters as possible |
+| re.+?                | Non-greedy plus                                                             |
+| re.opt?              | Non-greedy option                                                           |
+| (_ re.loop? a b)     | Non-greedy loop                                                             |
+| (_ re.capture n)     | Capture group with index n                                                  |
+| (_ re.reference n)   | Reference to the contents of capture group n                                |
+
+Such augmented regular expressions can be used in combination with several new string functions. Those functions support in particular capture groups and references in the replacement strings:
+
+| Name               | Explanation                                                                                          |
+|--------------------|------------------------------------------------------------------------------------------------------|
+| (_ str.extract n)  | Extract the contents of the n'th capture group ([example](../master/tests/extract-cg.smt2))          |
+| str.replace_cg     | Replace the first match of a regular expression ([example](../master/tests/parse-ecma-replace.smt2)) |
+| str.replace_cg_all | Replace all matches of a regular expression ([example](../master/tests/regex_cg_ref.smt2))           |
