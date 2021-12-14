@@ -32,6 +32,10 @@
 
 package ostrich
 
+import ostrich.automata.{Regex2PFA, JavascriptPFABuilder,
+                         AtomicStateAutomaton, BricsTransducer}
+import ostrich.preop._
+
 import ap.parser.ITerm
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction

@@ -32,6 +32,9 @@
 
 package ostrich
 
+import ostrich.automata.{AutDatabase, Transducer}
+import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
+
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp}
@@ -172,7 +175,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   // List of user-defined functions on strings that can be extended
   val extraStringFunctions : Seq[(String, IFunction, PreOp,
                                   Atom => Seq[Term], Atom => Term)] =
-    List(("str.reverse", str_reverse, ostrich.ReversePreOp,
+    List(("str.reverse", str_reverse, ReversePreOp,
           a => List(a(0)), a => a(1)))
 
   val extraRegexFunctions =

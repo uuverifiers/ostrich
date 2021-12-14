@@ -32,6 +32,8 @@
 
 package ostrich
 
+import ostrich.automata.{AutDatabase, BricsAutomaton}
+
 import ap.basetypes.IdealInt
 import ap.parser.{IFunApp, IIntLit}
 import ap.terfor.{Term, Formula,

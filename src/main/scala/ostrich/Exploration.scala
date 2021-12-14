@@ -32,6 +32,9 @@
 
 package ostrich
 
+import ostrich.automata.{Automaton, BricsAutomaton, AutomataUtils}
+import ostrich.preop.PreOp
+
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt

@@ -32,6 +32,8 @@
 
 package ostrich
 
+import ostrich.automata.TransducerTranslator
+
 import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
 

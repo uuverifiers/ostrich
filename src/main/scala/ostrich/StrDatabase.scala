@@ -32,6 +32,8 @@
 
 package ostrich
 
+import ostrich.automata.Regex2Aut
+
 import ap.basetypes.IdealInt
 import ap.parser.{IFunApp, IIntLit, ITerm, IExpression}
 import ap.theories.strings.StringTheory

@@ -32,6 +32,9 @@
 
 package ostrich
 
+import ostrich.automata.{Automaton, BricsAutomaton}
+import ostrich.preop.{PreOp, ConcatPreOp}
+
 import ap.SimpleAPI
 import ap.parser.IFunction
 import ap.terfor.{Term, TerForConvenience, ConstantTerm, OneTerm}
