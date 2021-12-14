@@ -27,7 +27,7 @@ Finite-state transducers are a general way to introduce further string functions
 
 Finite-state transducers can be defined as (mutually) recursive functions, see [this file](../master/tests/transducer1.smt2) for an example.
 
-It is also possible to use prioritised finite-state transducers to more compactly represent the choice between multiple possible branches, see [this file](../master/tests/priorityTransducer.smt2) for an example.
+It is also possible to use prioritised finite-state transducers: multiple outgoing transitions from a state can be given priorities, and the transducer will take the transition with highest priority that will lead to a successful run. See [this file](../master/tests/priorityTransducer.smt2) for an example.
 
 ### Additional regular expression constructors
 
