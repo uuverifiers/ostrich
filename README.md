@@ -48,6 +48,8 @@ OSTRICH can also process regular expressions that include capture groups, lazy q
 | (_ re.loop? a b)     | Non-greedy loop                                                             |
 | (_ re.capture n)     | Capture group with index n                                                  |
 | (_ re.reference n)   | Reference to the contents of capture group n                                |
+| re.begin-anchor      | The anchor ^                                                                |
+| re.end-anchor        | The anchor $                                                                |
 
 Such augmented regular expressions can be used in combination with several new string functions. Those functions support in particular capture groups and references in the replacement strings:
 
