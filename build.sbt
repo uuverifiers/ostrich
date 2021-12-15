@@ -43,21 +43,40 @@ lazy val commonSettings = Seq(
   fork in run           := true,
   cancelable in Global  := true,
 //
-  resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
-  libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-  libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
-  libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
-  libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-  libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
-//
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )
 )
 
+lazy val parserSettings = Seq(
+//    publishArtifact in packageDoc := false,
+//    publishArtifact in packageSrc := false,
+    exportJars := true,
+    crossPaths := true 
+)
+
+lazy val ecma2020parser = (project in file("ecma2020")).
+  settings(commonSettings: _*).
+  settings(parserSettings: _*).
+  settings(
+    name := "OSTRICH-ECMA2020-parser",
+    packageBin in Compile := baseDirectory.value / "ecma2020-regex-parser.jar"
+  ).
+  disablePlugins(AssemblyPlugin)
+
 lazy val root = (project in file(".")).
+  aggregate(ecma2020parser).
+  dependsOn(ecma2020parser).
   settings(commonSettings: _*).
   settings(
     mainClass in Compile := Some("ostrich.OstrichMain"),
-    unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala"
+    unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
+//
+    resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
+//
+    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+//    libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
+    libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
+    libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
+    libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
   )
 
 
