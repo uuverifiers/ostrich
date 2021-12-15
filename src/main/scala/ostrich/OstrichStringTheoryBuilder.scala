@@ -45,10 +45,12 @@ import scala.collection.mutable.ArrayBuffer
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
+  val version = "1.1"
 
   Console.withOut(Console.err) {
     println
-    println("Loading " + name + ", a solver for string constraints")
+    println("Loading " + name + " " + version +
+              ", a solver for string constraints")
     println("(c) Matthew Hague, Philipp Rümmer, 2018-2021")
     println("With contributions by Riccardo De Masellis, Zhilei Han.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
