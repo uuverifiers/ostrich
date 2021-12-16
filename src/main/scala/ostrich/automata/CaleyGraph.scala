@@ -34,7 +34,7 @@ package ostrich.automata
 
 import java.util.Objects
 
-import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
+import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet,Stack}
 
 object Box {
   /**
@@ -53,15 +53,15 @@ object Box {
  */
 class Box[A <: AtomicStateAutomaton] {
   private val arrows =
-    new HashMap[A#State, Set[A#State]] with MultiMap[A#State, A#State] {
-      override def default(q : A#State) : Set[A#State] = Set.empty[A#State]
+    new MHashMap[A#State, Set[A#State]] {
+      override def default(q : A#State) : Set[A#State] = Set()
     }
 
   /**
    * Add a new edge (q1, q2) to the box.  Updates box and returns this.
    */
   def addEdge(q1 : A#State, q2 : A#State) : Box.this.type = {
-      arrows.addBinding(q1, q2)
+      arrows.put(q1, arrows(q1) ++ List(q2))
       this
   }
 
@@ -75,7 +75,7 @@ class Box[A <: AtomicStateAutomaton] {
    * Iterate over all edges (q1, q2) in the box
    */
   lazy val getEdges : Iterable[(A#State, A#State)] =
-    for ((q1, qs) <- arrows.toIterable; q2 <- qs )
+    for ((q1, qs) <- arrows.toSeq; q2 <- qs )
       yield (q1, q2)
 
   /**
@@ -122,8 +122,8 @@ object CaleyGraph {
     val boundAut = AutomataUtils.product(wordBounds)
     val graphBuilder = aut.getBuilder
     graphBuilder.setMinimize(false)
-    val boxMap = new HashMap[aut.State, Box[A]]
-    val stateMap = new HashMap[Box[A], aut.State]
+    val boxMap = new MHashMap[aut.State, Box[A]]
+    val stateMap = new MHashMap[Box[A], aut.State]
 
     val eBox = getEpsilonBox(aut)
     val es = graphBuilder.getNewState
@@ -138,7 +138,7 @@ object CaleyGraph {
     // that boundAut may have reaced reading a word to es)
     val worklist = Stack((es, eBox, boundAut.initialState))
     // the boxes and states of boundAut we've explored before
-    val seenlist = new HashSet[(Box[A], boundAut.State)]
+    val seenlist = new MHashSet[(Box[A], boundAut.State)]
 
     while (!worklist.isEmpty) {
       val (s, w, bs) = worklist.pop()
