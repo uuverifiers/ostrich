@@ -39,11 +39,17 @@ import ecma2020regex._
 import ecma2020regex.Absyn._
 import ecma2020regex.Absyn.{Quantifier => ECMAQuantifier}
 
-import scala.collection.JavaConversions.{asScalaBuffer, asScalaIterator}
+import scala.collection.JavaConverters.asScala
 
 object ECMARegexParser {
 
   val OctalEscape = """[0-7]{1,3}""".r
+
+  implicit def impToScalaList[A](l : java.util.List[A]) : Seq[A] =
+    asScala(l).toSeq
+
+  implicit def impToScalaIterator[A](l : java.util.Iterator[A]) : Iterator[A] =
+    asScala(l)
 
 }
 
