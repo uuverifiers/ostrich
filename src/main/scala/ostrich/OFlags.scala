@@ -54,6 +54,9 @@ case class OFlags(
   useLength               : OFlags.LengthOptions.Value =
                                       OFlags.LengthOptions.Auto,
   forwardApprox           : Boolean = false,
-  minimizeAutomata        : Boolean = false
+  minimizeAutomata        : Boolean = false,
+
+  // Directory to which Parikh constraints should be dumped
+  outputParikhConstraints : Option[String] = None
 
 )

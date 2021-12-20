@@ -61,6 +61,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   private var eager, forward, minimizeAuts = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  private var outputPConstraints : Option[String] = Some("/tmp/Y") // None
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -75,6 +76,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.Auto
     case CmdlParser.Opt("forward", value) =>
       forward = value
+    case CmdlParser.ValueOpt("outputParikhConstraints", directory) =>
+      outputPConstraints = Some(directory)
     case str =>
       super.parseParameter(str)
   }
@@ -111,7 +114,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
                                     forwardApprox           = forward,
-                                    minimizeAutomata        = minimizeAuts))
+                                    minimizeAutomata        = minimizeAuts,
+                                    outputParikhConstraints = outputPConstraints))
   }
 
 }

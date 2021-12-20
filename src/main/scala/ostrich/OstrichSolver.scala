@@ -259,10 +259,12 @@ class OstrichSolver(theory : OstrichStringTheory,
       val exploration =
         if (eagerMode)
           Exploration.eagerExp(funApps, regexes, strDatabase,
-                               lProver, lengthVars.toMap, useLength, flags)
+                               lProver, lengthVars.toMap, useLength, flags,
+                               goal.facts)
         else
           Exploration.lazyExp(funApps, regexes, strDatabase,
-                              lProver, lengthVars.toMap, useLength, flags)
+                              lProver, lengthVars.toMap, useLength, flags,
+                              goal.facts)
 
       exploration.findModel
     }
