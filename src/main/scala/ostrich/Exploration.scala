@@ -589,10 +589,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                  if (!(strDatabase isConcrete t)) {
                    println("synchronised {  // Automata constraining " + t)
                    for (aut <- constraintStores(t).getCompleteContents) {
+
                      val lv =
                        (counters get t) match {
                          case None => {
-                           val lv = "" + lengthVars(t)
+                           val lv = lengthVars(t) match {
+                             case c : ConstantTerm => c.name
+                             case LinearCombination.SingleTerm(c : ConstantTerm) => c.name
+                             case _ => "aut_len_cnt_" + ind
+                           }
                            counters.put(t, List(lv))
                            lv
                          }
@@ -602,6 +607,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            lv
                          }
                        }
+
                      printAutParikh("Aut_" + t + "_" + ind, aut, lv)
                      ind = ind + 1
                    }
@@ -618,13 +624,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
              println
              println(autString)
-             println
 
-             for ((t, cnts) <- counters)
-               if (cnts.size > 1)
-                 println("constraint " +
-                           (for (cnt <- cnts.init)
-                            yield ("" + lengthVars(t) + " = " + cnt)).mkString(" && ") + ";")
+             for ((t, cnts) <- counters) {
+               val eqs =
+                 for (cnt <- cnts;
+                      lhs = "" + lengthVars(t);
+                      rhs = cnt;
+                      if lhs != rhs)
+                 yield (lhs + " = " + rhs)
+               if (!eqs.isEmpty)
+                 println("constraint " + eqs.mkString(" && ") + ";")
+             }
 
              val lengthConsts =
                (for ((_, c) <- lengthVars.iterator;
@@ -633,11 +643,6 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
              for (c <- facts.iterator)
                if (!c.arithConj.isTrue && (c.constants subsetOf lengthConsts)) {
                  println("constraint " + c + ";")
-               } else if (!c.predConj.isTrue &&
-                            c.predConj.negativeLits.isEmpty &&
-                            (c.predicates forall { _.name == "str_len" })) {
-                 val a = c.predConj.positiveLits.head
-                 println("constraint " + lengthVars(a(0)) + " = " + a(1))
                }
            }
 
