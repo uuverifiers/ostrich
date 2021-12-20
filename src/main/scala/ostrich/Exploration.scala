@@ -787,28 +787,28 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       AutomataUtils.product(constraints.toSeq, _flags.minimizeAutomata)
 
     def ensureCompleteLengthConstraints : Unit =
-      constraints match {
+      constraints.toSeq match {
         case Seq() | Seq(_) =>
           // nothing, all length constraints already pushed
         case auts =>
           addLengthConstraint(TermConstraint(t, intersection),
-                              (for (a <- constraints)
-                               yield TermConstraint(t, a)).toSeq)
+                              (for (a <- auts)
+                               yield TermConstraint(t, a)))
       }
 
     def isAcceptedWord(w : Seq[Int]) : Boolean =
       constraints forall (_(w))
 
     def getAcceptedWord : Seq[Int] =
-      constraints match {
+      constraints.toSeq match {
         case Seq() => List()
         case auts  => intersection.getAcceptedWord.get
       }
 
     def getAcceptedWordLen(len : Int) : Seq[Int] =
-      constraints match {
+      constraints.toSeq match {
         case Seq() => for (_ <- 0 until len) yield 0
-        case auts  => AutomataUtils.findAcceptedWord(auts.toSeq, len).get
+        case auts  => AutomataUtils.findAcceptedWord(auts, len).get
       }
   }
 
