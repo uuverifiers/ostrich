@@ -585,7 +585,16 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       for (t <- allTerms)
         if (!(strDatabase isConcrete t)) {
           println("synchronised {  // Automata constraining " + t)
-          for (aut <- constraintStores(t).getCompleteContents) {
+          val allAuts =
+            constraintStores(t).getCompleteContents match {
+              case List() =>
+                // need to make sure that there is at least one automaton
+                List(BricsAutomaton.makeAnyString)
+              case l =>
+                l
+            }
+
+          for (aut <- allAuts) {
 
             val lv =
               (counters get t) match {
@@ -660,6 +669,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                if (f.createNewFile)
                  file = f
              }
+
+             Console.err.println("Writing Parikh constraints to " + file)
 
              val out = new java.io.FileOutputStream(file)
              Console.withOut(out) {
