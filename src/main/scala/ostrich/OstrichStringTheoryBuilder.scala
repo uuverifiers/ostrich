@@ -61,7 +61,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   private var eager, forward, minimizeAuts = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
-  private var outputPConstraints : Option[String] = Some("/tmp/Y") // None
+  private var outputPConstraints : Option[String] = None
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
