@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -294,9 +294,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
-    // not used
-    def generateAxioms(goal : Goal)
-          : Option[(Conjunction, Conjunction)] = None
 
     private val modelCache =
       new ap.util.LRUCache[Conjunction,
@@ -325,9 +322,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       case _ => List()
     }
 
-    override def generateModel(goal : Goal) : Option[Conjunction] =
+    override def computeModel(goal : Goal) : Seq[Plugin.Action] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
-        None
+        List()
       } else {
         val model = (modelCache(goal.facts) {
                        ostrichSolver.findStringModel(goal)
@@ -345,12 +342,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                 if x.constants subsetOf order.orderedConstants)
               yield l(x - len))
 
-        val otherFormulas =
-          (goal.facts.iterator filter {
-             f => Seqs.disjointSeq(f.predicates, predicates)
-           }).toList
+        val stringFormulas =
+          conj(goal.facts.iterator filter {
+             f => !Seqs.disjointSeq(f.predicates, predicates)
+           })
 
-        Some(stringAssignments & lenAssignments & conj(otherFormulas))
+        List(Plugin.RemoveFacts(stringFormulas),
+             Plugin.AddAxiom(List(stringFormulas),
+                             stringAssignments & lenAssignments,
+                             OstrichStringTheory.this))
       }
 
   })
