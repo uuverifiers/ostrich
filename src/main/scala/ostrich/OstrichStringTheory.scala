@@ -129,6 +129,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("re.end-anchor", List(), RSo, true, false)
   val re_from_ecma2020 =
     MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
+  val re_from_ecma2020_flags =
+    MonoSortedIFunction("re.from_ecma2020_flags", List(SSo, SSo), RSo, true, false)
   val re_case_insensitive =
     MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
   val str_at_right =
@@ -179,7 +181,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           a => List(a(0)), a => a(1)))
 
   val extraRegexFunctions =
-    List(re_begin_anchor, re_end_anchor, re_from_ecma2020, re_case_insensitive,
+    List(re_begin_anchor, re_end_anchor,
+         re_from_ecma2020, re_from_ecma2020_flags,
+         re_case_insensitive,
          str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
          re_*?, re_+?, re_opt_?)
@@ -276,7 +280,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
                    re_comp, re_loop, re_loop_?, re_from_str, re_capture, re_reference,
-                   re_begin_anchor, re_end_anchor, re_from_ecma2020,
+                   re_begin_anchor, re_end_anchor,
+                   re_from_ecma2020, re_from_ecma2020_flags,
                    re_case_insensitive))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)

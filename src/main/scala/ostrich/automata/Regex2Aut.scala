@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -73,7 +73,8 @@ object Regex2Aut {
     import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
-                   re_begin_anchor, re_end_anchor, re_from_ecma2020}
+                   re_begin_anchor, re_end_anchor,
+                   re_from_ecma2020, re_from_ecma2020_flags}
     import theory.strDatabase.EncodedString
 
     def apply(t : ITerm) = Rewriter.rewrite(t, rewrTerm _).asInstanceOf[ITerm]
@@ -148,7 +149,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                  re_opt_?, re_loop_?,
                  re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
-                 re_begin_anchor, re_end_anchor, re_from_ecma2020,
+                 re_begin_anchor, re_end_anchor,
+                 re_from_ecma2020, re_from_ecma2020_flags,
                  re_case_insensitive}
 
   import Regex2Aut._
@@ -257,6 +259,13 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
     case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
       val parser = new ECMARegexParser(theory)
+      val s = parser.string2Term(str)
+      toBAutomaton(s, minimize)
+    }
+
+    case IFunApp(`re_from_ecma2020_flags`,
+                 Seq(EncodedString(str), EncodedString(flags))) => {
+      val parser = new ECMARegexParser(theory, flags)
       val s = parser.string2Term(str)
       toBAutomaton(s, minimize)
     }

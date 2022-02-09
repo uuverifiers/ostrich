@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020 Zhilei Han. All rights reserved.
+ * Copyright (c) 2020-2022 Zhilei Han. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -816,7 +816,7 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PrioAutomatonBuilder) {
     re_++, re_union, re_inter, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp,
     re_loop, re_loop_?, str_to_re, re_from_str,
     re_begin_anchor, re_end_anchor,
-    re_capture, re_reference, re_from_ecma2020}
+    re_capture, re_reference, re_from_ecma2020, re_from_ecma2020_flags}
   import theory.strDatabase.EncodedString
 
   private val simplifier = new Regex2Aut.DiffEliminator(theory)
@@ -978,8 +978,15 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PrioAutomatonBuilder) {
           (builder.constant(a), Set())
         }
         case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
-          val parser = new ECMARegexParser(theory)
-          val t = parser.string2Term(str, convertCaptureGroups = true)
+          val parser = new ECMARegexParser(theory, convertCaptureGroups = true)
+          val t = parser.string2Term(str)
+          buildPatternImpl(simplifier(t))
+        }
+        case IFunApp(`re_from_ecma2020_flags`,
+                     Seq(EncodedString(str), EncodedString(fl))) => {
+          val parser = new ECMARegexParser(theory, flags = fl,
+                                           convertCaptureGroups = true)
+          val t = parser.string2Term(str)
           buildPatternImpl(simplifier(t))
         }
         case _ =>

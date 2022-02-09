@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2021 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2022 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -45,21 +45,31 @@ object ECMARegexParser {
 
   val OctalEscape = """[0-7]{1,3}""".r
 
+  val UnsupportedFlag = """[^ius]""".r
+
 }
 
-class ECMARegexParser(theory : OstrichStringTheory) {
+class ECMARegexParser(theory : OstrichStringTheory,
+                      flags : String = "",
+                      convertCaptureGroups : Boolean = false) {
 
   import theory._
   import IExpression._
   import ECMARegexParser._
 
+  for (flag <- UnsupportedFlag.findAllMatchIn(flags))
+    Console.err.println("Warning: ignoring unsupported regex flag " +
+                          flag.matched)
+
   val printer = new PrettyPrinterNonStatic
 
-  def string2Term(inputString : String,
-                  convertCaptureGroups : Boolean = false) : ITerm = {
+  def string2Term(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
-    val visitor = new TranslationVisitor(convertCaptureGroups)
-    visitor(pat)
+    val res = TranslationVisitor(pat)
+    if (flags contains "i")
+      theory.re_case_insensitive(res)
+    else
+      res
   }
 
   def parseRegex(inputString : String) : Pattern = {
@@ -95,8 +105,7 @@ class ECMARegexParser(theory : OstrichStringTheory) {
   /**
    * Visitor to translate a regex AST to a term.
    */
-  class TranslationVisitor(convertCaptureGroups : Boolean)
-        extends FoldVisitor[ITerm, VisitorArg] {
+  object TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
 
@@ -304,7 +313,10 @@ class ECMARegexParser(theory : OstrichStringTheory) {
                   p.listalternativec_ map (_.accept(this, arg)) : _*))))
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
-      charComplement(lineTerminator) // . is anything apart from a line term.
+      if (flags contains "s")
+        ALL_CHAR
+      else
+        charComplement(lineTerminator) // . is anything apart from a line term.
 
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscaped,
                        arg : VisitorArg) =
@@ -329,6 +341,30 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeW,
                        arg : VisitorArg) =
       charComplement(word)
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapep,
+                       arg : VisitorArg) = {
+      val str = printer print p.unicodepropertyvalueexpressionc_
+      if (flags contains "u")
+        translateUnicodeProperty(str)
+      else
+        // If the Unicode flag is not set, the escape sequence should
+        // be interpreted literally
+        // TODO: this will not correctly model interaction with quantifiers
+        str_to_re(theory.string2Term("p{" + str + "}"))
+    }
+
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeP,
+                       arg : VisitorArg) = {
+      val str = printer print p.unicodepropertyvalueexpressionc_
+      if (flags contains "u")
+        re_comp(translateUnicodeProperty(str))
+      else
+        // If the Unicode flag is not set, the escape sequence should
+        // be interpreted literally.
+        // TODO: this will not correctly model interaction with quantifiers
+        str_to_re(theory.string2Term("P{" + str + "}"))
+    }
 
     override def visit(p : ecma2020regex.Absyn.AtomQuanTerm,
                        arg : VisitorArg) = {
@@ -544,7 +580,14 @@ class ECMARegexParser(theory : OstrichStringTheory) {
     override def visit(p : ecma2020regex.Absyn.CodepointUniEscapeSequence,
                        arg : VisitorArg) = {
       val str = printer print p
-      charSet(Integer.parseInt(str.substring(2, str.size - 1), 16))
+      if (flags contains "u") {
+        charSet(Integer.parseInt(str.substring(2, str.size - 1), 16))
+      } else {
+        // If the Unicode flag is not set, the escape sequence should
+        // be interpreted literally
+        // TODO: this will not correctly model interaction with quantifiers
+        str_to_re(theory.string2Term(str))
+      }
     }
 
     override def visit(p : ecma2020regex.Absyn.IdentityEscape,
@@ -659,5 +702,18 @@ class ECMARegexParser(theory : OstrichStringTheory) {
 
   private def charSet(chars : Int*) : ITerm =
     (for (c <- chars) yield re_charrange(c, c)).reduceLeft(reUnion _)
+
+  /**
+   * Currently we just match the general category properties.
+   */
+  private def translateUnicodeProperty(prop : String) : ITerm = {
+    val norm = UnicodeData.normalizeGeneralProperty(prop)
+    (UnicodeData.generalProperties get norm) match {
+      case Some(intervals) =>
+        reUnionStar((for ((l, u) <- intervals) yield re_charrange(l, u)) : _*)
+      case None =>
+        throw new Exception("Could not decode Unicode property " + prop)
+    }
+  }
 
 }

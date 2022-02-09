@@ -33,7 +33,7 @@
         (= (str.in_re w (re.from_ecma2020 '\,'))
            (str.in_re w (str.to.re ",")))
 
-        (= (str.in_re w (re.from_ecma2020 '[\u{61}-\u007A0-9]'))
+        (= (str.in_re w (re.from_ecma2020_flags '[\u{61}-\u007A0-9]' "u"))
            (str.in_re w (re.union (re.range "a" "z") (re.range "0" "9"))))
 
         (= (str.in_re w (re.from_ecma2020 '((?=.*?[A-Z])).{8,}'))
@@ -72,6 +72,22 @@
                 (str.in_re w (re.* (re.union (re.range "A" "Z")
                                              (re.range "a" "z")
                                              (re.range "0" "9"))))))
+
+        ; without the u flag, the \u{...} escape sequence is interpreted literally
+        (= (str.in_re w (re.from_ecma2020 '\u{ab}'))
+           (= w "u{ab}"))
+
+        (= (str.in_re w (re.from_ecma2020_flags '\p{Uppercase_Letter}' "u"))
+           (str.in_re w (re.from_ecma2020_flags '\p{Lu}' "u")))
+
+        (str.in_re "ABC" (re.from_ecma2020_flags '\P{Lowercase_Letter}*' "u"))
+
+        ; without the u flag, the \P{...} property is interpreted literally
+        (str.in_re "P{Lowercase_Letter}" (re.from_ecma2020 '\P{Lowercase_Letter}'))
+
+        (str.in_re "a\u{A}b" (re.from_ecma2020_flags '...' "s"))
+
+        (not (str.in_re "a\u{A}b" (re.from_ecma2020_flags '...' "")))
 
  )))
 

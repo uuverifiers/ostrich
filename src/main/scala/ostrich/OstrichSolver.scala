@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -54,7 +54,8 @@ class OstrichSolver(theory : OstrichStringTheory,
 
   import theory.{str_from_char, str_len, str_empty, str_cons, str_++,
                  str_in_re,
-                 str_in_re_id, str_to_re, re_from_str, re_from_ecma2020,
+                 str_in_re_id, str_to_re, re_from_str,
+                 re_from_ecma2020, re_from_ecma2020_flags,
                  re_case_insensitive,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
                  str_prefixof,
@@ -67,7 +68,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
         re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps, str_to_re,
         re_from_str, re_capture, re_reference, re_begin_anchor, re_end_anchor,
-        re_from_ecma2020, re_case_insensitive)
+        re_from_ecma2020, re_from_ecma2020_flags, re_case_insensitive)
 
   private val p = theory.functionPredicateMap
 
