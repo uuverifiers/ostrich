@@ -710,7 +710,9 @@ class ECMARegexParser(theory : OstrichStringTheory,
     val norm = UnicodeData.normalizeGeneralProperty(prop)
     (UnicodeData.generalProperties get norm) match {
       case Some(intervals) =>
-        reUnionStar((for ((l, u) <- intervals) yield re_charrange(l, u)) : _*)
+        reUnionStar((for ((l, u) <- intervals;
+                          if u <= OstrichStringTheory.alphabetSize)
+                     yield re_charrange(l, u)) : _*)
       case None =>
         throw new Exception("Could not decode Unicode property " + prop)
     }

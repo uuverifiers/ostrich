@@ -54,7 +54,10 @@ import scala.collection.{Map => GMap}
 
 object OstrichStringTheory {
 
-  val alphabetSize = 1 << 16
+  // TODO: at some point this has to be fixed, Unicode is
+  // bigger. Seems to be a problem with the BRICS automata library;
+  // use Unicode-16 encoding?
+  val alphabetSize = 0x10000
 
   class OstrichStringSort extends ProxySort(Sort.Integer) {
     override val name = "String"

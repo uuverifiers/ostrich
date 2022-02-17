@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2022 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -317,6 +317,11 @@ class OstrichReducer protected[ostrich]
                emptyIntersection(PositiveAut(regexAtomToId(a)), aut) }) ||
             (curNeg exists { a =>
                emptyIntersection(ComplementedAut(regexAtomToId(a)), aut) })
+
+          // TODO: the use of isSubsetOfBE is problematic. With option
+          // +assert, assertions switched on, this can lead to an
+          // assertion failure in ReduceWithConjunction, since
+          // applying the reducer multiple times can have different results.
 
           def isFwdSubsumed(aut : NamedAutomaton) : Boolean =
             (curPos exists { a =>

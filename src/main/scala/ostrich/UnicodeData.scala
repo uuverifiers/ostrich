@@ -36,7 +36,8 @@ import ap.util.Seqs
 
 import scala.io.Source
 import scala.collection.immutable.VectorBuilder
-import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer}
+import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer,
+                                 HashSet => MHashSet}
 
 object UnicodeData {
 
@@ -158,21 +159,48 @@ object UnicodeData {
 
     val categoriesSeq = categories.toVector.sortBy(_._1)
 
-    // Add the single-letter categories by joining the categories from
-    // the database
-    for ((cat, seq) <- categoriesSeq) {
-      assert(cat.size == 2)
-      val prefix = cat.substring(0, 1)
-      val intervals = categories.getOrElseUpdate(prefix, new ArrayBuffer)
-      intervals ++= seq
-    }
-
-    // Special case: LC is the union of Lu, Ll, Lt
     {
+      val mergedCats = new MHashSet[String]
+
+      // Add the single-letter categories by joining the categories from
+      // the database
+      for ((cat, seq) <- categoriesSeq) {
+        assert(cat.size == 2)
+        val prefix    = cat.substring(0, 1)
+        val intervals = categories.getOrElseUpdate(prefix, new ArrayBuffer)
+        intervals     ++= seq
+        mergedCats    += prefix
+      }
+
+      // Special case: LC is the union of Lu, Ll, Lt
       val intervals = categories.getOrElseUpdate("LC", new ArrayBuffer)
-      intervals ++= categories("Lu")
-      intervals ++= categories("Ll")
-      intervals ++= categories("Lt")
+      intervals     ++= categories("Lu")
+      intervals     ++= categories("Ll")
+      intervals     ++= categories("Lt")
+      mergedCats    += "LC"
+
+      // Merge adjacent internals in the merged categories, to reduce
+      // the number of cases to be considered later
+      for (cat <- mergedCats) {
+        val newCat       = new ArrayBuffer[Interval]
+        var lastCatStart = -10
+        var lastCatEnd   = -10
+
+        for ((a, b) <- categories(cat).sortBy(_._1))
+          if (a == lastCatEnd + 1) {
+            lastCatEnd = b
+          } else {
+            if (lastCatEnd >= 0)
+              newCat += ((lastCatStart, lastCatEnd))
+            lastCatStart = a
+            lastCatEnd   = b
+          }
+
+        if (lastCatEnd >= 0)
+          newCat += ((lastCatStart, lastCatEnd))
+
+        categories.put(cat, newCat)
+      }
     }
 
     (for ((cat, s) <- categories.iterator)

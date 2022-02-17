@@ -89,6 +89,14 @@
 
         (not (str.in_re "a\u{A}b" (re.from_ecma2020_flags '...' "")))
 
+        (= (and (str.in_re w (re.from_ecma2020_flags '\p{l}' "u"))
+                (str.in_re w (re.range "\u{00}" "\u{7F}")))
+           (str.in_re w (re.from_ecma2020 '[a-zA-Z]')))
+
+        (= (and (str.in_re w (re.from_ecma2020_flags '[\p{l}\p{n}]' "u"))
+                (str.in_re w (re.range "\u{00}" "\u{7F}")))
+           (str.in_re w (re.from_ecma2020 '[a-zA-Z0-9]')))
+
  )))
 
 (check-sat)
