@@ -181,6 +181,11 @@ class OstrichReducer protected[ostrich]
             a
           }
 
+        case `_str_++` if strDatabase.hasValue(a(0), List()) =>
+          a(1) === a(2)
+        case `_str_++` if strDatabase.hasValue(a(1), List()) =>
+          a(0) === a(2)
+
         case `str_in_re_id` => {
           val autId = regexAtomToId(a)
           if (isConcrete(a(0))) {

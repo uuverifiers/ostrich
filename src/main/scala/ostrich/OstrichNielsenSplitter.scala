@@ -233,8 +233,9 @@ class OstrichNielsenSplitter(goal : Goal,
     val splitLit2   = literals(1)
 
 //    if (debug)
-      Console.err.println(
-        "Applying Nielsen transformation: " + splitLit1 + ", " + splitLit2)
+    Console.err.println
+    Console.err.println(
+      "Applying Nielsen transformation: " + splitLit1 + ", " + splitLit2)
 
     val lengthModel =
       ModelSearchProver(Conjunction.negate(facts.arithConj, order), order)

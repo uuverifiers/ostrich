@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2021 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2022 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -67,6 +67,16 @@ class StrDatabase(theory : OstrichStringTheory) {
     case _ =>
       false
   }
+
+  /**
+   * Check whether the term <code>t</code> has the concrete value
+   * <code>str</code>.
+   */
+  def hasValue(t : Term, str : List[Int]) : Boolean =
+    term2List(t) match {
+      case Some(v) => v == str
+      case None    => false
+    }
 
   /**
    * Check whether the given term represents a concrete string, and return
