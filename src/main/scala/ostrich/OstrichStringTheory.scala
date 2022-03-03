@@ -261,6 +261,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val _str_empty = functionPredicateMap(str_empty)
   val _str_cons  = functionPredicateMap(str_cons)
   val _str_++    = functionPredicateMap(str_++)
+  val _str_len   = functionPredicateMap(str_len)
 
   private val predFunMap =
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
@@ -312,10 +313,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
 
-        breakCyclicEquations(goal) match {
-          case Some(actions) =>
-            actions
-          case None =>
+        breakCyclicEquations(goal).getOrElse(List()) elseDo {
+          // try backward propagation
+
+          try {
             modelCache(goal.facts) {
               ostrichSolver.findStringModel(goal)
             } match {
@@ -324,7 +325,19 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
               case None =>
                 List(Plugin.AddFormula(Conjunction.TRUE))
             }
+          } catch {
+            case OstrichSolver.BackwardFailed => List()
+          }
+
+        } elseDo {
+          // try Nielsen transformation
+
+          val nielsenSplitter =
+            new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
+          nielsenSplitter.splitEquation
+
         }
+
       }
 
       case _ => List()
@@ -396,7 +409,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
-    f
+
+    val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    preprocessor.preprocess(f, order)
   }
 
   override def iPreprocess(f : IFormula, signature : Signature)

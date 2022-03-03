@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -72,8 +72,11 @@ trait PreOp {
   def eval(arguments : Seq[Seq[Int]]) : Option[Seq[Int]]
 
   /**
-   * Generate a formula that approximates the length relationship between
-   * arguments and result. It is sound to just return <code>true</code>.
+   * Generate a formula that approximates the length relationship
+   * between arguments and result. It is sound to just return
+   * <code>true</code>. The parameters <code>arguments</code> and
+   * <code>result</code> are terms representing the length of the
+   * string arguments.
    */
   def lengthApproximation(arguments : Seq[Term], result : Term,
                           order : TermOrder) : Formula =

@@ -293,6 +293,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
       re_charrange(lower, upper)
 
+/*
+//TODO: how to control the translation from length constraints to regexes, and vice versa?
+
     case (t, _) =>
       // TODO: generalise
       (t update subres) match {
@@ -317,6 +320,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         case newT =>
           newT
       }
+ */
+
+    case (t, _) => t update subres
   }
 
 }

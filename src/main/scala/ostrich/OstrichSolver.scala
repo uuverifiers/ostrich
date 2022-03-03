@@ -49,6 +49,18 @@ import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
+object OstrichSolver {
+
+  /**
+   * Exception thrown by the backward propagation algorithm when it
+   * encounters constraints that cannot be handled: e.g.,
+   * non-tree-like or cyclic constraints.
+   */
+  protected[ostrich] object BackwardFailed
+                     extends Exception("backward propagation failed")
+
+}
+
 class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
 
@@ -103,8 +115,6 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     }
 
-    val wordExtractor =
-      theory.WordExtractor(goal)
     val regexExtractor =
       theory.RegexExtractor(goal)
     val stringFunctionTranslator =
@@ -268,35 +278,4 @@ class OstrichSolver(theory : OstrichStringTheory,
       exploration.findModel
     }
   }
-
-  //////////////////////////////////////////////////////////////////////////////
-
-  /**
-   * Translate term in a regex argument position into an automaton
-   * returns a string if it detects only one word is accepted
-   */
-/*
-  private def regexValue(regex : Term, regex2AFA : Regex2AFA)
-      : Either[String,AtomicStateAutomaton] = {
-    val b = (regex2AFA buildStrings regex).next
-    if (!b.isEmpty && b(0).isLeft) {
-      // In this case we've been given a string regex and expect it
-      // to start and end with / /
-      // if it just defines one string, treat it as a replaceall
-      // else treat it as true replaceall-re
-      val stringB : String = b.map(_.left.get.toChar)(collection.breakOut)
-      if (stringB(0) != '/' || stringB.last != '/')
-        throw new IllegalArgumentException("regex defined with a string argument expects the regular expression to start and end with /")
-      val sregex = stringB.slice(1, stringB.size - 1)
-      val baut = new RegExp(sregex, RegExp.NONE).toAutomaton(true)
-      val w = baut.getSingleton
-      if (w != null)
-        return Left(w)
-      else
-        return Right(new BricsAutomaton(baut))
-    } else {
-      return Right(BricsAutomaton(regex2AFA buildRegex regex))
-    }
-  }
-*/
 }
