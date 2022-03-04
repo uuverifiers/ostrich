@@ -33,6 +33,7 @@
 package ostrich
 
 import ap.basetypes.IdealInt
+import ap.parameters.Param
 import ap.proof.ModelSearchProver
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
@@ -53,6 +54,8 @@ class OstrichNielsenSplitter(goal : Goal,
   val order        = goal.order
   val X            = new ConstantTerm("X")
   val extOrder     = order extend X
+
+  val rand         = Param.RANDOM_DATA_SOURCE(goal.settings)
 
   val facts        = goal.facts
   val predConj     = facts.predConj
@@ -162,6 +165,7 @@ class OstrichNielsenSplitter(goal : Goal,
           varLengths.getOrElseUpdate(t, {
             val len = newVar(Sort.Integer)
             matrixFors += _str_len(List(l(t), l(len)))
+            matrixFors += l(len) >= 0
             len
           })
         case _ =>
@@ -214,6 +218,40 @@ class OstrichNielsenSplitter(goal : Goal,
     (splitLen > leftTermsLen + lengthFor(symToSplit))
   }
 
+  type DecompPoint =
+    (Atom,       // Atom containing the terms
+     Seq[Term],  // left terms
+     Seq[Term])  // right terms
+
+  def decomposeHelp(lits : Seq[Atom]) : Seq[Plugin.Action] = {
+    val resultTerm  = lits.head(0)
+    val splitPoints = new MHashMap[Term, DecompPoint]
+
+    
+    List()
+  }
+
+  /**
+   * Decompose equations of the form a.b = c.d if it can be derived
+   * that |a| = |c|.
+   */
+  def decomEquation : Seq[Plugin.Action] = {
+    val multiGroups =
+      concatPerRes filter {
+        case (res, lits) => lits.size >= 2 || (strDatabase isConcrete res)
+      }
+
+    val decompActions =
+      for ((res, lits) <- multiGroups) yield {
+
+      }
+
+    List()
+  }
+
+  /**
+   * Apply the Nielsen transformation to some selected equation.
+   */
   def splitEquation : Seq[Plugin.Action] = {
     val multiGroups =
       concatPerRes filter {
@@ -221,41 +259,60 @@ class OstrichNielsenSplitter(goal : Goal,
       }
 
     val splittableTerms =
-      concatLits.iterator.map(_(2)).filter(multiGroups.keySet).toList
+      concatLits.iterator.map(_(2)).filter(multiGroups.keySet).toList.distinct
 
     if (splittableTerms.isEmpty)
       return List()
 
-    val termToSplit = splittableTerms.head
-    val literals    = multiGroups(termToSplit).take(2)
+    val termToSplit = splittableTerms(rand nextInt splittableTerms.size)
+    val literals    = multiGroups(termToSplit)
 
-    val splitLit1   = literals(0)
-    val splitLit2   = literals(1)
-
-//    if (debug)
-    Console.err.println
-    Console.err.println(
-      "Applying Nielsen transformation: " + splitLit1 + ", " + splitLit2)
+    val splitLit1   = literals(rand nextInt literals.size)
+    val splitLit2   = (literals filterNot (_ == splitLit1))(
+                        rand nextInt (literals.size - 1))
 
     val lengthModel =
       ModelSearchProver(Conjunction.negate(facts.arithConj, order), order)
+    val lengthRed =
+      ReduceWithConjunction(lengthModel, extOrder)
 
-    val split = chooseSplit(splitLit1, splitLit2,
-                            ReduceWithConjunction(lengthModel, extOrder))
+    val zeroSyms = for (t <- (splitLit2 take 2).iterator;
+                        if evalLengthFor(t, lengthRed) == 0)
+                   yield t
 
-    if (debug)
+    if (zeroSyms.hasNext) {
+      val zeroSym = zeroSyms.next
+      Console.err.println("Assuming " + zeroSym + " = \"\"")
+
+      import TerForConvenience._
+      implicit val o = order
+
+      List(
+        Plugin.AxiomSplit(List(),
+                          List((zeroSym === strDatabase.str2Id(""), List()),
+                               (lengthFor(zeroSym) > 0,             List())),
+                          theory)
+      )
+    } else {
+      val split    = chooseSplit(splitLit1, splitLit2, lengthRed)
+      val splitSym = split._3
+
       Console.err.println(
-        "Splitting symbol " + split._3)
+        "Applying Nielsen transformation: " + splitLit1 + ", " + splitLit2 +
+          ", splitting " + splitSym)
 
-    val f1 = splittingFormula(split, splitLit2)
-    val f2 = diffLengthFormula(split, splitLit2)
+      val f1 = splittingFormula(split, splitLit2)
+      val f2 = diffLengthFormula(split, splitLit2)
 
-    List(
-      Plugin.RemoveFacts(Conjunction.conj(splitLit1, order)),
-      Plugin.AxiomSplit(concatLits ++ lengthLits, // TODO: make specific
-                        List((f1, List()), (f2, List())),
-                        theory)
-    )
+      List(
+        Plugin.AxiomSplit(concatLits ++ lengthLits, // TODO: make specific
+                          List((f1,
+                                List(Plugin.RemoveFacts(
+                                       Conjunction.conj(splitLit2, order)))),
+                               (f2, List())),
+                          theory)
+      )
+    }
 
   }
 

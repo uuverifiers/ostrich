@@ -313,7 +313,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
 
+
         breakCyclicEquations(goal).getOrElse(List()) elseDo {
+
+          // try Nielsen transformation
+          val nielsenSplitter =
+            new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
+          nielsenSplitter.splitEquation
+
+        } elseDo {
+
           // try backward propagation
 
           try {
@@ -328,13 +337,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           } catch {
             case OstrichSolver.BackwardFailed => List()
           }
-
-        } elseDo {
-          // try Nielsen transformation
-
-          val nielsenSplitter =
-            new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
-          nielsenSplitter.splitEquation
 
         }
 
