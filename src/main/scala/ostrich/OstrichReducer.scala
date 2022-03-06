@@ -111,8 +111,9 @@ class OstrichReducer protected[ostrich]
   import OstrichReducer._
   import theory.{_str_empty, _str_cons, _str_++,
                  str_empty, str_cons, str_in_re_id, str_prefixof,
+                 str_replace, str_replaceall,
                  re_++, str_to_re, re_all,
-                 strDatabase, autDatabase}
+                 strDatabase, autDatabase, FunPred}
   import factory.{_str_len, _int_to_str, _str_to_int}
 
   def passQuantifiers(num : Int) = this
@@ -160,11 +161,13 @@ class OstrichReducer protected[ostrich]
       yield aut
 
     ReducerPlugin.rewritePreds(predConj,
-                               List(_str_empty, _str_cons,
-                                    str_in_re_id, _str_len,
-                                    _int_to_str, _str_to_int,
-                                    str_prefixof) ++
-                                 funTranslator.translatablePredicates,
+                               (List(_str_empty, _str_cons,
+                                     str_in_re_id, _str_len,
+                                     _int_to_str, _str_to_int,
+                                     str_prefixof,
+                                     FunPred(str_replace),
+                                     FunPred(str_replaceall)) ++
+                                  funTranslator.translatablePredicates).distinct,
                                order,
                                logger) { a =>
       a.pred match {
@@ -244,6 +247,7 @@ class OstrichReducer protected[ostrich]
             a
           }
 
+        // TODO: same for suffixes
         case `str_prefixof` =>
           if (isConcrete(a(0))) {
             assert(a(0).isConstant)
@@ -260,6 +264,21 @@ class OstrichReducer protected[ostrich]
           } else {
             a
           }
+
+        case FunPred(`str_replace` | `str_replaceall`) if a(1) == a(2) =>
+          a(0) === a(3)
+
+        case FunPred(`str_replace`) if a(0) == a(1) =>
+          a(2) === a(3)
+
+        case FunPred(`str_replace`) if strDatabase.hasValue(a(0), List()) =>
+          ((a(0) === a(1)) & (a(2) === a(3))) | ((a(0) =/= a(1)) & (a(0) === a(3)))
+
+        case FunPred(`str_replace`) if strDatabase.hasValue(a(1), List()) =>
+          _str_++(List(a(2), a(0), a(3)))
+
+        case FunPred(`str_replaceall`) if strDatabase.hasValue(a(1), List()) =>
+          a(0) === a(3)
 
         case p => {
           assert(funTranslator.translatablePredicates contains p)
