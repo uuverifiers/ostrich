@@ -311,7 +311,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = goalState(goal) match {
 
-      case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
+      case Plugin.GoalState.Final => try { //  Console.withOut(Console.err) 
 
 
         breakCyclicEquations(goal).getOrElse(List()) elseDo {
@@ -340,6 +340,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
         }
 
+      } catch {
+        case t : Throwable =>  { t.printStackTrace; throw t }
       }
 
       case _ => List()

@@ -219,9 +219,44 @@ class OstrichNielsenSplitter(goal : Goal,
   }
 
   type DecompPoint =
-    (Atom,       // Atom containing the terms
-     Seq[Term],  // left terms
-     Seq[Term])  // right terms
+    (Atom,              // Atom containing the terms
+     Seq[Term],         // left terms, in reverse order
+     LinearCombination, // cumulative length of the left terms
+     Seq[Term])         // right terms
+
+  def decompPoints(lit : Atom) : Seq[DecompPoint] = {
+    implicit val o = order
+
+    val points = new ArrayBuffer[DecompPoint]
+
+    def genPoints(t          : LinearCombination,
+                  leftTerms  : List[Term],
+                  len        : LinearCombination,
+                  rightTerms : List[Term]) : Unit =
+      if (strDatabase isConcrete t) {
+
+      } else {
+        (concatPerRes get t) match {
+          case Some(Seq(concatLit)) => {
+            genPoints(concatLit(0),
+                      leftTerms,
+                      len,
+                      concatLit(1) :: rightTerms)
+            genPoints(concatLit(1),
+                      concatLit(0) :: leftTerms,
+                      len + lengthFor(concatLit(0)),
+                      rightTerms)
+          }
+          case _ =>
+            points += ((lit, leftTerms, len, rightTerms))
+        }
+      }
+
+    genPoints(lit(0), List(),       LinearCombination.ZERO, List(lit(1)))
+    genPoints(lit(1), List(lit(0)), lengthFor(lit(0)),      List())
+
+    points.toSeq
+  }
 
   def decomposeHelp(lits : Seq[Atom]) : Seq[Plugin.Action] = {
     val resultTerm  = lits.head(0)
@@ -250,7 +285,31 @@ class OstrichNielsenSplitter(goal : Goal,
   }
 
   /**
+   * Decompose equations of the form a.b = w, in which w is some
+   * concrete word.
+   */
+  def decomSimpleEquations : Seq[Plugin.Action] = {
+    for (lit <- concatLits;
+         if strDatabase isConcrete lit.last) yield ()
+
+    List()
+  }
+
+  /**
+   * Decompose one equation of the form a.b = w, in which w is some
+   * concrete word.
+   */
+  def decomSimpleEquation(lit : Atom) : Seq[Plugin.Action] = {
+
+
+    List()
+  }
+
+  /**
    * Apply the Nielsen transformation to some selected equation.
+   * 
+   * TODO: handle also the case where we don't have length information
+   * available.
    */
   def splitEquation : Seq[Plugin.Action] = {
     val multiGroups =
@@ -273,6 +332,10 @@ class OstrichNielsenSplitter(goal : Goal,
 
     val lengthModel =
       ModelSearchProver(Conjunction.negate(facts.arithConj, order), order)
+
+    if (lengthModel.isFalse)
+      return List(Plugin.AddAxiom(List(facts.arithConj), Conjunction.FALSE, theory))
+
     val lengthRed =
       ReduceWithConjunction(lengthModel, extOrder)
 
@@ -298,8 +361,13 @@ class OstrichNielsenSplitter(goal : Goal,
       val splitSym = split._3
 
       Console.err.println(
-        "Applying Nielsen transformation: " + splitLit1 + ", " + splitLit2 +
-          ", splitting " + splitSym)
+        "Applying Nielsen transformation (# word equations: " + multiGroups.size +
+          "), splitting " + splitSym)
+      Console.err.println("  " +
+                            term2String(splitLit1(0)) + " . " +
+                            term2String(splitLit1(1)) + " == " +
+                            term2String(splitLit2(0)) + " . " +
+                            term2String(splitLit2(1)))
 
       val f1 = splittingFormula(split, splitLit2)
       val f2 = diffLengthFormula(split, splitLit2)
@@ -315,5 +383,11 @@ class OstrichNielsenSplitter(goal : Goal,
     }
 
   }
+
+  private def term2String(t : Term) =
+    (strDatabase term2Str t) match {
+      case Some(str) => "\"" + str + "\""
+      case None => t.toString
+    }
 
 }

@@ -109,6 +109,37 @@ class StrDatabase(theory : OstrichStringTheory) {
   def id2List(id : Int) : List[Int] = StringTheory.term2List(id2ITerm(id))
 
   /**
+   * Enumerate prefix-suffix pairs for the given string but splitting
+   * the string into two parts in all possible ways.
+   */
+  /*
+  def enumPrefixesSuffixes(id : Int) = new Iterator[(Int, Int)] {
+    private var leftId        = id
+    private var cur : IFunApp = id2LocalTerm(id).get
+    private val right         = new ArrayBuffer[Int]
+
+    def hasNext = (cur != null)
+
+    def next : (Int, Int) = {
+      val res = (list2Id(right.toSeq), leftId)
+
+      cur match {
+        case IFunApp(`str_empty`, _) =>
+          cur = null
+        case IFunApp(`str_cons`,
+                     Seq(IIntLit(IdealInt(head)),
+                         IIntLit(IdealInt(nextId)))) => {
+          leftId = nextId
+          cur = id2LocalTerm(leftId).get
+          right += head
+        }
+      }
+
+      res
+    }
+  }
+   */
+  /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
    */
@@ -131,6 +162,10 @@ class StrDatabase(theory : OstrichStringTheory) {
       case _ =>
         throw new RuntimeException("Riccardo, this should not happen!")
     }
+  }
+
+  private def id2LocalTerm(id : Int) : Option[ITerm] = synchronized {
+    id2StrMap get id
   }
 
   /**
