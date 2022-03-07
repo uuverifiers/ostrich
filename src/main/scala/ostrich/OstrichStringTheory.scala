@@ -313,32 +313,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       case Plugin.GoalState.Final => try { //  Console.withOut(Console.err) 
 
-
-        breakCyclicEquations(goal).getOrElse(List()) elseDo {
-
-          // try Nielsen transformation
-          val nielsenSplitter =
-            new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
-          nielsenSplitter.splitEquation
-
-        } elseDo {
-
-          // try backward propagation
-
-          try {
-            modelCache(goal.facts) {
-              ostrichSolver.findStringModel(goal)
-            } match {
-              case Some(m) =>
-                equalityPropagator.handleSolution(goal, m)
-              case None =>
-                List(Plugin.AddFormula(Conjunction.TRUE))
-            }
-          } catch {
-            case OstrichSolver.BackwardFailed => List()
-          }
-
-        }
+        breakCyclicEquations(goal).getOrElse(List()) elseDo
+        callNielsenSplitter(goal)                    elseDo
+        callBackwardProp(goal)
 
       } catch {
         case t : Throwable =>  { t.printStackTrace; throw t }
@@ -346,6 +323,27 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       case _ => List()
     }
+
+    private def callNielsenSplitter(goal : Goal) : Seq[Plugin.Action] = {
+      val nielsenSplitter =
+        new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
+      nielsenSplitter.splitEquation
+    }
+
+    private def callBackwardProp(goal : Goal) : Seq[Plugin.Action] =
+      try {
+        modelCache(goal.facts) {
+          ostrichSolver.findStringModel(goal)
+        } match {
+          case Some(m) =>
+            equalityPropagator.handleSolution(goal, m)
+          case None =>
+            List(Plugin.AddFormula(Conjunction.TRUE))
+        }
+      } catch {
+        case OstrichSolver.BackwardFailed           => List()
+        case OstrichSolver.BlockingActions(actions) => actions
+      }
 
     override def computeModel(goal : Goal) : Seq[Plugin.Action] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {

@@ -37,17 +37,20 @@ import ostrich.preop.{PreOp, ConcatPreOp}
 
 import ap.SimpleAPI
 import ap.parser.IFunction
-import ap.terfor.{Term, TerForConvenience, ConstantTerm, OneTerm}
+import ap.terfor.{Term, Formula, TerForConvenience, ConstantTerm, OneTerm}
 import ap.terfor.preds.{PredConj, Atom}
 import ap.terfor.linearcombination.LinearCombination
+import ap.terfor.conjunctions.Conjunction
 import ap.types.Sort
 import ap.proof.goal.Goal
+import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
 import scala.collection.breakOut
-import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
+                                 HashSet => MHashSet}
 
 object OstrichSolver {
 
@@ -56,14 +59,21 @@ object OstrichSolver {
    * encounters constraints that cannot be handled: e.g.,
    * non-tree-like or cyclic constraints.
    */
-  protected[ostrich] object BackwardFailed
+  protected[ostrich] class BackwardException
                      extends Exception("backward propagation failed")
+
+  protected[ostrich] case object BackwardFailed
+                     extends BackwardException
+
+  protected[ostrich] case class BlockingActions(actions : Seq[Plugin.Action])
+                     extends BackwardException
 
 }
 
 class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
 
+  import OstrichSolver._
   import theory.{str_from_char, str_len, str_empty, str_cons, str_++,
                  str_in_re,
                  str_in_re_id, str_to_re, re_from_str,
@@ -124,6 +134,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     // literals
     val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
     val regexes    = new ArrayBuffer[(Term, Automaton)]
+    val negEqs     = new ArrayBuffer[(Term, Term)]
     val lengthVars = new MHashMap[Term, Term]
 
     ////////////////////////////////////////////////////////////////////////////
@@ -231,11 +242,30 @@ class OstrichSolver(theory : OstrichStringTheory,
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>
           // nothing
+        case Seq((IdealInt.ONE, c : ConstantTerm),
+                 (IdealInt.MINUS_ONE, d : ConstantTerm))
+            if stringConstants(c) && stringConstants(d) =>
+          negEqs += ((c, d))
         case lc if lc.constants exists stringConstants =>
           throw new Exception ("Cannot handle negative string equation " +
                                  (lc =/= 0))
         case _ =>
           // nothing
+      }
+
+      if (!negEqs.isEmpty) {
+        // make sure that symbols mentioned in negated equations have some
+        // regex constraint, and thus will be included in the solution
+        val regexCoveredTerms = new MHashSet[Term]
+        for ((t, _) <- regexes)
+          regexCoveredTerms += t
+
+        for ((c, d) <- negEqs) {
+          if (regexCoveredTerms add c)
+            regexes += ((l(c), BricsAutomaton.makeAnyString()))
+          if (regexCoveredTerms add d)
+            regexes += ((l(d), BricsAutomaton.makeAnyString()))
+        }
       }
     }
 
@@ -275,7 +305,40 @@ class OstrichSolver(theory : OstrichStringTheory,
           Exploration.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
-      exploration.findModel
+      val result = exploration.findModel
+
+      ////////////////////////////////////////////////////////////////////////////
+      // Verify that the result satisfies all constraints that could
+      // not be included initially
+
+      for (model <- result) {
+        import TerForConvenience._
+        implicit val o = order
+
+        for ((c, d) <- negEqs) {
+          val Right(cVal) = model(l(c))
+          val Right(dVal) = model(l(d))
+
+          if (cVal == dVal) {
+            Console.err.println("   ... disequality is not satisfied: " +
+                                  c + " != " + d)
+            Console.err.println(model)
+            val strId = strDatabase.list2Id(cVal)
+            throw new BlockingActions(List(
+              Plugin.AxiomSplit(List(c =/= d),
+                                List((c =/= strId, List()),
+                                     (c === strId & d =/= strId, List())),
+                                theory)))
+          }
+        }
+      }
+
+      if (result.isDefined)
+        Console.err.println("   ... sat")
+      else
+        Console.err.println("   ... unsat")
+
+      result
     }
   }
 }

@@ -152,7 +152,8 @@ class OstrichReducer protected[ostrich]
                     : ReducerPlugin.ReductionResult = {
     implicit val order = predConj.order
     import TerForConvenience._
-    import strDatabase.isConcrete
+    import strDatabase.{isConcrete, hasValue, term2List, term2ListGet,
+                        list2Id, str2Id, term2Str}
 
     def getLanguages(t : Term) : Iterator[NamedAutomaton] =
       for (c <- languageConstraints.iterator;
@@ -184,15 +185,15 @@ class OstrichReducer protected[ostrich]
             a
           }
 
-        case `_str_++` if strDatabase.hasValue(a(0), List()) =>
+        case `_str_++` if hasValue(a(0), List()) =>
           a(1) === a(2)
-        case `_str_++` if strDatabase.hasValue(a(1), List()) =>
+        case `_str_++` if hasValue(a(1), List()) =>
           a(0) === a(2)
 
         case `str_in_re_id` => {
           val autId = regexAtomToId(a)
           if (isConcrete(a(0))) {
-            val Some(str) = strDatabase.term2List(a(0))
+            val Some(str) = term2List(a(0))
             val Some(aut) = autDatabase.id2Automaton(autId)
             if (aut(str)) Conjunction.TRUE else Conjunction.FALSE
           } else {
@@ -218,9 +219,9 @@ class OstrichReducer protected[ostrich]
 
         case `_str_len` =>
           if (isConcrete(a(0))) {
-            a.last === (strDatabase term2ListGet a(0)).size
+            a.last === term2ListGet(a(0)).size
           } else if (a.last.isConstant && a.last.constant.isZero) {
-            a(0) === (strDatabase list2Id List())
+            a(0) === list2Id(List())
           } else {
             a
           }
@@ -228,8 +229,8 @@ class OstrichReducer protected[ostrich]
         case `_int_to_str` =>
           if (a(0).isConstant) {
             val const = a(0).constant
-            val str = if (const.signum < 0) "" else a(0).constant.toString
-            val id = strDatabase str2Id str
+            val str   = if (const.signum < 0) "" else a(0).constant.toString
+            val id    = str2Id(str)
             a.last === id
           } else {
             a
@@ -237,7 +238,7 @@ class OstrichReducer protected[ostrich]
 
         case `_str_to_int` =>
           if (isConcrete(a(0))) {
-            val str = strDatabase.term2Str(a(0)).get
+            val str = term2Str(a(0)).get
             val strVal = str match {
               case IntRegex() => IdealInt(str)
               case _          => IdealInt.MINUS_ONE
@@ -257,7 +258,7 @@ class OstrichReducer protected[ostrich]
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(1), l(autId)))
           } else if (isConcrete(a(1))) {
-            val str   = strDatabase.term2Str(a(1)).get
+            val str   = term2Str(a(1)).get
             val autId = autDatabase.automaton2Id(
                           BricsAutomaton.prefixAutomaton(str))
             str_in_re_id(List(a(0), l(autId)))
@@ -271,23 +272,28 @@ class OstrichReducer protected[ostrich]
         case FunPred(`str_replace`) if a(0) == a(1) =>
           a(2) === a(3)
 
-        case FunPred(`str_replace`) if strDatabase.hasValue(a(0), List()) =>
+        case FunPred(`str_replace` | `str_replaceall`)
+            if isConcrete(a(0)) && isConcrete(a(1)) &&
+               !(term2ListGet(a(0)) containsSlice term2ListGet(a(1))) =>
+          a(0) === a(3)
+
+        case FunPred(`str_replace`) if hasValue(a(0), List()) =>
           ((a(0) === a(1)) & (a(2) === a(3))) | ((a(0) =/= a(1)) & (a(0) === a(3)))
 
-        case FunPred(`str_replace`) if strDatabase.hasValue(a(1), List()) =>
+        case FunPred(`str_replace`) if hasValue(a(1), List()) =>
           _str_++(List(a(2), a(0), a(3)))
 
-        case FunPred(`str_replaceall`) if strDatabase.hasValue(a(1), List()) =>
+        case FunPred(`str_replaceall`) if hasValue(a(1), List()) =>
           a(0) === a(3)
 
         case p => {
           assert(funTranslator.translatablePredicates contains p)
           funTranslator(a) match {
             case Some((op, args, res)) if (args forall isConcrete) => {
-              val argStrs = args map strDatabase.term2ListGet
+              val argStrs = args map term2ListGet
               op().eval(argStrs) match {
                 case Some(resStr) =>
-                  res === strDatabase.list2Id(resStr)
+                  res === list2Id(resStr)
                 case None =>
                   a
               }
