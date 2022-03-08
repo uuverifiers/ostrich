@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -109,10 +109,27 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     }
 
     case (IFunApp(`str_indexof`, _),
-          Seq(bigStr : ITerm, subStr@ConcreteString(subStrStr),
-              IIntLit(IdealInt.ZERO) /* startIndex : ITerm */ )) => {
-      val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
-      val ind = v(2)
+          Seq(bigStr : ITerm,
+              subStr@ConcreteString(subStrStr),
+              startIndex : ITerm)) => {
+      val shBigStr5 = VariableShiftVisitor(bigStr, 0, 5)
+      val ind       = v(4)
+
+      val (bigStrSuffix, suffixDef1, suffixDef2, suffixDef3, shStartIndex) =
+        startIndex match {
+          case Const(IdealInt.ZERO) =>
+            (shBigStr5,
+             IBoolLit(true), IBoolLit(false), IBoolLit(true),
+             startIndex)
+          case _ => {
+            val shStartIndex = VariableShiftVisitor(startIndex, 0, 5)
+            (v(0, StringSort),
+             strCat(v(1, StringSort), v(0, StringSort)) === shBigStr5,
+             (shStartIndex < 0) | (shStartIndex > str_len(shBigStr5)),
+             str_len(v(1, StringSort)) === shStartIndex,
+             shStartIndex)
+          }
+        }
 
       // the search string must not occur in the prefix
       // of the big string concatenated with the search string
@@ -126,14 +143,19 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val forbiddenSuffixREs =
         for (s <- forbiddenSuffixes) yield re_++(re_all(), str_to_re(s))
       val containingOrSuffix =
-        reUnion(List(containingStr) ++ forbiddenSuffixREs : _*)
+        if (subStrStr.isEmpty)
+          reCat(re_allchar(), re_all())
+        else
+          reUnion(List(containingStr) ++ forbiddenSuffixREs : _*)
 
-      eps(StringSort.ex(StringSort.ex(
-        (ind === -1 & !str_in_re(shBigStr3, containingStr)) |
-        (ind === str_len(v(0, StringSort)) &
-           strCat(v(0, StringSort), subStr, v(1, StringSort)) === shBigStr3 &
-           !str_in_re(v(0, StringSort), containingOrSuffix))
-      )))
+      eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
+        suffixDef1 &
+        ((ind === -1 & (!str_in_re(bigStrSuffix, containingStr) | suffixDef2)) |
+         (suffixDef3 &
+            ind === str_len(v(2, StringSort)) + shStartIndex &
+            strCat(v(2, StringSort), subStr, v(3, StringSort)) === bigStrSuffix &
+            !str_in_re(v(2, StringSort), containingOrSuffix)))
+      )))))
     }
 
     case (IFunApp(`str_substr`, _),

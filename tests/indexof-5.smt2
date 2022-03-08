@@ -5,7 +5,8 @@
 (declare-fun x0 () String)
 (declare-fun n () Int)
 
-(assert (= (str.indexof x0 "===" 0) n))
-(assert (> n 0))
+(assert (str.prefixof "testtesttest" x0))
+(assert (= (str.indexof x0 "" 3) n))
 
 (check-sat)
+(get-model)

@@ -305,6 +305,15 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("indexof.smt2") =
     checkFile("tests/indexof.smt2", "sat")
+  property("indexof-2.smt2") =
+    checkFile("tests/indexof-2.smt2", "unsat")
+  property("indexof-3.smt2") =
+    checkFile("tests/indexof-3.smt2", "sat")
+  property("indexof-4.smt2") =
+    checkFile("tests/indexof-4.smt2", "sat")
+  property("indexof-5.smt2") =
+    checkFile("tests/indexof-5.smt2", "sat")
+
   property("substring.smt2") =
     checkFile("tests/substring.smt2", "sat")
   property("substring-bug.smt2") =

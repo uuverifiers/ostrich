@@ -1,11 +1,12 @@
 (set-logic QF_SLIA)
 
-; SAT
+; UNSAT
 
 (declare-fun x0 () String)
 (declare-fun n () Int)
 
-(assert (= (str.indexof x0 "===" 0) n))
+(assert (str.prefixof "testtesttest" x0))
+(assert (= (str.indexof x0 "testtest" 0) n))
 (assert (> n 0))
 
 (check-sat)
