@@ -112,22 +112,32 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           Seq(bigStr : ITerm,
               subStr@ConcreteString(subStrStr),
               startIndex : ITerm)) => {
-      val shBigStr5 = VariableShiftVisitor(bigStr, 0, 5)
-      val ind       = v(4)
+      // we need one epsilon and 5 quantifiers, so shift by 6
+      val shift = 6
 
-      val (bigStrSuffix, suffixDef1, suffixDef2, suffixDef3, shStartIndex) =
+      val shiftedBigStr      = VariableShiftVisitor(bigStr, 0, shift)
+      val shiftedStartIndex  = VariableShiftVisitor(startIndex, 0, shift)
+
+      val resultVar          = v(5)
+      val bigStrVar          = v(0, StringSort)
+      val skippedPrefixVar   = v(3, StringSort)
+      val matchedSuffixVar   = v(4, StringSort)
+      val unmatchedPrefixVar = v(1, StringSort)
+      val unmatchedSuffixVar = v(2, StringSort)
+
+      val (bigStrSuffix, suffixDef1, suffixDef2, suffixDef3) =
         startIndex match {
           case Const(IdealInt.ZERO) =>
-            (shBigStr5,
-             IBoolLit(true), IBoolLit(false), IBoolLit(true),
-             startIndex)
+            (bigStrVar,
+             bigStrVar === shiftedBigStr,
+             IBoolLit(false),
+             IBoolLit(true))
           case _ => {
-            val shStartIndex = VariableShiftVisitor(startIndex, 0, 5)
-            (v(0, StringSort),
-             strCat(v(1, StringSort), v(0, StringSort)) === shBigStr5,
-             (shStartIndex < 0) | (shStartIndex > str_len(shBigStr5)),
-             str_len(v(1, StringSort)) === shStartIndex,
-             shStartIndex)
+            (matchedSuffixVar,
+             (bigStrVar === shiftedBigStr) &
+               (strCat(skippedPrefixVar, matchedSuffixVar) === bigStrVar),
+             (shiftedStartIndex < 0) | (shiftedStartIndex > str_len(bigStrVar)),
+             str_len(skippedPrefixVar) === shiftedStartIndex)
           }
         }
 
@@ -148,14 +158,16 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         else
           reUnion(List(containingStr) ++ forbiddenSuffixREs : _*)
 
-      eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
+      eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
         suffixDef1 &
-        ((ind === -1 & (!str_in_re(bigStrSuffix, containingStr) | suffixDef2)) |
+        ((resultVar === -1 &
+            (!str_in_re(bigStrSuffix, containingStr) | suffixDef2)) |
          (suffixDef3 &
-            ind === str_len(v(2, StringSort)) + shStartIndex &
-            strCat(v(2, StringSort), subStr, v(3, StringSort)) === bigStrSuffix &
-            !str_in_re(v(2, StringSort), containingOrSuffix)))
-      )))))
+            resultVar === str_len(unmatchedPrefixVar) + shiftedStartIndex &
+            strCat(unmatchedPrefixVar, subStr,
+                   unmatchedSuffixVar) === bigStrSuffix &
+            !str_in_re(unmatchedPrefixVar, containingOrSuffix)))
+      ))))))
     }
 
     case (IFunApp(`str_substr`, _),
@@ -226,19 +238,30 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
     case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
-      val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
-      val shBegin3  = VariableShiftVisitor(begin, 0, 3)
-      val shLen3    = VariableShiftVisitor(len, 0, 3)
+      // we need one epsilon and 5 quantifiers, so shift by 6
+      val shift = 6
 
-      StringSort.eps(StringSort.ex(StringSort.ex(
+      val shiftedBigStr = VariableShiftVisitor(bigStr, 0, shift)
+      val shiftedBegin  = VariableShiftVisitor(begin, 0, shift)
+      val shiftedLen    = VariableShiftVisitor(len, 0, shift)
+
+      val resultVar     = v(5, StringSort)
+      val bigStrVar     = v(2, StringSort)
+      val beginVar      = v(3)
+      val lenVar        = v(4)
+
+      StringSort.eps(ex(ex(StringSort.ex(StringSort.ex(StringSort.ex(
+        bigStrVar === shiftedBigStr &
+        beginVar  === shiftedBegin &
+        lenVar    === shiftedLen &
         ite(
-          shLen3 < 0 | shBegin3 < 0 | shBegin3 + shLen3 > str_len(shBigStr3),
-          v(2, StringSort) === "",
-          strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
-          str_len(v(1, StringSort)) === shBegin3 &
-          str_len(v(2, StringSort)) === shLen3
+          lenVar < 0 | beginVar < 0 | beginVar + lenVar > str_len(bigStrVar),
+          resultVar === "",
+          strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
+          str_len(v(1, StringSort)) === beginVar &
+          str_len(resultVar) === lenVar
         )
-      )))
+      ))))))
     }
 
     // keep str.at with concrete index, we will later translate it
