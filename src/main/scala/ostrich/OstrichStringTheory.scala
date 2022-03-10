@@ -309,25 +309,27 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                            Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
     override def handleGoal(goal : Goal)
-                       : Seq[Plugin.Action] = goalState(goal) match {
-
-      case Plugin.GoalState.Final => try { //  Console.withOut(Console.err) 
-
-        breakCyclicEquations(goal).getOrElse(List()) elseDo
-        callNielsenSplitter(goal)                    elseDo
-        callBackwardProp(goal)
-
-      } catch {
-        case t : Throwable =>  { t.printStackTrace; throw t }
-      }
-
-      case _ => List()
-    }
-
-    private def callNielsenSplitter(goal : Goal) : Seq[Plugin.Action] = {
-      val nielsenSplitter =
+                       : Seq[Plugin.Action] = {
+      lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
-      nielsenSplitter.splitEquation
+
+      goalState(goal) match {
+
+        case Plugin.GoalState.Intermediate => {
+          nielsenSplitter.decompSimpleEquations
+        }
+
+        case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
+
+          breakCyclicEquations(goal).getOrElse(List()) elseDo
+          nielsenSplitter.splitEquation                elseDo
+          callBackwardProp(goal)
+
+        } catch {
+          case t : Throwable =>  { t.printStackTrace; throw t }
+        }
+
+      }
     }
 
     private def callBackwardProp(goal : Goal) : Seq[Plugin.Action] =

@@ -8,7 +8,7 @@ import org.scalacheck.Prop._
 
 object SMTLIBTests extends Properties("SMTLIBTests") {
 
-  val timeout = 20000
+  val timeout = 30000
 
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {

@@ -64,6 +64,61 @@ class OstrichNielsenSplitter(goal : Goal,
   val lengthLits   = predConj.positiveLitsWithPred(_str_len)
   val lengthMap    = (for (a <- lengthLits.iterator) yield (a(0), a(1))).toMap
 
+  class FormulaBuilder {
+    implicit val o = order
+    import TerForConvenience._
+
+    val varSorts   = new ArrayBuffer[Sort]
+    val matrixFors = new ArrayBuffer[Formula]
+    val varLengths = new MHashMap[VariableTerm, Term]
+
+    def newVar(s : Sort) : VariableTerm = {
+      val res = VariableTerm(varSorts.size)
+      varSorts += s
+      res
+    }
+
+    def lengthFor2(t : Term) : Term =
+      t match {
+        case t : VariableTerm =>
+          varLengths.getOrElseUpdate(t, {
+            val len = newVar(Sort.Integer)
+            matrixFors += _str_len(List(l(t), l(len)))
+            matrixFors += l(len) >= 0
+            len
+          })
+        case _ =>
+          lengthFor(t)
+      }
+
+    def addConcat(left : Term, right : Term, res : Term) : Unit = {
+      matrixFors += _str_++ (List(l(left), l(right), l(res)))
+      matrixFors += lengthFor2(left) + lengthFor2(right) === lengthFor2(res)
+    }
+
+    def addConcatN(terms : Seq[Term], res : Term) : Unit =
+      terms match {
+        case Seq(t) =>
+          matrixFors += t === res
+        case terms => {
+          assert(terms.size > 1)
+          val prefixes =
+            (for (_ <- (2 until terms.size).iterator)
+             yield newVar(StringSort)) ++ Iterator(res)
+          terms reduceLeft[Term] {
+            case (t1, t2) => {
+              val s = prefixes.next
+              addConcat(t1, t2, s)
+              s
+            }
+          }
+        }
+      }
+    
+    def result =
+      existsSorted(varSorts.toSeq, conj(matrixFors))
+  }
+
   def resolveConcat(t : LinearCombination)
                   : Option[(LinearCombination, LinearCombination)] =
     for (lits <- concatPerRes get t) yield (lits.head(0), lits.head(1))
@@ -144,66 +199,18 @@ class OstrichNielsenSplitter(goal : Goal,
   def splittingFormula(split     : ChooseSplitResult,
                        splitLit2 : Atom)
                                  : Conjunction = {
-    import TerForConvenience._
-    implicit val o = order
+    val builder = new FormulaBuilder
 
     val (leftTerms, _, symToSplit, rightTerms) = split
 
-    val varSorts   = new ArrayBuffer[Sort]
-    val matrixFors = new ArrayBuffer[Formula]
-    val varLengths = new MHashMap[VariableTerm, Term]
+    val leftSplitSym, rightSplitSym = builder.newVar(StringSort)
 
-    def newVar(s : Sort) : VariableTerm = {
-      val res = VariableTerm(varSorts.size)
-      varSorts += s
-      res
-    }
+    builder.addConcat(leftSplitSym, rightSplitSym, symToSplit)
 
-    def lengthFor2(t : Term) : Term =
-      t match {
-        case t : VariableTerm =>
-          varLengths.getOrElseUpdate(t, {
-            val len = newVar(Sort.Integer)
-            matrixFors += _str_len(List(l(t), l(len)))
-            matrixFors += l(len) >= 0
-            len
-          })
-        case _ =>
-          lengthFor(t)
-      }
+    builder.addConcatN(leftTerms ++ List(leftSplitSym),   splitLit2(0))
+    builder.addConcatN(List(rightSplitSym) ++ rightTerms, splitLit2(1))
 
-    def addConcat(left : Term, right : Term, res : Term) : Unit = {
-      matrixFors += _str_++ (List(l(left), l(right), l(res)))
-      matrixFors += lengthFor2(left) + lengthFor2(right) === lengthFor2(res)
-    }
-
-    def addConcatN(terms : Seq[Term], res : Term) : Unit =
-      terms match {
-        case Seq(t) =>
-          matrixFors += t === res
-        case terms => {
-          assert(terms.size > 1)
-          val prefixes =
-            (for (_ <- (2 until terms.size).iterator)
-             yield newVar(StringSort)) ++ Iterator(res)
-          terms reduceLeft[Term] {
-            case (t1, t2) => {
-              val s = prefixes.next
-              addConcat(t1, t2, s)
-              s
-            }
-          }
-        }
-      }
-
-    val leftSplitSym, rightSplitSym = newVar(StringSort)
-
-    addConcat(leftSplitSym, rightSplitSym, symToSplit)
-
-    addConcatN(leftTerms ++ List(leftSplitSym),   splitLit2(0))
-    addConcatN(List(rightSplitSym) ++ rightTerms, splitLit2(1))
-
-    existsSorted(varSorts.toSeq, conj(matrixFors))
+    builder.result
   }
 
   def diffLengthFormula(split : ChooseSplitResult,
@@ -224,7 +231,7 @@ class OstrichNielsenSplitter(goal : Goal,
      LinearCombination, // cumulative length of the left terms
      Seq[Term])         // right terms
 
-  def decompPoints(lit : Atom) : Seq[DecompPoint] = {
+  def decompositionPoints(lit : Atom) : Seq[DecompPoint] = {
     implicit val o = order
 
     val points = new ArrayBuffer[DecompPoint]
@@ -232,28 +239,33 @@ class OstrichNielsenSplitter(goal : Goal,
     def genPoints(t          : LinearCombination,
                   leftTerms  : List[Term],
                   len        : LinearCombination,
-                  rightTerms : List[Term]) : Unit =
+                  rightTerms : List[Term],
+                  leftMost   : Boolean) : Unit =
       if (strDatabase isConcrete t) {
-
+        if (!leftMost)
+          points += ((lit, leftTerms, len, t :: rightTerms))
       } else {
         (concatPerRes get t) match {
           case Some(Seq(concatLit)) => {
             genPoints(concatLit(0),
                       leftTerms,
                       len,
-                      concatLit(1) :: rightTerms)
+                      concatLit(1) :: rightTerms,
+                      leftMost)
             genPoints(concatLit(1),
                       concatLit(0) :: leftTerms,
                       len + lengthFor(concatLit(0)),
-                      rightTerms)
+                      rightTerms,
+                      false)
           }
           case _ =>
-            points += ((lit, leftTerms, len, rightTerms))
+            if (!leftMost)
+              points += ((lit, leftTerms, len, t :: rightTerms))
         }
       }
 
-    genPoints(lit(0), List(),       LinearCombination.ZERO, List(lit(1)))
-    genPoints(lit(1), List(lit(0)), lengthFor(lit(0)),      List())
+    genPoints(lit(0), List(),       LinearCombination.ZERO, List(lit(1)), true)
+    genPoints(lit(1), List(lit(0)), lengthFor(lit(0)),      List(),       false)
 
     points.toSeq
   }
@@ -270,7 +282,7 @@ class OstrichNielsenSplitter(goal : Goal,
    * Decompose equations of the form a.b = c.d if it can be derived
    * that |a| = |c|.
    */
-  def decomEquation : Seq[Plugin.Action] = {
+  def decompEquation : Seq[Plugin.Action] = {
     val multiGroups =
       concatPerRes filter {
         case (res, lits) => lits.size >= 2 || (strDatabase isConcrete res)
@@ -288,21 +300,65 @@ class OstrichNielsenSplitter(goal : Goal,
    * Decompose equations of the form a.b = w, in which w is some
    * concrete word.
    */
-  def decomSimpleEquations : Seq[Plugin.Action] = {
-    for (lit <- concatLits;
-         if strDatabase isConcrete lit.last) yield ()
+  def decompSimpleEquations : Seq[Plugin.Action] = {
+    if (lengthLits.isEmpty)
+      return List()
 
-    List()
+    for (lit <- concatLits;
+         if strDatabase isConcrete lit.last;
+         act <- decompSimpleEquation(lit))
+    yield act
   }
 
   /**
    * Decompose one equation of the form a.b = w, in which w is some
    * concrete word.
    */
-  def decomSimpleEquation(lit : Atom) : Seq[Plugin.Action] = {
+  def decompSimpleEquation(lit : Atom) : Seq[Plugin.Action] = {
+    import LinearCombination.Constant
+    import TerForConvenience._
 
+    val decomps = decompositionPoints(lit)
 
-    List()
+    val constLenPoints =
+      for ((_, left, Constant(IdealInt(len)), right) <- decomps.iterator)
+      yield (left, len, right)
+
+    if (constLenPoints.hasNext) {
+      val (left, len, right) = constLenPoints.next
+
+      val result       = strDatabase term2ListGet lit.last
+      val resultPrefix = strDatabase.list2Id(result take len)
+      val resultSuffix = strDatabase.list2Id(result drop len)
+
+      val builder = new FormulaBuilder
+
+      builder.addConcatN(left.reverse, l(resultPrefix))
+      builder.addConcatN(right,        l(resultSuffix))
+
+      List(Plugin.RemoveFacts(lit),
+           Plugin.AddAxiom(concatLits ++ lengthLits, // TODO: make specific
+                           builder.result,
+                           theory))
+    } else {
+      /*
+      for ((_, t :: left, len, right) <- decomps)
+        if (strDatabase isConcrete t) {
+          println
+          println("Concrete: " + decomps)
+          println
+        }
+
+      for ((_, left, len, Seq(t)) <- decomps)
+        if (strDatabase isConcrete t) {
+          println
+          println("Concrete: " + decomps)
+          println
+        }
+       */
+
+      List()
+    }
   }
 
   /**
