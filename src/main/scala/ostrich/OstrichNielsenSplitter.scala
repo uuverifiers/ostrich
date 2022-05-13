@@ -231,6 +231,9 @@ class OstrichNielsenSplitter(goal : Goal,
      LinearCombination, // cumulative length of the left terms
      Seq[Term])         // right terms
 
+  /**
+   * Compute all prefix/suffix pairs for the given concat term.
+   */
   def decompositionPoints(lit : Atom) : Seq[DecompPoint] = {
     implicit val o = order
 
@@ -268,6 +271,16 @@ class OstrichNielsenSplitter(goal : Goal,
     genPoints(lit(1), List(lit(0)), lengthFor(lit(0)),      List(),       false)
 
     points.toSeq
+  }
+
+  /**
+   * Compute all prefix/suffix pairs for the given concat term; also
+   * split string literals in the term into prefix/suffix pairs.
+   */
+  def decompositionPointsWithLits(lit : Atom) : Seq[DecompPoint] = {
+    val rawPoints = decompositionPoints(lit)
+
+    null
   }
 
   def decomposeHelp(lits : Seq[Atom]) : Seq[Plugin.Action] = {
@@ -319,7 +332,8 @@ class OstrichNielsenSplitter(goal : Goal,
     import TerForConvenience._
 
     val decomps = decompositionPoints(lit)
-
+    println(lit)
+    println(decomps)
     val constLenPoints =
       for ((_, left, Constant(IdealInt(len)), right) <- decomps.iterator)
       yield (left, len, right)

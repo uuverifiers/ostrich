@@ -40,7 +40,8 @@ import ap.theories.strings.StringTheory
 import ap.terfor.Term
 import ap.terfor.linearcombination.LinearCombination
 
-import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer}
+import scala.collection.immutable.VectorBuilder
 
 class StrDatabase(theory : OstrichStringTheory) {
 
@@ -109,36 +110,32 @@ class StrDatabase(theory : OstrichStringTheory) {
   def id2List(id : Int) : List[Int] = StringTheory.term2List(id2ITerm(id))
 
   /**
-   * Enumerate prefix-suffix pairs for the given string but splitting
+   * Enumerate prefix-suffix pairs for the given string by splitting
    * the string into two parts in all possible ways.
    */
-  /*
-  def enumPrefixesSuffixes(id : Int) = new Iterator[(Int, Int)] {
-    private var leftId        = id
-    private var cur : IFunApp = id2LocalTerm(id).get
-    private val right         = new ArrayBuffer[Int]
+  def prefixSuffixPairs(id : Int) : Seq[(Int, Int)] = {
+    val res        = new VectorBuilder[(Int, Int)]
+    val emptyStrId = atomic2Id(str_empty())
 
-    def hasNext = (cur != null)
+    var remId      = id
+    val prefix     = new ArrayBuffer[Int]
 
-    def next : (Int, Int) = {
-      val res = (list2Id(right.toSeq), leftId)
+    res            += ((list2Id(prefix.toSeq), remId))
 
-      cur match {
-        case IFunApp(`str_empty`, _) =>
-          cur = null
-        case IFunApp(`str_cons`,
-                     Seq(IIntLit(IdealInt(head)),
-                         IIntLit(IdealInt(nextId)))) => {
-          leftId = nextId
-          cur = id2LocalTerm(leftId).get
-          right += head
-        }
-      }
+    while (remId != emptyStrId) {
+      val IFunApp(`str_cons`,
+                  Seq(IIntLit(IdealInt(head)),
+                      IIntLit(IdealInt(nextId)))) = id2LocalTerm(remId).get
 
-      res
+      remId  = nextId
+      prefix += head
+
+      res += ((list2Id(prefix.toSeq), remId))
     }
+
+    res.result
   }
-   */
+
   /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
