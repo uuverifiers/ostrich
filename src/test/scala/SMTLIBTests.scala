@@ -8,6 +8,8 @@ import org.scalacheck.Prop._
 
 object SMTLIBTests extends Properties("SMTLIBTests") {
 
+  import System.lineSeparator
+
   val timeout = 30000
 
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
@@ -19,9 +21,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
     expResult match {
       case "error" =>
-        (result split "\n") exists { str => str contains "error" }
+        result contains "error"
       case res =>
-        (result split "\n") contains res
+        (result split lineSeparator) contains res
     }
   }
 
