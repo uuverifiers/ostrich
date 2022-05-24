@@ -52,6 +52,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/word-equation-2.smt2", "sat")
   property("word-equation-3.smt2") =
     checkFile("tests/word-equation-3.smt2", "unsat")
+  property("word-equation-4.smt2") =
+    checkFile("tests/word-equation-4.smt2", "sat")
 
   property("replace-special.smt2") =
     checkFile("tests/replace-special.smt2", "unsat")

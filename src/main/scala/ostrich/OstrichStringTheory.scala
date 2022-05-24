@@ -315,8 +315,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       goalState(goal) match {
 
-        case Plugin.GoalState.Intermediate => {
-          nielsenSplitter.decompSimpleEquations
+        case Plugin.GoalState.Intermediate => try {
+          nielsenSplitter.decompSimpleEquations elseDo
+          nielsenSplitter.decompEquations
+        } catch {
+          case t : ap.util.Timeout => throw t
+          case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
