@@ -383,8 +383,6 @@ class OstrichNielsenSplitter(goal : Goal,
     if (lengthLits.isEmpty)
       return List()
 
-    println(concatLits)
-
     val multiGroups =
       concatPerRes filter {
         case (res, lits) => lits.size >= 2 && !(strDatabase isConcrete res)
