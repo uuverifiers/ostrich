@@ -316,7 +316,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       goalState(goal) match {
 
         case Plugin.GoalState.Intermediate => try {
-          nielsenSplitter.decompSimpleEquations elseDo
+          breakCyclicEquations(goal).getOrElse(List()) elseDo
+          nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations
         } catch {
           case t : ap.util.Timeout => throw t
@@ -324,8 +325,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         }
 
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
-
-          breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.splitEquation                elseDo
           callBackwardProp(goal)
 

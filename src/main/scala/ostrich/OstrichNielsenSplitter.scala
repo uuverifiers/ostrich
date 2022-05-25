@@ -551,6 +551,15 @@ class OstrichNielsenSplitter(goal : Goal,
     val lengthRed =
       ReduceWithConjunction(lengthModel, extOrder)
 
+/*
+    for (t <- 
+    (for (lit <- concatLits.iterator;
+          t <- lit.iterator;
+          if !t.isConstant)
+     yield t).toSet[LinearCombination].toList.sortBy(_.toString)) {
+      Console.err.println("  |" + t + "| = " + evalLengthFor(t, lengthRed))
+    }
+*/
     val zeroSyms = for (t <- (splitLit2 take 2).iterator;
                         if evalLengthFor(t, lengthRed) == 0)
                    yield t
