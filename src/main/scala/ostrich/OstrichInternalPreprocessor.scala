@@ -54,11 +54,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     implicit val _ = order
     import TerForConvenience._
 
-    val useLength = flags.useLength match {
-      case OFlags.LengthOptions.Off  => false
-      case OFlags.LengthOptions.On   => true
-      case OFlags.LengthOptions.Auto => f.predicates contains _str_len
-    }
+    val useLength = theory.lengthNeeded(f)
 
     if (!useLength)
       return f
@@ -68,8 +64,6 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
         interestingCharacters(f).toSeq.sorted
       else
         List()
-
-    println(characters)
 
     val funTranslator =
       new OstrichStringFunctionTranslator(theory, Conjunction.TRUE)

@@ -303,6 +303,18 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * Determine whether length reasoning should be switched on, given
+   * some assertion.
+   */
+  def lengthNeeded(f : Conjunction) : Boolean = {
+    flags.useLength match {
+      case OFlags.LengthOptions.Off  => false
+      case OFlags.LengthOptions.On   => true
+      case OFlags.LengthOptions.Auto => f.predicates contains _str_len
+    }
+  }
+
   private val ostrichSolver      = new OstrichSolver (this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
