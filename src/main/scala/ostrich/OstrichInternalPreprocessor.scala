@@ -45,7 +45,7 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton}
 class OstrichInternalPreprocessor(theory : OstrichStringTheory,
                                   flags : OFlags) {
   import theory.{FunPred, StringSort, str_len, _str_len, _str_char_count,
-                 str_++, str_in_re_id, strDatabase, autDatabase}
+                 str_++, _str_++, str_in_re_id, strDatabase, autDatabase}
   import LinearCombination.Constant
 
   private val p = theory.functionPredicateMap
@@ -54,7 +54,10 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     implicit val _ = order
     import TerForConvenience._
 
-    val useLength = theory.lengthNeeded(f)
+    // As a heuristic, we generate length predicate whenever the
+    // problem already contained length constraints from the
+    // beginning, or if the problem contains string concatenation
+    val useLength = theory.lengthNeeded(f) || (f.predicates contains _str_++)
 
     if (!useLength)
       return f
