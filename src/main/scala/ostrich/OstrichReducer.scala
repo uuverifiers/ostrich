@@ -109,7 +109,7 @@ class OstrichReducer protected[ostrich]
       extends ReducerPlugin {
 
   import OstrichReducer._
-  import theory.{_str_empty, _str_cons, _str_++,
+  import theory.{_str_empty, _str_cons, _str_++, _str_char_count,
                  str_empty, str_cons, str_in_re_id, str_prefixof,
                  str_replace, str_replaceall,
                  re_++, str_to_re, re_all,
@@ -163,7 +163,7 @@ class OstrichReducer protected[ostrich]
 
     ReducerPlugin.rewritePreds(predConj,
                                (List(_str_empty, _str_cons,
-                                     str_in_re_id, _str_len,
+                                     str_in_re_id, _str_len, _str_char_count,
                                      _int_to_str, _str_to_int,
                                      str_prefixof,
                                      FunPred(str_replace),
@@ -222,6 +222,14 @@ class OstrichReducer protected[ostrich]
             a.last === term2ListGet(a(0)).size
           } else if (a.last.isConstant && a.last.constant.isZero) {
             a(0) === list2Id(List())
+          } else {
+            a
+          }
+
+        case `_str_char_count` =>
+          if (isConcrete(a(0)) && isConcrete(a(1))) {
+            val char = a(0).constant.intValueSafe
+            a.last === term2ListGet(a(1)).count(_ == char)
           } else {
             a
           }

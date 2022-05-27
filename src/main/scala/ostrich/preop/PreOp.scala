@@ -83,6 +83,19 @@ trait PreOp {
     Conjunction.TRUE
 
   /**
+   * Generate a formula that approximates the character count (=
+   * Parikh) relationship between arguments and result, for one
+   * particular letter <code>char</code>. It is sound to just return
+   * <code>true</code>. The parameters <code>arguments</code> and
+   * <code>result</code> are terms representing the length of the
+   * string arguments.
+   */
+  def charCountApproximation(char : Int,
+                             arguments : Seq[Term], result : Term,
+                             order : TermOrder) : Formula =
+    Conjunction.TRUE
+
+  /**
    * Given constraints on the input variables, produce an over-approximation
    * constraint on the output.
    */
