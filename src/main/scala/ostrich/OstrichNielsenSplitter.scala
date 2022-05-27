@@ -346,7 +346,7 @@ class OstrichNielsenSplitter(goal : Goal,
           strDatabase.id2List(strId).size
         val newSplits =
           for (n <- 1 until strLen)
-          yield InsideLitDecompPoint(atom, List(), leftLen + n, right, strId, n)
+          yield InsideLitDecompPoint(atom, left, leftLen + n, right, strId, n)
         List(decomp) ++ newSplits
       }
       case decomp =>
