@@ -87,6 +87,19 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       str_in_re(bigStr, asRE)
     }
 
+  /**  case (IAtom(`str_prefixof`, _),
+    Seq(x,y)) if (x == y) => {
+        IBoolLit(true)
+    } */
+
+    case (IAtom(`str_suffixof`, _),
+    Seq(x,y)) if (x == y) => {
+      IBoolLit(true)
+    }
+    case (IAtom(`str_contains`, _),
+    Seq(x,y)) if (x == y) => {
+      IBoolLit(true)
+    }
 /*
     case (IAtom(`str_prefixof`, _),
           Seq(subStr : ITerm, bigStr : ITerm)) if ctxt.polarity < 0 => {

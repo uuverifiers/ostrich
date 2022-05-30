@@ -33,19 +33,11 @@
 package ostrich.automata
 
 import ostrich.OFlags
+import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, Automaton => BAutomaton, State => BState}
+import ostrich.automata.AutomataUtils.buildEpsilons
 
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
-                           Automaton => BAutomaton, State => BState}
-
-import scala.collection.JavaConversions.{asScalaIterator,
-                                         iterableAsScalaIterable}
-import scala.collection.mutable.{HashMap => MHashMap,
-                                 HashSet => MHashSet,
-                                 LinkedHashSet => MLinkedHashSet,
-                                 Stack => MStack,
-                                 TreeSet => MTreeSet,
-                                 MultiMap => MMultiMap,
-                                 Set => MSet}
+import scala.collection.JavaConversions.{asScalaIterator, iterableAsScalaIterable}
+import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, LinkedHashSet => MLinkedHashSet, MultiMap => MMultiMap, Set => MSet, Stack => MStack, TreeSet => MTreeSet}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -90,6 +82,67 @@ object BricsAutomaton {
 
     for (s <- states)
       builder.setAccept(s, true)
+
+    builder.getAutomaton
+  }
+
+  /**
+   * Build brics automaton that accepts exactly the suffix of the given
+   * string.
+   */
+  def suffixAutomaton(str : String) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to str.length) yield builder.getNewState).toIndexedSeq
+
+    builder setInitialState states(0)
+
+    for ((c, n) <- str.iterator.zipWithIndex)
+      builder.addTransition(states(n),
+        builder.LabelOps singleton c,
+        states(n+1))
+
+    builder.setAccept(states(str.length), true)
+
+    val epsilons = new MHashMap[BState, MSet[BState]]()
+                    with MMultiMap[BState , BState]
+
+    for (n <- 1 to str.length)
+      epsilons.addBinding(states(0), states(n))
+    buildEpsilons(builder, epsilons)
+
+    builder.getAutomaton
+  }
+
+  /**
+   * Build brics automaton that accepts exactly the suffix of the given
+   * string.
+   */
+  def containsAutomaton(str : String) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to str.length) yield builder.getNewState).toIndexedSeq
+
+    builder setInitialState states(0)
+
+    for ((c, n) <- str.iterator.zipWithIndex)
+      builder.addTransition(states(n),
+        builder.LabelOps singleton c,
+        states(n+1))
+
+    for (s <- states)
+      builder.setAccept(s, true)
+
+    val epsilons = new MHashMap[BState, MSet[BState]]()
+      with MMultiMap[BState , BState]
+
+    for (n <- 1 to str.length) {
+      epsilons.addBinding(states(0), states(n))
+      epsilons.addBinding(states(n),states(str.length))
+    }
+    buildEpsilons(builder, epsilons)
 
     builder.getAutomaton
   }
