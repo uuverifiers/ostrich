@@ -217,6 +217,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           println("     " + op +
                     "(" + (args map (term2String _) mkString ", ") + ")")
       }
+
+/*
+      println
+      println("Regular expression constraints:")
+      for ((t, aut) <- initialConstraints) {
+        println("===== " + term2String(t) + " in:")
+        println("     " + aut)
+      }
+*/
     }
 
   val nonTreeLikeApps =

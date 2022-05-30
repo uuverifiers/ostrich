@@ -105,8 +105,9 @@ class OstrichReducer protected[ostrich]
       extends ReducerPlugin {
 
   import OstrichReducer._
-  import theory.{_str_empty, _str_cons, _str_++,
-                 str_empty, str_cons, str_in_re_id, str_prefixof, str_contains, str_suffixof,
+
+  import theory.{_str_empty, _str_cons, _str_++, _str_char_count,
+                 str_empty, str_cons, str_in_re_id, str_prefixof,str_suffixof,str_contains,
                  str_replace, str_replaceall,
                  re_++, str_to_re, re_all,
                  strDatabase, autDatabase, FunPred}
@@ -159,7 +160,7 @@ class OstrichReducer protected[ostrich]
 
     ReducerPlugin.rewritePreds(predConj,
                                (List(_str_empty, _str_cons,
-                                     str_in_re_id, _str_len,
+                                     str_in_re_id, _str_len, _str_char_count,
                                      _int_to_str, _str_to_int,
                                      str_prefixof, str_suffixof, str_contains,
                                      FunPred(str_replace),
@@ -222,6 +223,14 @@ class OstrichReducer protected[ostrich]
             a
           }
 
+        case `_str_char_count` =>
+          if (isConcrete(a(0)) && isConcrete(a(1))) {
+            val char = a(0).constant.intValueSafe
+            a.last === term2ListGet(a(1)).count(_ == char)
+          } else {
+            a
+          }
+
         case `_int_to_str` =>
           if (a(0).isConstant) {
             val const = a(0).constant
@@ -252,7 +261,6 @@ class OstrichReducer protected[ostrich]
 
         case `str_suffixof` =>
           if (isConcrete(a(0))) {
-            println(a(0) + " left is concrete")
             assert(a(0).isConstant)
             val asRE  = IFunApp(re_++,
               List(IFunApp(re_all, List()),IFunApp(str_to_re, List(a(0).constant))
@@ -262,7 +270,6 @@ class OstrichReducer protected[ostrich]
           } else if (isConcrete(a(1))) {
 
             val str   = term2Str(a(1)).get
-            println(str + " right is concrete")
             val autId = autDatabase.automaton2Id(
               BricsAutomaton.suffixAutomaton(str))
             str_in_re_id(List(a(0), l(autId)))
@@ -272,7 +279,6 @@ class OstrichReducer protected[ostrich]
 
         case `str_contains` =>
           if (isConcrete(a(1))) {
-            println(a(1) + " right is concrete")
             assert(a(1).isConstant)
             val asRE  =
               IFunApp(re_++,
@@ -283,7 +289,6 @@ class OstrichReducer protected[ostrich]
           } else if (isConcrete(a(0))) {
 
             val str   = term2Str(a(0)).get
-            println(str + " left is concrete")
             val autId = autDatabase.automaton2Id(
               BricsAutomaton.containsAutomaton(str))
             str_in_re_id(List(a(1), l(autId)))
@@ -291,7 +296,6 @@ class OstrichReducer protected[ostrich]
             a
           }
 
-        // TODO: same for suffixes
         case `str_prefixof` =>
           if (isConcrete(a(0))) {
             assert(a(0).isConstant)

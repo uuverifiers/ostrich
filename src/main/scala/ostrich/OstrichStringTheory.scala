@@ -126,6 +126,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
+  val str_char_count =
+    MonoSortedIFunction("str.char_count", List(Sort.Integer, SSo),
+                        Sort.Nat, true, false)
+
   val re_begin_anchor =
     MonoSortedIFunction("re.begin-anchor", List(), RSo, true, false)
   val re_end_anchor =
@@ -230,14 +234,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
 
-  //////////////////////////////////////////////////////////////////////////////
-  /* Modified by Riccardo */
   val strDatabase = new StrDatabase(this)
 
   //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ List(str_empty, str_cons, str_head, str_tail) ++
+    predefFunctions ++
+    List(str_empty, str_cons, str_head, str_tail, str_char_count) ++
     (extraStringFunctions map (_._2)) ++
     extraRegexFunctions ++ (extraIndexedFunctions map (_._1))
 
@@ -258,10 +261,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override val dependencies : Iterable[Theory] = List(ModuloArithmetic)
 
-  val _str_empty = functionPredicateMap(str_empty)
-  val _str_cons  = functionPredicateMap(str_cons)
-  val _str_++    = functionPredicateMap(str_++)
-  val _str_len   = functionPredicateMap(str_len)
+  val _str_empty      = functionPredicateMap(str_empty)
+  val _str_cons       = functionPredicateMap(str_cons)
+  val _str_++         = functionPredicateMap(str_++)
+  val _str_len        = functionPredicateMap(str_len)
+  val _str_char_count = functionPredicateMap(str_char_count)
 
   private val predFunMap =
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
@@ -273,7 +277,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof) ++
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_replaceallcg, 
@@ -299,6 +303,18 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * Determine whether length reasoning should be switched on, given
+   * some assertion.
+   */
+  def lengthNeeded(f : Conjunction) : Boolean = {
+    flags.useLength match {
+      case OFlags.LengthOptions.Off  => false
+      case OFlags.LengthOptions.On   => true
+      case OFlags.LengthOptions.Auto => f.predicates contains _str_len
+    }
+  }
+
   private val ostrichSolver      = new OstrichSolver (this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
@@ -313,15 +329,23 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
 
+      lazy val predToEq =
+        new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, flags)
+
       goalState(goal) match {
 
-        case Plugin.GoalState.Intermediate => {
-          nielsenSplitter.decompSimpleEquations
+        case Plugin.GoalState.Intermediate => try {
+          breakCyclicEquations(goal).getOrElse(List()) elseDo
+          nielsenSplitter.decompSimpleEquations        elseDo
+          nielsenSplitter.decompEquations              elseDo
+            predToEq.reducePredicatesToEquations
+
+        } catch {
+          case t : ap.util.Timeout => throw t
+          case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
-
-          breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.splitEquation                elseDo
           callBackwardProp(goal)
 

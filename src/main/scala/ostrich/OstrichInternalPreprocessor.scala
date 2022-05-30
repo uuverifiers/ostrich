@@ -32,59 +32,144 @@
 
 package ostrich
 
+import ap.basetypes.IdealInt
 import ap.theories.Theory
 import ap.terfor.{TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableShiftSubst
+import ap.types.SortedPredicate
+
+import ostrich.automata.{Automaton, AtomicStateAutomaton}
 
 class OstrichInternalPreprocessor(theory : OstrichStringTheory,
                                   flags : OFlags) {
-  import theory.{FunPred, str_len, _str_len, str_++}
+  import theory.{FunPred, StringSort, str_len, _str_len, _str_char_count,
+                 str_++, _str_++, str_in_re_id, strDatabase, autDatabase}
+  import LinearCombination.Constant
+
   private val p = theory.functionPredicateMap
 
   def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
     implicit val _ = order
     import TerForConvenience._
 
-    val useLength = flags.useLength match {
-      case OFlags.LengthOptions.Off  => false
-      case OFlags.LengthOptions.On   => true
-      case OFlags.LengthOptions.Auto => f.predicates contains _str_len
-    }
+    // As a heuristic, we generate length predicate whenever the
+    // problem already contained length constraints from the
+    // beginning, or if the problem contains string concatenation
+    val useLength = theory.lengthNeeded(f) || (f.predicates contains _str_++)
 
     if (!useLength)
       return f
 
+    val characters =
+      if (flags.useParikhConstraints)
+        interestingCharacters(f).toSeq.sorted
+      else
+        List()
+
     val funTranslator =
       new OstrichStringFunctionTranslator(theory, Conjunction.TRUE)
 
-      Theory.rewritePreds(f, order) { (a, negated) =>
-        if (negated) {
-          funTranslator(a) match {
-            case Some((preop, args, result)) => {
-              val shifter =
-                VariableShiftSubst(0, args.size + 1, order)
-              val shiftedA =
-                shifter(a)
-              val lenAtoms =
-                for ((t, n) <- (args ++ List(result)).zipWithIndex)
-                yield _str_len(List(shifter(l(t)), l(v(n))))
-              val relation =
-                preop().lengthApproximation(for (n <- 0 until args.size)
-                                              yield v(n),
-                                            v(args.size),
-                                            order)
-              exists(args.size + 1, conj(List(shiftedA, relation) ++ lenAtoms))
-            }
-            case _ =>
+    Theory.rewritePreds(f, order) { (a, negated) =>
+      funTranslator(a) match {
+        case Some((preop, args, result)) if negated => {
+          val coeff =
+            characters.size + 1
+          def lenVar(argNum : Int) =
+            l(v(argNum * coeff))
+          def charCountVar(argNum : Int, char : Int) =
+            l(v(argNum * coeff + char + 1))
+
+          val shifter =
+            VariableShiftSubst(0, (args.size + 1) * coeff, order)
+          val shiftedA =
+            shifter(a)
+          val lenAtoms =
+            for ((t, n) <- (args ++ List(result)).zipWithIndex)
+            yield _str_len(List(shifter(l(t)), lenVar(n)))
+          val charCountAtoms =
+            for ((t, n) <- (args ++ List(result)).zipWithIndex;
+                 (c, m) <- characters.zipWithIndex)
+            yield _str_char_count(List(l(c), shifter(l(t)),
+                                         charCountVar(n, m)))
+          val lenCountRelations =
+            for (n <- 0 to args.size)
+            yield (lenVar(n) >= sum(for (m <- 0 until characters.size)
+                                    yield (IdealInt.ONE, charCountVar(n, m))))
+          val lenRelation =
+            preop().lengthApproximation(for (n <- 0 until args.size) yield v(n),
+                                        v(args.size),
+                                        order)
+          val countRelations =
+            for ((c, m) <- characters.zipWithIndex)
+            yield preop().charCountApproximation(c,
+                                                 for (n <- 0 until args.size)
+                                                 yield charCountVar(n, m),
+                                                 charCountVar(args.size, m),
+                                                 order)
+          exists((args.size + 1) * coeff,
+                 conj(List(shiftedA, lenRelation) ++
+                        lenAtoms ++ charCountAtoms ++
+                        lenCountRelations ++ countRelations))
+        }
+
+        case _ => a.pred match {
+
+          case `str_in_re_id` if negated => {
+            val aut = autDatabase.id2Automaton(a.last.constant.intValueSafe).get
+            val charCountConstraints =
+              for (c <- characters; if !automatonAcceptsChar(c, aut))
+              yield _str_char_count(List(l(c), a(0), l(0)))
+            if (charCountConstraints.isEmpty)
               a
+            else
+              conj(charCountConstraints ++ List(a))
           }
-        } else {
-          a
+
+          case `str_in_re_id` if !negated => {
+            val aut =
+              !autDatabase.id2Automaton(a.last.constant.intValueSafe).get
+            val charCountConstraints =
+              for (c <- characters; if !automatonAcceptsChar(c, aut))
+              yield _str_char_count(List(l(c), a(0), l(0)))
+            if (charCountConstraints.isEmpty)
+              a
+            else
+              !conj(charCountConstraints) | a
+          }
+
+          case _ =>
+            a
         }
       }
+    }
 
   }
-  
+
+  def automatonAcceptsChar(char : Int, aut : Automaton) : Boolean = {
+    val asAut = aut.asInstanceOf[AtomicStateAutomaton]
+    asAut.transitions exists {
+      case (_, label, _) => asAut.LabelOps.labelContains(char.toChar, label)
+    }
+  }
+
+  def interestingCharacters(f : Conjunction) : Set[Int] = {
+    val predConj = f.predConj
+
+    val local =
+      (for (a <-
+              predConj.positiveLits.iterator ++ predConj.negativeLits.iterator;
+            sorts = SortedPredicate argumentSorts a;
+            (Constant(IdealInt(id)), StringSort) <-
+              a.iterator zip sorts.iterator;
+            c <- strDatabase id2List id)
+       yield c).toSet
+
+    local ++
+    (for (g <- f.negatedConjs.iterator;
+          c <- interestingCharacters(g).iterator)
+     yield c)
+  }
 
 }

@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -59,7 +59,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward, minimizeAuts = false
+  private var eager, forward, minimizeAuts, useParikh = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
@@ -110,6 +110,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     new OstrichStringTheory (symTransducers,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
+                                    useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
                                     minimizeAutomata        = minimizeAuts))
   }

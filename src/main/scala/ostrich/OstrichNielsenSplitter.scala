@@ -45,32 +45,22 @@ import ap.types.Sort
 
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
-class OstrichNielsenSplitter(goal : Goal,
-                             theory : OstrichStringTheory,
-                             flags : OFlags) {
-  import theory.{_str_++, _str_len, strDatabase, StringSort}
-  import OFlags.debug
+object OstrichNielsenSplitter {
 
-  val order        = goal.order
-  val X            = new ConstantTerm("X")
-  val extOrder     = order extend X
+  /**
+   * Class to simplify the construction of word equations.
+   */
+  class FormulaBuilder(goal   : Goal,
+                       theory : OstrichStringTheory) {
+    import theory.{_str_++, _str_len, strDatabase, StringSort}
 
-  val rand         = Param.RANDOM_DATA_SOURCE(goal.settings)
-
-  val facts        = goal.facts
-  val predConj     = facts.predConj
-  val concatLits   = predConj.positiveLitsWithPred(_str_++)
-  val concatPerRes = concatLits groupBy (_(2))
-  val lengthLits   = predConj.positiveLitsWithPred(_str_len)
-  val lengthMap    = (for (a <- lengthLits.iterator) yield (a(0), a(1))).toMap
-
-  class FormulaBuilder {
-    implicit val o = order
+    implicit val o = goal.order
     import TerForConvenience._
 
+    val useLength  = theory.lengthNeeded(goal.facts)
     val varSorts   = new ArrayBuffer[Sort]
     val matrixFors = new ArrayBuffer[Formula]
-    val varLengths = new MHashMap[VariableTerm, Term]
+    val varLengths = new MHashMap[Term, Term]
 
     def newVar(s : Sort) : VariableTerm = {
       val res = VariableTerm(varSorts.size)
@@ -78,22 +68,20 @@ class OstrichNielsenSplitter(goal : Goal,
       res
     }
 
-    def lengthFor2(t : Term) : Term =
-      t match {
-        case t : VariableTerm =>
-          varLengths.getOrElseUpdate(t, {
-            val len = newVar(Sort.Integer)
-            matrixFors += _str_len(List(l(t), l(len)))
-            matrixFors += l(len) >= 0
-            len
-          })
-        case _ =>
-          lengthFor(t)
-      }
+    def lengthOfTerm(t : Term) : Term =
+      varLengths.getOrElseUpdate(t, {
+        val len = newVar(Sort.Integer)
+        matrixFors += _str_len(List(l(t), l(len)))
+        matrixFors += l(len) >= 0
+        len
+      })
 
     def addConcat(left : Term, right : Term, res : Term) : Unit = {
       matrixFors += _str_++ (List(l(left), l(right), l(res)))
-      matrixFors += lengthFor2(left) + lengthFor2(right) === lengthFor2(res)
+      if (useLength) {
+        matrixFors +=
+          lengthOfTerm(left) + lengthOfTerm(right) === lengthOfTerm(res)
+      }
     }
 
     def addConcatN(terms : Seq[Term], res : Term) : Unit =
@@ -114,10 +102,71 @@ class OstrichNielsenSplitter(goal : Goal,
           }
         }
       }
-    
+
+    def concat(terms : Seq[Term]) : Term = terms match {
+      case Seq()  =>
+        strDatabase.list2Id(List())
+      case Seq(t) =>
+        t
+      case terms  => {
+        val res = newVar(StringSort)
+        addConcatN(terms, res)
+        res
+      }
+    }
+
+    def addConjunct(f : Formula) : Unit =
+      matrixFors += f
+
     def result =
       existsSorted(varSorts.toSeq, conj(matrixFors))
   }
+
+  abstract class DecompPoint(
+    val atom    : Atom,
+    val leftLen : LinearCombination
+  )
+
+  case class SimpleDecompPoint(
+    _atom   : Atom,               // Atom containing the terms
+    left    : Seq[Term],          // left terms, in reverse order
+    _leftLen : LinearCombination, // cumulative length of the left terms
+    right   : Seq[Term]           // right terms
+  ) extends DecompPoint(_atom, _leftLen)
+
+  case class InsideLitDecompPoint(
+    _atom        : Atom,               // Atom containing the terms
+    left         : Seq[Term],          // left terms, in reverse order
+    _leftLen      : LinearCombination, // cumulative length of the left terms
+    right        : Seq[Term],          // right terms
+    stringLit    : Int,                // if of the split string literal
+    stringLitPos : Int                 // position at which the string literal
+                                       // is split
+  ) extends DecompPoint(_atom, _leftLen)
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+class OstrichNielsenSplitter(goal : Goal,
+                             theory : OstrichStringTheory,
+                             flags : OFlags) {
+  import theory.{_str_++, _str_len, strDatabase, StringSort}
+  import OFlags.debug
+  import OstrichNielsenSplitter._
+
+  val order        = goal.order
+  val X            = new ConstantTerm("X")
+  val extOrder     = order extend X
+
+  val rand         = Param.RANDOM_DATA_SOURCE(goal.settings)
+
+  val facts        = goal.facts
+  val predConj     = facts.predConj
+  val concatLits   = predConj.positiveLitsWithPred(_str_++)
+  val concatPerRes = concatLits groupBy (_(2))
+  val lengthLits   = predConj.positiveLitsWithPred(_str_len)
+  val lengthMap    = (for (a <- lengthLits.iterator) yield (a(0), a(1))).toMap
 
   def resolveConcat(t : LinearCombination)
                   : Option[(LinearCombination, LinearCombination)] =
@@ -199,7 +248,7 @@ class OstrichNielsenSplitter(goal : Goal,
   def splittingFormula(split     : ChooseSplitResult,
                        splitLit2 : Atom)
                                  : Conjunction = {
-    val builder = new FormulaBuilder
+    val builder = new FormulaBuilder(goal, theory)
 
     val (leftTerms, _, symToSplit, rightTerms) = split
 
@@ -225,19 +274,13 @@ class OstrichNielsenSplitter(goal : Goal,
     (splitLen > leftTermsLen + lengthFor(symToSplit))
   }
 
-  type DecompPoint =
-    (Atom,              // Atom containing the terms
-     Seq[Term],         // left terms, in reverse order
-     LinearCombination, // cumulative length of the left terms
-     Seq[Term])         // right terms
-
   /**
    * Compute all prefix/suffix pairs for the given concat term.
    */
-  def decompositionPoints(lit : Atom) : Seq[DecompPoint] = {
+  def decompositionPoints(lit : Atom) : Seq[SimpleDecompPoint] = {
     implicit val o = order
 
-    val points = new ArrayBuffer[DecompPoint]
+    val points = new ArrayBuffer[SimpleDecompPoint]
 
     def genPoints(t          : LinearCombination,
                   leftTerms  : List[Term],
@@ -246,7 +289,7 @@ class OstrichNielsenSplitter(goal : Goal,
                   leftMost   : Boolean) : Unit =
       if (strDatabase isConcrete t) {
         if (!leftMost)
-          points += ((lit, leftTerms, len, t :: rightTerms))
+          points += SimpleDecompPoint(lit, leftTerms, len, t :: rightTerms)
       } else {
         (concatPerRes get t) match {
           case Some(Seq(concatLit)) => {
@@ -263,7 +306,7 @@ class OstrichNielsenSplitter(goal : Goal,
           }
           case _ =>
             if (!leftMost)
-              points += ((lit, leftTerms, len, t :: rightTerms))
+              points += SimpleDecompPoint(lit, leftTerms, len, t :: rightTerms)
         }
       }
 
@@ -278,35 +321,141 @@ class OstrichNielsenSplitter(goal : Goal,
    * split string literals in the term into prefix/suffix pairs.
    */
   def decompositionPointsWithLits(lit : Atom) : Seq[DecompPoint] = {
+    import LinearCombination.Constant
+
     val rawPoints = decompositionPoints(lit)
 
-    null
+    def splitLits(decomp : DecompPoint) : Seq[DecompPoint] = decomp match {
+      case SimpleDecompPoint(atom,
+                             Seq(Constant(IdealInt(strId))),
+                             leftLen,
+                             right) => {
+        val strLen =
+          strDatabase.id2List(strId).size
+        val newSplits =
+          for (n <- 1 until strLen)
+          yield InsideLitDecompPoint(atom, List(),
+                                     LinearCombination(n), right, strId, n)
+        newSplits ++ List(decomp)
+      }
+      case SimpleDecompPoint(atom,
+                             left,
+                             leftLen,
+                             Seq(Constant(IdealInt(strId)), right @ _*)) => {
+        val strLen =
+          strDatabase.id2List(strId).size
+        val newSplits =
+          for (n <- 1 until strLen)
+          yield InsideLitDecompPoint(atom, left, leftLen + n, right, strId, n)
+        List(decomp) ++ newSplits
+      }
+      case decomp =>
+        List(decomp)
+    }
+
+    for (decomp    <- rawPoints;
+         newDecomp <- splitLits(decomp))
+    yield newDecomp
   }
 
-  def decomposeHelp(lits : Seq[Atom]) : Seq[Plugin.Action] = {
-    val resultTerm  = lits.head(0)
-    val splitPoints = new MHashMap[Term, DecompPoint]
+  def concatLeft(decomp : DecompPoint)
+                (implicit builder : FormulaBuilder) : Term = decomp match {
+    case decomp : SimpleDecompPoint =>
+      builder.concat(decomp.left.reverse)
+    case decomp : InsideLitDecompPoint => {
+      import decomp.{left, stringLit, stringLitPos}
+      val strId =
+        strDatabase.list2Id(strDatabase.id2List(stringLit).take(stringLitPos))
+      builder.concat((List(LinearCombination(strId)) ++ left).reverse)
+    }
+  }
 
-    
-    List()
+  def concatRight(decomp : DecompPoint)
+                 (implicit builder : FormulaBuilder) : Term = decomp match {
+    case decomp : SimpleDecompPoint =>
+      builder.concat(decomp.right)
+    case decomp : InsideLitDecompPoint => {
+      import decomp.{right, stringLit, stringLitPos}
+      val strId =
+        strDatabase.list2Id(strDatabase.id2List(stringLit).drop(stringLitPos))
+      builder.concat(right ++ List(LinearCombination(strId)))
+    }
   }
 
   /**
    * Decompose equations of the form a.b = c.d if it can be derived
    * that |a| = |c|.
    */
-  def decompEquation : Seq[Plugin.Action] = {
+  def decompEquations : Seq[Plugin.Action] = {
+    if (lengthLits.isEmpty)
+      return List()
+
     val multiGroups =
       concatPerRes filter {
-        case (res, lits) => lits.size >= 2 || (strDatabase isConcrete res)
+        case (res, lits) => lits.size >= 2 && !(strDatabase isConcrete res)
       }
 
     val decompActions =
-      for ((res, lits) <- multiGroups) yield {
+      (for ((res, lits) <- multiGroups;
+            act <- decompEquation(res, lits))
+       yield act).toSeq
 
+    decompActions
+  }
+
+  def decompEquation(resultTerm     : Term,
+                     concatLiterals : Seq[Atom]) : Seq[Plugin.Action] = {
+    implicit val o = order
+    import TerForConvenience._
+
+    val splitPoints = new MHashMap[Term, DecompPoint]
+
+    val actions = new ArrayBuffer[Plugin.Action]
+
+    for (lit <- concatLiterals) {
+      val decomps = decompositionPointsWithLits(lit)
+
+      var stop = false
+
+      for (decomp <- decomps; if !stop) {
+        import decomp.leftLen
+        (splitPoints get leftLen) match {
+          case Some(otherDecomp) => {
+            val otherDecomp = splitPoints(leftLen)
+            stop = true
+
+            Console.err.println("Decomposing equation:")
+            Console.err.println("  " +
+                                  term2String(otherDecomp.atom(0)) + " . " +
+                                  term2String(otherDecomp.atom(1)) + " == " +
+                                  term2String(decomp.atom(0)) + " . " +
+                                  term2String(decomp.atom(1)))
+
+            actions += Plugin.RemoveFacts(conj(lit))
+
+            implicit val builder = new FormulaBuilder(goal, theory)
+
+            val newLeft    = concatLeft (decomp)
+            val newRight   = concatRight(decomp)
+            val otherLeft  = concatLeft (otherDecomp)
+            val otherRight = concatRight(otherDecomp)
+
+            builder addConjunct (newLeft  === otherLeft)
+            builder addConjunct (newRight === otherRight)
+
+            actions +=
+              Plugin.AddAxiom(concatLits ++ lengthLits, // TODO: make specific
+                              builder.result,
+                              theory)
+          }
+          case None => {
+            splitPoints.put(decomp.leftLen, decomp)
+          }
+        }
       }
+    }
 
-    List()
+    actions.toSeq
   }
 
   /**
@@ -332,10 +481,10 @@ class OstrichNielsenSplitter(goal : Goal,
     import TerForConvenience._
 
     val decomps = decompositionPoints(lit)
-    println(lit)
-    println(decomps)
+
     val constLenPoints =
-      for ((_, left, Constant(IdealInt(len)), right) <- decomps.iterator)
+      for (SimpleDecompPoint(_, left, Constant(IdealInt(len)), right) <-
+           decomps.iterator)
       yield (left, len, right)
 
     if (constLenPoints.hasNext) {
@@ -345,7 +494,7 @@ class OstrichNielsenSplitter(goal : Goal,
       val resultPrefix = strDatabase.list2Id(result take len)
       val resultSuffix = strDatabase.list2Id(result drop len)
 
-      val builder = new FormulaBuilder
+      val builder = new FormulaBuilder(goal, theory)
 
       builder.addConcatN(left.reverse, l(resultPrefix))
       builder.addConcatN(right,        l(resultSuffix))
@@ -375,11 +524,10 @@ class OstrichNielsenSplitter(goal : Goal,
     }
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+
   /**
    * Apply the Nielsen transformation to some selected equation.
-   * 
-   * TODO: handle also the case where we don't have length information
-   * available.
    */
   def splitEquation : Seq[Plugin.Action] = {
     val multiGroups =
@@ -400,6 +548,68 @@ class OstrichNielsenSplitter(goal : Goal,
     val splitLit2   = (literals filterNot (_ == splitLit1))(
                         rand nextInt (literals.size - 1))
 
+    if (lengthLits.isEmpty)
+      throw new Exception("Nielsen transformation is currently only enabled" +
+                            " in combination with option -length=on.")
+
+    splitEquationWithLen(splitLit1, splitLit2, multiGroups.size)
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * TODO: this needs more work!
+   */
+  private def splitEquationNoLen(splitLit1 : Atom, splitLit2 : Atom,
+                                 multiGroupNum : Int)
+                                                 : Seq[Plugin.Action] = {
+
+    import TerForConvenience._
+    implicit val o = order
+
+    val split1 = (List(),
+                  null,
+                  splitLit1(0), List(splitLit1(1)))
+    val split2 = (List(splitLit1(0)),
+                  null,
+                  splitLit1(1), List())
+
+    Console.err.println(
+      "Applying Nielsen transformation (# word equations: " + multiGroupNum +
+        ")")
+    Console.err.println("  " +
+                          term2String(splitLit1(0)) + " . " +
+                          term2String(splitLit1(1)) + " == " +
+                          term2String(splitLit2(0)) + " . " +
+                          term2String(splitLit2(1)))
+
+    val nil = strDatabase.str2Id("")
+
+    val zeroCases =
+      List(
+        (conj(splitLit2(0) === nil), List()),
+        (conj(splitLit2(0) =/= nil, splitLit2(1) === nil), List())
+      )
+
+    val splitCases =
+      for (split <- List(split1, split2)) yield {
+        (splittingFormula(split, splitLit2) &
+           splitLit2(0) =/= nil & splitLit2(1) =/= nil,
+         List(Plugin.RemoveFacts(Conjunction.conj(splitLit2, order))))
+      }
+
+    List(
+      Plugin.AxiomSplit(concatLits,
+                        zeroCases ++
+                          (if (rand.nextBoolean) splitCases else splitCases.reverse),
+                        theory))
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  private def splitEquationWithLen(splitLit1 : Atom, splitLit2 : Atom,
+                                   multiGroupNum : Int)
+                                                  : Seq[Plugin.Action] = {
     val lengthModel =
       ModelSearchProver(Conjunction.negate(facts.arithConj, order), order)
 
@@ -409,6 +619,15 @@ class OstrichNielsenSplitter(goal : Goal,
     val lengthRed =
       ReduceWithConjunction(lengthModel, extOrder)
 
+/*
+    for (t <- 
+    (for (lit <- concatLits.iterator;
+          t <- lit.iterator;
+          if !t.isConstant)
+     yield t).toSet[LinearCombination].toList.sortBy(_.toString)) {
+      Console.err.println("  |" + t + "| = " + evalLengthFor(t, lengthRed))
+    }
+*/
     val zeroSyms = for (t <- (splitLit2 take 2).iterator;
                         if evalLengthFor(t, lengthRed) == 0)
                    yield t
@@ -431,8 +650,8 @@ class OstrichNielsenSplitter(goal : Goal,
       val splitSym = split._3
 
       Console.err.println(
-        "Applying Nielsen transformation (# word equations: " + multiGroups.size +
-          "), splitting " + splitSym)
+        "Applying Nielsen transformation (# word equations: " + multiGroupNum +
+          "), splitting " + term2String(splitSym))
       Console.err.println("  " +
                             term2String(splitLit1(0)) + " . " +
                             term2String(splitLit1(1)) + " == " +
@@ -451,7 +670,6 @@ class OstrichNielsenSplitter(goal : Goal,
                           theory)
       )
     }
-
   }
 
   private def term2String(t : Term) =

@@ -41,6 +41,7 @@ class OstrichPredtoEqConverter(goal : Goal,
   val suffixNegLits = predConj.negativeLitsWithPred(str_suffixof)
 
   class FormulaBuilder {
+    // TODO: Class got restructured?
     implicit val o = order
     import TerForConvenience._
 
@@ -209,7 +210,6 @@ class OstrichPredtoEqConverter(goal : Goal,
     builder.addInequality(newVars(1),newVars(4))
     builder.addLength(newVars(1), LinearCombination.ONE)
     builder.addLength(newVars(4), LinearCombination.ONE)
-    println(t, builder.result, List(Plugin.RemoveFacts(t), Plugin.AddFormula(builder.result)) )
 
     val lengthBuilder = new FormulaBuilder
     lengthBuilder.addGreaterThanLengthConstraint(x,y)
@@ -226,9 +226,7 @@ class OstrichPredtoEqConverter(goal : Goal,
    */
 
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
-    println("test")
-    println(prefixNegLits)
-    println(suffixNegLits)
+    //TODO rewrite positive prefix, suffix, contains
 
      val a = (for (lit <- prefixNegLits;
          act <-  reduceNegPrefixToEquation(lit)) yield act)
