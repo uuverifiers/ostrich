@@ -60,7 +60,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     // beginning, or if the problem contains string concatenation
     val useLength = theory.lengthNeeded(f) || (f.predicates contains _str_++)
 
-    if (!useLength && !flags.useParikhConstraints)
+    if (!useLength)
       return f
 
     val characters =
@@ -95,6 +95,9 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
                  (c, m) <- characters.zipWithIndex)
             yield _str_char_count(List(l(c), shifter(l(t)),
                                          charCountVar(n, m)))
+          val charCountNonNeg =
+            for (n <- 0 until (args.size + 1); m <- 0 until characters.size)
+            yield (charCountVar(n, m) >= 0)
           val lenCountRelations =
             for (n <- 0 to args.size)
             yield (lenVar(n) >= sum(for (m <- 0 until characters.size)
@@ -113,7 +116,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
                                                  order)
           exists((args.size + 1) * coeff,
                  conj(List(shiftedA, lenRelation) ++
-                        lenAtoms ++ charCountAtoms ++
+                        lenAtoms ++ charCountAtoms ++ charCountNonNeg ++
                         lenCountRelations ++ countRelations))
         }
 
