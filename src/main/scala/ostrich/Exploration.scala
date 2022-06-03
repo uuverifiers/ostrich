@@ -41,7 +41,7 @@ import ap.basetypes.IdealInt
 import ap.terfor.{Term, ConstantTerm, OneTerm}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
-import ap.util.Seqs
+import ap.util.{Seqs, Timeout}
 
 import scala.collection.breakOut
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
@@ -590,7 +590,19 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
          if {
            if (debug)
              Console.err.println("checking length consistency")
-           measure("check length consistency") {p.???} == ProverStatus.Unsat
+           Timeout.unfinished {
+             p.checkSat(false)
+             measure("check length consistency") {
+               while (p.getStatus(100) == ProverStatus.Running)
+                 Timeout.check
+               p.??? == ProverStatus.Unsat
+             }
+           } {
+             case x : Any => {
+               p.stop
+               x
+             }
+           }
          }) yield {
       for (n <- p.getUnsatCore.toList.sorted;
            if n > 0;
