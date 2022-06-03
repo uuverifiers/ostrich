@@ -75,6 +75,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.Auto
     case CmdlParser.Opt("forward", value) =>
       forward = value
+    case CmdlParser.Opt("parikh", value) =>
+      useParikh = value
     case str =>
       super.parseParameter(str)
   }

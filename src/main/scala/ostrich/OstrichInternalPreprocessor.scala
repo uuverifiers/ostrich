@@ -35,10 +35,11 @@ package ostrich
 import ap.basetypes.IdealInt
 import ap.theories.Theory
 import ap.terfor.{TermOrder, TerForConvenience}
-import ap.terfor.conjunctions.Conjunction
+import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableShiftSubst
 import ap.types.SortedPredicate
+import ap.parameters.{Param, ReducerSettings}
 
 import ostrich.automata.{Automaton, AtomicStateAutomaton}
 
@@ -59,7 +60,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     // beginning, or if the problem contains string concatenation
     val useLength = theory.lengthNeeded(f) || (f.predicates contains _str_++)
 
-    if (!useLength)
+    if (!useLength && !flags.useParikhConstraints)
       return f
 
     val characters =
@@ -71,6 +72,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     val funTranslator =
       new OstrichStringFunctionTranslator(theory, Conjunction.TRUE)
 
+    val res = 
     Theory.rewritePreds(f, order) { (a, negated) =>
       funTranslator(a) match {
         case Some((preop, args, result)) if negated => {
@@ -98,8 +100,9 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
             yield (lenVar(n) >= sum(for (m <- 0 until characters.size)
                                     yield (IdealInt.ONE, charCountVar(n, m))))
           val lenRelation =
-            preop().lengthApproximation(for (n <- 0 until args.size) yield v(n),
-                                        v(args.size),
+            preop().lengthApproximation(for (n <- 0 until args.size)
+                                        yield lenVar(n),
+                                        lenVar(args.size),
                                         order)
           val countRelations =
             for ((c, m) <- characters.zipWithIndex)
@@ -129,7 +132,8 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
 
           case `str_in_re_id` if !negated => {
             val aut =
-              !autDatabase.id2Automaton(a.last.constant.intValueSafe).get
+              autDatabase.id2ComplementedAutomaton(
+                a.last.constant.intValueSafe).get
             val charCountConstraints =
               for (c <- characters; if !automatonAcceptsChar(c, aut))
               yield _str_char_count(List(l(c), a(0), l(0)))
@@ -144,6 +148,15 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
         }
       }
     }
+
+    val reducerSettings =
+      Param.FUNCTIONAL_PREDICATES.set(ReducerSettings.DEFAULT,
+                                      theory.functionalPredicates)
+    val res2 = ReduceWithConjunction(Conjunction.TRUE,
+                                     order,
+                                     reducerSettings)(res)
+
+    res2
 
   }
 

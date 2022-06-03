@@ -227,7 +227,7 @@ class OstrichReducer protected[ostrich]
           }
 
         case `_str_char_count` =>
-          if (isConcrete(a(0)) && isConcrete(a(1))) {
+          if (a(0).isConstant && isConcrete(a(1))) {
             val char = a(0).constant.intValueSafe
             a.last === term2ListGet(a(1)).count(_ == char)
           } else {
