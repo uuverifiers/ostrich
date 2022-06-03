@@ -277,7 +277,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof) ++
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_replaceallcg, 
@@ -329,12 +329,17 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
 
+      lazy val predToEq =
+        new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, flags)
+
       goalState(goal) match {
 
         case Plugin.GoalState.Intermediate => try {
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
-          nielsenSplitter.decompEquations
+          nielsenSplitter.decompEquations              elseDo
+            predToEq.reducePredicatesToEquations
+
         } catch {
           case t : ap.util.Timeout => throw t
           case t : Throwable =>  { t.printStackTrace; throw t }

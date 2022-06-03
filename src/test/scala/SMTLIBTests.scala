@@ -46,6 +46,29 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("prefix-1.smt2") =
+    checkFile("tests/prefix-1.smt2", "unsat")
+  property("prefix-2.smt2") =
+    checkFile("tests/prefix-2.smt2", "sat")
+
+  property("suffix-1.smt2") =
+    checkFile("tests/suffix-1.smt2", "unsat")
+  property("suffix-2.smt2") =
+    checkFile("tests/suffix-2.smt2", "sat")
+  property("suffix-3.smt2") =
+    checkFile("tests/suffix-3.smt2", "sat")
+  property("suffix-4.smt2") =
+    checkFile("tests/suffix-4.smt2", "sat")
+  property("suffix-5.smt2") =
+    checkFile("tests/suffix-5.smt2", "unsat")
+
+  property("contains-1.smt2") =
+    checkFile("tests/contains-1.smt2", "sat")
+  property("contains-2.smt2") =
+    checkFile("tests/contains-2.smt2", "sat")
+  property("contains-3.smt2") =
+    checkFile("tests/contains-3.smt2", "unsat")
+
   property("word-equation.smt2") =
     checkFile("tests/word-equation.smt2", "sat")
   property("word-equation-2.smt2") =
