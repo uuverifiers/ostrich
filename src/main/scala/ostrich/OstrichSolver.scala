@@ -34,6 +34,7 @@ package ostrich
 
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{PreOp, ConcatPreOp}
+import ostrich.preop.costenrich.{LengthPreOp}
 
 import ap.SimpleAPI
 import ap.parser.IFunction
@@ -148,6 +149,10 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
+      case FunPred(`str_len`)
+        if(flags.strategy == OFlags.StrategyOptions.CostEnrich) => {
+          funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
+      }
       case FunPred(`str_len`) => {
         lengthVars.put(a(0), a(1))
         if (a(1).isZero)
