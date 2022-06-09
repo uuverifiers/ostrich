@@ -395,7 +395,7 @@ class OstrichNielsenSplitter(goal : Goal,
       import decomp.{right, stringLit, stringLitPos}
       val strId =
         strDatabase.list2Id(strDatabase.id2List(stringLit).drop(stringLitPos))
-      builder.concat(right ++ List(LinearCombination(strId)))
+      builder.concat(List(LinearCombination(strId)) ++ right)
     }
   }
 
@@ -575,7 +575,7 @@ class OstrichNielsenSplitter(goal : Goal,
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * TODO: this needs more work!
+   * TODO: this needs more work, currently not used!
    */
   private def splitEquationNoLen(splitLit1 : Atom, splitLit2 : Atom,
                                  multiGroupNum : Int)

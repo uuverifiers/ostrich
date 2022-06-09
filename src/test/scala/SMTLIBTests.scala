@@ -77,6 +77,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/word-equation-3.smt2", "unsat")
   property("word-equation-4.smt2") =
     checkFile("tests/word-equation-4.smt2", "sat")
+  property("word-equation-6.smt2") =
+    checkFile("tests/word-equation-6.smt2", "sat")
 
   property("parikh-constraints.smt2") =
     checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh", "")
