@@ -268,11 +268,12 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         beginVar  === shiftedBegin &
         lenVar    === shiftedLen &
         ite(
-          lenVar < 0 | beginVar < 0 | beginVar + lenVar > str_len(bigStrVar),
+          lenVar < 0 | beginVar < 0 | beginVar >= str_len(bigStrVar),
           resultVar === "",
           strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
           str_len(v(1, StringSort)) === beginVar &
-          str_len(resultVar) === lenVar
+          (str_len(resultVar) === lenVar |
+           (str_len(resultVar) < lenVar & v(0, StringSort) === ""))
         )
       ))))))
     }
