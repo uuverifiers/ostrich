@@ -342,7 +342,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
         } catch {
           case t : ap.util.Timeout => throw t
-          case t : Throwable =>  { t.printStackTrace; throw t }
+//          case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
@@ -351,7 +351,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
         } catch {
           case t : ap.util.Timeout => throw t
-          case t : Throwable =>  { t.printStackTrace; throw t }
+//          case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
       }
@@ -368,7 +368,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
             List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
-        case OstrichSolver.BackwardFailed           => List()
         case OstrichSolver.BlockingActions(actions) => actions
       }
 
