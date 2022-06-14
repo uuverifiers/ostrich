@@ -152,15 +152,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                             List(SSo, RSo, RSo), SSo, true, false)
                             
   // string theory mixed with integer theory
-  val str_replacece = 
-    new MonoSortedIFunction("str.replace_ce",
-                            List(SSo, RSo, SSo), SSo, true, false)
-  val str_replaceallce =
-    new MonoSortedIFunction("str.replace_ce_all",
-                            List(SSo, RSo, SSo), SSo, true, false)
-  val index_of = 
-    new MonoSortedIFunction("index_of",
-                            List(SSo, SSo), Sort.Integer, true, false)
+  // val str_replacece = 
+  //   new MonoSortedIFunction("str.replace_ce",
+  //                           List(SSo, RSo, SSo), SSo, true, false)
+  // val str_replaceallce =
+  //   new MonoSortedIFunction("str.replace_ce_all",
+  //                           List(SSo, RSo, SSo), SSo, true, false)
+  // val index_of = 
+  //   new MonoSortedIFunction("index_of",
+  //                           List(SSo, SSo), Sort.Integer, true, false)
 
   // Non-greedy quantifiers
   val re_*? =
