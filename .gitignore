@@ -1,5 +1,8 @@
-/.bloop/
-/.metals/
+# Metals config files
+.metals/
+.bloop/
+.ammonite/
+metals.sbt
 /target/
 *.swo
 *.swp
