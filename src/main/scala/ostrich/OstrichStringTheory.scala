@@ -338,7 +338,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
-            predToEq.reducePredicatesToEquations
+          predToEq.reducePredicatesToEquations
 
         } catch {
           case t : ap.util.Timeout => throw t

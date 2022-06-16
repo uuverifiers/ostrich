@@ -89,6 +89,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/replace-special-2.smt2", "unsat")
   property("replace-special-3.smt2") =
     checkFile("tests/replace-special-3.smt2", "unsat")
+  property("replace-special-4.smt2") =
+    checkFile("tests/replace-special-4.smt2", "unsat")
+  property("replace-special-5.smt2") =
+    checkFile("tests/replace-special-5.smt2", "unsat")
   property("replace-length.smt2") =
     checkFile("tests/replace-length.smt2", "sat")
 

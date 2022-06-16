@@ -226,7 +226,9 @@ class OstrichSolver(theory : OstrichStringTheory,
                c <- t.constants.iterator) yield c) ++
          (for ((_, args, res) <- funApps.iterator;
                t <- args.iterator ++ Iterator(res);
-               c <- t.constants.iterator) yield c)).toSet
+               c <- t.constants.iterator) yield c) ++
+         (for (a <- (atoms positiveLitsWithPred p(str_len)).iterator;
+               c <- a(0).constants.iterator) yield c)).toSet
       val lengthConstants =
         (for (t <- lengthVars.values.iterator;
               c <- t.constants.iterator) yield c).toSet

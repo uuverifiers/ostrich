@@ -324,9 +324,6 @@ class OstrichReducer protected[ostrich]
                !(term2ListGet(a(0)) containsSlice term2ListGet(a(1))) =>
           a(0) === a(3)
 
-        case FunPred(`str_replace`) if hasValue(a(0), List()) =>
-          ((a(0) === a(1)) & (a(2) === a(3))) | ((a(0) =/= a(1)) & (a(0) === a(3)))
-
         case FunPred(`str_replace`) if hasValue(a(1), List()) =>
           _str_++(List(a(2), a(0), a(3)))
 

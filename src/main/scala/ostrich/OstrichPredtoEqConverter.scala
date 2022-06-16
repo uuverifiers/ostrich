@@ -1,3 +1,35 @@
+/**
+ * This file is part of Ostrich, an SMT solver for strings.
+ * Copyright (c) 2022 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package ostrich
 
 import ap.basetypes.IdealInt
@@ -21,14 +53,12 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
-  import theory.{str_prefixof, str_suffixof,_str_++, _str_len, strDatabase, StringSort}
+  import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
+                 strDatabase, StringSort, FunPred}
   import OFlags.debug
-  implicit val o = order
   import TerForConvenience._
 
-  val order        = goal.order
-  val X            = new ConstantTerm("X")
-  val extOrder     = order extend X
+  implicit val order = goal.order
 
   val facts        = goal.facts
   val predConj     = facts.predConj
@@ -40,9 +70,10 @@ class OstrichPredtoEqConverter(goal : Goal,
   val prefixNegLits = predConj.negativeLitsWithPred(str_prefixof)
   val suffixNegLits = predConj.negativeLitsWithPred(str_suffixof)
 
+  val replaceLits = predConj.positiveLitsWithPred(FunPred(str_replace))
+
   class FormulaBuilder {
     // TODO: Class got restructured?
-    implicit val o = order
     import TerForConvenience._
 
     val varSorts   = new ArrayBuffer[Sort]
@@ -154,7 +185,7 @@ class OstrichPredtoEqConverter(goal : Goal,
      *  remove negated t
      *  add new axioms from the matrix
      */
-    implicit val o = order
+
     import TerForConvenience._
 
     val builder = new FormulaBuilder
@@ -193,7 +224,7 @@ class OstrichPredtoEqConverter(goal : Goal,
      *  remove negated t
      *  add new axioms from the matrix
      */
-    implicit val o = order
+
     import TerForConvenience._
 
     val builder = new FormulaBuilder
@@ -216,31 +247,45 @@ class OstrichPredtoEqConverter(goal : Goal,
     lengthBuilder.addLength(x, lengthMap(x))
     lengthBuilder.addLength(y, lengthMap(y))
 
-    List(Plugin.RemoveFacts(!conj(t)), Plugin.AddAxiom(Seq(!conj(t)), builder.result | lengthBuilder.result, theory))
+    List(Plugin.RemoveFacts(!conj(t)),
+         Plugin.AddAxiom(Seq(!conj(t)),
+                         builder.result | lengthBuilder.result,
+                         theory))
   }
+
+  def rewriteStrReplace(a : Atom) : Seq[Plugin.Action] =
+    if (strDatabase.hasValue(a(0), List())) {
+      import TerForConvenience._
+      List(
+        Plugin.RemoveFacts(conj(a)),
+        Plugin.AddAxiom(Seq(conj(a)),
+                        ((a(0) === a(1)) & (a(2) === a(3))) |
+                          ((a(0) =/= a(1)) & (a(0) === a(3))),
+                        theory)
+      )
+    } else {
+      List()
+    }
+
   /**
    *  Convert predicates to equations. Supported predicates at the moment
    *  are negative literals of str_prefix
    *
    * @return Sequences of Actions to be executed
    */
-
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
     //TODO rewrite positive prefix, suffix, contains
 
-     val a = (for (lit <- prefixNegLits;
-         act <-  reduceNegPrefixToEquation(lit)) yield act)
+    val a = (for (lit <- prefixNegLits;
+                  act <- reduceNegPrefixToEquation(lit)) yield act)
 
-     val b = (for (lit <- suffixNegLits;
-                  act <-  reduceNegPrefixToEquation(lit)) yield act)
-    a ++ b
+    val b = (for (lit <- suffixNegLits;
+                  act <- reduceNegPrefixToEquation(lit)) yield act)
+
+    val c = (for (lit <- replaceLits;
+                  act <- rewriteStrReplace(lit)) yield act)
+
+    a ++ b ++ c
   }
-
-
-
-
-
-
-
 
 }
