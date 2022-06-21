@@ -34,6 +34,8 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.TermOrder
 import scala.annotation.implicitNotFound
 import java.text.Normalizer.Form
+import ap.terfor.ConstantTerm
+import ap.terfor.OneTerm
 
 object CostEnrichedAutomaton {
 
@@ -339,19 +341,21 @@ class CostEnrichedAutomaton(
   lazy val parikhTheory = {
 
     import ap.terfor.TerForConvenience._
+    implicit def termSeq2ConstantTermSeq(t: Seq[Term]): Seq[ConstantTerm] =
+      t.map(_.asInstanceOf[ConstantTerm])
 
-    implicit val order = TermOrder.EMPTY
+    implicit var order = TermOrder.EMPTY
 
-    def outFlowTerms(from: State): Seq[LinearCombination] = {
-      val outFlowTerms: ArrayBuffer[LinearCombination] = new ArrayBuffer
+    def outFlowTerms(from: State): Seq[Term] = {
+      val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       outgoingTransitionsWithVector(from).foreach { case (to, lbl, vec) =>
         outFlowTerms += transTermMap(from, lbl, to)
       }
       outFlowTerms
     }
 
-    def inFlowTerms(to: State): Seq[LinearCombination] = {
-      val inFlowTerms: ArrayBuffer[LinearCombination] = new ArrayBuffer
+    def inFlowTerms(to: State): Seq[Term] = {
+      val inFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       incomingTransitions(to).foreach { case (from, lbl) =>
         inFlowTerms += transTermMap(from, lbl, to)
       }
@@ -360,6 +364,7 @@ class CostEnrichedAutomaton(
 
     // consistent flow
     var consistentFlowFormula = Conjunction.TRUE
+
     states.foreach { s =>
       val outFlowTerms_ = outFlowTerms(s)
       // outFlow(finalState) = 1
@@ -369,7 +374,9 @@ class CostEnrichedAutomaton(
       // inFlow(initialState) = 1
       val inFlow: LinearCombination =
         if (s == initialState) 1 else inFlowTerms_.reduceLeft(_ + _)
-      consistentFlowFormula = consistentFlowFormula & (outFlow === inFlow)
+      order = order.extend(outFlowTerms_ ++ inFlowTerms_)
+
+      consistentFlowFormula = conj(Seq(consistentFlowFormula, outFlow === inFlow))(order)
     }
 
     // update for registers
