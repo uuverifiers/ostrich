@@ -38,9 +38,10 @@ import ostrich.preop.PreOp
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
-import ap.terfor.{Term, ConstantTerm, OneTerm}
+import ap.terfor.{Term, ConstantTerm, OneTerm, TerForConvenience, SortedWithOrder}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
+import ap.proof.theoryPlugins.Plugin
 import ap.util.{Seqs, Timeout}
 
 import scala.collection.breakOut
@@ -449,7 +450,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             if (!nonTreeLikeApps)
               throw new Exception("Model extraction failed: " +
                                     oldValue + " != " + resValue)
-            throw OstrichSolver.BackwardFailed
+
+            import TerForConvenience._
+            implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
+
+            val resEq =
+              res === strDatabase.list2Id(resString)
+
+            throw new OstrichSolver.BlockingActions(List(
+              Plugin.CutSplit(resEq, List(), List())))
           }
 
         if (!(constraintStores(res) isAcceptedWord resString))
