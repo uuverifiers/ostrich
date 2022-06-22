@@ -341,14 +341,8 @@ class CostEnrichedAutomaton(
   lazy val parikhTheory = {
 
     import ap.terfor.TerForConvenience._
-    implicit def termSeq2ConstantTermSeq(t: Seq[Term]): Seq[ConstantTerm] =
-      t.map(_.asInstanceOf[ConstantTerm])
-
-    implicit var order = {
-      val allConstantTerms : Seq[Term] = 
-        transitions.map(t => transTermMap(t)).toSeq
-      TermOrder.EMPTY.extend(allConstantTerms)
-    }
+    import TermGeneratorOrder._
+    import ostrich.CostEnrichedConvenience._
 
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer

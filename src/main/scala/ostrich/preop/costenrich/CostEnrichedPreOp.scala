@@ -8,14 +8,13 @@ import ostrich.automata.costenrich.CostEnrichedAutomaton
 
 trait CostEnrichedPreOp extends PreOp {
 
-  /** Given a sequence of registers for the arguments and
-   * registers for the result, derive a sequence of formula.
-   * It is sound to just return `true`
-   */
+  /** Given an iterator of pre-image constraints clusters and a result
+    * constraint, derive a sequence of formulas. Each formula responds to a
+    * pre-image constraints cluster It is sound to just return `true`
+    */
   def lengthConstraints(
-                         argumentsRegisters: Iterator[Seq[Seq[Term]]],
-                         resultRegisters: Seq[Term],
-                         order: TermOrder
-                       ): Iterator[Formula] =
+      preImageConstraints: Iterator[Seq[CostEnrichedAutomaton]],
+      resultConstraint: CostEnrichedAutomaton
+  )(implicit order: TermOrder): Iterator[Formula] =
     Iterator(Conjunction.TRUE)
 }

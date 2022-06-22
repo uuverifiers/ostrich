@@ -465,15 +465,9 @@ abstract class Exploration(val funApps: Seq[(PreOp, Seq[Term], Term)],
 
       if (flags.strategy == OFlags.StrategyOptions.CostEnrich &&
         op.isInstanceOf[CostEnrichedPreOp]) {
-        val argumentRegisters = newConstraintsIt.map{ seqAut =>
-          seqAut.map {
-            aut => CostEnrichedAutomaton.getRegisters(aut)
-          }
-        }
-        val resultRegisters = CostEnrichedAutomaton.getRegisters(resAut)
-        val ceOp = op.asInstanceOf[CostEnrichedPreOp]
+        import ostrich.CostEnrichedConvenience._
         for (p <- lengthProver)
-          lengthConstraints = ceOp.lengthConstraints(argumentRegisters, resultRegisters, p.order)
+          lengthConstraints = op.lengthConstraints(newConstraintsIt, resAut)(p.order)
       }
       while (measure("pre-op hasNext") {
         newConstraintsIt.hasNext
