@@ -344,7 +344,11 @@ class CostEnrichedAutomaton(
     implicit def termSeq2ConstantTermSeq(t: Seq[Term]): Seq[ConstantTerm] =
       t.map(_.asInstanceOf[ConstantTerm])
 
-    implicit var order = TermOrder.EMPTY
+    implicit var order = {
+      val allConstantTerms : Seq[Term] = 
+        transitions.map(t => transTermMap(t)).toSeq
+      TermOrder.EMPTY.extend(allConstantTerms)
+    }
 
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
@@ -374,7 +378,6 @@ class CostEnrichedAutomaton(
       // inFlow(initialState) = 1
       val inFlow: LinearCombination =
         if (s == initialState) 1 else inFlowTerms_.reduceLeft(_ + _)
-      order = order.extend(outFlowTerms_ ++ inFlowTerms_)
 
       consistentFlowFormula = conj(Seq(consistentFlowFormula, outFlow === inFlow))(order)
     }
