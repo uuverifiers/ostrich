@@ -36,6 +36,7 @@ import scala.annotation.implicitNotFound
 import java.text.Normalizer.Form
 import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
+import scala.collection.mutable.ArrayStack
 
 object CostEnrichedAutomaton {
 
@@ -157,33 +158,71 @@ class CostEnrichedAutomaton(
   /** Intersection
     */
   def &(that: Automaton): Automaton = {
-    val thatAut = getBAutomaton(that);
-    val thatEtaMap = getMap(that);
-    val thatRegisters = getRegisters(that);
-    val interAut = BasicOperations.intersection(underlying, thatAut);
-    val transitions: Iterable[(State, TLabel, State)] =
-      interAut
-        .getStates
-        .map(s =>
-          s.getTransitions
-            .map(t => (s, (t.getMin, t.getMax), t.getDest))
-        )
-        .flatten
+    // TODO：product of automata
+    val aut2 = getBAutomaton(that);
+    val etaMap2 = getMap(that);
+    val registers2 = getRegisters(that);
+    val aut1 = this.underlying
+    val etaMap1 = this.etaMap
+    val registers1 = this.registers
+    val autBuilder = new CostEnrichedAutomatonBuilder
 
-    // interEtaMap = (t => this.etaMap(t) ++ that.etaMap(t))
-    val interEtaMap: MHashMap[(State, TLabel, State), Seq[Int]] = new MHashMap
-    transitions.foreach{ t =>
-      val thisVec = etaMap(t)
-      val thatVec = thatEtaMap(t)
-      interEtaMap.put(t, thisVec ++ thatVec)
+    val interAut = {
+      val initialState1 = aut1.getInitialState()
+      val initialState2 = aut2.getInitialState()
+      val initialState = autBuilder.getNewState
+      autBuilder.setInitialState(initialState)
+      autBuilder.setAccept(
+        initialState,
+        initialState1.isAccept && initialState2.isAccept
+      )
+
+      val newStateMap = new MHashMap[(State, State), State]
+      var worklist = new ArrayStack[(State, State)]
+
+      newStateMap.put((initialState1, initialState2), initialState)
+      worklist.push((initialState1, initialState2))
+
+      while (!worklist.isEmpty) {
+        val (state1, state2) = worklist.pop()
+        val state = newStateMap(state1, state2)
+        val transition1 = state1.getSortedTransitions(false)
+        transition1.forEach(t1 => {
+          val transition2 = state2.getSortedTransitions(false)
+          transition2.forEach(t2 => {
+            val label1 = (t1.getMin(), t1.getMax())
+            val label2 = (t2.getMin(), t2.getMax())
+            LabelOps.intersectLabels(label1, label2) match {
+              case Some(label) => {
+                val to1 = t1.getDest()
+                val to2 = t2.getDest()
+                if (newStateMap.contains((to1, to2))) {
+                  val newState = newStateMap((to1, to2))
+                  val newVector =
+                    etaMap1(state1, label1, to1) ++ etaMap2(state2, label2, to2)
+                  autBuilder.addTransition(state, label, newState, newVector)
+                  autBuilder.setAccept(newState, to1.isAccept && to2.isAccept)
+                } else {
+                  val newState = autBuilder.getNewState
+                  newStateMap.put((to1, to2), newState)
+                  worklist.push((to1, to2))
+                  autBuilder.addTransition(state, label, newState)
+                  val newVector =
+                    etaMap1(state1, label1, to1) ++ etaMap2(state2, label2, to2)
+                  autBuilder.addTransition(state, label, newState, newVector)
+                  autBuilder.setAccept(newState, to1.isAccept && to2.isAccept)
+                }
+              }
+              case _ => // do nothing
+            }
+
+          })
+        })
+      }
     }
 
-    val interRegisters = registers ++ thatRegisters
-    new CostEnrichedAutomaton(
-      BasicOperations.intersection(underlying, thatAut),
-      interEtaMap,
-      interRegisters
-    );
+    autBuilder.addRegisters(registers1 ++ registers2)
+    autBuilder.getAutomaton
   }
 
   /** Complementation. @deprecated not implemented
@@ -215,14 +254,16 @@ class CostEnrichedAutomaton(
   /** Operations on labels
     */
   override val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
+
   /** The unique initial state
-   */
+    */
   lazy val initialState: State = underlying.getInitialState
 
   /** The set of accepting states
-   */
+    */
   val acceptingStates: Set[State] =
     (for (s <- states; if s.isAccept) yield s).toSet
+
   /** Iterate over automaton states
     */
   def states: Iterable[State] = {
@@ -373,7 +414,8 @@ class CostEnrichedAutomaton(
       val inFlow: LinearCombination =
         if (s == initialState) 1 else inFlowTerms_.reduceLeft(_ + _)
 
-      consistentFlowFormula = conj(Seq(consistentFlowFormula, outFlow === inFlow))(order)
+      consistentFlowFormula =
+        conj(Seq(consistentFlowFormula, outFlow === inFlow))(order)
     }
 
     // update for registers
@@ -381,12 +423,12 @@ class CostEnrichedAutomaton(
       val registerUpdateMap = new MHashMap[Term, ArrayBuffer[LinearCombination]]
       transitionsWithVector.foreach { case (from, lbl, to, vec) =>
         val trasitionTerm = transTermMap(from, lbl, to)
-        vec.foreach(i => {
+        vec.zipWithIndex.foreach{case (veci, i) => {
           val registerTerm = registers(i)
           val update =
-            registerUpdateMap.getOrElseUpdate(registerTerm, new ArrayBuffer)
+            registerUpdateMap.getOrElseUpdate(registerTerm, new ArrayBuffer[LinearCombination])
           update.append(trasitionTerm * i)
-        })
+        }}
       }
       registerUpdateMap.toMap
     }

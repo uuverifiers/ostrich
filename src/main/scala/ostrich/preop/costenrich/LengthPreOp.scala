@@ -28,9 +28,11 @@ class LengthPreOp(length: Term) extends CostEnrichedPreOp {
       initalState,
       Seq(1)
     )
+    builder.setAccept(initalState, true)
     builder.addRegister(RegisterTerm())
-
-    (Iterator(Seq(builder.getAutomaton)), Seq())
+    
+    val baut = builder.getAutomaton
+    (Iterator(Seq(baut)), Seq())
   }
 
   /** Evaluate the described function; return <code>None</code> if the function

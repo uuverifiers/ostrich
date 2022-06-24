@@ -44,6 +44,10 @@ class CostEnrichedAutomatonBuilder
     registers += register
   }
 
+  def addRegisters(registers: Seq[Term]) = {
+    this.registers ++= registers
+  }
+
   /** The initial state of the automaton being built
     */
   def initialState: State = baut.getInitialState
@@ -106,9 +110,9 @@ class CostEnrichedAutomatonBuilder
     */
   def getAutomaton: CostEnrichedAutomaton = {
 
-    baut.restoreInvariant
-    if (minimize && !CostEnrichedAutomaton.neverMinimize(baut))
-      baut.minimize
+    // baut.restoreInvariant
+    // if (minimize && !CostEnrichedAutomaton.neverMinimize(baut))
+    //   baut.minimize
     
     new CostEnrichedAutomaton(baut, etaMap, registers)
   }
