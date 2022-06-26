@@ -427,7 +427,7 @@ class CostEnrichedAutomaton(
           val registerTerm = registers(i)
           val update =
             registerUpdateMap.getOrElseUpdate(registerTerm, new ArrayBuffer[LinearCombination])
-          update.append(trasitionTerm * i)
+          update.append(trasitionTerm * veci)
         }}
       }
       registerUpdateMap.toMap
