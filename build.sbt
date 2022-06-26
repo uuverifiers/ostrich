@@ -82,7 +82,7 @@ lazy val root = (project in file("."))
 //
 //    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2021-11-15",
     libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-    libraryDependencies += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
+    // libraryDependencies += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8"

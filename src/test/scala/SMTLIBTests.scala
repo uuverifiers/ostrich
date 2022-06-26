@@ -88,8 +88,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex3.smt2", "sat")
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
-  property("empty-union.smt2") =
-    checkFile("tests/empty-union.smt2", "sat")
+  // property("empty-union.smt2") =
+  //   checkFile("tests/empty-union.smt2", "sat")
 
   property("non-greedy-quantifiers.smt2") =
     checkFile("tests/non-greedy-quantifiers.smt2", "sat")
@@ -153,8 +153,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("priorityTransducer4.smt2") =
     checkFile("tests/priorityTransducer4.smt2", "unsat")
 
-  property("loop.smt2") =
-    checkFile("tests/loop.smt2", "sat")
+  // property("loop.smt2") =
+  //   checkFile("tests/loop.smt2", "sat")
   property("loop2.smt2") =
     checkFile("tests/loop2.smt2", "unsat")
   property("loop-cg.smt2") =
@@ -164,8 +164,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("loop-cg3.smt2") =
     checkFile("tests/loop-cg3.smt2", "sat")
 
-  property("cg-star.smt2") =
-    checkFile("tests/cg-star.smt2", "sat")
+  // property("cg-star.smt2") =
+  //   checkFile("tests/cg-star.smt2", "sat")
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
@@ -255,8 +255,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("escapeSequences-1a.smt2") =
     checkFile("tests/escapeSequences-1a.smt2", "unsat")
-  property("escapeSequences-1b.smt2") =
-    checkFile("tests/escapeSequences-1b.smt2", "sat")
+  // property("escapeSequences-1b.smt2") =
+  //   checkFile("tests/escapeSequences-1b.smt2", "sat")
 
   property("len-bug.smt2") =
     checkFile("tests/len-bug.smt2", "unsat")
