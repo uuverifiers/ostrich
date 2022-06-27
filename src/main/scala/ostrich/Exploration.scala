@@ -388,6 +388,7 @@ abstract class Exploration(
         // we are finished and just have to construct a model
         val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
 
+        // lengthModel
         val lengthModel =
           if (strictLengths) {
             for (t <- allTerms)

@@ -37,6 +37,7 @@ import java.text.Normalizer.Form
 import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
 import scala.collection.mutable.ArrayStack
+import ap.SimpleAPI
 
 object CostEnrichedAutomaton {
 
@@ -251,6 +252,22 @@ class CostEnrichedAutomaton(
       case str  => Some(for (c <- str) yield c.toInt)
     }
 
+  /** Get any word accepted by this automaton, or <code>None</code> if the
+   * language is empty.
+   */
+  def getAcceptedWord(
+      lengthModel: Option[SimpleAPI.PartialModel]
+  ): Option[Seq[Int]] = lengthModel match {
+    case Some(model) => {
+      None
+    }
+    case None =>
+      (this.underlying getShortestExample true) match {
+        case null => None
+        case str  => Some(for (c <- str) yield c.toInt)
+      }
+  }
+
   /** Operations on labels
     */
   override val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
@@ -423,12 +440,17 @@ class CostEnrichedAutomaton(
       val registerUpdateMap = new MHashMap[Term, ArrayBuffer[LinearCombination]]
       transitionsWithVector.foreach { case (from, lbl, to, vec) =>
         val trasitionTerm = transTermMap(from, lbl, to)
-        vec.zipWithIndex.foreach{case (veci, i) => {
-          val registerTerm = registers(i)
-          val update =
-            registerUpdateMap.getOrElseUpdate(registerTerm, new ArrayBuffer[LinearCombination])
-          update.append(trasitionTerm * veci)
-        }}
+        vec.zipWithIndex.foreach {
+          case (veci, i) => {
+            val registerTerm = registers(i)
+            val update =
+              registerUpdateMap.getOrElseUpdate(
+                registerTerm,
+                new ArrayBuffer[LinearCombination]
+              )
+            update.append(trasitionTerm * veci)
+          }
+        }
       }
       registerUpdateMap.toMap
     }
