@@ -42,6 +42,8 @@ import ap.terfor.substitutions.VariableSubst
 import ap.util.Seqs
 import ostrich.automata.costenrich.CostEnrichedAutomaton
 import ostrich.preop.costenrich.CostEnrichedPreOp
+import ostrich.CostEnrichedConvenience._
+import ostrich.automata.costenrich.TermGeneratorOrder._
 
 import scala.collection.breakOut
 import scala.collection.mutable.{
@@ -52,6 +54,7 @@ import scala.collection.mutable.{
   HashMap => MHashMap,
   HashSet => MHashSet
 }
+import ap.parser.SymbolCollector
 
 object Exploration {
   case class TermConstraint(t: Term, aut: Automaton)
@@ -511,18 +514,6 @@ abstract class Exploration(
           op(argConstraints, resAut)
         }
 
-      var lengthConstraints: Iterator[Formula] =
-        newConstraintsIt.map(_ => Conjunction.TRUE)
-
-      if (
-        flags.strategy == OFlags.StrategyOptions.CostEnrich &&
-        op.isInstanceOf[CostEnrichedPreOp]
-      ) {
-        import ostrich.CostEnrichedConvenience._
-        import ostrich.automata.costenrich.TermGeneratorOrder._
-        lengthConstraints = op.lengthConstraints(newConstraintsIt, resAut)
-      }
-
       while (
         measure("pre-op hasNext") {
           newConstraintsIt.hasNext
@@ -539,8 +530,11 @@ abstract class Exploration(
 
         pushLengthConstraints
 
-        if (flags.strategy == OFlags.StrategyOptions.CostEnrich)
-          lengthConstraints.next
+        if (
+          flags.strategy == OFlags.StrategyOptions.CostEnrich &&
+          op.isInstanceOf[CostEnrichedPreOp]
+        )
+          addLengthConstraint(op.lengthConstraints(argCS, resAut))
 
         try {
           val newConstraints = new MHashSet[TermConstraint]
@@ -625,6 +619,8 @@ abstract class Exploration(
   protected def addLengthConstraint(lengthConstraint: Formula): Unit = {
     for (p <- lengthProver) {
       p addAssertion lengthConstraint
+      val constTerms = SymbolCollector.constants(lengthConstraint)
+      p addConstants constTerms
     }
   }
 

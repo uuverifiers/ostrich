@@ -13,8 +13,8 @@ trait CostEnrichedPreOp extends PreOp {
     * pre-image constraints cluster It is sound to just return `true`
     */
   def lengthConstraints(
-      preImageConstraints: Iterator[Seq[CostEnrichedAutomaton]],
+      preImageConstraints: Seq[CostEnrichedAutomaton],
       resultConstraint: CostEnrichedAutomaton
-  )(implicit order: TermOrder): Iterator[Formula] =
-    Iterator(Conjunction.TRUE)
+  )(implicit order: TermOrder): Formula =
+    Conjunction.TRUE
 }

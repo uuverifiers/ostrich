@@ -46,16 +46,16 @@ class LengthPreOp(length: Term) extends CostEnrichedPreOp {
     * result, derive a sequence of formula. It is sound to just return `true`
     */
   override def lengthConstraints(
-      preImageConstraints: Iterator[Seq[CostEnrichedAutomaton]],
+      preImageConstraints: Seq[CostEnrichedAutomaton],
       resultConstraint: CostEnrichedAutomaton
-  )(implicit order: TermOrder): Iterator[Formula] = {
+  )(implicit order: TermOrder): Formula = {
     import TerForConvenience._
     import ostrich.CostEnrichedConvenience._
 
-    val lengthRegister = preImageConstraints.next.head.registers(0)
+    val lengthRegister = preImageConstraints(0).registers(0)
 
-    Iterator(
-      lengthRegister === length
-    )
+
+    lengthRegister === length
+
   }
 }
