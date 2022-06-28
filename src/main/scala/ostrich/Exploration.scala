@@ -572,9 +572,10 @@ abstract class Exploration(
         if (
           useCostEnrichAlgorithm(flags) &&
           op.isInstanceOf[CostEnrichedPreOp]
-        )
+        ){
           addLengthConstraint(op.lengthConstraints(argCS, resAut))
-        addLengthConstraint(argCS(0).parikhTheory)
+          addLengthConstraint(argCS(0).parikhTheory)
+        }
 
         try {
           val newConstraints = new MHashSet[TermConstraint]

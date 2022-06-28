@@ -49,6 +49,7 @@ import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
+import ostrich.automata.costenrich.TermGeneratorOrder
 
 class OstrichSolver(theory : OstrichStringTheory,
                     flags : OFlags) {
@@ -269,7 +270,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         else
           Exploration.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
-
+      TermGeneratorOrder.init(order)
       exploration.findModel
     }
   }
