@@ -53,9 +53,9 @@ class LengthPreOp(length: Term) extends CostEnrichedPreOp {
     import ostrich.CostEnrichedConvenience._
 
     val lengthRegister = preImageConstraints(0).registers(0)
-
-
+    
     lengthRegister === length
-
   }
+
+  override def isIntRes: Boolean = true
 }

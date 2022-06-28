@@ -38,6 +38,7 @@ import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
 import scala.collection.mutable.ArrayStack
 import ap.SimpleAPI
+import java_cup.internal_error
 
 object CostEnrichedAutomaton {
 
@@ -146,18 +147,16 @@ class CostEnrichedAutomaton(
     }
   }
 
-  /** Transtion -> ap.terfor.Term, used by parikhTheory generator
-    */
+  // Transtion -> ap.terfor.Term, used by parikhTheory generator
   val transTermMap: Map[(State, TLabel, State), Term] =
     transitions.map(t => (t, TranstionTerm())).toMap
 
-  /** Union. @deprecated not implemented
+  /** @deprecated not implemented
     */
   def |(that: Automaton): Automaton =
     new CostEnrichedAutomaton(new BAutomaton, new MHashMap, Seq())
 
-  /** Intersection
-    */
+
   def &(that: Automaton): Automaton = {
     // TODO：product of automata
     val aut2 = getBAutomaton(that);
@@ -226,63 +225,33 @@ class CostEnrichedAutomaton(
     autBuilder.getAutomaton
   }
 
-  /** Complementation. @deprecated not implemented
+  /** @deprecated not implemented
     */
   def unary_! : Automaton =
     new CostEnrichedAutomaton(new BAutomaton, new MHashMap, Seq())
 
-  /** Check whether this automaton accepts any word.
-    */
   def isEmpty: Boolean = underlying.isEmpty
 
-  /** Check whether the automaton accepts a given word.
-    */
   def apply(word: Seq[Int]): Boolean =
     BasicOperations.run(
       this.underlying,
       SeqCharSequence(for (c <- word.toIndexedSeq) yield c.toChar).toString
     )
 
-  /** Get any word accepted by this automaton, or <code>None</code> if the
-    * language is empty
-    */
   def getAcceptedWord: Option[Seq[Int]] =
     (this.underlying getShortestExample true) match {
       case null => None
       case str  => Some(for (c <- str) yield c.toInt)
     }
 
-  /** Get any word accepted by this automaton, or <code>None</code> if the
-   * language is empty.
-   */
-  def getAcceptedWord(
-      lengthModel: Option[SimpleAPI.PartialModel]
-  ): Option[Seq[Int]] = lengthModel match {
-    case Some(model) => {
-      None
-    }
-    case None =>
-      (this.underlying getShortestExample true) match {
-        case null => None
-        case str  => Some(for (c <- str) yield c.toInt)
-      }
-  }
 
-  /** Operations on labels
-    */
   override val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
 
-  /** The unique initial state
-    */
   lazy val initialState: State = underlying.getInitialState
 
-  /** The set of accepting states
-    */
   val acceptingStates: Set[State] =
     (for (s <- states; if s.isAccept) yield s).toSet
 
-  /** Iterate over automaton states
-    */
   def states: Iterable[State] = {
     // do this the hard way to give a deterministic ordering
     val worklist = new MStack[State]
@@ -305,14 +274,10 @@ class CostEnrichedAutomaton(
     seenstates
   }
 
-  /** To enumerate the labels used
-    */
   val labelEnumerator: TLabelEnumerator[TLabel] =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
-  /** Given a state, iterate over all outgoing transitions, try to be
-    * deterministic
-    */
+  
   def outgoingTransitions(from: State): Iterator[(State, TLabel)] = {
     for (t <- from.getSortedTransitions(true).iterator)
       yield (
@@ -321,7 +286,7 @@ class CostEnrichedAutomaton(
       )
   }
 
-  /** Given a state, iterate over all outgoing transitons and their update
+  /** Given a state, iterate over all outgoing transitons and their updates
     * functions, try to be deterministic
     */
   def outgoingTransitionsWithVector(
@@ -333,6 +298,17 @@ class CostEnrichedAutomaton(
         (t.getMin, t.getMax),
         etaMap((q, (t.getMin, t.getMax), t.getDest))
       )
+  /** Given a state, iterate over all outgoing transitons and their terms
+    * functions, try to be deterministic
+    */
+  def outgoingTransitionsWithTerm(q: State): Iterator[(State, TLabel, Term)] = {
+    for (t <- q.getSortedTransitions(true).iterator)
+      yield (
+        t.getDest,
+        (t.getMin, t.getMax),
+        transTermMap((q, (t.getMin, t.getMax), t.getDest))
+      )
+  }
 
   lazy val transitionsWithVector: Iterator[(State, TLabel, State, Seq[Int])] =
     for (
@@ -374,25 +350,26 @@ class CostEnrichedAutomaton(
     map.toMap
   }
 
-  /** Test if state is accepting
-    */
   def isAccept(s: State): Boolean = s.isAccept
 
-  /** Return new automaton builder of compatible type
-    */
   def getBuilder: AtomicStateAutomatonBuilder[State, TLabel] = {
     new CostEnrichedAutomatonBuilder
   }
 
-  /** Return new automaton builder of compatible type. TODO: change to
-    * CostEnrichedTransducer
-    */
   def getTransducerBuilder: TransducerBuilder[State, TLabel] =
     BricsTransducer.getBuilder
 
-  /** String representation of automaton in full gory detail
-    */
   def toDetailedString: String = underlying.toString()
+
+  /** Get terms representing the transtions
+    */
+  def getTransitionsTerms: Seq[Term] = {
+    val terms = new ArrayBuffer[Term]
+    transTermMap.foreach({ case (transition, term) =>
+      terms += term
+    })
+    terms
+  }
 
   /** Parikh image of this automaton
     */
@@ -465,4 +442,6 @@ class CostEnrichedAutomaton(
 
     consistentFlowFormula & registerUpdateFormula
   }
+
+  override lazy val getLengthAbstraction: Formula = parikhTheory
 }

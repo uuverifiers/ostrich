@@ -17,4 +17,9 @@ trait CostEnrichedPreOp extends PreOp {
       resultConstraint: CostEnrichedAutomaton
   )(implicit order: TermOrder): Formula =
     Conjunction.TRUE
+
+  /** If this op return integer result
+   */  
+  def isIntRes: Boolean = false
+  
 }

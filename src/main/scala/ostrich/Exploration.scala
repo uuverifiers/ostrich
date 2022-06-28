@@ -57,10 +57,14 @@ import scala.collection.mutable.{
 import ap.parser.SymbolCollector
 
 object Exploration {
+
+  def useCostEnrichAlgorithm(flags: OFlags) = {
+    flags.strategy == OFlags.StrategyOptions.CostEnrich
+  }
+
   case class TermConstraint(t: Term, aut: Automaton)
 
   type ConflictSet = Seq[TermConstraint]
-
   abstract class ConstraintStore {
     def push: Unit
 
@@ -96,6 +100,17 @@ object Exploration {
       * constraints
       */
     def getAcceptedWordLen(len: Int): Seq[Int]
+
+    /** Produce a word accepted by all the stored constraints, based on the
+      * given length model
+      */
+    def getAcceptedWordFromLengthModel(
+        lengthModel: MHashMap[Term, Int]
+    ): Seq[Int]
+
+    /** Get integer terms of all constraints that was asserted
+      */
+    def getCompleteTerms: Seq[Term] = Seq()
   }
 
   def eagerExp(
@@ -339,6 +354,12 @@ abstract class Exploration(
       None
     } catch {
       case FoundModel(model) => Some(model)
+      case e: Exception =>
+        Console.withOut(Console.err) {
+          println("Exception in findModel:")
+          e.printStackTrace
+        }
+        None
     }
   }
 
@@ -414,9 +435,20 @@ abstract class Exploration(
           model.put(
             t,
             Right(
-              (for (tlen <- getVarLength(t))
-                yield store.getAcceptedWordLen(tlen.intValueSafe))
-                .getOrElse(store.getAcceptedWord)
+              if (useCostEnrichAlgorithm(flags)) {
+                val lengthValue = new MHashMap[Term, Int]
+                for (
+                  lModel <- lengthModel;
+                  term <- store.getCompleteTerms;
+                  if term.constants.size == 1;
+                  tVal <- evalTerm(term)(lModel)
+                )
+                  lengthValue.put(term, tVal.intValue)
+                store.getAcceptedWordFromLengthModel(lengthValue)
+              } else
+                (for (tlen <- getVarLength(t))
+                  yield store.getAcceptedWordLen(tlen.intValueSafe))
+                  .getOrElse(store.getAcceptedWord)
             )
           )
         }
@@ -443,6 +475,7 @@ abstract class Exploration(
 
           val argStrings: Seq[Seq[Int]] = argValues map (_.right.get)
 
+          // value for result
           val resString =
             op.eval(argStrings) match {
               case Some(v) => v
@@ -454,31 +487,36 @@ abstract class Exploration(
             }
 
           val resValue: Either[IdealInt, Seq[Int]] = Right(resString)
+          
+          def isStringRes(op: PreOp) = 
+            !(op.isInstanceOf[CostEnrichedPreOp] && op.isIntRes)
+          
+          if (isStringRes(op)) {
+            for (oldValue <- model get res)
+              if (resValue != oldValue)
+                throw new Exception(
+                  "Model extraction failed: " +
+                    oldValue + " != " + resValue
+                )
 
-          for (oldValue <- model get res)
-            if (resValue != oldValue)
+            if (!(constraintStores(res) isAcceptedWord resString))
               throw new Exception(
-                "Model extraction failed: " +
-                  oldValue + " != " + resValue
+                "Could not satisfy regex constraints for " + res +
+                  ", maybe the problems involves non-functional transducers?"
               )
 
-          if (!(constraintStores(res) isAcceptedWord resString))
-            throw new Exception(
-              "Could not satisfy regex constraints for " + res +
-                ", maybe the problems involves non-functional transducers?"
-            )
+            for (resLen <- getVarLength(res))
+              if (resValue.right.get.size != resLen.intValueSafe)
+                throw new Exception(
+                  "Could not satisfy length constraints for " + res +
+                    " with solution " +
+                    resValue.right.get.map(i => i.toChar)(breakOut) +
+                    "; length is " + resValue.right.get.size +
+                    " but should be " + resLen
+                )
 
-          for (resLen <- getVarLength(res))
-            if (resValue.right.get.size != resLen.intValueSafe)
-              throw new Exception(
-                "Could not satisfy length constraints for " + res +
-                  " with solution " +
-                  resValue.right.get.map(i => i.toChar)(breakOut) +
-                  "; length is " + resValue.right.get.size +
-                  " but should be " + resLen
-              )
-
-          model.put(res, resValue)
+            model.put(res, resValue)
+          }
         }
         throw FoundModel(model.toMap)
       }
@@ -532,10 +570,11 @@ abstract class Exploration(
         pushLengthConstraints
 
         if (
-          flags.strategy == OFlags.StrategyOptions.CostEnrich &&
+          useCostEnrichAlgorithm(flags) &&
           op.isInstanceOf[CostEnrichedPreOp]
         )
           addLengthConstraint(op.lengthConstraints(argCS, resAut))
+        addLengthConstraint(argCS(0).parikhTheory)
 
         try {
           val newConstraints = new MHashSet[TermConstraint]
@@ -619,7 +658,7 @@ abstract class Exploration(
 
   protected def addLengthConstraint(lengthConstraint: Formula): Unit = {
     for (p <- lengthProver) {
-      p addAssertion lengthConstraint
+      p !! lengthConstraint
       val constTerms = SymbolCollector.constants(lengthConstraint)
       p addConstants constTerms
     }
@@ -764,6 +803,15 @@ class EagerExploration(
         case Some(aut) => AutomataUtils.findAcceptedWord(List(aut), len).get
         case None      => List()
       }
+
+    // TODO: implement this
+    def getAcceptedWordFromLengthModel(
+        lengthModel: MHashMap[Term, Int]
+    ): Seq[Int] = currentConstraint match {
+      case Some(aut) =>
+        AutomataUtils.findAcceptedWord(Seq(aut), lengthModel).get
+      case None => List()
+    }
   }
 
 }
@@ -931,6 +979,23 @@ class LazyExploration(
         case Seq() => for (_ <- 0 until len) yield 0
         case auts  => AutomataUtils.findAcceptedWord(auts, len).get
       }
+
+    override def getCompleteTerms: Seq[Term] = {
+      constraints match {
+        case Seq() => Seq()
+        case auts =>
+          auts
+            .map(a => a.asInstanceOf[CostEnrichedAutomaton].getTransitionsTerms)
+            .flatten
+      }
+    }
+
+    def getAcceptedWordFromLengthModel(
+        lengthModel: MHashMap[Term, Int]
+    ): Seq[Int] = constraints match {
+      case Seq() => Seq()
+      case auts  => AutomataUtils.findAcceptedWord(auts.toSeq, lengthModel).get
+    }
   }
 
 }
