@@ -30,7 +30,7 @@ class LengthPreOp(length: Term) extends CostEnrichedPreOp {
     )
     builder.setAccept(initalState, true)
     builder.addRegister(RegisterTerm())
-    
+
     val baut = builder.getAutomaton
     (Iterator(Seq(baut)), Seq())
   }
@@ -53,8 +53,8 @@ class LengthPreOp(length: Term) extends CostEnrichedPreOp {
     import ostrich.CostEnrichedConvenience._
 
     val lengthRegister = preImageConstraints(0).registers(0)
-    
-    lengthRegister === length
+
+    length === lengthRegister
   }
 
   override def isIntRes: Boolean = true

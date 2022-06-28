@@ -7,3 +7,19 @@ metals.sbt
 *.swo
 *.swp
 /.bsp
+
+# scalafmt conf
+*.conf
+
+# my template files
+[0-9].smt2
+**/testMain.scala
+*.jar
+
+# IDEA config
+.idea/
+.vscode/
+
+# compiled file 
+project
+ecma2020/target
