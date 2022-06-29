@@ -56,7 +56,7 @@ class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
   import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
-                 strDatabase, str_to_int, StringSort, FunPred}
+                 strDatabase, str_to_int, int_to_str, StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
 
@@ -66,6 +66,8 @@ class OstrichPredtoEqConverter(goal : Goal,
   val predConj     = facts.predConj
   val concatLits   = predConj.positiveLitsWithPred(_str_++)
   val concatPerRes = concatLits groupBy (_(2))
+  val lengthLits   = predConj.positiveLitsWithPred(_str_len)
+  val lengthMap    = (for (a <- lengthLits.iterator) yield (a(0), a(1))).toMap
 
   def resolveConcat(t : LinearCombination)
   : Option[(LinearCombination, LinearCombination)] =
@@ -174,6 +176,24 @@ class OstrichPredtoEqConverter(goal : Goal,
     yield Plugin.AddAxiom(List(), enumAtom, theory)
   }
 
+  def enumIntToStrValues(a : Atom) : Seq[Plugin.Action] = {
+    for (lit <- List(a);
+         if !a.head.isConstant;
+         enumAtom = conj(theory.IntEnumerator.enumIntValuesOf(a.head, order));
+         if !goal.reduceWithFacts(enumAtom).isTrue)
+    yield Plugin.AddAxiom(List(), enumAtom, theory)
+  }
+
+  def propStrToIntLength(a : Atom, len : Term) : Seq[Plugin.Action] = {
+    (for (IdealInt(bound) <- goal.reduceWithFacts.upperBound(len);
+          constraint = (a(1) >= -1) & a(1) <= ((IdealInt(10) pow bound) - 1);
+          if !goal.reduceWithFacts(constraint).isTrue) yield {
+       Plugin.AddAxiom(List(), // TODO
+                       constraint,
+                       theory)
+     }).toSeq
+  }
+
   /**
    *  Convert predicates to equations. Supported predicates at the moment
    *  are negative literals of str_prefix
@@ -192,14 +212,21 @@ class OstrichPredtoEqConverter(goal : Goal,
     val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_replace));
                   act <- rewriteStrReplace(lit)) yield act)
 
-    a ++ b ++ c
+    val d = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_int));
+                  len <- (lengthMap get lit(0)).toSeq;
+                  act <- propStrToIntLength(lit, len)) yield act)
+
+    a ++ b ++ c ++ d
   }
 
   def lazyEnumeration : Seq[Plugin.Action] = {
-    val d = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_int));
+    val a = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_int));
                   act <- enumStrToIntValues(lit)) yield act)
 
-    d
+    val b = (for (lit <- predConj.positiveLitsWithPred(FunPred(int_to_str));
+                  act <- enumIntToStrValues(lit)) yield act)
+
+    a ++ b
   }
 
 }
