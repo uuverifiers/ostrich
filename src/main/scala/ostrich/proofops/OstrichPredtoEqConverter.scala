@@ -56,7 +56,7 @@ class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
   import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
-                 strDatabase, StringSort, FunPred}
+                 strDatabase, str_to_int, StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
 
@@ -66,11 +66,6 @@ class OstrichPredtoEqConverter(goal : Goal,
   val predConj     = facts.predConj
   val concatLits   = predConj.positiveLitsWithPred(_str_++)
   val concatPerRes = concatLits groupBy (_(2))
-
-  val prefixNegLits = predConj.negativeLitsWithPred(str_prefixof)
-  val suffixNegLits = predConj.negativeLitsWithPred(str_suffixof)
-
-  val replaceLits = predConj.positiveLitsWithPred(FunPred(str_replace))
 
   def resolveConcat(t : LinearCombination)
   : Option[(LinearCombination, LinearCombination)] =
@@ -171,6 +166,14 @@ class OstrichPredtoEqConverter(goal : Goal,
       List()
     }
 
+  def enumStrToIntValues(a : Atom) : Seq[Plugin.Action] = {
+    for (lit <- List(a);
+         if !a.last.isConstant;
+         enumAtom = conj(theory.IntEnumerator.enumIntValuesOf(a.last, order));
+         if !goal.reduceWithFacts(enumAtom).isTrue)
+    yield Plugin.AddAxiom(List(), enumAtom, theory)
+  }
+
   /**
    *  Convert predicates to equations. Supported predicates at the moment
    *  are negative literals of str_prefix
@@ -180,16 +183,23 @@ class OstrichPredtoEqConverter(goal : Goal,
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
     //TODO rewrite positive prefix, suffix, contains
 
-    val a = (for (lit <- prefixNegLits;
+    val a = (for (lit <- predConj.negativeLitsWithPred(str_prefixof);
                   act <- reduceNegPrefixToEquation(lit)) yield act)
 
-    val b = (for (lit <- suffixNegLits;
+    val b = (for (lit <- predConj.negativeLitsWithPred(str_suffixof);
                   act <- reduceNegPrefixToEquation(lit)) yield act)
 
-    val c = (for (lit <- replaceLits;
+    val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_replace));
                   act <- rewriteStrReplace(lit)) yield act)
 
     a ++ b ++ c
+  }
+
+  def lazyEnumeration : Seq[Plugin.Action] = {
+    val d = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_int));
+                  act <- enumStrToIntValues(lit)) yield act)
+
+    d
   }
 
 }

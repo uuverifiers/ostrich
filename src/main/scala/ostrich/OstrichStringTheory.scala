@@ -260,7 +260,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
-  override val dependencies : Iterable[Theory] = List(ModuloArithmetic)
+  val IntEnumerator = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
+
+  override val dependencies : Iterable[Theory] =
+    List(ModuloArithmetic, IntEnumerator)
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)
@@ -348,6 +351,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
           nielsenSplitter.splitEquation                elseDo
+          predToEq.lazyEnumeration                     elseDo
           callBackwardProp(goal)
 
         } catch {
