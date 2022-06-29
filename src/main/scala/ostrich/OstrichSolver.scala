@@ -327,7 +327,6 @@ class OstrichSolver(theory : OstrichStringTheory,
           if (cVal == dVal) {
             Console.err.println("   ... disequality is not satisfied: " +
                                   c + " != " + d)
-            Console.err.println(model)
             val strId = strDatabase.list2Id(cVal)
             throw new BlockingActions(List(
               Plugin.AxiomSplit(List(c =/= d),

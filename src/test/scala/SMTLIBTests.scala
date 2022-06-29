@@ -95,6 +95,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/replace-special-5.smt2", "unsat")
   property("replace-length.smt2") =
     checkFile("tests/replace-length.smt2", "sat")
+  property("replace-length-2.smt2") =
+    checkFileOpts("tests/replace-length-2.smt2", "sat", "+parikh", "")
 
   property("model-bug.smt2") =
     checkFileOpts("tests/model-bug.smt2", "sat", "", "+model")

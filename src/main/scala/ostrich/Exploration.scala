@@ -445,20 +445,25 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
         val resValue : Either[IdealInt, Seq[Int]] = Right(resString)
 
+        def throwResultCutException : Unit = {
+          import TerForConvenience._
+          implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
+
+          val resEq =
+            res === strDatabase.list2Id(resString)
+
+          Console.err.println("   ... adding cut over result for " + res)
+
+          throw new OstrichSolver.BlockingActions(List(
+            Plugin.CutSplit(resEq, List(), List())))
+        }
+
         for (oldValue <- model get res)
           if (resValue != oldValue) {
             if (!nonTreeLikeApps)
               throw new Exception("Model extraction failed: " +
                                     oldValue + " != " + resValue)
-
-            import TerForConvenience._
-            implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
-
-            val resEq =
-              res === strDatabase.list2Id(resString)
-
-            throw new OstrichSolver.BlockingActions(List(
-              Plugin.CutSplit(resEq, List(), List())))
+            throwResultCutException
           }
 
         if (!(constraintStores(res) isAcceptedWord resString))
@@ -467,13 +472,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             ", maybe the problems involves non-functional transducers?")
 
         for (resLen <- getVarLength(res))
-          if (resValue.right.get.size != resLen.intValueSafe)
+          if (resValue.right.get.size != resLen.intValueSafe) {
+ /*
             throw new Exception(
               "Could not satisfy length constraints for " + res +
                 " with solution " +
                 resValue.right.get.map(i => i.toChar)(breakOut) +
                 "; length is " + resValue.right.get.size +
                 " but should be " + resLen)
+  */
+            throwResultCutException
+         }
 
         model.put(res, resValue)
       }
