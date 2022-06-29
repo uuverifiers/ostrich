@@ -48,6 +48,10 @@ class CostEnrichedAutomatonBuilder
     this.registers ++= registers
   }
 
+  def addEtaMap(map: MHashMap[(State, TLabel, State), Seq[Int]]) = {
+    this.etaMap ++= map
+  }
+
   /** The initial state of the automaton being built
     */
   def initialState: State = baut.getInitialState

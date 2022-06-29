@@ -444,4 +444,12 @@ class CostEnrichedAutomaton(
   }
 
   override lazy val getLengthAbstraction: Formula = parikhTheory
+
+  lazy val uniqueAcceptedWordLengths: Option[Seq[Int]] = {
+    val lengths = for (s <- acceptingStates) yield (uniqueLengthStates get s)
+    if (lengths.size > 0 && !(lengths contains None))
+      Some(lengths.filter(_ != None).map(_.get).toSeq)
+    else
+      None
+  }
 }

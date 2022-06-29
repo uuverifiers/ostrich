@@ -37,6 +37,9 @@ import scala.collection.mutable.{HashMap => MHashMap, ArrayStack,
                                  LinkedHashSet => MLinkedHashSet,
                                  Set => MSet}
 import scala.collection.{Set => GSet}
+import ostrich.automata.costenrich.CostEnrichedAutomaton
+import ostrich.automata.costenrich.CostEnrichedAutomatonBuilder
+import ostrich.automata.costenrich.RegisterTerm
 
 object AtomicStateAutomatonAdapter {
   def intern(a : Automaton) : Automaton = a match {
@@ -128,8 +131,15 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
         builder.addTransition(t, label, smap(to))
       builder.setAccept(t, isAccept(s))
     }
-
+  
     builder.setInitialState(smap(initialState))
+
+    if(underlying.isInstanceOf[CostEnrichedAutomaton]){
+      val ceUnderlying = underlying.asInstanceOf[CostEnrichedAutomaton]
+      val ceBuilder = builder.asInstanceOf[CostEnrichedAutomatonBuilder]
+      ceBuilder.addRegisters(Seq.fill(ceUnderlying.registers.length)(RegisterTerm()))
+      ceBuilder.addEtaMap(ceUnderlying.etaMap)
+    }
 
     builder.getAutomaton
   }
