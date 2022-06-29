@@ -34,7 +34,7 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, BricsAutomaton}
 import ap.basetypes.IdealInt
-import ap.parser.{IBoolLit, IFunApp, IIntLit}
+import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
 import ap.terfor.{ComputationLogger, Formula, TerForConvenience, Term, TermOrder}
 import ap.terfor.conjunctions.{Conjunction, NegatedConjunctions, Quantifier, ReduceWithConjunction, ReducerPlugin, ReducerPluginFactory}
 import ap.terfor.arithconj.ArithConj
@@ -72,7 +72,8 @@ object OstrichReducer {
     a(1).constant.intValueSafe
   }
 
-  val IntRegex = """[0-9]+""".r
+  val IntRegex                = """[0-9]+""".r
+  val IntNoLeadingZeroesRegex = """[1-9][0-9]*|0""".r
 }
 
 class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
@@ -107,10 +108,11 @@ class OstrichReducer protected[ostrich]
   import OstrichReducer._
 
   import theory.{_str_empty, _str_cons, _str_++, _str_char_count,
-                 str_empty, str_cons, str_in_re_id, str_prefixof,str_suffixof,str_contains,
+                 str_empty, str_cons, str_in_re_id, str_prefixof,
+                 str_suffixof, str_contains,
                  str_replace, str_replaceall,
-                 re_++, str_to_re, re_all,
-                 strDatabase, autDatabase, FunPred}
+                 re_++, re_*, re_+, str_to_re, re_all, re_comp, re_charrange,
+                 strDatabase, autDatabase, FunPred, string2Term, int2Char}
   import factory.{_str_len, _int_to_str, _str_to_int}
   def passQuantifiers(num : Int) = this
 
@@ -237,6 +239,18 @@ class OstrichReducer protected[ostrich]
             val str   = if (const.signum < 0) "" else a(0).constant.toString
             val id    = str2Id(str)
             a.last === id
+          } else if (isConcrete(a(1))) {
+            val str = term2Str(a(1)).get
+            str match {
+              case IntNoLeadingZeroesRegex() => {
+                val strVal = IdealInt(str)
+                a(0) === strVal
+              }
+              case "" =>
+                a(0) < 0
+              case _ =>
+                Conjunction.FALSE
+            }
           } else {
             a
           }
@@ -249,15 +263,40 @@ class OstrichReducer protected[ostrich]
               case _          => IdealInt.MINUS_ONE
             }
             a.last === strVal
+          } else if (a(1).isConstant) {
+            a(1).constant match {
+              case IdealInt.MINUS_ONE => {
+                // argument must be something different from a decimal number
+                val autId = {
+                  import IExpression._
+                  val re =
+                    re_comp(re_+(re_charrange(int2Char(48), int2Char(57))))
+                  autDatabase.regex2Id(re)
+                }
+                str_in_re_id(List(a(0), l(autId)))
+              }
+              case const if const.signum >= 0 => {
+                val autId = {
+                  import IExpression._
+                  val num = const.toString
+                  val re  = re_++(re_*(str_to_re("0")), str_to_re(num))
+                  autDatabase.regex2Id(re)
+                }
+                str_in_re_id(List(a(0), l(autId)))
+              }
+              case _ =>
+                Conjunction.FALSE
+            }
           } else {
             a
           }
-        case `str_prefixof` if a(0) == a(1) => {
-          Conjunction.TRUE}
-        case `str_suffixof` if a(0) == a(1) => {
-          Conjunction.TRUE}
-        case `str_contains` if a(0) == a(1) => {
-          Conjunction.TRUE}
+
+        case `str_prefixof` if a(0) == a(1) =>
+          Conjunction.TRUE
+        case `str_suffixof` if a(0) == a(1) =>
+          Conjunction.TRUE
+        case `str_contains` if a(0) == a(1) =>
+          Conjunction.TRUE
 
         case `str_suffixof` =>
           if (isConcrete(a(0))) {
