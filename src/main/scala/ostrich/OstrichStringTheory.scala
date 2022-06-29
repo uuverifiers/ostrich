@@ -34,6 +34,7 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
+import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
 
 import ap.Signature
 import ap.basetypes.IdealInt

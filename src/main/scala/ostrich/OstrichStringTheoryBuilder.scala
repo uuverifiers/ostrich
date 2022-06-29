@@ -51,8 +51,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Philipp Rümmer, 2018-2021")
-    println("With contributions by Riccardo De Masellis, Zhilei Han.")
+    println("(c) Matthew Hague, Philipp Rümmer, 2018-2022")
+    println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }

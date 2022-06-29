@@ -30,7 +30,9 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.proofops
+
+import ostrich._
 
 import ap.basetypes.IdealInt
 import ap.parameters.Param
@@ -41,103 +43,10 @@ import ap.terfor.{ConstantTerm, VariableTerm, Formula, Term, TerForConvenience}
 import ap.terfor.conjunctions.{Conjunction, ReduceWithConjunction}
 import ap.terfor.preds.Atom
 import ap.terfor.linearcombination.LinearCombination
-import ap.types.Sort
 
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 object OstrichNielsenSplitter {
-
-  /**
-   * Class to simplify the construction of word equations.
-   */
-  class FormulaBuilder(goal   : Goal,
-                       theory : OstrichStringTheory) {
-    import theory.{_str_++, _str_len, _str_char_count, strDatabase, StringSort}
-
-    implicit val o = goal.order
-    import TerForConvenience._
-
-    val predConj   = goal.facts.predConj
-    val useLength  = theory.lengthNeeded(goal.facts)
-    val varSorts   = new ArrayBuffer[Sort]
-    val matrixFors = new ArrayBuffer[Formula]
-    val varLengths = new MHashMap[Term, Term]
-    val charCounts = new MHashMap[(Int, Term), Term]
-
-    val characters =
-      (for (a <- predConj.positiveLitsWithPred(_str_char_count).iterator)
-       yield a(0).constant.intValueSafe).toSet
-
-    def newVar(s : Sort) : VariableTerm = {
-      val res = VariableTerm(varSorts.size)
-      varSorts += s
-      res
-    }
-
-    def lengthOfTerm(t : Term) : Term =
-      varLengths.getOrElseUpdate(t, {
-        val len = newVar(Sort.Integer)
-        matrixFors += _str_len(List(l(t), l(len)))
-        matrixFors += l(len) >= sum(for (c <- characters.iterator)
-                                    yield (IdealInt.ONE, l(ccOfTerm(c, t))))
-        len
-      })
-
-    def ccOfTerm(c : Int, t : Term) : Term =
-      charCounts.getOrElseUpdate((c, t), {
-        val cc = newVar(Sort.Integer)
-        matrixFors += _str_char_count(List(l(c), l(t), l(cc)))
-        matrixFors += l(cc) >= 0
-        cc
-      })
-
-    def addConcat(left : Term, right : Term, res : Term) : Unit = {
-      matrixFors += _str_++ (List(l(left), l(right), l(res)))
-      if (useLength) {
-        matrixFors += lengthOfTerm(left) + lengthOfTerm(right) === lengthOfTerm(res)
-
-        for (c <- characters)
-          matrixFors += ccOfTerm(c, left) + ccOfTerm(c, right) === ccOfTerm(c, res)
-      }
-    }
-
-    def addConcatN(terms : Seq[Term], res : Term) : Unit =
-      terms match {
-        case Seq(t) =>
-          matrixFors += t === res
-        case terms => {
-          assert(terms.size > 1)
-          val prefixes =
-            (for (_ <- (2 until terms.size).iterator)
-             yield newVar(StringSort)) ++ Iterator(res)
-          terms reduceLeft[Term] {
-            case (t1, t2) => {
-              val s = prefixes.next
-              addConcat(t1, t2, s)
-              s
-            }
-          }
-        }
-      }
-
-    def concat(terms : Seq[Term]) : Term = terms match {
-      case Seq()  =>
-        strDatabase.list2Id(List())
-      case Seq(t) =>
-        t
-      case terms  => {
-        val res = newVar(StringSort)
-        addConcatN(terms, res)
-        res
-      }
-    }
-
-    def addConjunct(f : Formula) : Unit =
-      matrixFors += f
-
-    def result =
-      existsSorted(varSorts.toSeq, conj(matrixFors))
-  }
 
   abstract class DecompPoint(
     val atom    : Atom,
