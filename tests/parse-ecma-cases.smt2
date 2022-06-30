@@ -98,6 +98,9 @@
                 (str.in_re w (re.range "\u{00}" "\u{7F}")))
            (str.in_re w (re.from_ecma2020 '[a-zA-Z0-9]')))
 
+        (= (str.in_re w (re.from_ecma2020 '_'))
+           (= w "_"))
+
  )))
 
 (check-sat)
