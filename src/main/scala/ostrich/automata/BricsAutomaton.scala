@@ -36,7 +36,8 @@ import ostrich.OFlags
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, Automaton => BAutomaton, State => BState}
 import ostrich.automata.AutomataUtils.buildEpsilons
 
-import scala.collection.JavaConversions.{asScalaIterator, iterableAsScalaIterable}
+import scala.collection.JavaConverters.asScala
+
 import scala.collection.mutable.{HashMap => MHashMap,
                                  HashSet => MHashSet,
                                  LinkedHashSet => MLinkedHashSet,
