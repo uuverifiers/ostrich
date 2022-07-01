@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "1.1",
+  version               := "1.2",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
@@ -34,6 +34,12 @@ lazy val commonSettings = Seq(
                                name  = "Zhilei Han",
                                email = "hzl17@mails.tsinghua.edu.cn",
                                url   = url("https://www.linusboyle.cn/")
+                             ),
+                             Developer(
+                               id    = "oliver.markgraf",
+                               name  = "Oliver Markgraf",
+                               email = "markgraf@cs.uni-kl.de",
+                               url   = url("https://arg.cs.uni-kl.de/gruppe/markgraf/")
                              )
                           ),
 //
@@ -70,10 +76,10 @@ lazy val root = (project in file(".")).
     mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
-    resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
+//    resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
 //
-//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2021-11-15",
-    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2022-07-01",
+//    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
 //    libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
