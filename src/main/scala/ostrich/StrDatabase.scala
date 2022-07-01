@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2021 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2022 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -40,7 +40,8 @@ import ap.theories.strings.StringTheory
 import ap.terfor.Term
 import ap.terfor.linearcombination.LinearCombination
 
-import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer}
+import scala.collection.immutable.VectorBuilder
 
 class StrDatabase(theory : OstrichStringTheory) {
 
@@ -67,6 +68,16 @@ class StrDatabase(theory : OstrichStringTheory) {
     case _ =>
       false
   }
+
+  /**
+   * Check whether the term <code>t</code> has the concrete value
+   * <code>str</code>.
+   */
+  def hasValue(t : Term, str : List[Int]) : Boolean =
+    term2List(t) match {
+      case Some(v) => v == str
+      case None    => false
+    }
 
   /**
    * Check whether the given term represents a concrete string, and return
@@ -99,6 +110,33 @@ class StrDatabase(theory : OstrichStringTheory) {
   def id2List(id : Int) : List[Int] = StringTheory.term2List(id2ITerm(id))
 
   /**
+   * Enumerate prefix-suffix pairs for the given string by splitting
+   * the string into two parts in all possible ways.
+   */
+  def prefixSuffixPairs(id : Int) : Seq[(Int, Int)] = {
+    val res        = new VectorBuilder[(Int, Int)]
+    val emptyStrId = atomic2Id(str_empty())
+
+    var remId      = id
+    val prefix     = new ArrayBuffer[Int]
+
+    res            += ((list2Id(prefix.toSeq), remId))
+
+    while (remId != emptyStrId) {
+      val IFunApp(`str_cons`,
+                  Seq(IIntLit(IdealInt(head)),
+                      IIntLit(IdealInt(nextId)))) = id2LocalTerm(remId).get
+
+      remId  = nextId
+      prefix += head
+
+      res += ((list2Id(prefix.toSeq), remId))
+    }
+
+    res.result
+  }
+
+  /**
    * Query the string for an id. If no string belongs to the id, an
    * exception is thrown.
    */
@@ -121,6 +159,10 @@ class StrDatabase(theory : OstrichStringTheory) {
       case _ =>
         throw new RuntimeException("Riccardo, this should not happen!")
     }
+  }
+
+  private def id2LocalTerm(id : Int) : Option[ITerm] = synchronized {
+    id2StrMap get id
   }
 
   /**

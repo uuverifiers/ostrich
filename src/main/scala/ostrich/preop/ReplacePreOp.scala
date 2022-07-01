@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -301,6 +301,10 @@ class ReplacePreOpTran(tran : Transducer) extends PreOp {
     for (s <- tran(arguments(0).map(_.toChar).mkString,
                    arguments(1).map(_.toChar).mkString))
     yield s.toSeq.map(_.toInt)
+
+  override def lengthApproximation(arguments : Seq[Term], result : Term,
+                                   order : TermOrder) : Formula =
+    tran.lengthApproximation(arguments(0), arguments(1), result, order)
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)

@@ -75,14 +75,14 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
-    case FunPred(`str_replaceall`) => {
+    case FunPred(`str_replaceall`) if strDatabase isConcrete a(1) => {
       val op = () => {
         val b = strDatabase term2ListGet a(1)
         ReplaceAllPreOp(b map (_.toChar))
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
-    case FunPred(`str_replace`) => {
+    case FunPred(`str_replace`) if strDatabase isConcrete a(1) => {
       val op = () => {
         val b = strDatabase term2ListGet a(1)
         ReplacePreOp(b map (_.toChar))

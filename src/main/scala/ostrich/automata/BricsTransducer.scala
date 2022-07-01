@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,6 +38,9 @@ import scala.collection.mutable.{HashSet => MHashSet,
                                  Stack => MStack,
                                  MultiMap => MMultiMap,
                                  Set => MSet}
+
+import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
+import ap.terfor.conjunctions.Conjunction
 
 import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
@@ -676,6 +679,82 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     }
 
     return None
+  }
+
+  override def lengthApproximation(inputLen : Term,
+                                   internalLen : Term,
+                                   resultLen : Term,
+                                   order : TermOrder) : Formula = {
+    // We currently just check for cases of
+    // length-decreasing/increasing transitions. A more precise
+    // approach would be the computation of Parikh images.
+
+    def outputLen(op : OutputOp, intLen : Int) : Int = op match {
+      case OutputOp(preW, NOP, postW) =>
+        preW.size + preW.size
+      case OutputOp(preW, Internal, postW) =>
+        preW.size + preW.size + intLen
+      case OutputOp(preW, Plus(_), postW) =>
+        preW.size + preW.size + 1
+    }
+    
+    def allLblTrans =
+      for (transitions <- lblTrans.valuesIterator;
+           t <- transitions.iterator)
+      yield t
+    def allETrans =
+      for (transitions <- eTrans.valuesIterator;
+           t <- transitions.iterator)
+      yield t
+
+    val lblDecreasing =
+      for (intLen <- List(0, 1, 2)) yield {
+        allLblTrans exists {
+          case (_, op, _) => outputLen(op, intLen) < 1
+        }
+      }
+    val lblIncreasing =
+      for (intLen <- List(0, 1, 2)) yield {
+        allLblTrans exists {
+          case (_, op, _) => outputLen(op, intLen) > 1
+        }
+      }
+    val eIncreasing =
+      for (intLen <- List(0, 1, 2)) yield {
+        allETrans exists {
+          case (op, _) => outputLen(op, intLen) > 0
+        }
+      }
+
+    import TerForConvenience._
+    implicit val o = order
+
+    def inEqs(geq : Boolean, leq : Boolean,
+              left : Term, right : Term) : Conjunction =
+      if (geq) {
+        if (leq)
+          left === right
+        else
+          left >= right
+      } else {
+        if (leq)
+          left <= right
+        else
+          Conjunction.TRUE
+      }
+
+    val lengthFors =
+      for (i <- List(0, 1, 2))
+      yield inEqs(!lblDecreasing(i), !lblIncreasing(i) && !eIncreasing(i),
+                  resultLen, inputLen)
+
+    if (lengthFors forall (_ == Conjunction.TRUE)) {
+      Conjunction.TRUE
+    } else {
+      (internalLen === 0 & lengthFors(0)) |
+      (internalLen === 1 & lengthFors(1)) |
+      (internalLen > 1   & lengthFors(2))
+    }
   }
 
   override def toDot() : String = {

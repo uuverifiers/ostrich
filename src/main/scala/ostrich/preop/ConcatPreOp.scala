@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -118,6 +118,11 @@ object ConcatPreOp extends PreOp {
     implicit val o = order
     result === arguments(0) + arguments(1)
   }
+
+  override def charCountApproximation(char : Int,
+                                      arguments : Seq[Term], result : Term,
+                                      order : TermOrder) : Formula =
+    lengthApproximation(arguments, result, order)
 
   override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
     val fstCons = argumentConstraints(0).map(_ match {

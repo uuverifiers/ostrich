@@ -34,6 +34,7 @@ It is also possible to use prioritised finite-state transducers: multiple outgoi
 | Name        | Explanation      |
 |-------------|------------------|
 | re.from_ecma2020 | Parse a regular expression in textual ECMAScript 2020 format [(example)](../master/tests/parse-ecma-cases.smt2) |
+| re.from_ecma2020_flags | Parse a regular expression in textual ECMAScript 2020 format, with a second argument to specify flags [(example)](../master/tests/parse-ecma-cases.smt2) |
 | re.case_insensitive | Make any regular expression case insensitive [(example)](../master/tests/case-insensitive.smt2) |
 
 ### Handling of capture groups

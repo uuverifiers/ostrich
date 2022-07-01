@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2022 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,8 @@ import ap.util.Seqs
 
 import scala.io.Source
 import scala.collection.immutable.VectorBuilder
+import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer,
+                                 HashSet => MHashSet}
 
 object UnicodeData {
 
@@ -124,5 +126,144 @@ object UnicodeData {
 
     result.result
   }
+
+  /**
+   * Unicode properties of the general category. For each general
+   * category property value, the map specifies the intervals of
+   * characters belonging to the category.
+   */
+  lazy val generalProperties : Map[String, Seq[Interval]] = {
+    var lastCat      = ""
+    var lastCatStart = -1
+    val categories   = new MHashMap[String, ArrayBuffer[Interval]]
+
+    for (str <- characterLines) {
+      val fields = str split ";"
+      val code   = Integer.parseInt(fields(0), 16)
+      val cat    = fields(2)
+
+      if (cat != lastCat) {
+        if (lastCatStart >= 0) {
+          val intervals = categories.getOrElseUpdate(lastCat, new ArrayBuffer)
+          intervals += ((lastCatStart, code - 1))
+        }
+        lastCat      = cat
+        lastCatStart = code
+      }
+    }
+
+    if (lastCatStart >= 0) {
+      val intervals = categories.getOrElseUpdate(lastCat, new ArrayBuffer)
+      intervals += ((lastCatStart, 0x10FFFF))
+    }
+
+    val categoriesSeq = categories.toVector.sortBy(_._1)
+
+    {
+      val mergedCats = new MHashSet[String]
+
+      // Add the single-letter categories by joining the categories from
+      // the database
+      for ((cat, seq) <- categoriesSeq) {
+        assert(cat.size == 2)
+        val prefix    = cat.substring(0, 1)
+        val intervals = categories.getOrElseUpdate(prefix, new ArrayBuffer)
+        intervals     ++= seq
+        mergedCats    += prefix
+      }
+
+      // Special case: LC is the union of Lu, Ll, Lt
+      val intervals = categories.getOrElseUpdate("LC", new ArrayBuffer)
+      intervals     ++= categories("Lu")
+      intervals     ++= categories("Ll")
+      intervals     ++= categories("Lt")
+      mergedCats    += "LC"
+
+      // Merge adjacent internals in the merged categories, to reduce
+      // the number of cases to be considered later
+      for (cat <- mergedCats) {
+        val newCat       = new ArrayBuffer[Interval]
+        var lastCatStart = -10
+        var lastCatEnd   = -10
+
+        for ((a, b) <- categories(cat).sortBy(_._1))
+          if (a == lastCatEnd + 1) {
+            lastCatEnd = b
+          } else {
+            if (lastCatEnd >= 0)
+              newCat += ((lastCatStart, lastCatEnd))
+            lastCatStart = a
+            lastCatEnd   = b
+          }
+
+        if (lastCatEnd >= 0)
+          newCat += ((lastCatStart, lastCatEnd))
+
+        categories.put(cat, newCat)
+      }
+    }
+
+    (for ((cat, s) <- categories.iterator)
+     yield (cat.toLowerCase, s.toSeq)).toMap
+  }
+
+  /**
+   * Map a property of the general category to the standard name.
+   */
+  def normalizeGeneralProperty(name : String) : String =
+    if (name.size <= 2) {
+      name.toLowerCase
+    } else {
+      val norm = normalize(name)
+      longCategoryNames.getOrElse(norm, norm)
+    }
+
+  private val longCategoryNamesRaw = Map(
+    "Letter" -> "L",
+    "Lowercase_Letter" -> "Ll",
+    "Uppercase_Letter" -> "Lu",
+    "Titlecase_Letter" -> "Lt",
+    "Cased_Letter" -> "LC",
+    "Modifier_Letter" -> "Lm",
+    "Other_Letter" -> "Lo",
+    "Mark" -> "M",
+    "Non_Spacing_Mark" -> "Mn",
+    "Spacing_Combining_Mark" -> "Mc",
+    "Enclosing_Mark" -> "Me",
+    "Separator" -> "Z",
+    "Space_Separator" -> "Zs",
+    "Line_Separator" -> "Zl",
+    "Paragraph_Separator" -> "Zp",
+    "Symbol" -> "S",
+    "Math_Symbol" -> "Sm",
+    "Currency_Symbol" -> "Sc",
+    "Modifier_Symbol" -> "Sk",
+    "Other_Symbol" -> "So",
+    "Number" -> "N",
+    "Decimal_Digit_Number" -> "Nd",
+    "Letter_Number" -> "Nl",
+    "Other_Number" -> "No",
+    "Punctuation" -> "P",
+    "Dash_Punctuation" -> "Pd",
+    "Open_Punctuation" -> "Ps",
+    "Close_Punctuation" -> "Pe",
+    "Initial_Punctuation" -> "Pi",
+    "Final_Punctuation" -> "Pf",
+    "Connector_Punctuation" -> "Pc",
+    "Other_Punctuation" -> "Po",
+    "Other" -> "C",
+    "Control" -> "Cc",
+    "Format" -> "Cf",
+    "Private_Use" -> "Co",
+    "Surrogate" -> "Cs",
+    "Unassigned" -> "Cn"
+  )
+
+  private val longCategoryNames =
+    for ((a, b) <- longCategoryNamesRaw)
+    yield (normalize(a), b.toLowerCase)
+
+  private def normalize(str : String) : String =
+    str.toLowerCase.replaceAll("[^a-z]", "")
 
 }

@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2022 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -33,21 +33,16 @@
 package ostrich
 
 import ostrich.automata.{AutDatabase, BricsAutomaton}
-
 import ap.basetypes.IdealInt
-import ap.parser.{IFunApp, IIntLit}
-import ap.terfor.{Term, Formula,
-                  TermOrder, TerForConvenience, ComputationLogger}
-import ap.terfor.conjunctions.{Conjunction, Quantifier, ReduceWithConjunction,
-                               ReducerPluginFactory, ReducerPlugin,
-                               NegatedConjunctions}
+import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
+import ap.terfor.{ComputationLogger, Formula, TerForConvenience, Term, TermOrder}
+import ap.terfor.conjunctions.{Conjunction, NegatedConjunctions, Quantifier, ReduceWithConjunction, ReducerPlugin, ReducerPluginFactory}
 import ap.terfor.arithconj.ArithConj
-import ap.terfor.preds.{Atom, Predicate, PredConj}
+import ap.terfor.preds.{Atom, PredConj, Predicate}
 import ap.util.PeekIterator
+import AutDatabase.{ComplementedAut, NamedAutomaton, PositiveAut}
 
-import AutDatabase.{NamedAutomaton, PositiveAut, ComplementedAut}
-
-import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer}
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
 object OstrichReducer {
   def extractLanguageConstraints(conj : PredConj,
@@ -77,7 +72,8 @@ object OstrichReducer {
     a(1).constant.intValueSafe
   }
 
-  val IntRegex = """[0-9]+""".r
+  val IntRegex                = """[0-9]+""".r
+  val IntNoLeadingZeroesRegex = """[1-9][0-9]*|0""".r
 }
 
 class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
@@ -95,6 +91,7 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
   val _str_len      = FunPred(str_len)
   val _int_to_str   = FunPred(int_to_str)
   val _str_to_int   = FunPred(str_to_int)
+
 }
 
 /**
@@ -109,12 +106,14 @@ class OstrichReducer protected[ostrich]
       extends ReducerPlugin {
 
   import OstrichReducer._
-  import theory.{_str_empty, _str_cons, _str_++,
-                 str_empty, str_cons, str_in_re_id, str_prefixof,
-                 re_++, str_to_re, re_all,
-                 strDatabase, autDatabase}
-  import factory.{_str_len, _int_to_str, _str_to_int}
 
+  import theory.{_str_empty, _str_cons, _str_++, _str_char_count,
+                 str_empty, str_cons, str_in_re_id, str_prefixof,
+                 str_suffixof, str_contains,
+                 str_replace, str_replaceall,
+                 re_++, re_*, re_+, str_to_re, re_all, re_comp, re_charrange,
+                 strDatabase, autDatabase, FunPred, string2Term, int2Char}
+  import factory.{_str_len, _int_to_str, _str_to_int}
   def passQuantifiers(num : Int) = this
 
   def addAssumptions(arithConj : ArithConj,
@@ -137,9 +136,10 @@ class OstrichReducer protected[ostrich]
              reducer : ReduceWithConjunction,
              logger : ComputationLogger,
              mode : ReducerPlugin.ReductionMode.Value)
-           : ReducerPlugin.ReductionResult =
+           :  ReducerPlugin.ReductionResult = {
     reduce1(predConj, reducer, logger, mode) orElse
     reduce2(predConj, reducer, logger, mode)
+  }
 
   /**
    * Reduction based on contextual knowledge.
@@ -151,7 +151,8 @@ class OstrichReducer protected[ostrich]
                     : ReducerPlugin.ReductionResult = {
     implicit val order = predConj.order
     import TerForConvenience._
-    import strDatabase.isConcrete
+    import strDatabase.{isConcrete, hasValue, term2List, term2ListGet,
+                        list2Id, str2Id, term2Str}
 
     def getLanguages(t : Term) : Iterator[NamedAutomaton] =
       for (c <- languageConstraints.iterator;
@@ -160,11 +161,13 @@ class OstrichReducer protected[ostrich]
       yield aut
 
     ReducerPlugin.rewritePreds(predConj,
-                               List(_str_empty, _str_cons,
-                                    str_in_re_id, _str_len,
-                                    _int_to_str, _str_to_int,
-                                    str_prefixof) ++
-                                 funTranslator.translatablePredicates,
+                               (List(_str_empty, _str_cons,
+                                     str_in_re_id, _str_len, _str_char_count,
+                                     _int_to_str, _str_to_int,
+                                     str_prefixof, str_suffixof, str_contains,
+                                     FunPred(str_replace),
+                                     FunPred(str_replaceall)) ++
+                                  funTranslator.translatablePredicates).distinct,
                                order,
                                logger) { a =>
       a.pred match {
@@ -181,10 +184,15 @@ class OstrichReducer protected[ostrich]
             a
           }
 
+        case `_str_++` if hasValue(a(0), List()) =>
+          a(1) === a(2)
+        case `_str_++` if hasValue(a(1), List()) =>
+          a(0) === a(2)
+
         case `str_in_re_id` => {
           val autId = regexAtomToId(a)
           if (isConcrete(a(0))) {
-            val Some(str) = strDatabase.term2List(a(0))
+            val Some(str) = term2List(a(0))
             val Some(aut) = autDatabase.id2Automaton(autId)
             if (aut(str)) Conjunction.TRUE else Conjunction.FALSE
           } else {
@@ -210,9 +218,17 @@ class OstrichReducer protected[ostrich]
 
         case `_str_len` =>
           if (isConcrete(a(0))) {
-            a.last === (strDatabase term2ListGet a(0)).size
+            a.last === term2ListGet(a(0)).size
           } else if (a.last.isConstant && a.last.constant.isZero) {
-            a(0) === (strDatabase list2Id List())
+            a(0) === list2Id(List())
+          } else {
+            a
+          }
+
+        case `_str_char_count` =>
+          if (a(0).isConstant && isConcrete(a(1))) {
+            val char = a(0).constant.intValueSafe
+            a.last === term2ListGet(a(1)).count(_ == char)
           } else {
             a
           }
@@ -220,21 +236,101 @@ class OstrichReducer protected[ostrich]
         case `_int_to_str` =>
           if (a(0).isConstant) {
             val const = a(0).constant
-            val str = if (const.signum < 0) "" else a(0).constant.toString
-            val id = strDatabase str2Id str
+            val str   = if (const.signum < 0) "" else a(0).constant.toString
+            val id    = str2Id(str)
             a.last === id
+          } else if (isConcrete(a(1))) {
+            val str = term2Str(a(1)).get
+            str match {
+              case IntNoLeadingZeroesRegex() => {
+                val strVal = IdealInt(str)
+                a(0) === strVal
+              }
+              case "" =>
+                a(0) < 0
+              case _ =>
+                Conjunction.FALSE
+            }
           } else {
             a
           }
 
         case `_str_to_int` =>
           if (isConcrete(a(0))) {
-            val str = strDatabase.term2Str(a(0)).get
+            val str = term2Str(a(0)).get
             val strVal = str match {
               case IntRegex() => IdealInt(str)
               case _          => IdealInt.MINUS_ONE
             }
             a.last === strVal
+          } else if (a(1).isConstant) {
+            a(1).constant match {
+              case IdealInt.MINUS_ONE => {
+                // argument must be something different from a decimal number
+                val autId = {
+                  import IExpression._
+                  val re =
+                    re_comp(re_+(re_charrange(int2Char(48), int2Char(57))))
+                  autDatabase.regex2Id(re)
+                }
+                str_in_re_id(List(a(0), l(autId)))
+              }
+              case const if const.signum >= 0 => {
+                val autId = {
+                  import IExpression._
+                  val num = const.toString
+                  val re  = re_++(re_*(str_to_re("0")), str_to_re(num))
+                  autDatabase.regex2Id(re)
+                }
+                str_in_re_id(List(a(0), l(autId)))
+              }
+              case _ =>
+                Conjunction.FALSE
+            }
+          } else {
+            a
+          }
+
+        case `str_prefixof` if a(0) == a(1) =>
+          Conjunction.TRUE
+        case `str_suffixof` if a(0) == a(1) =>
+          Conjunction.TRUE
+        case `str_contains` if a(0) == a(1) =>
+          Conjunction.TRUE
+
+        case `str_suffixof` =>
+          if (isConcrete(a(0))) {
+            assert(a(0).isConstant)
+            val asRE  = IFunApp(re_++,
+              List(IFunApp(re_all, List()),IFunApp(str_to_re, List(a(0).constant))
+                ))
+            val autId = autDatabase.regex2Id(asRE)
+            str_in_re_id(List(a(1), l(autId)))
+          } else if (isConcrete(a(1))) {
+
+            val str   = term2Str(a(1)).get
+            val autId = autDatabase.automaton2Id(
+              BricsAutomaton.suffixAutomaton(str))
+            str_in_re_id(List(a(0), l(autId)))
+          } else {
+            a
+          }
+
+        case `str_contains` =>
+          if (isConcrete(a(1))) {
+            assert(a(1).isConstant)
+            val asRE  =
+              IFunApp(re_++,
+              List(IFunApp(re_all, List()),IFunApp(str_to_re, List(a(1).constant))
+              , IFunApp(re_all, List())))
+            val autId = autDatabase.regex2Id(asRE)
+            str_in_re_id(List(a(0), l(autId)))
+          } else if (isConcrete(a(0))) {
+
+            val str   = term2Str(a(0)).get
+            val autId = autDatabase.automaton2Id(
+              BricsAutomaton.containsAutomaton(str))
+            str_in_re_id(List(a(1), l(autId)))
           } else {
             a
           }
@@ -248,7 +344,7 @@ class OstrichReducer protected[ostrich]
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(1), l(autId)))
           } else if (isConcrete(a(1))) {
-            val str   = strDatabase.term2Str(a(1)).get
+            val str   = term2Str(a(1)).get
             val autId = autDatabase.automaton2Id(
                           BricsAutomaton.prefixAutomaton(str))
             str_in_re_id(List(a(0), l(autId)))
@@ -256,14 +352,36 @@ class OstrichReducer protected[ostrich]
             a
           }
 
+        case FunPred(`str_replace` | `str_replaceall`) if a(1) == a(2) =>
+          a(0) === a(3)
+
+        case FunPred(`str_replace`) if a(0) == a(1) =>
+          a(2) === a(3)
+
+        case FunPred(`str_replace` | `str_replaceall`)
+            if isConcrete(a(0)) && isConcrete(a(1)) &&
+               !(term2ListGet(a(0)) containsSlice term2ListGet(a(1))) =>
+          a(0) === a(3)
+
+        case FunPred(`str_replace`) if hasValue(a(1), List()) =>
+          _str_++(List(a(2), a(0), a(3)))
+
+        case FunPred(`str_replaceall`) if hasValue(a(1), List()) =>
+          a(0) === a(3)
+
         case p => {
-          assert(funTranslator.translatablePredicates contains p)
+          try {
+          assert(funTranslator.translatablePredicates contains p, ("Unhandled case in reducer: " + p))
+          } catch {
+            case t : ap.util.Timeout => throw t
+            case t : Throwable =>  { t.printStackTrace; throw t }
+          }
           funTranslator(a) match {
             case Some((op, args, res)) if (args forall isConcrete) => {
-              val argStrs = args map strDatabase.term2ListGet
+              val argStrs = args map term2ListGet
               op().eval(argStrs) match {
                 case Some(resStr) =>
-                  res === strDatabase.list2Id(resStr)
+                  res === list2Id(resStr)
                 case None =>
                   a
               }
@@ -317,6 +435,11 @@ class OstrichReducer protected[ostrich]
                emptyIntersection(PositiveAut(regexAtomToId(a)), aut) }) ||
             (curNeg exists { a =>
                emptyIntersection(ComplementedAut(regexAtomToId(a)), aut) })
+
+          // TODO: the use of isSubsetOfBE is problematic. With option
+          // +assert, assertions switched on, this can lead to an
+          // assertion failure in ReduceWithConjunction, since
+          // applying the reducer multiple times can have different results.
 
           def isFwdSubsumed(aut : NamedAutomaton) : Boolean =
             (curPos exists { a =>

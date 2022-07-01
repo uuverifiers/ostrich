@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -45,21 +45,21 @@ import scala.collection.mutable.ArrayBuffer
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
-  val version = "1.1"
+  val version = "1.2"
 
   Console.withOut(Console.err) {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Philipp Rümmer, 2018-2021")
-    println("With contributions by Riccardo De Masellis, Zhilei Han.")
+    println("(c) Matthew Hague, Philipp Rümmer, 2018-2022")
+    println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward, minimizeAuts = false
+  private var eager, forward, minimizeAuts, useParikh = false
   private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
@@ -75,6 +75,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.Auto
     case CmdlParser.Opt("forward", value) =>
       forward = value
+    case CmdlParser.Opt("parikh", value) =>
+      useParikh = value
     case str =>
       super.parseParameter(str)
   }
@@ -110,6 +112,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     new OstrichStringTheory (symTransducers.toSeq,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
+                                    useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
                                     minimizeAutomata        = minimizeAuts))
   }

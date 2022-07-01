@@ -33,7 +33,7 @@
         (= (str.in_re w (re.from_ecma2020 '\,'))
            (str.in_re w (str.to.re ",")))
 
-        (= (str.in_re w (re.from_ecma2020 '[\u{61}-\u007A0-9]'))
+        (= (str.in_re w (re.from_ecma2020_flags '[\u{61}-\u007A0-9]' "u"))
            (str.in_re w (re.union (re.range "a" "z") (re.range "0" "9"))))
 
         (= (str.in_re w (re.from_ecma2020 '((?=.*?[A-Z])).{8,}'))
@@ -65,13 +65,41 @@
                 (not (str.in_re w (re.from_ecma2020 '[0-9]*')))))
 
         (= (str.in_re w (re.from_ecma2020 '^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$'))
-           (and (>= (str.len w) 8)
+           (and ; (>= (str.len w) 8)
+                (str.in_re w (re.++ ((_ re.^ 8) re.allchar) re.all))
                 (str.in_re w (re.++ re.all (re.union (re.range "A" "Z")
                                                      (re.range "a" "z")) re.all))
                 (str.in_re w (re.++ re.all (re.range "0" "9") re.all))
                 (str.in_re w (re.* (re.union (re.range "A" "Z")
                                              (re.range "a" "z")
                                              (re.range "0" "9"))))))
+
+        ; without the u flag, the \u{...} escape sequence is interpreted literally
+        (= (str.in_re w (re.from_ecma2020 '\u{ab}'))
+           (= w "u{ab}"))
+
+        (= (str.in_re w (re.from_ecma2020_flags '\p{Uppercase_Letter}' "u"))
+           (str.in_re w (re.from_ecma2020_flags '\p{Lu}' "u")))
+
+        (str.in_re "ABC" (re.from_ecma2020_flags '\P{Lowercase_Letter}*' "u"))
+
+        ; without the u flag, the \P{...} property is interpreted literally
+        (str.in_re "P{Lowercase_Letter}" (re.from_ecma2020 '\P{Lowercase_Letter}'))
+
+        (str.in_re "a\u{A}b" (re.from_ecma2020_flags '...' "s"))
+
+        (not (str.in_re "a\u{A}b" (re.from_ecma2020_flags '...' "")))
+
+        (= (and (str.in_re w (re.from_ecma2020_flags '\p{l}' "u"))
+                (str.in_re w (re.range "\u{00}" "\u{7F}")))
+           (str.in_re w (re.from_ecma2020 '[a-zA-Z]')))
+
+        (= (and (str.in_re w (re.from_ecma2020_flags '[\p{l}\p{n}]' "u"))
+                (str.in_re w (re.range "\u{00}" "\u{7F}")))
+           (str.in_re w (re.from_ecma2020 '[a-zA-Z0-9]')))
+
+        (= (str.in_re w (re.from_ecma2020 '_'))
+           (= w "_"))
 
  )))
 

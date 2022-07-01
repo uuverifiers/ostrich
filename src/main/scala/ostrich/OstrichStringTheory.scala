@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
+import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
 
 import ap.Signature
 import ap.basetypes.IdealInt
@@ -54,7 +55,10 @@ import scala.collection.{Map => GMap}
 
 object OstrichStringTheory {
 
-  val alphabetSize = 1 << 16
+  // TODO: at some point this has to be fixed, Unicode is
+  // bigger. Seems to be a problem with the BRICS automata library;
+  // use Unicode-16 encoding?
+  val alphabetSize = 0x10000
 
   class OstrichStringSort extends ProxySort(Sort.Integer) {
     override val name = "String"
@@ -123,12 +127,18 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val str_reverse =
     MonoSortedIFunction("str.reverse", List(SSo), SSo, true, false)
+  val str_char_count =
+    MonoSortedIFunction("str.char_count", List(Sort.Integer, SSo),
+                        Sort.Nat, true, false)
+
   val re_begin_anchor =
     MonoSortedIFunction("re.begin-anchor", List(), RSo, true, false)
   val re_end_anchor =
     MonoSortedIFunction("re.end-anchor", List(), RSo, true, false)
   val re_from_ecma2020 =
     MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
+  val re_from_ecma2020_flags =
+    MonoSortedIFunction("re.from_ecma2020_flags", List(SSo, SSo), RSo, true, false)
   val re_case_insensitive =
     MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
   val str_at_right =
@@ -179,7 +189,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           a => List(a(0)), a => a(1)))
 
   val extraRegexFunctions =
-    List(re_begin_anchor, re_end_anchor, re_from_ecma2020, re_case_insensitive,
+    List(re_begin_anchor, re_end_anchor,
+         re_from_ecma2020, re_from_ecma2020_flags,
+         re_case_insensitive,
          str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
          re_*?, re_+?, re_opt_?)
@@ -223,14 +235,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
 
-  //////////////////////////////////////////////////////////////////////////////
-  /* Modified by Riccardo */
   val strDatabase = new StrDatabase(this)
 
   //////////////////////////////////////////////////////////////////////////////
 
   val functions =
-    predefFunctions ++ List(str_empty, str_cons, str_head, str_tail) ++
+    predefFunctions ++
+    List(str_empty, str_cons, str_head, str_tail, str_char_count) ++
     (extraStringFunctions map (_._2)) ++
     extraRegexFunctions ++ (extraIndexedFunctions map (_._1))
 
@@ -249,11 +260,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
-  override val dependencies : Iterable[Theory] = List(ModuloArithmetic)
+  val IntEnumerator = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
 
-  val _str_empty = functionPredicateMap(str_empty)
-  val _str_cons  = functionPredicateMap(str_cons)
-  val _str_++    = functionPredicateMap(str_++)
+  override val dependencies : Iterable[Theory] =
+    List(ModuloArithmetic, IntEnumerator)
+
+  val _str_empty      = functionPredicateMap(str_empty)
+  val _str_cons       = functionPredicateMap(str_cons)
+  val _str_++         = functionPredicateMap(str_++)
+  val _str_len        = functionPredicateMap(str_len)
+  val _str_char_count = functionPredicateMap(str_char_count)
 
   private val predFunMap =
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
@@ -265,7 +281,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof) ++
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre, str_replaceallcg, 
@@ -276,7 +292,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
                    re_comp, re_loop, re_loop_?, re_from_str, re_capture, re_reference,
-                   re_begin_anchor, re_end_anchor, re_from_ecma2020,
+                   re_begin_anchor, re_end_anchor,
+                   re_from_ecma2020, re_from_ecma2020_flags,
                    re_case_insensitive))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
@@ -290,44 +307,78 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * Determine whether length reasoning should be switched on, given
+   * some assertion.
+   */
+  def lengthNeeded(f : Conjunction) : Boolean = {
+    flags.useLength match {
+      case OFlags.LengthOptions.Off  => false
+      case OFlags.LengthOptions.On   => true
+      case OFlags.LengthOptions.Auto => f.predicates contains _str_len
+    }
+  }
+
   private val ostrichSolver      = new OstrichSolver (this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
-    // not used
-    def generateAxioms(goal : Goal)
-          : Option[(Conjunction, Conjunction)] = None
 
     private val modelCache =
       new ap.util.LRUCache[Conjunction,
                            Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
     override def handleGoal(goal : Goal)
-                       : Seq[Plugin.Action] = goalState(goal) match {
+                       : Seq[Plugin.Action] = {
+      lazy val nielsenSplitter =
+        new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
 
-      case Plugin.GoalState.Final => { //  Console.withOut(Console.err) 
+      lazy val predToEq =
+        new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, flags)
 
-        breakCyclicEquations(goal) match {
-          case Some(actions) =>
-            actions
-          case None =>
-            modelCache(goal.facts) {
-              ostrichSolver.findStringModel(goal)
-            } match {
-              case Some(m) =>
-                equalityPropagator.handleSolution(goal, m)
-              case None =>
-                List(Plugin.AddFormula(Conjunction.TRUE))
-            }
+      goalState(goal) match {
+
+        case Plugin.GoalState.Intermediate => try {
+          breakCyclicEquations(goal).getOrElse(List()) elseDo
+          nielsenSplitter.decompSimpleEquations        elseDo
+          nielsenSplitter.decompEquations              elseDo
+          predToEq.reducePredicatesToEquations
+
+        } catch {
+          case t : ap.util.Timeout => throw t
+//          case t : Throwable =>  { t.printStackTrace; throw t }
         }
-      }
 
-      case _ => List()
+        case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
+          nielsenSplitter.splitEquation                elseDo
+          predToEq.lazyEnumeration                     elseDo
+          callBackwardProp(goal)
+
+        } catch {
+          case t : ap.util.Timeout => throw t
+//          case t : Throwable =>  { t.printStackTrace; throw t }
+        }
+
+      }
     }
 
-    override def generateModel(goal : Goal) : Option[Conjunction] =
+    private def callBackwardProp(goal : Goal) : Seq[Plugin.Action] =
+      try {
+        modelCache(goal.facts) {
+          ostrichSolver.findStringModel(goal)
+        } match {
+          case Some(m) =>
+            equalityPropagator.handleSolution(goal, m)
+          case None =>
+            List(Plugin.AddFormula(Conjunction.TRUE))
+        }
+      } catch {
+        case OstrichSolver.BlockingActions(actions) => actions
+      }
+
+    override def computeModel(goal : Goal) : Seq[Plugin.Action] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
-        None
+        List()
       } else {
         val model = (modelCache(goal.facts) {
                        ostrichSolver.findStringModel(goal)
@@ -345,12 +396,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                 if x.constants subsetOf order.orderedConstants)
               yield l(x - len))
 
-        val otherFormulas =
-          (goal.facts.iterator filter {
-             f => Seqs.disjointSeq(f.predicates, predicates)
-           }).toList
+        val stringFormulas =
+          conj(goal.facts.iterator filter {
+             f => !Seqs.disjointSeq(f.predicates, predicates)
+           })
 
-        Some(stringAssignments & lenAssignments & conj(otherFormulas))
+        List(Plugin.RemoveFacts(stringFormulas),
+             Plugin.AddAxiom(List(stringFormulas),
+                             stringAssignments & lenAssignments,
+                             OstrichStringTheory.this))
       }
 
   })
@@ -388,7 +442,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
-    f
+
+    val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    preprocessor.preprocess(f, order)
   }
 
   override def iPreprocess(f : IFormula, signature : Signature)

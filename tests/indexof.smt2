@@ -1,4 +1,4 @@
-(set-logic QF_S)
+(set-logic QF_SLIA)
 
 ; SAT
 
