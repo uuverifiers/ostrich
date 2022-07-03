@@ -44,6 +44,7 @@ import ostrich.automata.costenrich.CostEnrichedAutomaton
 import ostrich.preop.costenrich.CostEnrichedPreOp
 import ostrich.CostEnrichedConvenience._
 import ostrich.automata.costenrich.TermGeneratorOrder._
+import ostrich.automata.AtomicStateAutomatonAdapter.intern
 
 import scala.collection.breakOut
 import scala.collection.mutable.{
@@ -55,6 +56,7 @@ import scala.collection.mutable.{
   HashSet => MHashSet
 }
 import ap.parser.SymbolCollector
+import ostrich.automata.AtomicStateAutomatonAdapter
 
 object Exploration {
 
@@ -254,7 +256,7 @@ abstract class Exploration(
   // completeness; otherwise not all pre-images of function applications might
   // be considered
 
-  val allInitialConstraints = {
+  val allInitialConstraints: Seq[(Term, Automaton)] = {
     val term2Index =
       (for (((_, t), n) <- sortedFunApps.iterator.zipWithIndex)
         yield (t -> n)).toMap
@@ -290,8 +292,13 @@ abstract class Exploration(
     )
       for (ind <- term2Index get arg)
         coveredTerms += ind
+    if (useCostEnrichAlgorithm(flags))
+      (initialConstraints ++ additionalConstraints).map(x =>
+        (x._1, automaton2CostEnriched(x._2))
+      )
+    else
+      initialConstraints ++ additionalConstraints
 
-    initialConstraints ++ additionalConstraints
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -326,10 +333,12 @@ abstract class Exploration(
     }
 
     for (p <- lengthProver) {
-      for ((t, aut) <- allInitialConstraints)
-        p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
+      for ((t, aut) <- allInitialConstraints) {
+        p !! VariableSubst(0, List(lengthVars(t)), p.order)(
           aut.getLengthAbstraction
         )
+        p addConstants (SymbolCollector.constants(aut.getLengthAbstraction))
+      }
 
       if (
         measure("check length consistency") {
@@ -350,15 +359,12 @@ abstract class Exploration(
         yield (op, args, res)).toList
 
     try {
-      dfExplore(funAppList)
+      val a = dfExplore(funAppList)
       None
     } catch {
       case FoundModel(model) => Some(model)
-      case e: Exception =>
-        Console.withOut(Console.err) {
-          println("Exception in findModel:")
-          e.printStackTrace
-        }
+      case e: Throwable =>
+        e.printStackTrace()
         None
     }
   }
@@ -435,7 +441,7 @@ abstract class Exploration(
           model.put(
             t,
             Right(
-              if (useCostEnrichAlgorithm(flags)) {
+              if (useCostEnrichAlgorithm(flags) && strictLengths) {
                 val lengthValue = new MHashMap[Term, Int]
                 for (
                   lModel <- lengthModel;
@@ -487,10 +493,10 @@ abstract class Exploration(
             }
 
           val resValue: Either[IdealInt, Seq[Int]] = Right(resString)
-          
-          def isStringRes(op: PreOp) = 
+
+          def isStringRes(op: PreOp) =
             !(op.isInstanceOf[CostEnrichedPreOp] && op.isIntRes)
-          
+
           if (isStringRes(op)) {
             for (oldValue <- model get res)
               if (resValue != oldValue)
@@ -571,10 +577,15 @@ abstract class Exploration(
 
         if (
           useCostEnrichAlgorithm(flags) &&
-          op.isInstanceOf[CostEnrichedPreOp]
-        ){
-          addLengthConstraint(op.lengthConstraints(argCS, resAut))
-          addLengthConstraint(argCS(0).parikhTheory)
+          op.isInstanceOf[CostEnrichedPreOp] &&
+          strictLengths
+        ) {
+          val resArgsRelatedFormula = op.lengthConstraints(argCS, resAut)
+          val argsAutParikh = argCS.map(_.parikhTheory)
+          addLengthConstraint(resArgsRelatedFormula)
+          argsAutParikh.foreach(addLengthConstraint(_))
+          if (debug)
+            Console.err.println("dfExploreOp, #addLengthContraints")
         }
 
         try {
@@ -649,16 +660,19 @@ abstract class Exploration(
       sources: Seq[TermConstraint]
   ): Unit =
     for (p <- lengthProver) {
+      val TermConstraint(t, aut) = constraint
       lengthPartitions += sources
       p setPartitionNumber lengthPartitions.size
-      val TermConstraint(t, aut) = constraint
-      p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
+      p !! VariableSubst(0, List(lengthVars(t)), p.order)(
         aut.getLengthAbstraction
       )
+      p addConstants (SymbolCollector.constants(aut.getLengthAbstraction))
     }
 
   protected def addLengthConstraint(lengthConstraint: Formula): Unit = {
     for (p <- lengthProver) {
+      if(debug)
+        Console.err.println("addLengthConstraint: " + lengthConstraint)
       p !! lengthConstraint
       val constTerms = SymbolCollector.constants(lengthConstraint)
       p addConstants constTerms
@@ -812,6 +826,10 @@ class EagerExploration(
       case Some(aut) =>
         AutomataUtils.findAcceptedWord(Seq(aut), lengthModel).get
       case None => List()
+    }
+    override def getCompleteTerms() = currentConstraint match {
+      case Some(aut) => intern(aut).getTransitionsTerms
+      case None      => Seq()
     }
   }
 
@@ -985,9 +1003,9 @@ class LazyExploration(
       constraints match {
         case Seq() => Seq()
         case auts =>
-          auts
-            .map(a => a.asInstanceOf[CostEnrichedAutomaton].getTransitionsTerms)
-            .flatten
+          auts.map { case aut =>
+            intern(aut).getTransitionsTerms
+          }.flatten
       }
     }
 

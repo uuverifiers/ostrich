@@ -44,13 +44,7 @@ object OstrichMain {
   val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
 
   def main(args: Array[String]): Unit = {
-    try {
       ap.CmdlMain.main((options ++ args).toArray)
-    } catch {
-      case e: Exception =>
-        println("Ostrich: " + e.getMessage)
-        e.printStackTrace()
-    }
   }
 
 }

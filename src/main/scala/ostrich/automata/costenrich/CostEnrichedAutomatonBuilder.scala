@@ -40,6 +40,9 @@ class CostEnrichedAutomatonBuilder
 
   private var registers: ArrayBuffer[Term] = new ArrayBuffer()
 
+  private var transTermMap: MHashMap[(State, TLabel, State), Term] =
+    new MHashMap
+
   def addRegister(register: Term) = {
     registers += register
   }
@@ -50,6 +53,10 @@ class CostEnrichedAutomatonBuilder
 
   def addEtaMap(map: MHashMap[(State, TLabel, State), Seq[Int]]) = {
     this.etaMap ++= map
+  }
+
+  def addTransTermMap(map: MHashMap[(State,TLabel,State), Term]) = {
+    this.transTermMap ++= map
   }
 
   /** The initial state of the automaton being built
@@ -98,6 +105,23 @@ class CostEnrichedAutomatonBuilder
     }
   }
 
+  /** Add a new transition q1 --label,vector--> q2, set its term to t
+    */
+  override def addTransition(
+      q1: State,
+      label: TLabel,
+      q2: State,
+      vector: Seq[Int],
+      t: Term
+  ): Unit = {
+    if (LabelOps.isNonEmptyLabel(label)) {
+      val (min, max) = label
+      q1.addTransition(new Transition(min, max, q2))
+      etaMap += ((q1, (min, max), q2) -> vector)
+      transTermMap += ((q1, (min, max), q2) -> t)
+    }
+  }
+
   def outgoingTransitions(
       q: State
   ): Iterator[(State, TLabel)] =
@@ -118,6 +142,6 @@ class CostEnrichedAutomatonBuilder
     // if (minimize && !CostEnrichedAutomaton.neverMinimize(baut))
     //   baut.minimize
     
-    new CostEnrichedAutomaton(baut, etaMap, registers)
+    new CostEnrichedAutomaton(baut, etaMap, registers, transTermMap)
   }
 }

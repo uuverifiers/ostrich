@@ -38,7 +38,6 @@ import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
 import scala.collection.mutable.ArrayStack
 import ap.SimpleAPI
-import java_cup.internal_error
 
 object CostEnrichedAutomaton {
 
@@ -46,16 +45,12 @@ object CostEnrichedAutomaton {
   type TLabel = CostEnrichedAutomaton#TLabel
 
   def apply(): CostEnrichedAutomaton =
-    new CostEnrichedAutomaton(new BAutomaton, new MHashMap, Seq())
+    new CostEnrichedAutomaton(new BAutomaton)
 
   /** Build CostEnriched automaton from a regular expression in brics format
     */
   def apply(pattern: String): CostEnrichedAutomaton =
-    new CostEnrichedAutomaton(
-      new RegExp(pattern).toAutomaton(false),
-      new MHashMap,
-      Seq()
-    )
+    new CostEnrichedAutomaton(new RegExp(pattern).toAutomaton(false))
 
   /** Derive parikh image of the automaton
     */
@@ -68,33 +63,33 @@ object CostEnrichedAutomaton {
 
   /** Return the underlying brics automata of the given aut.
     */
-  def getBAutomaton(aut: Automaton): BAutomaton = aut match {
+  def _getBAutomaton(aut: Automaton): BAutomaton = aut match {
     case that: CostEnrichedAutomaton =>
       that.underlying
     case that: AtomicStateAutomatonAdapter[_] =>
-      getBAutomaton(that.internalise)
+      _getBAutomaton(that.internalise)
     case _ =>
       throw new IllegalArgumentException
   }
 
   /** Return the etaMap of the given aut. */
-  def getMap(
+  def _getMap(
       aut: Automaton
   ): MHashMap[(State, TLabel, State), Seq[Int]] = aut match {
     case that: CostEnrichedAutomaton =>
       that.etaMap
     case that: AtomicStateAutomatonAdapter[_] =>
-      getMap(that.internalise)
+      _getMap(that.internalise)
     case _ =>
       throw new IllegalArgumentException
   }
 
   /** Return the registers of the given aut. */
-  def getRegisters(aut: Automaton): Seq[Term] = aut match {
+  def _getRegisters(aut: Automaton): Seq[Term] = aut match {
     case that: CostEnrichedAutomaton =>
       that.registers
     case that: AtomicStateAutomatonAdapter[_] =>
-      getRegisters(that.internalise)
+      _getRegisters(that.internalise)
     case _ =>
       throw new IllegalArgumentException
   }
@@ -112,6 +107,7 @@ object CostEnrichedAutomaton {
 
   private val MINIMIZE_LIMIT = 100000
 }
+import CostEnrichedAutomaton._
 
 /** Wrapper for the BRICS automaton class. New features added:
   *   - registers: a sequence of registers that store integer values
@@ -119,15 +115,9 @@ object CostEnrichedAutomaton {
   */
 class CostEnrichedAutomaton(
     val underlying: BAutomaton,
-    val etaMap: MHashMap[
-      (
-          CostEnrichedAutomaton#State,
-          CostEnrichedAutomaton#TLabel,
-          CostEnrichedAutomaton#State
-      ),
-      Seq[Int]
-    ],
-    val registers: Seq[Term]
+    val etaMap: MHashMap[(State, TLabel, State), Seq[Int]],
+    val registers: Seq[Term],
+    val transTermMap: MHashMap[(State, TLabel, State), Term]
 ) extends AtomicStateAutomaton {
 
   import CostEnrichedAutomaton._
@@ -138,30 +128,41 @@ class CostEnrichedAutomaton(
 
   var minimised = false
 
-  // init and check etaMap
+  /** constructor */
+  def this(underlying: BAutomaton) =
+    this(underlying, new MHashMap, Seq(), new MHashMap)
+
+  def this(
+      underlying: BAutomaton,
+      etaMap: MHashMap[(State, TLabel, State), Seq[Int]],
+      registers: Seq[Term]
+  ) =
+    this(underlying, etaMap, registers, new MHashMap)
+
+  // Traverse etaMap and transTermMap and init all undefined keys
   transitions.foreach { transition =>
     if (!etaMap.contains(transition)) {
       etaMap.put(transition, Seq.fill(registers.size)(0))
     } else {
       assert(etaMap(transition).size == registers.size)
     }
+    if (!transTermMap.contains(transition)) {
+      transTermMap.put(transition, TransitionTerm())
+    }
   }
 
-  // Transtion -> ap.terfor.Term, used by parikhTheory generator
-  val transTermMap: Map[(State, TLabel, State), Term] =
-    transitions.map(t => (t, TranstionTerm())).toMap
-
-  /** @deprecated not implemented
+  /** @deprecated
+    *   not implemented
     */
   def |(that: Automaton): Automaton =
-    new CostEnrichedAutomaton(new BAutomaton, new MHashMap, Seq())
-
+    new CostEnrichedAutomaton(new BAutomaton)
 
   def &(that: Automaton): Automaton = {
     // TODO：product of automata
-    val aut2 = getBAutomaton(that);
-    val etaMap2 = getMap(that);
-    val registers2 = getRegisters(that);
+    
+    val aut2 = _getBAutomaton(that);
+    val etaMap2 = _getMap(that);
+    val registers2 = _getRegisters(that);
     val aut1 = this.underlying
     val etaMap1 = this.etaMap
     val registers1 = this.registers
@@ -225,10 +226,11 @@ class CostEnrichedAutomaton(
     autBuilder.getAutomaton
   }
 
-  /** @deprecated not implemented
+  /** @deprecated
+    *   not implemented
     */
   def unary_! : Automaton =
-    new CostEnrichedAutomaton(new BAutomaton, new MHashMap, Seq())
+    new CostEnrichedAutomaton(new BAutomaton)
 
   def isEmpty: Boolean = underlying.isEmpty
 
@@ -243,7 +245,6 @@ class CostEnrichedAutomaton(
       case null => None
       case str  => Some(for (c <- str) yield c.toInt)
     }
-
 
   override val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
 
@@ -277,7 +278,6 @@ class CostEnrichedAutomaton(
   val labelEnumerator: TLabelEnumerator[TLabel] =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
-  
   def outgoingTransitions(from: State): Iterator[(State, TLabel)] = {
     for (t <- from.getSortedTransitions(true).iterator)
       yield (
@@ -286,7 +286,7 @@ class CostEnrichedAutomaton(
       )
   }
 
-  /** Given a state, iterate over all outgoing transitons and their updates
+  /** Given a state, iterate over all outgoing transitons with their updates
     * functions, try to be deterministic
     */
   def outgoingTransitionsWithVector(
@@ -298,8 +298,9 @@ class CostEnrichedAutomaton(
         (t.getMin, t.getMax),
         etaMap((q, (t.getMin, t.getMax), t.getDest))
       )
-  /** Given a state, iterate over all outgoing transitons and their terms
-    * functions, try to be deterministic
+
+  /** Given a state, iterate over all outgoing transitons with their terms, try
+    * to be deterministic
     */
   def outgoingTransitionsWithTerm(q: State): Iterator[(State, TLabel, Term)] = {
     for (t <- q.getSortedTransitions(true).iterator)
@@ -307,6 +308,20 @@ class CostEnrichedAutomaton(
         t.getDest,
         (t.getMin, t.getMax),
         transTermMap((q, (t.getMin, t.getMax), t.getDest))
+      )
+  }
+
+  /** Given a state, iterate over all outgoing transitons with their terms and
+    * updates functions, try to be deterministic
+    */
+  override def outgoingTransitionsWithVec(
+      q: State
+  ): Iterator[(State, TLabel, Seq[Int])] = {
+    for (t <- q.getSortedTransitions(true).iterator)
+      yield (
+        t.getDest,
+        (t.getMin, t.getMax),
+        etaMap((q, (t.getMin, t.getMax), t.getDest)),
       )
   }
 
@@ -373,7 +388,7 @@ class CostEnrichedAutomaton(
 
   /** Parikh image of this automaton
     */
-  lazy val parikhTheory = {
+  lazy val parikhTheory: Formula = {
 
     import ap.terfor.TerForConvenience._
     import TermGeneratorOrder._
@@ -381,7 +396,7 @@ class CostEnrichedAutomaton(
 
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
-      outgoingTransitionsWithVector(from).foreach { case (to, lbl, vec) =>
+      outgoingTransitions(from).foreach { case (to, lbl) =>
         outFlowTerms += transTermMap(from, lbl, to)
       }
       outFlowTerms
@@ -398,6 +413,10 @@ class CostEnrichedAutomaton(
     // consistent flow
     var consistentFlowFormula = Conjunction.TRUE
 
+    if (states.toSeq.length == 1) {
+      consistentFlowFormula = outFlowTerms(states.head) >= 0
+    }
+
     states.foreach { s =>
       val outFlowTerms_ = outFlowTerms(s)
       // outFlow(finalState) = 1
@@ -408,8 +427,7 @@ class CostEnrichedAutomaton(
       val inFlow: LinearCombination =
         if (s == initialState) 1 else inFlowTerms_.reduceLeft(_ + _)
 
-      consistentFlowFormula =
-        conj(Seq(consistentFlowFormula, outFlow === inFlow))(order)
+      consistentFlowFormula = conj(consistentFlowFormula, outFlow === inFlow)
     }
 
     // update for registers
@@ -435,12 +453,12 @@ class CostEnrichedAutomaton(
     // formula for registers update
     var registerUpdateFormula = Conjunction.TRUE
     registerUpdateMap.foreach { case (registerTerm, update) =>
-      val updateSum = update.reduceLeft(_ + _)
+      val updateSum = update.clone.reduceLeft(_ + _)
       registerUpdateFormula =
-        registerUpdateFormula & (registerTerm === updateSum)
+        conj(registerUpdateFormula, (registerTerm === updateSum))
     }
 
-    consistentFlowFormula & registerUpdateFormula
+    conj(registerUpdateFormula, consistentFlowFormula)
   }
 
   override lazy val getLengthAbstraction: Formula = parikhTheory

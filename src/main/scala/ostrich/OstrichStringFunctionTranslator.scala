@@ -42,6 +42,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
+import ostrich.preop.costenrich.ConcatCEPreOp
 
 /**
  * Class for mapping string constraints to string functions.
@@ -74,7 +75,9 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
     case FunPred(`str_++`) =>
-      Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
+      Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
+    // case FunPred(`str_++`) =>
+    //   Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) => {
       val op = () => {
         val b = strDatabase term2ListGet a(1)

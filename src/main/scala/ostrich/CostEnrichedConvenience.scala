@@ -14,9 +14,19 @@ import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
 import scala.collection.mutable.HashMap
+import ostrich.automata.AtomicStateAutomatonAdapter.intern
+import ostrich.automata.AtomicStateAutomatonBuilder
+import ostrich.automata.costenrich.CostEnrichedAutomatonBuilder
+import ostrich.automata.AtomicStateAutomaton
 
 object CostEnrichedConvenience {
 
+  def isCostEnrich(aut : Automaton) : Boolean = {
+    aut match {
+      case _ : CostEnrichedAutomaton => true
+      case _ => false
+    }
+  }
   // implicit def Internal2Input(c: Conjunction): IFormula =
   //   Internal2InputAbsy(c)
 
@@ -43,11 +53,12 @@ object CostEnrichedConvenience {
 
 
   implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomaton = {
-    if(aut.isInstanceOf[CostEnrichedAutomaton]) {
-      aut.asInstanceOf[CostEnrichedAutomaton]
-    } else if(aut.isInstanceOf[BricsAutomaton]){
-      val underlying = aut.asInstanceOf[BricsAutomaton].underlying
-      new CostEnrichedAutomaton(underlying, new HashMap, Seq())
+    val internAut = intern(aut)
+    if(internAut.isInstanceOf[CostEnrichedAutomaton]) {
+      internAut.asInstanceOf[CostEnrichedAutomaton]
+    } else if(internAut.isInstanceOf[BricsAutomaton]){
+      val underlying = internAut.asInstanceOf[BricsAutomaton].underlying
+      new CostEnrichedAutomaton(underlying)
     } else {
       val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
       e.printStackTrace()

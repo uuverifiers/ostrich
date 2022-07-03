@@ -28,7 +28,7 @@ object RegisterTerm {
   }
 }
 
-object TranstionTerm {
+object TransitionTerm {
   var count = 0
   def apply(): Term = {
     count += 1

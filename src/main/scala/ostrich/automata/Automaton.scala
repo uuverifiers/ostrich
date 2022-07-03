@@ -231,6 +231,8 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
 
+  def outgoingTransitionsWithVec(q: State) : Iterator[(State, TLabel, Seq[Int])] = Iterator()
+
   /**
    * Test if state is accepting
    */
@@ -514,6 +516,8 @@ trait AtomicStateAutomatonBuilder[State, TLabel] {
    * Add a new transition q1 --label--> q2
    */
   def addTransition(s1 : State, label : TLabel, s2 : State) : Unit
+
+  def addTransition(s1 : State, label : TLabel, s2 : State, update : Seq[Int], t: Term) : Unit = AnyRef
 
   /**
    * Iterate over outgoing transitions from state
