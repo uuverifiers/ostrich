@@ -213,6 +213,7 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
       }
       case FunPred(`str_len`) => {
         lengthVars.put(a(0), a(1))
+        // Optimization below can be delete because it has been down at OstrichReducer.scala?
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
       }

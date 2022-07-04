@@ -60,10 +60,6 @@ import ostrich.automata.AtomicStateAutomatonAdapter
 
 object Exploration {
 
-  def useCostEnrichAlgorithm(flags: OFlags) = {
-    flags.strategy == OFlags.StrategyOptions.CostEnrich
-  }
-
   case class TermConstraint(t: Term, aut: Automaton)
 
   type ConflictSet = Seq[TermConstraint]
@@ -292,7 +288,7 @@ abstract class Exploration(
     )
       for (ind <- term2Index get arg)
         coveredTerms += ind
-    if (useCostEnrichAlgorithm(flags))
+    if (flags.useCostEnrich)
       (initialConstraints ++ additionalConstraints).map(x =>
         (x._1, automaton2CostEnriched(x._2))
       )
@@ -441,7 +437,7 @@ abstract class Exploration(
           model.put(
             t,
             Right(
-              if (useCostEnrichAlgorithm(flags) && strictLengths) {
+              if (flags.useCostEnrich && strictLengths) {
                 val lengthValue = new MHashMap[Term, Int]
                 for (
                   lModel <- lengthModel;
@@ -576,7 +572,7 @@ abstract class Exploration(
         pushLengthConstraints
 
         if (
-          useCostEnrichAlgorithm(flags) &&
+          flags.useCostEnrich &&
           op.isInstanceOf[CostEnrichedPreOp] &&
           strictLengths
         ) {

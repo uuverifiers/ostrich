@@ -74,10 +74,10 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_++`) =>
+    case FunPred(`str_++`) if theory.getFlags.useCostEnrich =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
-    // case FunPred(`str_++`) =>
-    //   Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
+    case FunPred(`str_++`) =>
+      Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) => {
       val op = () => {
         val b = strDatabase term2ListGet a(1)

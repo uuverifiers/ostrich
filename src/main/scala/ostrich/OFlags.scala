@@ -44,7 +44,6 @@ object OFlags {
     * throughout the theory.
     */
   protected[ostrich] val debug = true
-
 }
 
 case class OFlags(
@@ -55,4 +54,6 @@ case class OFlags(
     forwardApprox: Boolean = false,
     minimizeAutomata: Boolean = false,
     strategy: OFlags.StrategyOptions.Value = OFlags.StrategyOptions.Basic
-)
+){
+  def useCostEnrich: Boolean = strategy == OFlags.StrategyOptions.CostEnrich
+}

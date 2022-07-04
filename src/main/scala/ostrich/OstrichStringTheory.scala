@@ -102,6 +102,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val SSo = StringSort
   private val RSo = RegexSort
 
+  def getFlags = flags
+
   def int2Char(t : ITerm) : ITerm =
     ModuloArithmetic.cast2Interval(IdealInt.ZERO, upperBound, t)
 

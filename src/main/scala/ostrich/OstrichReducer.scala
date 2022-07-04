@@ -180,7 +180,8 @@ class OstrichReducer protected[ostrich]
           } else {
             a
           }
-
+        
+        // (assert (= Int (str.len x)))
         case `str_in_re_id` => {
           val autId = regexAtomToId(a)
           if (isConcrete(a(0))) {
@@ -208,6 +209,7 @@ class OstrichReducer protected[ostrich]
           }
         }
 
+        // (assert (= Var (str.len x))), the Var may be a constant, like (assert (= 1 Var))
         case `_str_len` =>
           if (isConcrete(a(0))) {
             a.last === (strDatabase term2ListGet a(0)).size
