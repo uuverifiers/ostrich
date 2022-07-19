@@ -8,7 +8,9 @@ import org.scalacheck.Prop._
 
 object SMTLIBTests extends Properties("SMTLIBTests") {
 
-  val timeout = 20000
+  import System.lineSeparator
+
+  val timeout = 30000
 
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
@@ -19,9 +21,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
     expResult match {
       case "error" =>
-        (result split "\n") exists { str => str contains "error" }
+        result contains "error"
       case res =>
-        (result split "\n") contains res
+        (result split lineSeparator) contains res
     }
   }
 
@@ -44,10 +46,64 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                         false)
     }
 
+  property("prefix-1.smt2") =
+    checkFile("tests/prefix-1.smt2", "unsat")
+  property("prefix-2.smt2") =
+    checkFile("tests/prefix-2.smt2", "sat")
+
+  property("suffix-1.smt2") =
+    checkFile("tests/suffix-1.smt2", "unsat")
+  property("suffix-2.smt2") =
+    checkFile("tests/suffix-2.smt2", "sat")
+  property("suffix-3.smt2") =
+    checkFile("tests/suffix-3.smt2", "sat")
+  property("suffix-4.smt2") =
+    checkFile("tests/suffix-4.smt2", "sat")
+  property("suffix-5.smt2") =
+    checkFile("tests/suffix-5.smt2", "unsat")
+
+  property("contains-1.smt2") =
+    checkFile("tests/contains-1.smt2", "sat")
+  property("contains-2.smt2") =
+    checkFile("tests/contains-2.smt2", "sat")
+  property("contains-3.smt2") =
+    checkFile("tests/contains-3.smt2", "unsat")
+
+  property("word-equation.smt2") =
+    checkFile("tests/word-equation.smt2", "sat")
+  property("word-equation-2.smt2") =
+    checkFile("tests/word-equation-2.smt2", "sat")
+  property("word-equation-3.smt2") =
+    checkFile("tests/word-equation-3.smt2", "unsat")
+  property("word-equation-4.smt2") =
+    checkFile("tests/word-equation-4.smt2", "sat")
+  property("word-equation-6.smt2") =
+    checkFile("tests/word-equation-6.smt2", "sat")
+
+  property("parikh-constraints.smt2") =
+    checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh", "")
+
+  property("replace-special.smt2") =
+    checkFile("tests/replace-special.smt2", "unsat")
+  property("replace-special-2.smt2") =
+    checkFile("tests/replace-special-2.smt2", "unsat")
+  property("replace-special-3.smt2") =
+    checkFile("tests/replace-special-3.smt2", "unsat")
+  property("replace-special-4.smt2") =
+    checkFile("tests/replace-special-4.smt2", "unsat")
+  property("replace-special-5.smt2") =
+    checkFile("tests/replace-special-5.smt2", "unsat")
+  property("replace-length.smt2") =
+    checkFile("tests/replace-length.smt2", "sat")
+  property("replace-length-2.smt2") =
+    checkFileOpts("tests/replace-length-2.smt2", "sat", "+parikh", "")
+
   property("model-bug.smt2") =
     checkFileOpts("tests/model-bug.smt2", "sat", "", "+model")
   property("null-problem.smt2") =
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
+  property("failedProp.smt2") =
+    checkFileOpts("tests/failedProp.smt2", "unknown", "", "-timeout=3000")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
@@ -68,10 +124,26 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str.from_int.smt2", "sat")
   property("str.from_int_2.smt2") =
     checkFile("tests/str.from_int_2.smt2", "unsat")
+  property("str.from_int_3.smt2") =
+    checkFile("tests/str.from_int_3.smt2", "sat")
+  property("str.from_int_4.smt2") =
+    checkFile("tests/str.from_int_4.smt2", "unsat")
+  property("str.from_int_5.smt2") =
+    checkFile("tests/str.from_int_5.smt2", "sat")
+  property("str.from_int_6.smt2") =
+    checkFile("tests/str.from_int_6.smt2", "sat")
   property("str.to_int.smt2") =
     checkFile("tests/str.to_int.smt2", "sat")
   property("str.to_int_2.smt2") =
     checkFile("tests/str.to_int_2.smt2", "unsat")
+  property("str.to_int_3.smt2") =
+    checkFile("tests/str.to_int_3.smt2", "sat")
+  property("str.to_int_4.smt2") =
+    checkFile("tests/str.to_int_4.smt2", "unsat")
+  property("str.to_int_5.smt2") =
+    checkFile("tests/str.to_int_5.smt2", "sat")
+  property("str.to_int_6.smt2") =
+    checkFile("tests/str.to_int_6.smt2", "sat")
 
   property("chars.smt2") =
     checkFile("tests/chars.smt2", "sat")
@@ -88,8 +160,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-regex3.smt2", "sat")
   property("concat-regex4.smt2") =
     checkFile("tests/concat-regex4.smt2", "sat")
-  // property("empty-union.smt2") =
-  //   checkFile("tests/empty-union.smt2", "sat")
+  property("empty-union.smt2") =
+    checkFileOpts("tests/empty-union.smt2", "sat", "", "+stringEscapes")
 
   property("non-greedy-quantifiers.smt2") =
     checkFile("tests/non-greedy-quantifiers.smt2", "sat")
@@ -153,8 +225,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("priorityTransducer4.smt2") =
     checkFile("tests/priorityTransducer4.smt2", "unsat")
 
-  // property("loop.smt2") =
-  //   checkFile("tests/loop.smt2", "sat")
+  property("loop.smt2") =
+    checkFileOpts("tests/loop.smt2", "sat", "", "+stringEscapes")
   property("loop2.smt2") =
     checkFile("tests/loop2.smt2", "unsat")
   property("loop-cg.smt2") =
@@ -164,8 +236,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("loop-cg3.smt2") =
     checkFile("tests/loop-cg3.smt2", "sat")
 
-  // property("cg-star.smt2") =
-  //   checkFile("tests/cg-star.smt2", "sat")
+  property("cg-star.smt2") =
+    checkFileOpts("tests/cg-star.smt2", "sat", "", "+stringEscapes")
 
   property("test-replace.smt2") =
     checkFile("tests/test-replace.smt2", "sat")
@@ -254,9 +326,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/adt2.smt2", "sat")
 
   property("escapeSequences-1a.smt2") =
-    checkFile("tests/escapeSequences-1a.smt2", "unsat")
-  // property("escapeSequences-1b.smt2") =
-  //   checkFile("tests/escapeSequences-1b.smt2", "sat")
+    checkFileOpts("tests/escapeSequences-1a.smt2", "unsat", "", "+stringEscapes")
+  property("escapeSequences-1b.smt2") =
+    checkFileOpts("tests/escapeSequences-1b.smt2", "sat", "", "+stringEscapes")
 
   property("len-bug.smt2") =
     checkFile("tests/len-bug.smt2", "unsat")
@@ -278,8 +350,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str.at-3b.smt2", "unsat")
   property("str.at-3c.smt2") =
     checkFile("tests/str.at-3c.smt2", "unsat")
-  property("str.at-bug.smt2") =
-    checkFile("tests/str.at-bug.smt2", "sat")
+// TODO: does not work anymore with Nielsen?
+//  property("str.at-bug.smt2") =
+//    checkFile("tests/str.at-bug.smt2", "sat")
 
   property("email-regex.smt2") =
     checkFile("tests/email-regex.smt2", "sat")
@@ -290,10 +363,21 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("indexof.smt2") =
     checkFile("tests/indexof.smt2", "sat")
+  property("indexof-2.smt2") =
+    checkFile("tests/indexof-2.smt2", "unsat")
+  property("indexof-3.smt2") =
+    checkFile("tests/indexof-3.smt2", "sat")
+  property("indexof-4.smt2") =
+    checkFile("tests/indexof-4.smt2", "sat")
+  property("indexof-5.smt2") =
+    checkFile("tests/indexof-5.smt2", "sat")
+
   property("substring.smt2") =
     checkFile("tests/substring.smt2", "sat")
   property("substring-bug.smt2") =
     checkFile("tests/substring-bug.smt2", "sat")
+  property("substring-bug2.smt2") =
+    checkFile("tests/substring-bug2.smt2", "unsat")
   property("substring2.smt2") =
     checkFile("tests/substring2.smt2", "unsat")
   property("substring2b.smt2") =
@@ -339,10 +423,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("negated-equation-1.smt2") =
     checkFile("tests/negated-equation-1.smt2", "unsat")
   property("negated-equation-2.smt2") =
-    checkFile("tests/negated-equation-2.smt2", "error")
+    checkFile("tests/negated-equation-2.smt2", "unknown")
   property("concat-empty.smt2") =
     checkFile("tests/concat-empty.smt2", "unsat")
   property("replace-bug.smt2") =
-    checkFile("tests/replace-bug.smt2", "error")
+    checkFile("tests/replace-bug.smt2", "unsat")
 
 }

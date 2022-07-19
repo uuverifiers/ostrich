@@ -1,5 +1,5 @@
 /** This file is part of Ostrich, an SMT solver for strings. Copyright (c)
-  * 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+  * 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
   *
   * Redistribution and use in source and binary forms, with or without
   * modification, are permitted provided that the following conditions are met:
@@ -35,11 +35,18 @@ import ostrich.preop.{PreOp, costenrich}
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
-import ap.terfor.conjunctions.Conjunction
-import ap.terfor.{ConstantTerm, Formula, OneTerm, Term}
+import ap.terfor.{
+  Term,
+  ConstantTerm,
+  OneTerm,
+  TerForConvenience,
+  SortedWithOrder
+}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
-import ap.util.Seqs
+import ap.proof.theoryPlugins.Plugin
+import ap.util.{Seqs, Timeout}
+import ap.terfor.conjunctions.Conjunction
 import ostrich.automata.costenrich.CostEnrichedAutomaton
 import ostrich.preop.costenrich.CostEnrichedPreOp
 import ostrich.CostEnrichedConvenience._
@@ -57,6 +64,7 @@ import scala.collection.mutable.{
 }
 import ap.parser.SymbolCollector
 import ostrich.automata.AtomicStateAutomatonAdapter
+import ap.terfor.Formula
 
 object Exploration {
 
@@ -151,6 +159,7 @@ object Exploration {
 
   private case class FoundModel(model: Map[Term, Either[IdealInt, Seq[Int]]])
       extends Exception
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -177,11 +186,14 @@ abstract class Exploration(
       comp
 
   Console.err.println
-  Console.err.println("Running OSTRICH")
+  Console.err.println("Running backward propagation")
 
   // topological sorting of the function applications
-  private val (allTerms, sortedFunApps)
-      : (Set[Term], Seq[(Seq[(PreOp, Seq[Term])], Term)]) = {
+  private val (allTerms, sortedFunApps, ignoredApps): (
+      Set[Term],
+      Seq[(Seq[(PreOp, Seq[Term])], Term)],
+      Seq[(PreOp, Seq[Term], Term)]
+  ) = {
     val argTermNum = new MHashMap[Term, Int]
     for ((_, _, res) <- funApps)
       argTermNum.put(res, 0)
@@ -192,6 +204,7 @@ abstract class Exploration(
     for ((_, args, _) <- funApps; a <- args)
       argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
 
+    var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
     var remFunApps = funApps
     val sortedApps = new ArrayBuffer[(Seq[(PreOp, Seq[Term])], Term)]
 
@@ -201,49 +214,82 @@ abstract class Exploration(
           argTermNum(res) == 0 ||
           strDatabase.isConcrete(res)
         }
-      remFunApps = otherApps
 
-      for ((_, args, _) <- selectedApps; a <- args)
-        argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
+      if (selectedApps.isEmpty) {
 
-      if (selectedApps.isEmpty)
-        throw new Exception(
-          "Cyclic definitions found, input is not straightline"
-        )
+        if (ignoredApps.isEmpty)
+          Console.err.println(
+            "Warning: cyclic definitions found, ignoring some function " +
+              "applications"
+          )
+        ignoredApps += remFunApps.head
+        remFunApps = remFunApps.tail
 
-      val appsPerRes = selectedApps groupBy (_._3)
-      val nonArgTerms = (selectedApps map (_._3)).distinct
+      } else {
 
-      for (t <- nonArgTerms)
-        sortedApps +=
-          ((for ((op, args, _) <- appsPerRes(t)) yield (op, args), t))
+        remFunApps = otherApps
+
+        for ((_, args, _) <- selectedApps; a <- args)
+          argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
+
+        val appsPerRes = selectedApps groupBy (_._3)
+        val nonArgTerms = (selectedApps map (_._3)).distinct
+
+        for (t <- nonArgTerms)
+          sortedApps +=
+            ((for ((op, args, _) <- appsPerRes(t)) yield (op, args), t))
+
+      }
     }
 
-    (argTermNum.keySet.toSet, sortedApps.toSeq)
+    (argTermNum.keySet.toSet, sortedApps.toSeq, ignoredApps.toSeq)
   }
 
-  for ((ops, t) <- sortedFunApps)
-    if (ops.size > 1 && !(strDatabase isConcrete t))
-      throw new Exception(
-        "Multiple definitions found for " + t +
-          ", input is not straightline"
-      )
+  if (!sortedFunApps.isEmpty)
+    Console.withOut(Console.err) {
+      println("   Considered function applications:")
+
+      def term2String(t: Term) =
+        (strDatabase term2Str t) match {
+          case Some(str) => "\"" + str + "\""
+          case None      => t.toString
+        }
+
+      for ((apps, res) <- sortedFunApps) {
+        println("   " + term2String(res) + " =")
+        for ((op, args) <- apps)
+          println(
+            "     " + op +
+              "(" + (args map (term2String _) mkString ", ") + ")"
+          )
+      }
+
+      /*
+      println
+      println("Regular expression constraints:")
+      for ((t, aut) <- initialConstraints) {
+        println("===== " + term2String(t) + " in:")
+        println("     " + aut)
+      }
+       */
+    }
+
+  val nonTreeLikeApps =
+    sortedFunApps exists { case (ops, t) =>
+      ops.size > 1 && !(strDatabase isConcrete t)
+    }
+
+  if (nonTreeLikeApps)
+    Console.err.println(
+      "Warning: input is not straightline, some variables have multiple " +
+        "definitions"
+    )
 
   val resultTerms =
     (for ((_, t) <- sortedFunApps.iterator) yield t).toSet
   val leafTerms =
     allTerms filter { case t =>
       (strDatabase isConcrete t) || !(resultTerms contains t)
-    }
-
-  if (!sortedFunApps.isEmpty)
-    Console.withOut(Console.err) {
-      println("   Considered function applications:")
-      for ((apps, res) <- sortedFunApps) {
-        println("   " + res + " =")
-        for ((op, args) <- apps)
-          println("     " + op + "(" + (args mkString ", ") + ")")
-      }
     }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -288,7 +334,7 @@ abstract class Exploration(
     )
       for (ind <- term2Index get arg)
         coveredTerms += ind
-    if (flags.useCostEnrich)
+    if (flags.useParikhConstraints)
       (initialConstraints ++ additionalConstraints).map(x =>
         (x._1, automaton2CostEnriched(x._2))
       )
@@ -437,7 +483,7 @@ abstract class Exploration(
           model.put(
             t,
             Right(
-              if (flags.useCostEnrich && strictLengths) {
+              if (flags.useParikhConstraints && strictLengths) {
                 val lengthValue = new MHashMap[Term, Int]
                 for (
                   lModel <- lengthModel;
@@ -490,6 +536,20 @@ abstract class Exploration(
 
           val resValue: Either[IdealInt, Seq[Int]] = Right(resString)
 
+          def throwResultCutException: Unit = {
+            import TerForConvenience._
+            implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
+
+            val resEq =
+              res === strDatabase.list2Id(resString)
+
+            Console.err.println("   ... adding cut over result for " + res)
+
+            throw new OstrichSolver.BlockingActions(
+              List(Plugin.CutSplit(resEq, List(), List()))
+            )
+          }
+
           def isStringRes(op: PreOp) =
             !(op.isInstanceOf[CostEnrichedPreOp] && op.isIntRes)
 
@@ -508,14 +568,17 @@ abstract class Exploration(
               )
 
             for (resLen <- getVarLength(res))
-              if (resValue.right.get.size != resLen.intValueSafe)
-                throw new Exception(
-                  "Could not satisfy length constraints for " + res +
-                    " with solution " +
-                    resValue.right.get.map(i => i.toChar)(breakOut) +
-                    "; length is " + resValue.right.get.size +
-                    " but should be " + resLen
-                )
+              if (resValue.right.get.size != resLen.intValueSafe) {
+                /*
+            throw new Exception(
+              "Could not satisfy length constraints for " + res +
+                " with solution " +
+                resValue.right.get.map(i => i.toChar)(breakOut) +
+                "; length is " + resValue.right.get.size +
+                " but should be " + resLen)
+                 */
+                throwResultCutException
+              }
 
             model.put(res, resValue)
           }
@@ -572,7 +635,7 @@ abstract class Exploration(
         pushLengthConstraints
 
         if (
-          flags.useCostEnrich &&
+          flags.useParikhConstraints &&
           op.isInstanceOf[CostEnrichedPreOp] &&
           strictLengths
         ) {
@@ -667,7 +730,7 @@ abstract class Exploration(
 
   protected def addLengthConstraint(lengthConstraint: Formula): Unit = {
     for (p <- lengthProver) {
-      if(debug)
+      if (debug)
         Console.err.println("addLengthConstraint: " + lengthConstraint)
       p !! lengthConstraint
       val constTerms = SymbolCollector.constants(lengthConstraint)
@@ -681,9 +744,19 @@ abstract class Exploration(
       if {
         if (debug)
           Console.err.println("checking length consistency")
-        measure("check length consistency") {
-          p.???
-        } == ProverStatus.Unsat
+        Timeout.unfinished {
+          p.checkSat(false)
+          measure("check length consistency") {
+            while (p.getStatus(100) == ProverStatus.Running)
+              Timeout.check
+            p.??? == ProverStatus.Unsat
+          }
+        } {
+          case x: Any => {
+            p.stop
+            x
+          }
+        }
       }
     ) yield {
       for (

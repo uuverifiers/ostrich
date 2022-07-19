@@ -8,6 +8,8 @@ import org.scalacheck.Prop._
 
 object YanTests extends Properties("YanTests") {
 
+  import System.lineSeparator
+  
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
       Console.withErr(ap.CmdlMain.NullStream) {
@@ -15,7 +17,7 @@ object YanTests extends Properties("YanTests") {
       }
     }
 
-    (result split "\n") contains expResult
+    (result split lineSeparator) contains expResult
   }
 
   def checkFile(filename : String, result : String,

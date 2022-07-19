@@ -145,7 +145,7 @@ object Regex2Aut {
 
 class Regex2Aut(theory : OstrichStringTheory) {
 
-  import theory.{re_none, re_all, re_eps, re_allchar, re_charrange,
+  import theory.{re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                  re_opt_?, re_loop_?,
                  re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
@@ -242,8 +242,13 @@ class Regex2Aut(theory : OstrichStringTheory) {
   private def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
-    Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
+                 Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
+
+    case IFunApp(`re_range`, _) =>
+      throw new IllegalArgumentException(
+        "re.range can only be applied to singleton strings" +
+          ", cannot handle " + t)
 
     case IFunApp(`str_to_re`, Seq(EncodedString(str))) =>
       BasicAutomata.makeString(str)

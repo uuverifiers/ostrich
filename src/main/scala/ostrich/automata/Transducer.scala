@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,9 @@
  */
 
 package ostrich.automata
+
+import ap.terfor.{Term, Formula, TermOrder}
+import ap.terfor.conjunctions.Conjunction
 
 object Transducer {
   /**
@@ -104,6 +107,15 @@ trait Transducer {
    * or None
    */
   def apply(input : String, internal : String = "") : Option[String]
+
+  /**
+   * Generate a formula that approximates the length relationship
+   * between arguments and result when calling <code>apply</code>. It
+   * is sound to just return <code>true</code>.
+   */
+  def lengthApproximation(inputLen : Term, internalLen : Term,
+                          resultLen : Term, order : TermOrder) : Formula =
+    Conjunction.TRUE
 
   /**
    * Return a dot representation of the transducer (may not be

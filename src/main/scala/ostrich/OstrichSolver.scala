@@ -36,95 +36,61 @@ import ostrich.preop.costenrich.{LengthPreOp}
 
 import ap.SimpleAPI
 import ap.parser.IFunction
-import ap.terfor.{Term, TerForConvenience, ConstantTerm, OneTerm}
+import ap.terfor.{Term, Formula, TerForConvenience, ConstantTerm, OneTerm}
 import ap.terfor.preds.{PredConj, Atom}
 import ap.terfor.linearcombination.LinearCombination
+import ap.terfor.conjunctions.Conjunction
 import ap.types.Sort
 import ap.proof.goal.Goal
+import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
 import scala.collection.breakOut
-import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
+                                 HashSet => MHashSet}
 import ostrich.automata.costenrich.TermGeneratorOrder
 
-class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
+object OstrichSolver {
 
-  import theory.{
-    str_from_char,
-    str_len,
-    str_empty,
-    str_cons,
-    str_++,
-    str_in_re,
-    str_in_re_id,
-    str_to_re,
-    re_from_str,
-    re_from_ecma2020,
-    re_from_ecma2020_flags,
-    re_case_insensitive,
-    str_replace,
-    str_replacere,
-    str_replaceall,
-    str_replaceallre,
-    str_prefixof,
-    re_none,
-    re_all,
-    re_allchar,
-    re_charrange,
-    re_++,
-    re_union,
-    re_inter,
-    re_diff,
-    re_*,
-    re_*?,
-    re_+,
-    re_+?,
-    re_opt,
-    re_opt_?,
-    re_comp,
-    re_loop,
-    re_loop_?,
-    re_eps,
-    re_capture,
-    re_reference,
-    re_begin_anchor,
-    re_end_anchor,
-    FunPred,
-    strDatabase
-  }
+  /**
+   * Exception thrown by the backward propagation algorithm when it
+   * encounters constraints that cannot be handled: e.g.,
+   * non-tree-like or cyclic constraints.
+   */
+  protected[ostrich] class BackwardException
+                     extends Exception("backward propagation failed")
 
-  val rexOps: Set[IFunction] =
-    Set(
-      re_none,
-      re_all,
-      re_allchar,
-      re_charrange,
-      re_++,
-      re_union,
-      re_inter,
-      re_diff,
-      re_*,
-      re_*?,
-      re_+,
-      re_+?,
-      re_opt,
-      re_opt_?,
-      re_comp,
-      re_loop,
-      re_loop_?,
-      re_eps,
-      str_to_re,
-      re_from_str,
-      re_capture,
-      re_reference,
-      re_begin_anchor,
-      re_end_anchor,
-      re_from_ecma2020,
-      re_from_ecma2020_flags,
-      re_case_insensitive
-    )
+  protected[ostrich] case object BackwardFailed
+                     extends BackwardException
+
+  protected[ostrich] case class BlockingActions(actions : Seq[Plugin.Action])
+                     extends BackwardException
+
+}
+
+class OstrichSolver(theory : OstrichStringTheory,
+                    flags : OFlags) {
+
+  import OstrichSolver._
+  import theory.{str_from_char, str_len, str_empty, str_cons, str_++,
+                 str_in_re, str_char_count,
+                 str_in_re_id, str_to_re, re_from_str,
+                 re_from_ecma2020, re_from_ecma2020_flags,
+                 re_case_insensitive,
+                 str_replace, str_replacere, str_replaceall, str_replaceallre,
+                 str_prefixof,
+                 re_none, re_all, re_allchar, re_charrange,
+                 re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
+                 re_comp, re_loop, re_loop_?, re_eps, re_capture, re_reference,
+                 re_begin_anchor, re_end_anchor, FunPred, strDatabase}
+
+  val rexOps : Set[IFunction] =
+    Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
+        re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps, str_to_re,
+        re_from_str, re_capture, re_reference, re_begin_anchor, re_end_anchor,
+        re_from_ecma2020, re_from_ecma2020_flags, re_case_insensitive)
 
   private val p = theory.functionPredicateMap
 
@@ -162,8 +128,6 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
 
     }
 
-    val wordExtractor =
-      theory.WordExtractor(goal)
     val regexExtractor =
       theory.RegexExtractor(goal)
     val stringFunctionTranslator =
@@ -171,8 +135,9 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
 
     // extract regex constraints and function applications from the
     // literals
-    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
-    val regexes = new ArrayBuffer[(Term, Automaton)]
+    val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
+    val regexes    = new ArrayBuffer[(Term, Automaton)]
+    val negEqs     = new ArrayBuffer[(Term, Term)]
     val lengthVars = new MHashMap[Term, Term]
 
     ////////////////////////////////////////////////////////////////////////////
@@ -208,7 +173,7 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`)
-          if (flags.strategy == OFlags.StrategyOptions.CostEnrich) => {
+          if flags.useParikhConstraints => {
         funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
       }
       case FunPred(`str_len`) => {
@@ -216,6 +181,9 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
         // Optimization below can be delete because it has been down at OstrichReducer.scala?
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
+      }
+      case FunPred(`str_char_count`) => {
+        // ignore
       }
       case `str_prefixof` => {
         val rightVar = theory.StringSort.newConstant("rhs")
@@ -262,15 +230,13 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
       implicit val o = order
 
       val stringConstants =
-        ((for (
-          (t, _) <- regexes.iterator;
-          c <- t.constants.iterator
-        ) yield c) ++
-          (for (
-            (_, args, res) <- funApps.iterator;
-            t <- args.iterator ++ Iterator(res);
-            c <- t.constants.iterator
-          ) yield c)).toSet
+        ((for ((t, _) <- regexes.iterator;
+               c <- t.constants.iterator) yield c) ++
+         (for ((_, args, res) <- funApps.iterator;
+               t <- args.iterator ++ Iterator(res);
+               c <- t.constants.iterator) yield c) ++
+         (for (a <- (atoms positiveLitsWithPred p(str_len)).iterator;
+               c <- a(0).constants.iterator) yield c)).toSet
       val lengthConstants =
         (for (
           t <- lengthVars.values.iterator;
@@ -290,7 +256,11 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
           regexes += ((l(c), !(BricsAutomaton fromString str)))
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>
-        // nothing
+          // nothing
+        case Seq((IdealInt.ONE, c : ConstantTerm),
+                 (IdealInt.MINUS_ONE, d : ConstantTerm))
+            if stringConstants(c) && stringConstants(d) =>
+          negEqs += ((c, d))
         case lc if lc.constants exists stringConstants =>
           throw new Exception(
             "Cannot handle negative string equation " +
@@ -298,6 +268,21 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
           )
         case _ =>
         // nothing
+      }
+
+      if (!negEqs.isEmpty) {
+        // make sure that symbols mentioned in negated equations have some
+        // regex constraint, and thus will be included in the solution
+        val regexCoveredTerms = new MHashSet[Term]
+        for ((t, _) <- regexes)
+          regexCoveredTerms += t
+
+        for ((c, d) <- negEqs) {
+          if (regexCoveredTerms add c)
+            regexes += ((l(c), BricsAutomaton.makeAnyString()))
+          if (regexCoveredTerms add d)
+            regexes += ((l(d), BricsAutomaton.makeAnyString()))
+        }
       }
     }
 
@@ -345,53 +330,42 @@ class OstrichSolver(theory: OstrichStringTheory, flags: OFlags) {
             flags
           )
         else
-          Exploration.lazyExp(
-            funApps,
-            regexes,
-            strDatabase,
-            lProver,
-            lengthVars.toMap,
-            useLength,
-            flags
-          )
-      try {
-        exploration.findModel
-      } catch {
-        case e: Exception =>
-          Console.err.println("Stack trace:")
-          e.printStackTrace
-          throw e
+          Exploration.lazyExp(funApps, regexes, strDatabase,
+                              lProver, lengthVars.toMap, useLength, flags)
+
+      val result = exploration.findModel
+
+      ////////////////////////////////////////////////////////////////////////////
+      // Verify that the result satisfies all constraints that could
+      // not be included initially
+
+      for (model <- result) {
+        import TerForConvenience._
+        implicit val o = order
+
+        for ((c, d) <- negEqs) {
+          val Right(cVal) = model(l(c))
+          val Right(dVal) = model(l(d))
+
+          if (cVal == dVal) {
+            Console.err.println("   ... disequality is not satisfied: " +
+                                  c + " != " + d)
+            val strId = strDatabase.list2Id(cVal)
+            throw new BlockingActions(List(
+              Plugin.AxiomSplit(List(c =/= d),
+                                List((c =/= strId, List()),
+                                     (c === strId & d =/= strId, List())),
+                                theory)))
+          }
+        }
       }
-    }
-  }
 
-  //////////////////////////////////////////////////////////////////////////////
-
-  /** Translate term in a regex argument position into an automaton returns a
-    * string if it detects only one word is accepted
-    */
-  /*
-  private def regexValue(regex : Term, regex2AFA : Regex2AFA)
-      : Either[String,AtomicStateAutomaton] = {
-    val b = (regex2AFA buildStrings regex).next
-    if (!b.isEmpty && b(0).isLeft) {
-      // In this case we've been given a string regex and expect it
-      // to start and end with / /
-      // if it just defines one string, treat it as a replaceall
-      // else treat it as true replaceall-re
-      val stringB : String = b.map(_.left.get.toChar)(collection.breakOut)
-      if (stringB(0) != '/' || stringB.last != '/')
-        throw new IllegalArgumentException("regex defined with a string argument expects the regular expression to start and end with /")
-      val sregex = stringB.slice(1, stringB.size - 1)
-      val baut = new RegExp(sregex, RegExp.NONE).toAutomaton(true)
-      val w = baut.getSingleton
-      if (w != null)
-        return Left(w)
+      if (result.isDefined)
+        Console.err.println("   ... sat")
       else
-        return Right(new BricsAutomaton(baut))
-    } else {
-      return Right(BricsAutomaton(regex2AFA buildRegex regex))
+        Console.err.println("   ... unsat")
+
+      result
     }
   }
-   */
 }

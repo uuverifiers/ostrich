@@ -65,7 +65,8 @@
                 (not (str.in_re w (re.from_ecma2020 '[0-9]*')))))
 
         (= (str.in_re w (re.from_ecma2020 '^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$'))
-           (and (>= (str.len w) 8)
+           (and ; (>= (str.len w) 8)
+                (str.in_re w (re.++ ((_ re.^ 8) re.allchar) re.all))
                 (str.in_re w (re.++ re.all (re.union (re.range "A" "Z")
                                                      (re.range "a" "z")) re.all))
                 (str.in_re w (re.++ re.all (re.range "0" "9") re.all))
