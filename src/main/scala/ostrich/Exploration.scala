@@ -50,6 +50,8 @@ import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  BitSet => MBitSet}
 
 import ostrich.parikh.automata.CostEnrichedAutomaton
+import ap.parser.smtlib.Absyn
+import ap.parser.SymbolCollector
 
 
 object Exploration {
@@ -354,6 +356,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       None
     } catch {
       case FoundModel(model) => Some(model)
+      case t : Throwable => {t.printStackTrace(); None}
     }
   }
 
@@ -370,7 +373,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
-  private def evalTerm(t : Term)(model : SimpleAPI.PartialModel)
+  protected  def evalTerm(t : Term)(model : SimpleAPI.PartialModel)
                       : Option[IdealInt] = t match {
     case c : ConstantTerm =>
       model eval c
@@ -987,6 +990,9 @@ class ParikhExploration(
           val productedAut: CostEnrichedAutomaton = auts.reduceLeft(_ & _)
           for (p <- _lengthProver) {
             p.!!(productedAut.parikhTheory)
+            p.!!(productedAut.intFormula)
+            p.addConstants(SymbolCollector.constants(productedAut.parikhTheory))
+            p.addConstants(SymbolCollector.constants(productedAut.intFormula))
           }
           checkLengthConsistency match {
             case Some(_) => false
@@ -994,8 +1000,7 @@ class ParikhExploration(
           }
         }
         val consideredAuts = new ArrayBuffer[Automaton]
-        consideredAuts += aut
-        for (aut2 <- constraints) {
+        for (aut2 <- constraints :+ aut) {
           consideredAuts += aut2
           if (!isConsistency(consideredAuts)) {
             return Some(consideredAuts.toSeq)
@@ -1011,6 +1016,7 @@ class ParikhExploration(
         // one confilctSet in **inconsistentAutomata**.
         directlyConflictSet(aut) match {
           case Some(confilctSet) => return Some(confilctSet)
+          case None => // do nothing
         }
 
         // 2. check if the stored automata is consistent after adding the aut:
@@ -1072,12 +1078,30 @@ class ParikhExploration(
       */
     def getAcceptedWord: Seq[Int] = {
       // TODO: implement this
-      return Seq()
+      val lModel = _lengthProver.get.partialModel
+      val lengthModel = new MHashMap[Term, Int]
+      for (
+        term <- getAllConstantTerms;
+        if term.constants.size == 1;
+          tVal <- evalTerm(term)(lModel)
+      )
+        lengthModel.put(term, tVal.intValue)
+      AutomataUtils.findAcceptedWord(constraints, lengthModel) match {
+        case None => throw new Exception("No accepted word found")
+        case Some(w) => return w
+      }
     }
 
     /** Produce a word of length <code>len</code> accepted by all the stored
       * constraints
       */
-    def getAcceptedWordLen(len: Int): Seq[Int] = Seq() // no need
+    def getAcceptedWordLen(len: Int): Seq[Int] = getAcceptedWord // no need
+
+    def getAllConstantTerms: Seq[Term] = {
+      import ostrich.automata.AtomicStateAutomatonAdapter.intern
+      val termsSet = new MHashSet[Term]
+      constraints.foreach(aut => termsSet ++= intern(aut).getTransitionsTerms)
+      termsSet.toSeq
+    }
   }
 }

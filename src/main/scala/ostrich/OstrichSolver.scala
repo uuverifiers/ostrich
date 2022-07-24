@@ -104,6 +104,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     TermGeneratorOrder.init(order)
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
+    val useParikh = flags.useParikhConstraints
 
     val useLength = flags.useLength match {
 
@@ -172,10 +173,10 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
-      // case FunPred(`str_len`)
-      //     if flags.useParikhConstraints => {
-      //   funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
-      // }
+      case FunPred(`str_len`)
+          if flags.useParikhConstraints => {
+        funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
+      }
       case FunPred(`str_len`) => {
         lengthVars.put(a(0), a(1))
         // Optimization below can be delete because it has been down at OstrichReducer.scala?
@@ -319,7 +320,17 @@ class OstrichSolver(theory : OstrichStringTheory,
         }
 
       val exploration =
-        if (eagerMode)
+        if(useParikh)
+          Exploration.parikhExp(
+            funApps,
+            regexes,
+            strDatabase,
+            lProver,
+            lengthVars.toMap,
+            useLength,
+            flags
+          )
+        else if (eagerMode)
           Exploration.eagerExp(
             funApps,
             regexes,
