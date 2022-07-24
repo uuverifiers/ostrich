@@ -42,7 +42,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
-import ostrich.preop.costenrich.ConcatCEPreOp
+import ostrich.parikh.preop.ConcatCEPreOp
 
 /**
  * Class for mapping string constraints to string functions.
@@ -74,8 +74,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_++`) if theory.getFlags.useParikhConstraints =>
-      Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
+    // case FunPred(`str_++`) if theory.getFlags.useParikhConstraints =>
+    //   Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) if strDatabase isConcrete a(1) => {

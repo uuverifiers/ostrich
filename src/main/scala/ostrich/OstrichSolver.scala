@@ -50,7 +50,7 @@ import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
-import ostrich.automata.costenrich.TermGeneratorOrder
+import ostrich.parikh.TermGeneratorOrder
 
 object OstrichSolver {
 
@@ -172,10 +172,10 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
-      case FunPred(`str_len`)
-          if flags.useParikhConstraints => {
-        funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
-      }
+      // case FunPred(`str_len`)
+      //     if flags.useParikhConstraints => {
+      //   funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
+      // }
       case FunPred(`str_len`) => {
         lengthVars.put(a(0), a(1))
         // Optimization below can be delete because it has been down at OstrichReducer.scala?

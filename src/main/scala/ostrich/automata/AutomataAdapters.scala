@@ -39,13 +39,7 @@ import scala.collection.mutable.{
   Set => MSet
 }
 import scala.collection.{Set => GSet}
-import ostrich.automata.costenrich.CostEnrichedAutomaton
-import ostrich.automata.costenrich.CostEnrichedAutomatonBuilder
-import ostrich.automata.costenrich.RegisterTerm
 import ap.terfor.Term
-import ostrich.CostEnrichedConvenience._
-import ostrich.automata.costenrich.TermGeneratorOrder
-import ostrich.automata.costenrich.TransitionTerm
 
 object AtomicStateAutomatonAdapter {
   def intern(a: Automaton): Automaton = a match {
@@ -134,21 +128,11 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton](
 
     for (s <- states) {
       val t = smap(s)
-      if (isCostEnrich(underlying)) {
-        for ((to, label, update) <- outgoingTransitionsWithVec(s))
-          builder.addTransition(t, label, smap(to), update, TransitionTerm())
-      } else {
-        for ((to, label) <- outgoingTransitions(s))
-          builder.addTransition(t, label, smap(to))
-      }
+      for ((to, label) <- outgoingTransitions(s))
+        builder.addTransition(t, label, smap(to))
       builder.setAccept(t, isAccept(s))
     }
 
-    if (isCostEnrich(underlying)) {
-      builder
-        .asInstanceOf[CostEnrichedAutomatonBuilder]
-        .addRegisters(Seq.fill(underlying.registers.size)(RegisterTerm()))
-    }
     builder.setInitialState(smap(initialState))
     builder.getAutomaton
   }

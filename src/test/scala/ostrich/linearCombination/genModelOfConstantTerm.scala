@@ -1,7 +1,7 @@
 package ostrich.linearCombination
 
 import ap.SimpleAPI
-import ostrich.automata.costenrich.RegisterTerm
+import ostrich.parikh.RegisterTerm
 import ap.terfor.TerForConvenience
 import org.scalacheck.Properties
 import org.scalacheck.Prop._

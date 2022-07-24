@@ -1,2 +1,0 @@
-package ostrich.automata.costenrich
-
