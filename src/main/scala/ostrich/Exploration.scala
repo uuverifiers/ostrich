@@ -31,27 +31,18 @@
 package ostrich
 
 import ostrich.automata.{AutomataUtils, Automaton, BricsAutomaton}
-import ostrich.preop.{PreOp, costenrich}
+import ostrich.preop.{PreOp}
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
-import ap.terfor.{
-  Term,
-  ConstantTerm,
-  OneTerm,
-  TerForConvenience,
-  SortedWithOrder
-}
+import ap.terfor.{Term, ConstantTerm, OneTerm, TerForConvenience}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
 import ap.proof.theoryPlugins.Plugin
 import ap.util.{Seqs, Timeout}
-import ap.terfor.conjunctions.Conjunction
 import ostrich.automata.costenrich.CostEnrichedAutomaton
-import ostrich.preop.costenrich.CostEnrichedPreOp
 import ostrich.CostEnrichedConvenience._
 import ostrich.automata.costenrich.TermGeneratorOrder._
-import ostrich.automata.AtomicStateAutomatonAdapter.intern
 
 import scala.collection.breakOut
 import scala.collection.mutable.{
@@ -63,8 +54,6 @@ import scala.collection.mutable.{
   HashSet => MHashSet
 }
 import ap.parser.SymbolCollector
-import ostrich.automata.AtomicStateAutomatonAdapter
-import ap.terfor.Formula
 
 object Exploration {
 
@@ -106,17 +95,6 @@ object Exploration {
       * constraints
       */
     def getAcceptedWordLen(len: Int): Seq[Int]
-
-    /** Produce a word accepted by all the stored constraints, based on the
-      * given length model
-      */
-    def getAcceptedWordFromLengthModel(
-        lengthModel: MHashMap[Term, Int]
-    ): Seq[Int]
-
-    /** Get integer terms of all constraints that was asserted
-      */
-    def getCompleteTerms: Seq[Term] = Seq()
   }
 
   def eagerExp(
@@ -148,6 +126,25 @@ object Exploration {
       flags: OFlags
   ): Exploration =
     new LazyExploration(
+      funApps,
+      initialConstraints,
+      strDatabase,
+      lengthProver,
+      lengthVars,
+      strictLengths,
+      flags
+    )
+
+  def parikhExp(
+      funApps: Seq[(PreOp, Seq[Term], Term)],
+      initialConstraints: Seq[(Term, Automaton)],
+      strDatabase: StrDatabase,
+      lengthProver: Option[SimpleAPI],
+      lengthVars: Map[Term, Term],
+      strictLengths: Boolean,
+      flags: OFlags
+  ): Exploration =
+    new ParikhExploration(
       funApps,
       initialConstraints,
       strDatabase,
@@ -264,17 +261,9 @@ abstract class Exploration(
           )
       }
 
-      /*
-      println
-      println("Regular expression constraints:")
-      for ((t, aut) <- initialConstraints) {
-        println("===== " + term2String(t) + " in:")
-        println("     " + aut)
-      }
-       */
     }
 
-  val nonTreeLikeApps =
+  val nonTreeLikeApps: Boolean =
     sortedFunApps exists { case (ops, t) =>
       ops.size > 1 && !(strDatabase isConcrete t)
     }
@@ -285,9 +274,9 @@ abstract class Exploration(
         "definitions"
     )
 
-  val resultTerms =
+  val resultTerms: Set[Term] =
     (for ((_, t) <- sortedFunApps.iterator) yield t).toSet
-  val leafTerms =
+  val leafTerms: Set[Term] =
     allTerms filter { case t =>
       (strDatabase isConcrete t) || !(resultTerms contains t)
     }
@@ -401,7 +390,7 @@ abstract class Exploration(
         yield (op, args, res)).toList
 
     try {
-      val a = dfExplore(funAppList)
+      dfExplore(funAppList)
       None
     } catch {
       case FoundModel(model) => Some(model)
@@ -483,20 +472,9 @@ abstract class Exploration(
           model.put(
             t,
             Right(
-              if (flags.useParikhConstraints && strictLengths) {
-                val lengthValue = new MHashMap[Term, Int]
-                for (
-                  lModel <- lengthModel;
-                  term <- store.getCompleteTerms;
-                  if term.constants.size == 1;
-                  tVal <- evalTerm(term)(lModel)
-                )
-                  lengthValue.put(term, tVal.intValue)
-                store.getAcceptedWordFromLengthModel(lengthValue)
-              } else
-                (for (tlen <- getVarLength(t))
-                  yield store.getAcceptedWordLen(tlen.intValueSafe))
-                  .getOrElse(store.getAcceptedWord)
+              (for (tlen <- getVarLength(t))
+                yield store.getAcceptedWordLen(tlen.intValueSafe))
+                .getOrElse(store.getAcceptedWord)
             )
           )
         }
@@ -538,7 +516,7 @@ abstract class Exploration(
 
           def throwResultCutException: Unit = {
             import TerForConvenience._
-            implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
+            // implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
 
             val resEq =
               res === strDatabase.list2Id(resString)
@@ -550,38 +528,27 @@ abstract class Exploration(
             )
           }
 
-          def isStringRes(op: PreOp) =
-            !(op.isInstanceOf[CostEnrichedPreOp] && op.isIntRes)
+          if (!(constraintStores(res) isAcceptedWord resString))
+            throw new Exception(
+              "Could not satisfy regex constraints for " + res +
+                ", maybe the problems involves non-functional transducers?"
+            )
 
-          if (isStringRes(op)) {
-            for (oldValue <- model get res)
-              if (resValue != oldValue)
-                throw new Exception(
-                  "Model extraction failed: " +
-                    oldValue + " != " + resValue
-                )
-
-            if (!(constraintStores(res) isAcceptedWord resString))
-              throw new Exception(
-                "Could not satisfy regex constraints for " + res +
-                  ", maybe the problems involves non-functional transducers?"
-              )
-
-            for (resLen <- getVarLength(res))
-              if (resValue.right.get.size != resLen.intValueSafe) {
-                /*
+          for (resLen <- getVarLength(res))
+            if (resValue.right.get.size != resLen.intValueSafe) {
+              /*
             throw new Exception(
               "Could not satisfy length constraints for " + res +
                 " with solution " +
                 resValue.right.get.map(i => i.toChar)(breakOut) +
                 "; length is " + resValue.right.get.size +
                 " but should be " + resLen)
-                 */
-                throwResultCutException
-              }
+               */
+              throwResultCutException
+            }
 
-            model.put(res, resValue)
-          }
+          model.put(res, resValue)
+          // }
         }
         throw FoundModel(model.toMap)
       }
@@ -633,19 +600,6 @@ abstract class Exploration(
           constraintStores(a).push
 
         pushLengthConstraints
-
-        if (
-          flags.useParikhConstraints &&
-          op.isInstanceOf[CostEnrichedPreOp] &&
-          strictLengths
-        ) {
-          val resArgsRelatedFormula = op.lengthConstraints(argCS, resAut)
-          val argsAutParikh = argCS.map(_.parikhTheory)
-          addLengthConstraint(resArgsRelatedFormula)
-          argsAutParikh.foreach(addLengthConstraint(_))
-          if (debug)
-            Console.err.println("dfExploreOp, #addLengthContraints")
-        }
 
         try {
           val newConstraints = new MHashSet[TermConstraint]
@@ -728,17 +682,17 @@ abstract class Exploration(
       p addConstants (SymbolCollector.constants(aut.getLengthAbstraction))
     }
 
-  protected def addLengthConstraint(lengthConstraint: Formula): Unit = {
-    for (p <- lengthProver) {
-      if (debug)
-        Console.err.println("addLengthConstraint: " + lengthConstraint)
-      p !! lengthConstraint
-      val constTerms = SymbolCollector.constants(lengthConstraint)
-      p addConstants constTerms
-    }
-  }
+  // protected def addLengthConstraint(lengthConstraint: Formula): Unit = {
+  //   for (p <- lengthProver) {
+  //     if (debug)
+  //       Console.err.println("addLengthConstraint: " + lengthConstraint)
+  //     p !! lengthConstraint
+  //     val constTerms = SymbolCollector.constants(lengthConstraint)
+  //     p addConstants constTerms
+  //   }
+  // }
 
-  private def checkLengthConsistency: Option[Seq[TermConstraint]] =
+  def checkLengthConsistency: Option[Seq[TermConstraint]] =
     for (
       p <- lengthProver;
       if {
@@ -887,19 +841,6 @@ class EagerExploration(
         case Some(aut) => AutomataUtils.findAcceptedWord(List(aut), len).get
         case None      => List()
       }
-
-    // TODO: implement this
-    def getAcceptedWordFromLengthModel(
-        lengthModel: MHashMap[Term, Int]
-    ): Seq[Int] = currentConstraint match {
-      case Some(aut) =>
-        AutomataUtils.findAcceptedWord(Seq(aut), lengthModel).get
-      case None => List()
-    }
-    override def getCompleteTerms() = currentConstraint match {
-      case Some(aut) => intern(aut).getTransitionsTerms
-      case None      => Seq()
-    }
   }
 
 }
@@ -1045,7 +986,7 @@ class LazyExploration(
       constraints match {
         case Seq() | Seq(_) =>
         // nothing, all length constraints already pushed
-        case auts =>
+        case _ =>
           addLengthConstraint(
             TermConstraint(t, intersection),
             for (a <- constraints)
@@ -1059,7 +1000,7 @@ class LazyExploration(
     def getAcceptedWord: Seq[Int] =
       constraints match {
         case Seq() => List()
-        case auts  => intersection.getAcceptedWord.get
+        case _     => intersection.getAcceptedWord.get
       }
 
     def getAcceptedWordLen(len: Int): Seq[Int] =
@@ -1067,23 +1008,185 @@ class LazyExploration(
         case Seq() => for (_ <- 0 until len) yield 0
         case auts  => AutomataUtils.findAcceptedWord(auts, len).get
       }
-
-    override def getCompleteTerms: Seq[Term] = {
-      constraints match {
-        case Seq() => Seq()
-        case auts =>
-          auts.map { case aut =>
-            intern(aut).getTransitionsTerms
-          }.flatten
-      }
-    }
-
-    def getAcceptedWordFromLengthModel(
-        lengthModel: MHashMap[Term, Int]
-    ): Seq[Int] = constraints match {
-      case Seq() => Seq()
-      case auts  => AutomataUtils.findAcceptedWord(auts.toSeq, lengthModel).get
-    }
   }
 
+}
+
+class ParikhExploration(
+    _funApps: Seq[(PreOp, Seq[Term], Term)],
+    _initialConstraints: Seq[(Term, Automaton)],
+    _strDatabase: StrDatabase,
+    _lengthProver: Option[SimpleAPI],
+    _lengthVars: Map[Term, Term],
+    _strictLengths: Boolean,
+    _flags: OFlags
+) extends Exploration(
+      _funApps,
+      _initialConstraints,
+      _strDatabase,
+      _lengthProver,
+      _lengthVars,
+      _strictLengths,
+      _flags
+    ) {
+  import Exploration._
+
+  protected val needCompleteContentsForConflicts: Boolean = false
+  protected def newStore(t: Term): ConstraintStore = new ParikhStore(t)
+
+  private class ParikhStore(t: Term) extends ConstraintStore {
+
+    private val constraints = new ArrayBuffer[Automaton]
+    private val constraintStack = new ArrayStack[Int]
+
+    // Combinations of automata that are known to have empty intersection
+    private val inconsistentAutomata = new ArrayBuffer[Seq[Automaton]]
+    // Map from watched automata to the indexes of
+    // <code>inconsistentAutomata</code> that is watched
+    private val watchedAutomata = new MHashMap[Automaton, List[Int]]
+
+    def push: Unit = constraintStack push constraints.size
+
+    def pop: Unit = {
+      val oldSize = constraintStack.pop
+      constraints reduceToSize oldSize
+    }
+
+    /** Add new automata to the store, return a sequence of term constraints in
+      * case the asserted constraints have become inconsistent
+      */
+    def assertConstraint(aut: Automaton): Option[ConflictSet] = {
+      val constraintSet = constraints.toSet
+
+      /** Check if there is directly confilct
+        * @param aut
+        *   new added aut
+        * @return
+        *   None if constraints belong to one of **inconsistentAutomata**;
+        *   ConflicSet otherwise.
+        */
+      def directlyConflictSet(aut: Automaton): Option[ConflictSet] = {
+        var potentialConflictsIdxs = watchedAutomata.getOrElse(aut, List())
+        while (!potentialConflictsIdxs.isEmpty) {
+          val potentialConflictsIdx = potentialConflictsIdxs.head
+          val potentialConflicts = inconsistentAutomata(potentialConflictsIdx)
+          if (constraintSet.forall(potentialConflicts.contains(_))) {
+            // constraints have become inconsistent!
+            println("Stored conflict applies!")
+            return Some(
+              for (a <- potentialConflicts.toList)
+                yield TermConstraint(t, a)
+            )
+          }
+          potentialConflictsIdxs = potentialConflictsIdxs.tail
+        }
+        return None
+      }
+
+      /** Check if constraints are still consistent after adding `aut`
+        * @param aut
+        *   new added aut
+        * @return
+        *   None if constraints are still consistent; unsat core otherwise.
+        *   (unsat core is a set of automata, and is as minimal as possible)
+        */
+      def checkConsistency(aut: Automaton): Option[Seq[Automaton]] = {
+        def isConsistency(auts: Seq[CostEnrichedAutomaton]): Boolean = {
+          // TODO: native product auts and compute the prikh iamge now
+          val productedAut: CostEnrichedAutomaton = auts.reduceLeft(_ & _)
+          for (p <- _lengthProver) {
+            p.!!(productedAut.parikhTheory)
+          }
+          checkLengthConsistency match {
+            case Some(_) => false
+            case None    => true
+          }
+        }
+        val consideredAuts = new ArrayBuffer[Automaton]
+        consideredAuts += aut
+        for (aut2 <- constraints) {
+          consideredAuts += aut2
+          if (!isConsistency(consideredAuts)) {
+            return Some(consideredAuts.toSeq)
+          }
+        }
+        return None
+      }
+      if (!constraintSet.contains(aut)) {
+        // check if the stored automata is consistent after adding the aut
+        // 1. check if the aut is already in inconsistent core:
+        // We will maintain an ArrayBuffer **inconsistentAutomata** to store confilctSets.
+        // We return the conflictSet directly if current constraints with aut belongs to
+        // one confilctSet in **inconsistentAutomata**.
+        directlyConflictSet(aut) match {
+          case Some(confilctSet) => return Some(confilctSet)
+        }
+
+        // 2. check if the stored automata is consistent after adding the aut:
+        checkConsistency(aut) match {
+          case Some(inconsistentAuts) => {
+            // add the inconsistent automata to the list of inconsistent automata
+            inconsistentAutomata += inconsistentAuts
+            // add the index of the inconsistent automata to the watched automata
+            for (inconsistentAut <- inconsistentAuts) {
+              watchedAutomata.put(
+                inconsistentAut,
+                watchedAutomata.getOrElse(
+                  inconsistentAut,
+                  List()
+                ) :+ inconsistentAutomata.size - 1
+              )
+            }
+            // return the conflictSet
+            return Some(
+              for (a <- inconsistentAuts.toList)
+                yield TermConstraint(t, a)
+            )
+          }
+          case None => {
+            constraints += aut
+            return None
+          }
+        }
+      }
+      return None
+    }
+
+    /** Return some representation of the asserted constraints
+      */
+    def getContents: List[Automaton] = constraints.toList
+
+    /** Return all constraints that were asserted (without any modifications)
+      */
+    def getCompleteContents: List[Automaton] = constraints.toList
+
+    /** Make sure that the exact length abstraction for the intersection of the
+      * stored automata has been pushed to the length prover
+      */
+    def ensureCompleteLengthConstraints: Unit = {} // no need
+
+    /** Check whether some word is accepted by all the stored constraints
+      */
+    def isAcceptedWord(w: Seq[Int]): Boolean = {
+      val constraintSet = constraints.toSet
+      for (aut <- constraintSet) {
+        if (!aut(w)) {
+          return false
+        }
+      }
+      return true
+    }
+
+    /** Produce an arbitrary word accepted by all the stored constraints
+      */
+    def getAcceptedWord: Seq[Int] = {
+      // TODO: implement this
+      return Seq()
+    }
+
+    /** Produce a word of length <code>len</code> accepted by all the stored
+      * constraints
+      */
+    def getAcceptedWordLen(len: Int): Seq[Int] = Seq() // no need
+  }
 }

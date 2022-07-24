@@ -321,7 +321,7 @@ class CostEnrichedAutomaton(
       yield (
         t.getDest,
         (t.getMin, t.getMax),
-        etaMap((q, (t.getMin, t.getMax), t.getDest)),
+        etaMap((q, (t.getMin, t.getMax), t.getDest))
       )
   }
 
