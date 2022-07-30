@@ -37,6 +37,7 @@ import ostrich.preop.PreOp
 
 import ap.SimpleAPI
 import SimpleAPI.ProverStatus
+import ap.api.PartialModel
 import ap.basetypes.IdealInt
 import ap.terfor.{Term, ConstantTerm, OneTerm, TerForConvenience, SortedWithOrder}
 import ap.terfor.linearcombination.LinearCombination
@@ -357,7 +358,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
-  private def evalTerm(t : Term)(model : SimpleAPI.PartialModel)
+  private def evalTerm(t : Term)(model : PartialModel)
                       : Option[IdealInt] = t match {
     case c : ConstantTerm =>
       model eval c
