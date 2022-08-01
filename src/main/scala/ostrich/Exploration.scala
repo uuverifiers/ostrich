@@ -130,7 +130,7 @@ object Exploration {
     new ParikhExploration(funApps, initialConstraints, strDatabase,
                          lengthProver, lengthVars, strictLengths, flags)
 
-  private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
+  case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
           extends Exception
 
 }
@@ -161,7 +161,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   Console.err.println("Running backward propagation")
 
   // topological sorting of the function applications
-  protected  val (allTerms, sortedFunApps, ignoredApps)
+  protected val (allTerms, sortedFunApps, ignoredApps)
               : (Set[Term],
                  Seq[(Seq[(PreOp, Seq[Term])], Term)],
                  Seq[(PreOp, Seq[Term], Term)]) = {
@@ -314,7 +314,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  private val constraintStores = new MHashMap[Term, ConstraintStore]
+  protected val constraintStores = new MHashMap[Term, ConstraintStore]
 
   /**
    * Check for existence of a model. A model maps each integer variable
@@ -370,7 +370,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
-  private def evalTerm(t : Term)(model : PartialModel)
+  protected def evalTerm(t : Term)(model : PartialModel)
                       : Option[IdealInt] = t match {
     case c : ConstantTerm =>
       model eval c
@@ -386,7 +386,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
-  private def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
+  protected def dfExplore(apps : List[(PreOp, Seq[Term], Term)])
                       : ConflictSet = apps match {
 
     case List() => {
@@ -509,7 +509,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
-  private def dfExploreOp(op : PreOp,
+  protected def dfExploreOp(op : PreOp,
                           args : Seq[Term],
                           res : Term,
                           resConstraints : List[Automaton],

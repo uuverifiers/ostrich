@@ -176,6 +176,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       case FunPred(`str_len`)
           if flags.useCostEnriched => {
           funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
+          lengthVars.put(a(0), a(1))
       }
       case FunPred(`str_len`) => {
           lengthVars.put(a(0), a(1))
