@@ -259,6 +259,7 @@ object AutomataUtils {
   ): Option[Seq[Int]] = {
     type State = CostEnrichedAutomaton#State
     type TLabel = CostEnrichedAutomaton#TLabel
+
     val fisrtAut = auts(0)
 
     /** Check whether all states are accepted

@@ -32,7 +32,7 @@ package ostrich
 
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{PreOp, ConcatPreOp}
-import ostrich.preop.costenrich.{LengthPreOp}
+import ostrich.parikh.preop.{LengthPreOp}
 
 import ap.SimpleAPI
 import ap.parser.IFunction
@@ -104,7 +104,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     TermGeneratorOrder.init(order)
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
-    val useParikh = flags.useParikhConstraints
+    val useCostEnriched = flags.useCostEnriched
 
     val useLength = flags.useLength match {
 
@@ -174,14 +174,14 @@ class OstrichSolver(theory : OstrichStringTheory,
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`)
-          if flags.useParikhConstraints => {
-        funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
+          if flags.useCostEnriched => {
+          funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
       }
       case FunPred(`str_len`) => {
-        lengthVars.put(a(0), a(1))
+          lengthVars.put(a(0), a(1))
         // Optimization below can be delete because it has been down at OstrichReducer.scala?
-        if (a(1).isZero)
-          regexes += ((a(0), BricsAutomaton fromString ""))
+        // if (a(1).isZero)
+        //   regexes += ((a(0), BricsAutomaton fromString ""))
       }
       case FunPred(`str_char_count`) => {
         // ignore
@@ -320,7 +320,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         }
 
       val exploration =
-        if(useParikh)
+        if(useCostEnriched)
           Exploration.parikhExp(
             funApps,
             regexes,
@@ -330,7 +330,8 @@ class OstrichSolver(theory : OstrichStringTheory,
             useLength,
             flags
           )
-        else if (eagerMode)
+        else 
+        if (eagerMode)
           Exploration.eagerExp(
             funApps,
             regexes,

@@ -48,11 +48,7 @@ import scala.collection.breakOut
 import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
                                  BitSet => MBitSet}
-
-import ostrich.parikh.automata.CostEnrichedAutomaton
-import ap.parser.smtlib.Absyn
-import ap.parser.SymbolCollector
-
+import ostrich.parikh.ParikhExploration
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
@@ -164,7 +160,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   Console.err.println("Running backward propagation")
 
   // topological sorting of the function applications
-  private val (allTerms, sortedFunApps, ignoredApps)
+  protected  val (allTerms, sortedFunApps, ignoredApps)
               : (Set[Term],
                  Seq[(Seq[(PreOp, Seq[Term])], Term)],
                  Seq[(PreOp, Seq[Term], Term)]) = {
@@ -356,7 +352,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       None
     } catch {
       case FoundModel(model) => Some(model)
-      case t : Throwable => {t.printStackTrace(); None}
+      case t : Throwable => t.printStackTrace(); None
     }
   }
 
@@ -373,7 +369,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
   }
 
-  protected  def evalTerm(t : Term)(model : SimpleAPI.PartialModel)
+  protected def evalTerm(t : Term)(model : SimpleAPI.PartialModel)
                       : Option[IdealInt] = t match {
     case c : ConstantTerm =>
       model eval c
@@ -619,7 +615,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                                                   aut.getLengthAbstraction)
     }
 
-  protected  def checkLengthConsistency : Option[Seq[TermConstraint]] =
+  protected def checkLengthConsistency : Option[Seq[TermConstraint]] =
     for (p <- lengthProver;
          if {
            if (debug)
@@ -903,205 +899,4 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       }
   }
 
-}
-
-class ParikhExploration(
-    _funApps: Seq[(PreOp, Seq[Term], Term)],
-    _initialConstraints: Seq[(Term, Automaton)],
-    _strDatabase: StrDatabase,
-    _lengthProver: Option[SimpleAPI],
-    _lengthVars: Map[Term, Term],
-    _strictLengths: Boolean,
-    _flags: OFlags
-) extends Exploration(
-      _funApps,
-      _initialConstraints,
-      _strDatabase,
-      _lengthProver,
-      _lengthVars,
-      _strictLengths,
-      _flags
-    ) {
-  import Exploration._
-
-  protected val needCompleteContentsForConflicts: Boolean = false
-  protected def newStore(t: Term): ConstraintStore = new ParikhStore(t)
-
-  private class ParikhStore(t: Term) extends ConstraintStore {
-    import ostrich.parikh.CostEnrichedConvenience._
-
-    private val constraints = new ArrayBuffer[Automaton]
-    private val constraintStack = new ArrayStack[Int]
-
-    // Combinations of automata that are known to have empty intersection
-    private val inconsistentAutomata = new ArrayBuffer[Seq[Automaton]]
-    // Map from watched automata to the indexes of
-    // <code>inconsistentAutomata</code> that is watched
-    private val watchedAutomata = new MHashMap[Automaton, List[Int]]
-
-    def push: Unit = constraintStack push constraints.size
-
-    def pop: Unit = {
-      val oldSize = constraintStack.pop
-      constraints reduceToSize oldSize
-    }
-
-    /** Add new automata to the store, return a sequence of term constraints in
-      * case the asserted constraints have become inconsistent
-      */
-    def assertConstraint(aut: Automaton): Option[ConflictSet] = {
-      val constraintSet = constraints.toSet
-
-      /** Check if there is directly confilct
-        * @param aut
-        *   new added aut
-        * @return
-        *   None if constraints belong to one of **inconsistentAutomata**;
-        *   ConflicSet otherwise.
-        */
-      def directlyConflictSet(aut: Automaton): Option[ConflictSet] = {
-        var potentialConflictsIdxs = watchedAutomata.getOrElse(aut, List())
-        while (!potentialConflictsIdxs.isEmpty) {
-          val potentialConflictsIdx = potentialConflictsIdxs.head
-          val potentialConflicts = inconsistentAutomata(potentialConflictsIdx)
-          if (constraintSet.forall(potentialConflicts.contains(_))) {
-            // constraints have become inconsistent!
-            println("Stored conflict applies!")
-            return Some(
-              for (a <- potentialConflicts.toList)
-                yield TermConstraint(t, a)
-            )
-          }
-          potentialConflictsIdxs = potentialConflictsIdxs.tail
-        }
-        return None
-      }
-
-      /** Check if constraints are still consistent after adding `aut`
-        * @param aut
-        *   new added aut
-        * @return
-        *   None if constraints are still consistent; unsat core otherwise.
-        *   (unsat core is a set of automata, and is as minimal as possible)
-        */
-      def checkConsistency(aut: Automaton): Option[Seq[Automaton]] = {
-        def isConsistency(auts: Seq[CostEnrichedAutomaton]): Boolean = {
-          // TODO: native product auts and compute the prikh iamge now
-          val productedAut: CostEnrichedAutomaton = auts.reduceLeft(_ & _)
-          for (p <- _lengthProver) {
-            p.!!(productedAut.parikhTheory)
-            p.!!(productedAut.intFormula)
-            p.addConstants(SymbolCollector.constants(productedAut.parikhTheory))
-            p.addConstants(SymbolCollector.constants(productedAut.intFormula))
-          }
-          checkLengthConsistency match {
-            case Some(_) => false
-            case None    => true
-          }
-        }
-        val consideredAuts = new ArrayBuffer[Automaton]
-        for (aut2 <- constraints :+ aut) {
-          consideredAuts += aut2
-          if (!isConsistency(consideredAuts)) {
-            return Some(consideredAuts.toSeq)
-          }
-        }
-        return None
-      }
-      if (!constraintSet.contains(aut)) {
-        // check if the stored automata is consistent after adding the aut
-        // 1. check if the aut is already in inconsistent core:
-        // We will maintain an ArrayBuffer **inconsistentAutomata** to store confilctSets.
-        // We return the conflictSet directly if current constraints with aut belongs to
-        // one confilctSet in **inconsistentAutomata**.
-        directlyConflictSet(aut) match {
-          case Some(confilctSet) => return Some(confilctSet)
-          case None => // do nothing
-        }
-
-        // 2. check if the stored automata is consistent after adding the aut:
-        checkConsistency(aut) match {
-          case Some(inconsistentAuts) => {
-            // add the inconsistent automata to the list of inconsistent automata
-            inconsistentAutomata += inconsistentAuts
-            // add the index of the inconsistent automata to the watched automata
-            for (inconsistentAut <- inconsistentAuts) {
-              watchedAutomata.put(
-                inconsistentAut,
-                watchedAutomata.getOrElse(
-                  inconsistentAut,
-                  List()
-                ) :+ inconsistentAutomata.size - 1
-              )
-            }
-            // return the conflictSet
-            return Some(
-              for (a <- inconsistentAuts.toList)
-                yield TermConstraint(t, a)
-            )
-          }
-          case None => {
-            constraints += aut
-            return None
-          }
-        }
-      }
-      return None
-    }
-
-    /** Return some representation of the asserted constraints
-      */
-    def getContents: List[Automaton] = constraints.toList
-
-    /** Return all constraints that were asserted (without any modifications)
-      */
-    def getCompleteContents: List[Automaton] = constraints.toList
-
-    /** Make sure that the exact length abstraction for the intersection of the
-      * stored automata has been pushed to the length prover
-      */
-    def ensureCompleteLengthConstraints: Unit = {} // no need
-
-    /** Check whether some word is accepted by all the stored constraints
-      */
-    def isAcceptedWord(w: Seq[Int]): Boolean = {
-      val constraintSet = constraints.toSet
-      for (aut <- constraintSet) {
-        if (!aut(w)) {
-          return false
-        }
-      }
-      return true
-    }
-
-    /** Produce an arbitrary word accepted by all the stored constraints
-      */
-    def getAcceptedWord: Seq[Int] = {
-      // TODO: implement this
-      val lModel = _lengthProver.get.partialModel
-      val lengthModel = new MHashMap[Term, Int]
-      for (
-        term <- getAllConstantTerms;
-        if term.constants.size == 1;
-          tVal <- evalTerm(term)(lModel)
-      )
-        lengthModel.put(term, tVal.intValue)
-      AutomataUtils.findAcceptedWord(constraints, lengthModel) match {
-        case None => throw new Exception("No accepted word found")
-        case Some(w) => return w
-      }
-    }
-
-    /** Produce a word of length <code>len</code> accepted by all the stored
-      * constraints
-      */
-    def getAcceptedWordLen(len: Int): Seq[Int] = getAcceptedWord // no need
-
-    def getAllConstantTerms: Seq[Term] = {
-      import ostrich.automata.AtomicStateAutomatonAdapter.intern
-      val termsSet = new MHashSet[Term]
-      constraints.foreach(aut => termsSet ++= intern(aut).getTransitionsTerms)
-      termsSet.toSeq
-    }
-  }
 }

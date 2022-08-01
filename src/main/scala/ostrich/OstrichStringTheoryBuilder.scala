@@ -58,7 +58,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh = false
+  private var eager, forward, minimizeAuts, useParikh, useCostEnriched = false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str: String): Unit = str match {
@@ -76,6 +76,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forward = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+    case CmdlParser.Opt("costenriched", value) =>
+      useCostEnriched = value
     case str =>
       super.parseParameter(str)
   }
@@ -115,7 +117,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
-                                    minimizeAutomata        = minimizeAuts))
+                                    minimizeAutomata        = minimizeAuts,
+                                    useCostEnriched         = useCostEnriched))
   }
 
 }
