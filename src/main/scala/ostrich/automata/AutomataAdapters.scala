@@ -158,12 +158,6 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton](
 
   def outgoingTransitions(from: State): Iterator[(State, TLabel)] =
     underlying.outgoingTransitions(from)
-
-  override def outgoingTransitionsWithVec(
-      from: State
-  ): Iterator[(State, TLabel, Seq[Int])] = {
-    underlying.outgoingTransitionsWithVec(from)
-  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

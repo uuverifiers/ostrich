@@ -78,6 +78,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useParikh = value
     case CmdlParser.Opt("costenriched", value) =>
       useCostEnriched = value
+      minimizeAuts = value  
+      // when use cost enriched strategy, 
+      // the initial auts must be minimize so that the final state is unique. 
     case str =>
       super.parseParameter(str)
   }

@@ -387,6 +387,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
+        case t : Throwable => t.printStackTrace(); throw t
       }
 
     override def computeModel(goal : Goal) : Seq[Plugin.Action] =

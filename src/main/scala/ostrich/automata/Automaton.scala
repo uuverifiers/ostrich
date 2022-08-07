@@ -231,8 +231,6 @@ trait AtomicStateAutomaton extends Automaton {
    */
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
 
-  def outgoingTransitionsWithVec(q: State) : Iterator[(State, TLabel, Seq[Int])] = Iterator()
-
   /**
    * Test if state is accepting
    */

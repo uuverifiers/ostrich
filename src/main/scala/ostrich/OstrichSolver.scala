@@ -32,7 +32,7 @@ package ostrich
 
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{PreOp, ConcatPreOp}
-import ostrich.parikh.preop.{LengthPreOp}
+import ostrich.parikh.preop.{LengthCEPreOp}
 
 import ap.SimpleAPI
 import ap.parser.IFunction
@@ -175,14 +175,13 @@ class OstrichSolver(theory : OstrichStringTheory,
         decodeRegexId(a, false)
       case FunPred(`str_len`)
           if flags.useCostEnriched => {
-          funApps += ((LengthPreOp(a(1)), Seq(a(0)), a(1)))
-          lengthVars.put(a(0), a(1))
+          funApps += ((LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
       }
       case FunPred(`str_len`) => {
           lengthVars.put(a(0), a(1))
         // Optimization below can be delete because it has been down at OstrichReducer.scala?
-        // if (a(1).isZero)
-        //   regexes += ((a(0), BricsAutomaton fromString ""))
+        if (a(1).isZero)
+          regexes += ((a(0), BricsAutomaton fromString ""))
       }
       case FunPred(`str_char_count`) => {
         // ignore
@@ -300,7 +299,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
-        if (useLength) {
+        if (useLength || useCostEnriched) {
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 

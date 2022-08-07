@@ -38,10 +38,6 @@ object OFlags {
     val Off, On, Auto = Value
   }
 
-  object StrategyOptions extends Enumeration {
-    val Basic, CostEnrich, Mixed = Value
-  }
-
   /** Compile-time flag that can be used to switch on debugging output
     * throughout the theory.
     */
