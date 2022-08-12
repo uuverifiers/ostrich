@@ -51,6 +51,7 @@ import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 import ostrich.parikh.TermGeneratorOrder
+import ostrich.parikh.CostEnrichedConvenience
 
 object OstrichSolver {
 

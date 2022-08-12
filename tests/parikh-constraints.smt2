@@ -11,7 +11,7 @@
     (str.contains
             (str.replace
                    (str.substr
-                               value2
+                            value2
                           0 (+ (str.indexof value2 "G" 0) 1))
                      "G" "g")
      "M")

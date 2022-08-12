@@ -12,7 +12,7 @@ metals.sbt
 *.conf
 
 # my template files
-[0-9].smt2
+[0-9].*
 **/testMain.scala
 *.jar
 

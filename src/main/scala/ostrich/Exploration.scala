@@ -353,7 +353,6 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       None
     } catch {
       case FoundModel(model) => Some(model)
-      case t : Throwable => t.printStackTrace(); None
     }
   }
 
@@ -641,13 +640,13 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       yield c
     }
 
-  private def pushLengthConstraints : Unit =
+  protected def pushLengthConstraints : Unit =
     for (p <- lengthProver) {
       p.push
       lengthPartitionStack push lengthPartitions.size
     }
 
-  private def popLengthConstraints : Unit =
+  protected def popLengthConstraints : Unit =
     for (p <- lengthProver) {
       p.pop
       lengthPartitions reduceToSize lengthPartitionStack.pop
