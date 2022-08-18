@@ -16,13 +16,16 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
 ) extends AtomicStateAutomatonAdapter[A](_underlying)
     with CostEnrichedAutomatonTrait {
 
+  val registers = Seq.fill(underlying.registers.size)(RegisterTerm())
+
+  val smap = new MHashMap[underlying.State, underlying.State]
+
   override type State = _underlying.State
 
   override type TLabel = _underlying.TLabel
 
   override lazy val internalise: CostEnrichedAutomaton = {
-    val builder = underlying.getBuilder
-    val smap = new MHashMap[underlying.State, underlying.State]
+    val builder = underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
 
     for (s <- states)
       smap.put(s, builder.getNewState)
@@ -34,10 +37,9 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
       builder.setAccept(t, isAccept(s))
     }
 
-    builder.asInstanceOf[CostEnrichedAutomatonBuilder].addRegisters(registers)
-    builder.asInstanceOf[CostEnrichedAutomatonBuilder].addIntFormula(intFormula)
+    builder.addRegisters(registers)
     builder.setInitialState(smap(initialState))
-    builder.asInstanceOf[CostEnrichedAutomatonBuilder].getAutomaton
+    builder.getAutomaton
   }
 }
 
@@ -60,9 +62,9 @@ object CostEnrichedInitFinalAutomaton {
   ) =
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, oldInit, oldFinal) =>
-        _CostEnrichedInitFinalAutomaton(a, initialState, oldFinal).internalise
+        _CostEnrichedInitFinalAutomaton(a, initialState, oldFinal)
       case _ =>
-        _CostEnrichedInitFinalAutomaton(aut, initialState, aut.acceptingStates).internalise
+        _CostEnrichedInitFinalAutomaton(aut, initialState, aut.acceptingStates)
     }
 
   def setFinal[A <: CostEnrichedAutomatonTrait](
@@ -71,9 +73,9 @@ object CostEnrichedInitFinalAutomaton {
   ) =
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, oldInit, oldFinal) =>
-        _CostEnrichedInitFinalAutomaton(a, oldInit, acceptingStates).internalise
+        _CostEnrichedInitFinalAutomaton(a, oldInit, acceptingStates)
       case _ =>
-        _CostEnrichedInitFinalAutomaton(aut, aut.initialState, acceptingStates).internalise
+        _CostEnrichedInitFinalAutomaton(aut, aut.initialState, acceptingStates)
     }
 }
 
@@ -83,11 +85,14 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     val _acceptingStates: Set[A#State]
 ) extends CostEnrichedAutomatonAdapter[A](_underlying) {
 
-  lazy val parikhTheory = internalise.parikhTheory
+  override def toString = internalise.toString()
+
+  val transitionsWithTerm = internalise.transitionsWithTerm
+  
+  lazy val parikhImage = internalise.parikhImage
 
   def getTransitionsTerms = internalise.getTransitionsTerms
 
-  val registers = Seq.fill(underlying.registers.size)(RegisterTerm())
 
   override lazy val initialState = _initialState
 
@@ -130,13 +135,9 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
 
   def outgoingTransitionsWithTerm(
       q: State
-  ): Iterator[(State, TLabel, Term)] = {
-    val _states = states
-    for (
-      p @ (s, _, _) <- underlying.outgoingTransitionsWithTerm(q);
-      if _states contains s
-    )
-      yield p
-  }
+  ): Iterator[(State, TLabel, Term)] =
+    // The transtion terms are unique for each internalise
+    // We can not use `underlying.outgoingTransitionsWithTerm(q)` directly
+    internalise.outgoingTransitionsWithTerm(smap.getOrElse(q, q))
 
 }

@@ -98,6 +98,8 @@ object Exploration {
      * constraints
      */
     def getAcceptedWordLen(len : Int) : Seq[Int]
+
+    def getAcceptedWordOption : Option[Seq[Int]] = None
   }
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
@@ -572,7 +574,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             if (Seqs.disjointSeq(newConstraints, conflict)) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-//println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
+println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
@@ -823,8 +825,10 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
     def assertConstraint(aut : Automaton) : Option[ConflictSet] =
       if (constraintSet contains aut) {
+        println("contain")
         None
       } else {
+        println("check")
         var potentialConflicts =
           (watchedAutomata get aut) match {
             case Some(incAuts) => {

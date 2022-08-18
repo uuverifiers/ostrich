@@ -56,8 +56,8 @@ class CostEnrichedAutomatonBuilder
   }
 
   // prepends regsters
-  def addRegisters(registers: Seq[Term]) = {
-    registers ++=: this.registers
+  def addRegisters(_registers: Seq[Term]) = {
+    _registers ++=: registers
   }
 
   // add a (transition -> vector) map to etaMap

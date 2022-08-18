@@ -7,13 +7,14 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.automata.CostEnrichedInitFinalAutomaton
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "ConcatCEPreOp"
 
   def addConcatPreRegsFormula(
-      concatLeft: CostEnrichedAutomaton,
-      concatRight: CostEnrichedAutomaton,
-      result: CostEnrichedAutomaton
+      concatLeft: CostEnrichedAutomatonTrait,
+      concatRight: CostEnrichedAutomatonTrait,
+      result: CostEnrichedAutomatonTrait
   ): Unit = {
     val leftRegs = concatLeft.registers
     val rightRegs = concatRight.registers
@@ -22,7 +23,7 @@ object ConcatCEPreOp extends CEPreOp {
       (reg + rightRegs(i)) === resultRegs(i)
     })
     concatLeft.addIntFormula(regsRelation)
-    concatRight.addIntFormula(regsRelation)
+    // concatRight.addIntFormula(regsRelation)
   }
 
   def apply(
@@ -30,7 +31,7 @@ object ConcatCEPreOp extends CEPreOp {
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val resultAut = automaton2CostEnriched(resultConstraint)
-    val argLengths: Seq[Option[(Automaton, Seq[Int])]] = (
+    val argLengths = (
       for (argAuts <- argumentConstraints) yield {
         (for (
           aut <- argAuts;
@@ -92,8 +93,8 @@ object ConcatCEPreOp extends CEPreOp {
             val relatedArgs = List(List(), List(lenAut))
             (preImage.iterator, relatedArgs)
           }
-          case None =>
-            val preImage = 
+          case _ =>
+            val preImage =
               for (s <- resultAut.states) yield {
                 val concatLeft =
                   CostEnrichedInitFinalAutomaton.setFinal(resultAut, Set(s))

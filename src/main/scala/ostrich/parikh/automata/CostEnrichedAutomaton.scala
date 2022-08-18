@@ -65,7 +65,7 @@ object CostEnrichedAutomaton {
     */
   def parikhTheory(aut: Automaton): Formula = aut match {
     case that: CostEnrichedAutomaton =>
-      that.parikhTheory
+      that.parikhImage
     case that: AtomicStateAutomatonAdapter[_] =>
       parikhTheory(that.internalise)
   }
@@ -103,10 +103,18 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
 
   type TLabel = (Char, Char)
 
+  /** Registers storing count value for accepting state.
+    */
   val registers: Seq[Term]
 
+  /** Enssential linear arithmatic constraints for the automaton.
+    */
   var intFormula: Formula = Conjunction.TRUE
 
+  /** Add linear arithmatic constraints to the automaton.
+    * @param f
+    *   the LIA constraints
+    */
   def addIntFormula(f: Formula) = {
     intFormula = conj(intFormula, f)
   }
@@ -134,9 +142,15 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
       None
   }
 
-  val parikhTheory: Formula 
+  /** Prikh image of the automaton
+    */
+  val parikhImage: Formula
 
+  /** Return a sequence of terms representing transtions
+    */
   def getTransitionsTerms: Seq[Term]
+
+  val transitionsWithTerm: Iterator[(State, TLabel, State, Term)]
 }
 
 /** Wrapper for the BRICS automaton class. New features added:
@@ -151,6 +165,11 @@ class CostEnrichedAutomaton(
 ) extends CostEnrichedAutomatonTrait {
 
   var minimised = false
+
+  val transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
+    transitions.map { case (from, l, to) =>
+      (from, l, to, transTermMap((from, l, to)))
+    }
 
   /** constructor */
   def this(underlying: BAutomaton) =
@@ -182,12 +201,14 @@ class CostEnrichedAutomaton(
     new CostEnrichedAutomaton(new BAutomaton)
 
   def &(that: Automaton): Automaton = {
-    // TODO：intersection of automata
 
     val aut1 = this
     val aut2 = getCEAutomaton(that)
     val autBuilder = new CostEnrichedAutomatonBuilder
 
+    // old transtion term to a set of new transition terms
+    // the value of old transtion term is the sum of values of new transtion terms
+    // the value of olde transtion term will be used to find accepted word
     val oldTerm2NewTerms = new MHashMap[Term, MHashSet[Term]]
 
     // begin intersection
@@ -200,6 +221,7 @@ class CostEnrichedAutomaton(
       aut1.isAccept(initialState1) && aut2.isAccept(initialState2)
     )
 
+    // from old states pair to new state
     val newStateMap = new MHashMap[(State, State), State]
     var worklist = new ArrayStack[(State, State)]
 
@@ -213,6 +235,7 @@ class CostEnrichedAutomaton(
         (t1, label1, vec1, term1) <- aut1.outgoingTransitionsWithInfo(state1);
         (t2, label2, vec2, term2) <- aut2.outgoingTransitionsWithInfo(state2)
       ) {
+        // intersect transition
         LabelOps.intersectLabels(label1, label2) match {
           case Some(label) => {
             if (newStateMap.contains((t1, t2))) {
@@ -257,9 +280,9 @@ class CostEnrichedAutomaton(
         }
       }
     }
-    oldTerm2NewTerms.foreach { case (oldTerm, newTerms) =>
-      autBuilder.addIntFormula(oldTerm === newTerms.reduce(_ + _))
-    }
+    // oldTerm2NewTerms.foreach { case (oldTerm, newTerms) =>
+    //   autBuilder.addIntFormula(oldTerm === newTerms.reduce(_ + _))
+    // }
     autBuilder.addIntFormula(aut1.intFormula)
     autBuilder.addIntFormula(aut2.intFormula)
     autBuilder.addRegisters(aut1.registers ++ aut2.registers)
@@ -421,7 +444,7 @@ class CostEnrichedAutomaton(
 
   /** Parikh image of this automaton
     */
-  lazy val parikhTheory: Formula = {
+  lazy val parikhImage: Formula = {
 
     // BUG: when accepting states are more than one, the formula is not correct
     import ap.terfor.TerForConvenience._
@@ -445,20 +468,34 @@ class CostEnrichedAutomaton(
     }
 
     // consistent flow ///////////////////////////////////////////////////////////////
-    var consistentFlowFormula = Conjunction.TRUE
+    var consistentFlowRejectStates = Conjunction.TRUE
 
-    states.foreach { s =>
-      val outFlowTerms_ = outFlowTerms(s)
+    states.filterNot(acceptingStates contains).foreach { s =>
       val outFlow: LinearCombination =
-        if (s.isAccept()) outFlowTerms_.reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-        else outFlowTerms_.reduceLeftOption(_ + _).getOrElse(l(0))
-      val inFlowTerms_ = inFlowTerms(s)
+        outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
       val inFlow: LinearCombination =
-        if (s == initialState) inFlowTerms_.reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-        else inFlowTerms_.reduceLeftOption(_ + _).getOrElse(l(0))
+        if (s == initialState)
+          inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+        else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
 
-      consistentFlowFormula = conj(consistentFlowFormula, outFlow === inFlow)
+      consistentFlowRejectStates =
+        conj(consistentFlowRejectStates, outFlow === inFlow)
     }
+
+    var conststentFlowAcceptingStates = Conjunction.TRUE
+    acceptingStates.foreach { s =>
+      val inFlow: LinearCombination =
+        if (s == initialState)
+          inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+        else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
+      val outFlow: LinearCombination =
+        outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+      conststentFlowAcceptingStates =
+        disj(conststentFlowAcceptingStates, inFlow === outFlow)
+    }
+
+    var consistentFlowFormula =
+      conj(consistentFlowRejectStates, conststentFlowAcceptingStates)
 
     // every transtion term should greater than 0
     getTransitionsTerms.foreach { term =>
@@ -501,6 +538,8 @@ class CostEnrichedAutomaton(
 
   override lazy val getLengthAbstraction: Formula = Conjunction.TRUE
 
-  override def toString : String = "CostEnrichedAutomaton@" + underlying.toString
-  
+  override def toString: String =
+      underlying.toString +
+      getTransitionsTerms + "\n\n"
+
 }

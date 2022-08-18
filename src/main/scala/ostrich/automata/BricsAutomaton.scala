@@ -293,7 +293,7 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
   def enumDisjointLabels : Iterable[(Char, Char)] =
     disjointLabels.toIterable
 
-  /**
+/**
    * Enumerate all labels with overlaps removed such that the whole
    * alphabet is covered (including internal characters)
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]

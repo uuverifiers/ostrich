@@ -1,6 +1,12 @@
 package ostrich.parikh
 
-import scala.collection.mutable.{Map => MMap, HashSet => MHashSet, HashMap => MHashMap, ArrayStack}
+import scala.collection.mutable.{
+  Map => MMap,
+  HashSet => MHashSet,
+  HashMap => MHashMap,
+  TreeSet => MTreeSet,
+  ArrayStack
+}
 import ap.terfor.Term
 import ap.api.SimpleAPI
 import CostEnrichedConvenience._
@@ -11,8 +17,20 @@ import TermGeneratorOrder._
 import SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
+
+import ostrich.automata.BricsTLabelEnumerator
+import scala.collection.mutable.ArrayBuffer
+
+object StringSolverStatus extends Enumeration {
+  val Sat, Unsat, Unknown = Value
+}
 
 object ParikhUtil {
+
+  type State = CostEnrichedAutomatonTrait#State
+  type TLabel = CostEnrichedAutomatonTrait#TLabel
+
   def getAllConstantTerms(auts: Seq[CostEnrichedAutomatonTrait]): Seq[Term] = {
     val termsSet = new MHashSet[Term]
     auts.foreach(aut => termsSet ++= aut.getTransitionsTerms)
@@ -35,7 +53,9 @@ object ParikhUtil {
     /** Check whether all states are accepted
       */
     def isAccepting(states: Seq[State]): Boolean =
-      states forall (_.isAccept)
+      states zip auts forall {
+        case (state, aut) => aut.isAccept(state)
+      }
 
     /** One step of intersection
       */
@@ -117,76 +137,192 @@ object ParikhUtil {
     None
   }
 
-  /** Given a sequence of automata, heuristicly product the parikh image of
-    * them. This function is sound, but not complete.
+  /** Given a sequence of automata and synchronized length, return a sequence of
+    * automata that is equivalent to the given sequence of automata. And return
+    * the map from state to its prefix string
     * @param auts
-    *   the automata
-    * @param lengthProver
-    *   the prover to check the parikh image
-    * @return
-    *   true if find an accepted word, false otherwise
+    *   the sequence of automata
+    * @param synclen
+    *   the length need to synchronize
     */
-  def checkConsistenceByParikh(
+  def getSyncLenAuts(
       auts: Seq[CostEnrichedAutomatonTrait],
-      lengthProver: Option[SimpleAPI]
-  ): Boolean = {
-    val syncMaxLen = 2
-    var syncCurrentLen = 0
-    val p = lengthProver.getOrElse(
-      SimpleAPI()
-    )
-    while (syncCurrentLen <= syncMaxLen) {
-      checkConsistenceByParikhStep(auts, p, syncCurrentLen) match {
-        case true  => {
-          val lengthModel = new MHashMap[Term, Int]
-          findAcceptedWord(auts, lengthModel) match {
-            case Some(w) => return true
-            case None => checkConsistenceByParikhStep(auts, p, syncCurrentLen + 1)
+      labels: MTreeSet[TLabel],
+      synclen: Int
+  ): (Seq[CostEnrichedAutomatonTrait], MMap[State, Seq[TLabel]]) = {
+    assert(synclen >= 1)
+    val newState2Prefix = new MHashMap[State, Seq[TLabel]]
+    val newAuts = auts.map { case aut =>
+      val (newAut, map) = getSyncLenAut(aut, labels, synclen)
+      newState2Prefix ++= map
+      newAut
+    }
+    (newAuts, newState2Prefix)
+  }
+
+  /** Given an automaton and synchronized length, return an automaton that is
+    * equivalent to the given automaton. And return the map from state to its
+    * prefix string
+    * @param aut
+    *   the automaton
+    * @param synclen
+    *   the length need to synchronize
+    */
+  def getSyncLenAut(
+      aut: CostEnrichedAutomatonTrait,
+      labels: MTreeSet[TLabel],
+      synclen: Int
+  ): (CostEnrichedAutomatonTrait, MMap[State, Seq[TLabel]]) = {
+    assert(synclen >= 1)
+    // prefix len
+    val prefixLen = synclen - 1
+    // (old state, prefix string) pair
+    val worklist = new ArrayStack[(State, Seq[TLabel])]
+    val seenSet = new MHashSet[(State, Seq[TLabel])]
+    // pair (old state, prefix string) to new state
+    val oldStateWithPrefix2newState = new MHashMap[(State, Seq[TLabel]), State]
+    // new state to prefix string
+    val newState2Prefix = new MHashMap[State, Seq[TLabel]]
+    val builder = aut.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
+
+    val initialState = builder.getNewState
+    builder.setInitialState(initialState)
+    builder.setAccept(initialState, aut.isAccept(aut.initialState))
+
+    worklist.push((aut.initialState, Seq()))
+    oldStateWithPrefix2newState += ((aut.initialState, Seq()) -> initialState)
+    newState2Prefix += (initialState -> Seq())
+
+    while (!worklist.isEmpty) {
+      val (oldStatePre, prefix) = worklist.pop
+      if (seenSet.add((oldStatePre, prefix))) {
+        val newStatePre = oldStateWithPrefix2newState((oldStatePre, prefix))
+        for (
+          (to, (lMin, lMax), vec) <- aut.outgoingTransitionsWithVec(oldStatePre)
+        ) {
+          val splitLabelIt = labels
+            .from((lMin, Char.MinValue))
+            .to((lMax, Char.MaxValue))
+            .toIterable
+          for (label <- splitLabelIt) {
+            val newPrefix = (prefix :+ label).take(prefixLen)
+            val newState = oldStateWithPrefix2newState.getOrElse(
+              (to, newPrefix),
+              builder.getNewState
+            )
+            builder.addTransition(newStatePre, label, newState, vec)
+            builder.setAccept(newState, aut.isAccept(to))
+            worklist.push((to, newPrefix))
+            oldStateWithPrefix2newState += ((to, newPrefix) -> newState)
+            newState2Prefix += (newState -> newPrefix)
           }
         }
-        case false => false
       }
     }
-    false
+    builder.addIntFormula(aut.intFormula)
+    builder.addRegisters(aut.registers)
+    (builder.getAutomaton, newState2Prefix)
   }
 
-  /** Given a sequence of automata, heuristicly product the parikh image of
-    * them. Guarantee that the number of substring of length `syncLen` are same
-    * for every automaton.
+  /** Given a sequence of automata, return a set of labels. The labels represent
+    * all labels in `auts` and have min interval
     * @param auts
-    *   the automata
-    * @param lengthProver
-    *   the prover to check the parikh image
-    * @param syncLen
-    *   the length of substring
-    * @return
-    *   true if the parikh image is satisfiable, false otherwise
+    *   the sequence of automata
     */
-  def checkConsistenceByParikhStep(
-      auts: Seq[CostEnrichedAutomatonTrait],
-      lengthProver: SimpleAPI,
-      syncLen: Int
-  ): Boolean = {
-    // TODO: implement it 
-    true
+  def split2MinLabels(
+      auts: Seq[CostEnrichedAutomatonTrait]
+  ): MTreeSet[TLabel] = {
+    val oldLabels = new MHashSet[TLabel]
+    for (aut <- auts)
+      for ((_, label, _) <- aut.transitions)
+        oldLabels += label
+    val splitedLabels = new MTreeSet[TLabel]
+    new BricsTLabelEnumerator(oldLabels.iterator).enumDisjointLabels.foreach(
+      splitedLabels += _
+    )
+    splitedLabels
   }
 
-  /**
-    * Given a sequence of automata, consider them as an infinite transition system.
-    * The bad state is (q1, ..., qn, \varphi) where q1, ..., qn are accepted state and 
-    * formula \varphi is consistent with other linear arithmetic constraints. 
-    * Use algorithm **IC3** to solve this problem. 
+  /** Compute a formula that represents the synchronization of substring from
+    * length 1 to `synclen` in `auts`
+    * @param auts
+    *   the sequence of automata
+    * @param states2prefix
+    *   the map from state to its prefix string
+    * @param labels
+    *   the set of splited labels
+    * @param synclen
+    *   the max length need to synchronize
+    */
+  def sync(
+      auts: Seq[CostEnrichedAutomatonTrait],
+      states2Prefix: MMap[State, Seq[TLabel]],
+      labels: MTreeSet[TLabel],
+      synclen: Int
+  ): Formula = {
+    if (synclen == 0) return Conjunction.TRUE
+    var finalFormula = Conjunction.TRUE
+    var strings : Seq[Traversable[TLabel]] = Seq()
+    for (i <- 0 until synclen + 1) 
+      strings = strings ++: crossJoin(Seq.fill(i)(labels)).toSeq
+      
+    val commonStr2LTerm = strings.map { case str => (str, LabelTerm()) }.toMap
+    for (aut <- auts) {
+      val lTerm2Terms = new MHashMap[Term, MHashSet[Term]]
+      for ((from, label, to, tTerm) <- aut.transitionsWithTerm) {
+        val prefix = states2Prefix(from)
+        val str = prefix :+ label
+        val lTerm = commonStr2LTerm(str)
+        // partition transition terms by transition label
+        lTerm2Terms.getOrElseUpdate(lTerm, new MHashSet[Term]).add(tTerm)
+      }
+      // if the label does not appear in any transtion, the label count is 0
+      commonStr2LTerm.values.filterNot(lTerm2Terms.contains).foreach { lTerm =>
+        finalFormula = finalFormula & (lTerm === 0)
+      }
+      // label count is the sum of transition terms
+      lTerm2Terms.foreach { case (lTerm, terms) =>
+        finalFormula = finalFormula & (lTerm === terms
+          .reduceOption(_ + _)
+          .getOrElse(l(0))) & (lTerm >= 0)
+      }
+    }
+    finalFormula
+  }
+
+  /** Compute cross join of a sequence of lists
+    * @param list
+    *   the list of list need to be cross joined
+    */
+  def crossJoin[T](
+      list: Traversable[Traversable[T]]
+  ): Traversable[Traversable[T]] =
+    list match {
+      case Nil       => Nil
+      case xs :: Nil => xs map (Traversable(_))
+      case x :: xs =>
+        for {
+          i <- x
+          j <- crossJoin(xs)
+        } yield Traversable(i) ++ j
+    }
+
+  /** Given a sequence of automata, consider them as an infinite transition
+    * system. The bad state is (q1, ..., qn, \varphi) where q1, ..., qn are
+    * accepted state and formula \varphi is consistent with other linear
+    * arithmetic constraints. Use algorithm **IC3** to solve this problem.
     * @param auts
     *   the automata
     * @param lengthProver
     *   the prover to check whether \varphi is consistent
-    * @return true if find a bad state; otherwise, false.
+    * @return
+    *   true if find a bad state; otherwise, false.
     */
   def checkConsistenceByIC3(
       auts: Seq[CostEnrichedAutomatonTrait],
       lengthProver: Option[SimpleAPI]
-  ): Boolean = {
-    // TODO: implement it 
-    true
+  ) = {
+    // TODO: implement it
+    StringSolverStatus.Unknown
   }
 }

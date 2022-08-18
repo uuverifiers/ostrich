@@ -37,3 +37,13 @@ object TransitionTerm {
     transTerm
   }
 }
+
+object LabelTerm {
+  var count = 0
+  def apply(): Term = {
+    count += 1
+    val transTerm = new ConstantTerm(s"L$count")
+    TermGeneratorOrder.extend(transTerm)
+    transTerm
+  }
+}
