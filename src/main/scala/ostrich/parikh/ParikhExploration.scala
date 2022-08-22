@@ -47,7 +47,6 @@ class ParikhExploration(
       _flags
     ) {
   import Exploration._
-  import OFlags.debug
 
   // if unknown is true, the unsat result is unsound, return empty conflict set
   var unknown = false
@@ -58,7 +57,7 @@ class ParikhExploration(
   var allStrTerms = allTerms
 
   funApps.foreach {
-    case (_: LengthCEPreOp, _, res) =>
+    case (_: LengthCEPreOp, _, res) =>  // length op
       allStrTerms = allStrTerms - res
       integerTerm += res
     case (_, _, _) =>
@@ -96,24 +95,19 @@ class ParikhExploration(
     apps match {
 
       case List() => {
-        if (debug)
-          Console.err.println("Trying to contruct model")
-
-        // TODO: Parikh solver will introduce integer, we should consider
-        // them when generate model.
 
         // we are finished and just have to construct a model
         val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
 
         for (t <- allTerms)
           constraintStores(t).ensureCompleteLengthConstraints
-        for (core <- checkLengthConsistency){
+        for (_ <- checkLengthConsistency){
           // we failed and need to try other pre-image
           println("fail at final linear arithmatic check")
-          return core
+          return Seq()
         }
 
-        // values for string variables
+        // values for leaf string variables
         val leafTerms =
           allTerms filter { case t => !(resultTerms contains t) }
         for (t <- leafTerms) {
@@ -124,13 +118,14 @@ class ParikhExploration(
           }
         }
 
+        // values for integer variables
+
         // lengthModel must be assigned after store.getAcceptedWordOption
         // because the store.getAcceptedWordOption will change the formula to be checked
         val lengthModel = {
           Some(_lengthProver.get.partialModel)
         }
 
-        // values for integer variables
         for (
           lModel <- lengthModel;
           c <- integerTerm;
@@ -138,6 +133,7 @@ class ParikhExploration(
         )
           model.put(c, Left(cVal))
 
+        // values for result variables
         val allFunApps: Iterator[(PreOp, Seq[Term], Term)] =
           (for (
             (ops, res) <- sortedFunApps.reverseIterator;
@@ -166,11 +162,6 @@ class ParikhExploration(
                 )
             }
 
-          if (debug)
-            Console.err.println(
-              "Derived model value: " + res + " <- " + args
-            )
-
           for (oldValue <- model get res) {
             var _oldValue: Seq[Int] = Seq()
             oldValue match {
@@ -195,8 +186,6 @@ class ParikhExploration(
         throw FoundModel(model.toMap)
       }
       case (op, args, res) :: otherApps => {
-        if (debug)
-          Console.err.println("dfExplore, depth " + apps.size)
         dfExploreOp(op, args, res, constraintStores(res).getContents, otherApps)
       }
     }
@@ -212,9 +201,6 @@ class ParikhExploration(
       dfExplore(nextApps)
 
     case resAut :: otherAuts => {
-      if (debug)
-        Console.err.println("dfExploreOp, #constraints " + resConstraints.size)
-
       ap.util.Timeout.check
 
       val argConstraints =
