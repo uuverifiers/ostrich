@@ -8,7 +8,7 @@ import dk.brics.automaton.{
   State => BState
 }
 import scala.collection.mutable.{HashMap => MHashMap}
-import scala.collection.JavaConversions.asScalaIterator
+import scala.collection.JavaConverters.asScalaIterator
 import ap.terfor.Term
 import scala.collection.mutable.ArrayBuffer
 import ap.terfor.Formula
@@ -130,7 +130,7 @@ class CostEnrichedAutomatonBuilder
   def outgoingTransitions(
       q: State
   ): Iterator[(State, TLabel)] =
-    for (t <- q.getTransitions.iterator)
+    for (t <- asScalaIterator(q.getTransitions.iterator))
       yield (t.getDest, (t.getMin, t.getMax))
       
   def setAccept(q: State, isAccepting: Boolean): Unit =
