@@ -48,6 +48,9 @@ class ParikhExploration(
     ) {
   import Exploration._
 
+  // lengthProver p is used to solve linear arithmatic constraints
+  val p = _lengthProver.get
+
   // if unknown is true, the unsat result is unsound, return empty conflict set
   var unknown = false
 
@@ -57,7 +60,7 @@ class ParikhExploration(
   var allStrTerms = allTerms
 
   funApps.foreach {
-    case (_: LengthCEPreOp, _, res) =>  // length op
+    case (_: LengthCEPreOp, _, res) => // length op
       allStrTerms = allStrTerms - res
       integerTerm += res
     case (_, _, _) =>
@@ -101,7 +104,7 @@ class ParikhExploration(
 
         for (t <- allTerms)
           constraintStores(t).ensureCompleteLengthConstraints
-        for (_ <- checkLengthConsistency){
+        for (_ <- checkLengthConsistency) {
           // we failed and need to try other pre-image
           println("fail at final linear arithmatic check")
           return Seq()
@@ -114,7 +117,7 @@ class ParikhExploration(
           val store = constraintStores(t)
           store.getAcceptedWordOption match {
             case Some(w) => model.put(t, Right(w))
-            case None    => return Seq()  // unknown
+            case None    => return Seq() // unknown
           }
         }
 
@@ -123,7 +126,7 @@ class ParikhExploration(
         // lengthModel must be assigned after store.getAcceptedWordOption
         // because the store.getAcceptedWordOption will change the formula to be checked
         val lengthModel = {
-          Some(_lengthProver.get.partialModel)
+          Some(p.partialModel)
         }
 
         for (
@@ -162,6 +165,7 @@ class ParikhExploration(
                 )
             }
 
+          // check the consistence of old result values and computed result values
           for (oldValue <- model get res) {
             var _oldValue: Seq[Int] = Seq()
             oldValue match {
@@ -174,6 +178,7 @@ class ParikhExploration(
               )
           }
 
+          // check the result string value is accepted by its automaton
           if (!integerTerm.contains(res)) {
             if (!(constraintStores(res) isAcceptedWord resValue))
               throw new Exception(
@@ -208,16 +213,19 @@ class ParikhExploration(
 
       val collectedConflicts = new LinkedHashSet[TermConstraint]
 
+      // compute pre image for op
       val (newConstraintsIt, argDependencies) =
         measure("pre-op") { op(argConstraints, resAut) }
+
+      // iterate over pre image
       while (measure("pre-op hasNext") { newConstraintsIt.hasNext }) {
         ap.util.Timeout.check
 
         val argCS = measure("pre-op next") { newConstraintsIt.next }
 
+        // push
         for (a <- args)
           constraintStores(a).push
-
         pushLengthConstraints
 
         try {
@@ -227,7 +235,7 @@ class ParikhExploration(
           for ((a, aut) <- args zip argCS)
             if (consistent) {
               newConstraints += TermConstraint(a, aut)
-
+              // add pre image aut to its constraint store, check consistency
               constraintStores(a).assertConstraint(aut) match {
                 case Some(conflict) => {
                   consistent = false
@@ -245,25 +253,27 @@ class ParikhExploration(
 
           if (consistent) {
             val conflict = dfExploreOp(op, args, res, otherAuts, nextApps)
-            // if (
-            //   !conflict.isEmpty && Seqs.disjointSeq(newConstraints, conflict)
-            // ) {
-            //   // we can jump back, because the found conflict does not depend
-            //   // on the considered function application
-            //   println("backjump " + (conflict map {
-            //     case TermConstraint(t, aut) => (t, aut)
-            //   }))
-            //   return conflict
-            // }
+            if (
+              !conflict.isEmpty && Seqs.disjointSeq(newConstraints, conflict)
+            ) {
+              // we can jump back, because the found conflict does not depend
+              // on the considered function application
+              println("backjump " + (conflict map {
+                case TermConstraint(t, aut) => (t, aut)
+              }))
+              return conflict
+            }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
           }
         } finally {
+          // pop
           for (a <- args)
             constraintStores(a).pop
           popLengthConstraints
         }
       }
 
+      // generate conflict set
       if (needCompleteContentsForConflicts)
         collectedConflicts ++=
           (for (aut <- constraintStores(res).getCompleteContents)
@@ -368,27 +378,24 @@ class ParikhExploration(
       * them. This function is sound, but not complete.
       * @param auts
       *   the automata
-      * @param lengthProver
-      *   the prover to check the parikh image
       * @return
-      *   true if find an accepted word, false otherwise
+      *   `StringSolverStatus.Sat` if finding some accepted word;
+      *   `StringSolverStatus.Unsat` if finding unsatisfiable LIA;
+      *   `StringSolverStatus.Unknown` otherwise.
       */
     def checkConsistenceByParikh(
-        auts: Seq[CostEnrichedAutomatonTrait],
-        lengthProver: Option[SimpleAPI]
+        auts: Seq[CostEnrichedAutomatonTrait]
     ): StringSolverStatus.Value = {
-      val syncMinLen = 1 // greater than 0, 0 is meaningless and easy to lead `unknown`
+      val syncMinLen =
+        1 // greater than 0, 0 is meaningless and easy to lead `unknown`
       val syncMaxLen = 2 // max length to synchorin
       val maxRepeat =
         10 // max repeat times for find length model for each sychorinized length
-      val p = lengthProver.getOrElse(
-        SimpleAPI()
-      )
 
       for (i <- syncMinLen until syncMaxLen + 1) {
-        checkConsistenceByParikhStep(auts, p, i) match {
+        checkConsistenceByParikhStep(auts, i) match {
           case StringSolverStatus.Unknown => {
-            repeatFindAcceptedWord(p, currentParikhAuts, maxRepeat) match {
+            repeatFindAcceptedWord(currentParikhAuts, maxRepeat) match {
               case Some(_) => return StringSolverStatus.Sat
               case _       => // nothing
             }
@@ -404,16 +411,14 @@ class ParikhExploration(
       * same for every automaton.
       * @param auts
       *   the automata
-      * @param lengthProver
-      *   the prover to check the parikh image
       * @param syncLen
       *   the length of substring
       * @return
-      *   true if the parikh image is satisfiable, false otherwise
+      *   `StringSolverStatus.Unsat` if finding unsatisfiable LIA;
+      *   `StringSolverStatus.Unknown` otherwise.
       */
     def checkConsistenceByParikhStep(
         auts: Seq[CostEnrichedAutomatonTrait],
-        p: SimpleAPI,
         syncLen: Int
     ): StringSolverStatus.Value = {
       assert(syncLen >= 1)
@@ -428,23 +433,25 @@ class ParikhExploration(
       currentParikhAuts = syncLenAuts
       p.!!(currentFormula)
       p.addConstantsRaw(SymbolCollector constants currentFormula)
-      val status = p.???
-      if (status == ProverStatus.Unsat)
-        StringSolverStatus.Unsat
-      else
-        StringSolverStatus.Unknown
-      // p.??? match {
-      //   case ProverStatus.Unsat => StringSolverStatus.Unsat
-      //   case _                  => StringSolverStatus.Unknown
-      // }
+      p.??? match {
+        case ProverStatus.Unsat => StringSolverStatus.Unsat
+        case _                  => StringSolverStatus.Unknown
+      }
     }
 
+    /** Repeatly find accepted word for many times.
+      * @param auts
+      *   the automata
+      * @param maxRepeatTimes
+      *   the max repeat times
+      * @return
+      *   Some(word) if find accepted word; None otherwise
+      */
     def repeatFindAcceptedWord(
-        p: SimpleAPI,
         auts: Seq[CostEnrichedAutomatonTrait],
         maxRepeatTimes: Int
     ): Option[Seq[Int]] = {
-      for (i <- 0 until maxRepeatTimes + 1) {
+      for (_ <- 0 until maxRepeatTimes + 1) {
         resetTransTerm2Value(auts)
         findAcceptedWord(auts, transTerm2Value) match {
           case Some(w) => return Some(w)
@@ -460,9 +467,6 @@ class ParikhExploration(
         pushLengthConstraints
         p.!!(currentFormula)
         p.addConstantsRaw(SymbolCollector.constants(currentFormula))
-        // after p.???, the formula in p will be reset 
-        // so must add `pushLengthConstraints` and `popLengthConstraints`
-        // to restore the formula
         p.??? match {
           case ProverStatus.Unsat => return None
           case _                  => // do nothing
@@ -478,12 +482,8 @@ class ParikhExploration(
       *   `currentFormula`
       */
     def checkConsistenceByProduct(
-        auts: Seq[CostEnrichedAutomatonTrait],
-        lengthProver: Option[SimpleAPI]
+        auts: Seq[CostEnrichedAutomatonTrait]
     ): StringSolverStatus.Value = {
-      val p = lengthProver.getOrElse(
-        SimpleAPI()
-      )
       val productAut = auts.reduceLeft(_ & _)
       val linearArith = conj(productAut.intFormula, productAut.parikhImage)
       p.!!(linearArith)
@@ -504,27 +504,32 @@ class ParikhExploration(
       */
     def resetTransTerm2Value(auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
       transTerm2Value.clear()
-      val lModel = _lengthProver.get.partialModel
+      val lModel = p.partialModel
       for (
-        term <- getAllConstantTerms(auts);
+        term <- getAllTransTerms(auts);
         if term.constants.size == 1;
         tVal <- evalTerm(term)(lModel)
       )
         transTerm2Value.put(term, tVal.intValue)
     }
 
+    // After calling for `p.???`, the formula in p will be reset.
+    // Remember to use `pushLengthConstraints` and `popLengthConstraints`
+    // to store formula !!
+    /** push to store current linear arith formula before add new constraints
+      */
     def pushLengthConstraints: Unit = {
-      for (p <- _lengthProver) p.push
+      p.push
     }
 
+    /** pop to restore the linear arith formula
+      */
     def popLengthConstraints: Unit = {
-      for (p <- _lengthProver) p.pop
+      p.pop
     }
 
     def push: Unit = {
       constraintStack push constraints.size
-      // for (p <- _lengthProver) p.push
-      // formulaStack push formulas.size
     }
 
     def pop: Unit = {
@@ -533,9 +538,6 @@ class ParikhExploration(
         constraintSet -= constraints.last
         constraints reduceToSize (constraints.size - 1)
       }
-      // for (p <- _lengthProver) p.pop
-      // val oldSize2 = formulaStack.pop
-      // formulas reduceToSize oldSize2
     }
 
     def assertConstraint(aut: Automaton): Option[ConflictSet] = {
@@ -577,11 +579,11 @@ class ParikhExploration(
         pushLengthConstraints
         strategy match {
           case RegisterBased =>
-            res = checkConsistenceByProduct(auts, _lengthProver)
+            res = checkConsistenceByProduct(auts)
           case ParikhBased =>
-            res = checkConsistenceByParikh(auts, _lengthProver)
+            res = checkConsistenceByParikh(auts)
           case IC3Based =>
-            res = checkConsistenceByIC3(auts, _lengthProver)
+            res = checkConsistenceByIC3(auts)
         }
         popLengthConstraints
         res
@@ -659,10 +661,8 @@ class ParikhExploration(
     def getCompleteContents: List[Automaton] = constraints.toList
 
     def ensureCompleteLengthConstraints: Unit = {
-      for (p <- _lengthProver) {
-        p.!!(currentFormula)
-        p.addConstantsRaw(SymbolCollector.constants(currentFormula))
-      }
+      p.!!(currentFormula)
+      p.addConstantsRaw(SymbolCollector.constants(currentFormula))
     }
 
     def isAcceptedWord(w: Seq[Int]): Boolean = {
@@ -687,7 +687,7 @@ class ParikhExploration(
         case RegisterBased => Seq(currentProduct)
       }
       resetTransTerm2Value(finalCostraints)
-      repeatFindAcceptedWord(_lengthProver.get, finalCostraints, maxRepeatTimes)
+      repeatFindAcceptedWord(finalCostraints, maxRepeatTimes)
     }
 
     def getAcceptedWord: Seq[Int] = Seq() // no need, just the trait

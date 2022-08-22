@@ -27,7 +27,12 @@ object ParikhUtil {
   type State = CostEnrichedAutomatonTrait#State
   type TLabel = CostEnrichedAutomatonTrait#TLabel
 
-  def getAllConstantTerms(auts: Seq[CostEnrichedAutomatonTrait]): Seq[Term] = {
+  /**
+    * Get all transition terms from given automata.
+    * @param auts automata
+    * @return all transition terms
+    */
+  def getAllTransTerms(auts: Seq[CostEnrichedAutomatonTrait]): Seq[Term] = {
     val termsSet = new MHashSet[Term]
     auts.foreach(aut => termsSet ++= aut.getTransitionsTerms)
     termsSet.toSeq
@@ -309,14 +314,11 @@ object ParikhUtil {
     * arithmetic constraints. Use algorithm **IC3** to solve this problem.
     * @param auts
     *   the automata
-    * @param lengthProver
-    *   the prover to check whether \varphi is consistent
     * @return
     *   true if find a bad state; otherwise, false.
     */
   def checkConsistenceByIC3(
-      auts: Seq[CostEnrichedAutomatonTrait],
-      lengthProver: Option[SimpleAPI]
+      auts: Seq[CostEnrichedAutomatonTrait]
   ): StringSolverStatus.Value = {
     // TODO: implement it
     StringSolverStatus.Unknown

@@ -99,6 +99,10 @@ object Exploration {
      */
     def getAcceptedWordLen(len : Int) : Seq[Int]
 
+    /**
+     * Produce a word accepted by all the stored
+     * constraints, or None if no such word exists
+     */
     def getAcceptedWordOption : Option[Seq[Int]] = None
   }
 

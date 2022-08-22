@@ -300,7 +300,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
-        if (useLength || useCostEnriched) {
+        if (useLength) {
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
@@ -316,9 +316,14 @@ class OstrichSolver(theory : OstrichStringTheory,
           implicit val o = lengthProver.order
 
           Some(lengthProver)
-        } else {
+        } else if(useCostEnriched){
+          lengthProver setConstructProofs true
+          lengthProver.addConstantsRaw(order sort order.orderedConstants)
+
+          lengthProver addAssertion goal.facts.arithConj
+          Some(lengthProver)
+        } else
           None
-        }
 
       val exploration =
         if(useCostEnriched)
