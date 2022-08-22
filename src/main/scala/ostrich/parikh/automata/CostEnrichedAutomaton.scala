@@ -2,16 +2,12 @@ package ostrich.parikh.automata
 
 import ostrich.automata._
 
-import scala.collection.JavaConversions.{
-  asScalaIterator,
-  iterableAsScalaIterable
-}
+import scala.collection.JavaConversions.asScalaIterator
 
 import dk.brics.automaton.{
   BasicAutomata,
   BasicOperations,
   RegExp,
-  Transition,
   Automaton => BAutomaton,
   State => BState
 }
@@ -19,25 +15,16 @@ import scala.collection.mutable.{
   HashMap => MHashMap,
   HashSet => MHashSet,
   LinkedHashSet => MLinkedHashSet,
-  Stack => MStack,
-  TreeSet => MTreeSet,
-  MultiMap => MMultiMap,
-  Set => MSet
+  Stack => MStack
 }
 
 import ap.terfor.Term
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
-import scala.collection.immutable.{HashMap, Map}
+import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
 import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.TermOrder
-import scala.annotation.implicitNotFound
-import java.text.Normalizer.Form
-import ap.terfor.ConstantTerm
-import ap.terfor.OneTerm
 import scala.collection.mutable.ArrayStack
-import ap.SimpleAPI
 import ostrich.parikh._
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
@@ -115,7 +102,7 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     * @param f
     *   the LIA constraints
     */
-  def addIntFormula(f: Formula) = {
+  def addIntFormula(f: Formula): Unit = {
     intFormula = conj(intFormula, f)
   }
 
@@ -436,7 +423,7 @@ class CostEnrichedAutomaton(
     */
   def getTransitionsTerms: Seq[Term] = {
     val terms = new ArrayBuffer[Term]
-    transTermMap.foreach({ case (transition, term) =>
+    transTermMap.foreach({ case (_, term) =>
       terms += term
     })
     terms
@@ -449,7 +436,6 @@ class CostEnrichedAutomaton(
     // BUG: when accepting states are more than one, the formula is not correct
     import ap.terfor.TerForConvenience._
     import TermGeneratorOrder._
-    import ostrich.parikh.CostEnrichedConvenience._
 
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer

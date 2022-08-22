@@ -1,22 +1,16 @@
 package ostrich.parikh.automata
 
-import ostrich.automata.AtomicStateAutomaton
 import ostrich.automata.AtomicStateAutomatonAdapter
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.{TransitionTerm, RegisterTerm}
-import ap.terfor.Formula
-import ap.terfor.conjunctions.Conjunction
-import ap.terfor.TerForConvenience._
-import ostrich.parikh.TermGeneratorOrder._
 import ap.terfor.Term
-import dk.brics.automaton.{State => BState}
 
 abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
     val _underlying: A
 ) extends AtomicStateAutomatonAdapter[A](_underlying)
     with CostEnrichedAutomatonTrait {
 
-  val registers = Seq.fill(underlying.registers.size)(RegisterTerm())
+  val registers: Seq[Term] = Seq.fill(underlying.registers.size)(RegisterTerm())
 
   val smap = new MHashMap[underlying.State, underlying.State]
 
@@ -59,9 +53,9 @@ object CostEnrichedInitFinalAutomaton {
   def setInitial[A <: CostEnrichedAutomatonTrait](
       aut: A,
       initialState: A#State
-  ) =
+  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonTrait] =
     aut match {
-      case _CostEnrichedInitFinalAutomaton(a, oldInit, oldFinal) =>
+      case _CostEnrichedInitFinalAutomaton(a, _, oldFinal) =>
         _CostEnrichedInitFinalAutomaton(a, initialState, oldFinal)
       case _ =>
         _CostEnrichedInitFinalAutomaton(aut, initialState, aut.acceptingStates)
@@ -70,9 +64,9 @@ object CostEnrichedInitFinalAutomaton {
   def setFinal[A <: CostEnrichedAutomatonTrait](
       aut: A,
       acceptingStates: Set[CostEnrichedAutomatonTrait#State]
-  ) =
+  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonTrait] =
     aut match {
-      case _CostEnrichedInitFinalAutomaton(a, oldInit, oldFinal) =>
+      case _CostEnrichedInitFinalAutomaton(a, oldInit, _) =>
         _CostEnrichedInitFinalAutomaton(a, oldInit, acceptingStates)
       case _ =>
         _CostEnrichedInitFinalAutomaton(aut, aut.initialState, acceptingStates)
@@ -85,7 +79,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     val _acceptingStates: Set[A#State]
 ) extends CostEnrichedAutomatonAdapter[A](_underlying) {
 
-  override def toString = internalise.toString()
+  override def toString: String = internalise.toString()
 
   val transitionsWithTerm = internalise.transitionsWithTerm
   
@@ -96,10 +90,10 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
 
   override lazy val initialState = _initialState
 
-  override lazy val states =
+  override lazy val states: scala.collection.Set[underlying.State] =
     computeReachableStates(_initialState, _acceptingStates)
 
-  override lazy val acceptingStates =
+  override lazy val acceptingStates: Set[State] =
     _acceptingStates & states
 
   override def outgoingTransitions(q: State): Iterator[(State, TLabel)] = {

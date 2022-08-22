@@ -2,9 +2,6 @@ package ostrich.parikh
 
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.automata.Automaton
-import ostrich.preop.PreOp
-import ap.terfor.conjunctions.Conjunction
-import ap.parser.IExpression
 import ap.parser.Internal2InputAbsy
 import ap.terfor.Term
 import ap.parser.ITerm
@@ -12,15 +9,11 @@ import ap.terfor.ConstantTerm
 import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
-import scala.collection.mutable.HashMap
-import ostrich.automata.AtomicStateAutomatonAdapter.intern
-import ostrich.automata.AtomicStateAutomatonBuilder
-import ostrich.automata.AtomicStateAutomaton
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 
 object CostEnrichedConvenience {
 
-  def brics2CostEnriched(aut: Automaton) = {
+  def brics2CostEnriched(aut: Automaton): Automaton = {
     if (aut.isInstanceOf[BricsAutomaton])
       new CostEnrichedAutomaton(aut.asInstanceOf[BricsAutomaton].underlying)
     else if (aut.isInstanceOf[CostEnrichedAutomaton])

@@ -5,7 +5,7 @@ import ap.terfor.ConstantTerm
 import ap.terfor.TermOrder
 
 object TermGeneratorOrder{
-  implicit var order = TermOrder.EMPTY
+  implicit var order: TermOrder = TermOrder.EMPTY
   def apply(): TermOrder = order
   def extend(t: ConstantTerm): Unit = {
     order = order.extend(t)

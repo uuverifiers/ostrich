@@ -20,20 +20,14 @@ import ostrich.parikh.CostEnrichedConvenience._
 import scala.collection.breakOut
 import ostrich.parikh.preop.LengthCEPreOp
 import ap.basetypes.IdealInt
-import ap.terfor.SortedWithOrder
-import ostrich.OstrichSolver
-import ap.proof.theoryPlugins.Plugin
 import ap.terfor.TerForConvenience._
 import TermGeneratorOrder._
-import ap.terfor.Formula
 import ParikhUtil._
 import SimpleAPI.ProverStatus
 import ap.terfor.conjunctions.Conjunction
 import scala.collection.mutable.LinkedHashSet
 import ap.util.Seqs
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.automata.AtomicStateAutomatonAdapter.intern
-import ap.basetypes.Node
 
 class ParikhExploration(
     _funApps: Seq[(PreOp, Seq[Term], Term)],
@@ -64,10 +58,10 @@ class ParikhExploration(
   var allStrTerms = allTerms
 
   funApps.foreach {
-    case (preOp: LengthCEPreOp, args, res) =>
+    case (_: LengthCEPreOp, _, res) =>
       allStrTerms = allStrTerms - res
       integerTerm += res
-    case (preOp, args, res) =>
+    case (_, _, _) =>
   }
 
   override def findModel: Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
@@ -303,7 +297,7 @@ class ParikhExploration(
   }
 
   // need to be cost-enriched constraints
-  override val allInitialConstraints = {
+  override val allInitialConstraints: Seq[(Term, Automaton)] = {
     // transform brics automata to cost-enriched automata
     val initialConstraints = _initialConstraints.map { case (t, aut) =>
       (t, brics2CostEnriched(aut))
@@ -351,8 +345,6 @@ class ParikhExploration(
   protected def newStore(t: Term): ConstraintStore = new ParikhStore(t)
 
   private class ParikhStore(t: Term) extends ConstraintStore {
-    // the string accepted by this constraint store
-    private var acceptedString: Option[String] = None
     // the transition terms value used to generate accepted string
     private val transTerm2Value = new MHashMap[Term, Int]
     // current linear arithmatic constraints to be solved
@@ -411,7 +403,7 @@ class ParikhExploration(
         checkConsistenceByParikhStep(auts, p, i) match {
           case StringSolverStatus.Unknown => {
             repeatFindAcceptedWord(p, currentParikhAuts, maxRepeat) match {
-              case Some(w) => return StringSolverStatus.Sat
+              case Some(_) => return StringSolverStatus.Sat
               case _       => // nothing
             }
           }
@@ -437,7 +429,7 @@ class ParikhExploration(
         auts: Seq[CostEnrichedAutomatonTrait],
         p: SimpleAPI,
         syncLen: Int
-    ) = {
+    ): StringSolverStatus.Value = {
       assert(syncLen >= 1)
       val labels = split2MinLabels(auts)
       val (syncLenAuts, states2Prefix) = getSyncLenAuts(auts, labels, syncLen)
@@ -502,7 +494,7 @@ class ParikhExploration(
     def checkConsistenceByProduct(
         auts: Seq[CostEnrichedAutomatonTrait],
         lengthProver: Option[SimpleAPI]
-    ) = {
+    ): StringSolverStatus.Value = {
       val p = lengthProver.getOrElse(
         SimpleAPI()
       )

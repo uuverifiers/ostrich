@@ -9,18 +9,14 @@ import scala.collection.mutable.{
 }
 import ap.terfor.Term
 import ap.api.SimpleAPI
-import CostEnrichedConvenience._
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import TermGeneratorOrder._
-import SimpleAPI.ProverStatus
-import ap.parser.SymbolCollector
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 
 import ostrich.automata.BricsTLabelEnumerator
-import scala.collection.mutable.ArrayBuffer
 
 object StringSolverStatus extends Enumeration {
   val Sat, Unsat, Unknown = Value
@@ -123,7 +119,7 @@ object ParikhUtil {
             auts(0).LabelOps.sigmaLabel
           )
       ) {
-        val a = 1
+        
         if (visitedStates.add((reached, updatedModel))) {
           val newW = w :+ let
           val finishTrans = updatedModel.forall(_._2 == 0)
@@ -321,7 +317,7 @@ object ParikhUtil {
   def checkConsistenceByIC3(
       auts: Seq[CostEnrichedAutomatonTrait],
       lengthProver: Option[SimpleAPI]
-  ) = {
+  ): StringSolverStatus.Value = {
     // TODO: implement it
     StringSolverStatus.Unknown
   }

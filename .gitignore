@@ -23,3 +23,6 @@ metals.sbt
 # compiled file 
 project
 ecma2020/target
+
+# logs
+*.log

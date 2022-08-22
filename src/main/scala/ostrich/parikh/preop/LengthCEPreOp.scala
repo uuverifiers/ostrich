@@ -1,7 +1,7 @@
 package ostrich.parikh.preop
 
 import ostrich.automata.Automaton
-import ap.terfor.{Formula, Term, TermOrder, TerForConvenience}
+import ap.terfor.{Term, TerForConvenience}
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait

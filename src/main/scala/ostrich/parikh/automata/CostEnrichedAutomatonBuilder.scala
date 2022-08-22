@@ -3,18 +3,12 @@ package ostrich.parikh.automata
 import ostrich.automata._
 
 import dk.brics.automaton.{
-  BasicAutomata,
-  BasicOperations,
-  RegExp,
   Transition,
   Automaton => BAutomaton,
   State => BState
 }
 import scala.collection.mutable.{HashMap => MHashMap}
-import scala.collection.JavaConversions.{
-  asScalaIterator,
-  iterableAsScalaIterable
-}
+import scala.collection.JavaConversions.asScalaIterator
 import ap.terfor.Term
 import scala.collection.mutable.ArrayBuffer
 import ap.terfor.Formula
@@ -30,9 +24,9 @@ class CostEnrichedAutomatonBuilder
   type State = CostEnrichedAutomaton#State
   type TLabel = CostEnrichedAutomaton#TLabel
 
-  val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
+  var minimize = false
 
-  private var minimize = false
+  val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
 
   val baut: BAutomaton = {
     val baut = new BAutomaton
@@ -40,33 +34,33 @@ class CostEnrichedAutomatonBuilder
     baut
   }
 
-  private var etaMap: MHashMap[(State, TLabel, State), Seq[Int]] = new MHashMap
-  private var registers: ArrayBuffer[Term] = new ArrayBuffer()
-  private var transTermMap: MHashMap[(State, TLabel, State), Term] = new MHashMap
+  private val etaMap: MHashMap[(State, TLabel, State), Seq[Int]] = new MHashMap
+  private val registers: ArrayBuffer[Term] = new ArrayBuffer()
+  private val transTermMap: MHashMap[(State, TLabel, State), Term] = new MHashMap
   private var intFormula: Formula = Conjunction.TRUE
   
   // add interger arithmatic to this aut
-  def addIntFormula(f: Formula) = {
+  def addIntFormula(f: Formula): Unit = {
     intFormula = conj(intFormula, f)
   }
 
   // prepends a regsiter
-  def addRegister(register: Term) = {
+  def addRegister(register: Term): ArrayBuffer[Term] = {
     register +=: registers
   }
 
   // prepends regsters
-  def addRegisters(_registers: Seq[Term]) = {
+  def addRegisters(_registers: Seq[Term]): ArrayBuffer[Term] = {
     _registers ++=: registers
   }
 
   // add a (transition -> vector) map to etaMap
-  def addEtaMap(map: MHashMap[(State, TLabel, State), Seq[Int]]) = {
+  def addEtaMap(map: MHashMap[(State, TLabel, State), Seq[Int]]): MHashMap[(State, TLabel, State),Seq[Int]] = {
     this.etaMap ++= map
   }
 
   // add a (transition -> term) map to transTermMap
-  def addTransTermMap(map: MHashMap[(State,TLabel,State), Term]) = {
+  def addTransTermMap(map: MHashMap[(State,TLabel,State), Term]): MHashMap[(State, TLabel, State),Term] = {
     this.transTermMap ++= map
   }
 
