@@ -372,7 +372,7 @@ class ParikhExploration(
     case object IC3Based extends ProductStrategy
     case object ParikhBased extends ProductStrategy
 
-    val strategy: ProductStrategy = ParikhBased
+    val strategy: ProductStrategy = RegisterBased
 
     /** Given a sequence of automata, heuristicly product the parikh image of
       * them. This function is sound, but not complete.
@@ -388,9 +388,9 @@ class ParikhExploration(
     ): StringSolverStatus.Value = {
       val syncMinLen =
         1 // greater than 0, 0 is meaningless and easy to lead `unknown`
-      val syncMaxLen = 2 // max length to synchorin
+      val syncMaxLen = 3 // max length to synchorinize
       val maxRepeat =
-        10 // max repeat times for find length model for each sychorinized length
+        20 // max repeat times for find length model for each sychorinized length
 
       for (i <- syncMinLen until syncMaxLen + 1) {
         checkConsistenceByParikhStep(auts, i) match {
@@ -452,6 +452,7 @@ class ParikhExploration(
         maxRepeatTimes: Int
     ): Option[Seq[Int]] = {
       for (_ <- 0 until maxRepeatTimes + 1) {
+        println("repeat find word")
         resetTransTerm2Value(auts)
         findAcceptedWord(auts, transTerm2Value) match {
           case Some(w) => return Some(w)
@@ -681,12 +682,15 @@ class ParikhExploration(
       *   the accepted word
       */
     override def getAcceptedWordOption: Option[Seq[Int]] = {
-      val maxRepeatTimes = 10
+      var maxRepeatTimes = 0
       val finalCostraints = strategy match {
-        case ParikhBased   => currentParikhAuts
+        case ParikhBased   => 
+          maxRepeatTimes = 20
+          currentParikhAuts
         case RegisterBased => Seq(currentProduct)
       }
       resetTransTerm2Value(finalCostraints)
+      println("getAcceptedWordOption")
       repeatFindAcceptedWord(finalCostraints, maxRepeatTimes)
     }
 

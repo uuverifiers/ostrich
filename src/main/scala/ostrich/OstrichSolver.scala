@@ -321,6 +321,13 @@ class OstrichSolver(theory : OstrichStringTheory,
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
           lengthProver addAssertion goal.facts.arithConj
+          // consistent to super class `Exploration`, no use
+          for (t <- interestingTerms)
+            lengthVars.getOrElseUpdate(
+              t,
+              lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
+            )
+          
           Some(lengthProver)
         } else
           None

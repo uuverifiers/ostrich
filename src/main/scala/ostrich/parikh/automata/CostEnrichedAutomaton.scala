@@ -433,7 +433,6 @@ class CostEnrichedAutomaton(
     */
   lazy val parikhImage: Formula = {
 
-    // BUG: when accepting states are more than one, the formula is not correct
     import ap.terfor.TerForConvenience._
     import TermGeneratorOrder._
 
@@ -454,34 +453,23 @@ class CostEnrichedAutomaton(
     }
 
     // consistent flow ///////////////////////////////////////////////////////////////
-    var consistentFlowRejectStates = Conjunction.TRUE
-
-    states.filterNot(acceptingStates contains).foreach { s =>
-      val outFlow: LinearCombination =
-        outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-      val inFlow: LinearCombination =
-        if (s == initialState)
-          inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-        else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-
-      consistentFlowRejectStates =
-        conj(consistentFlowRejectStates, outFlow === inFlow)
-    }
-
-    var conststentFlowAcceptingStates = Conjunction.TRUE
-    acceptingStates.foreach { s =>
-      val inFlow: LinearCombination =
-        if (s == initialState)
-          inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-        else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-      val outFlow: LinearCombination =
-        outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-      conststentFlowAcceptingStates =
-        disj(conststentFlowAcceptingStates, inFlow === outFlow)
-    }
-
-    var consistentFlowFormula =
-      conj(consistentFlowRejectStates, conststentFlowAcceptingStates)
+    var consistentFlowFormula = disjFor(
+      for (acceptState <- acceptingStates)
+        yield conj(
+          for (s <- states)
+            yield {
+              val inFlow: LinearCombination =
+                if (s == initialState)
+                  inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+                else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
+              val outFlow: LinearCombination =
+                if (s == acceptState)
+                  outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+                else outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
+              inFlow === outFlow
+            }
+        )
+    )
 
     // every transtion term should greater than 0
     getTransitionsTerms.foreach { term =>
@@ -525,7 +513,8 @@ class CostEnrichedAutomaton(
   override lazy val getLengthAbstraction: Formula = Conjunction.TRUE
 
   override def toString: String =
-      underlying.toString +
-      getTransitionsTerms + "\n\n"
+    underlying.toString +
+      getTransitionsTerms + "\n" +
+      registers + "\n\n"
 
 }
