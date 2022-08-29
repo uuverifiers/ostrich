@@ -91,6 +91,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
     p.pPatternC.asInstanceOf[Pattern]
   }
 
+
   //////////////////////////////////////////////////////////////////////////////
 
   // Currently the visitor argument just determines whether an expression

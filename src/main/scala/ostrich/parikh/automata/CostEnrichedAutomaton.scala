@@ -137,7 +137,7 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     */
   def getTransitionsTerms: Seq[Term]
 
-  val transitionsWithTerm: Iterator[(State, TLabel, State, Term)]
+  def transitionsWithTerm: Iterator[(State, TLabel, State, Term)]
 }
 
 /** Wrapper for the BRICS automaton class. New features added:
@@ -151,9 +151,7 @@ class CostEnrichedAutomaton(
     val transTermMap: MHashMap[(State, TLabel, State), Term]
 ) extends CostEnrichedAutomatonTrait {
 
-  var minimised = false
-
-  val transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
+  def transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
     transitions.map { case (from, l, to) =>
       (from, l, to, transTermMap((from, l, to)))
     }
@@ -432,7 +430,7 @@ class CostEnrichedAutomaton(
   /** Parikh image of this automaton
     */
   lazy val parikhImage: Formula = {
-
+    // Bug : do not consider connection
     import ap.terfor.TerForConvenience._
     import TermGeneratorOrder._
 
@@ -452,30 +450,65 @@ class CostEnrichedAutomaton(
       inFlowTerms
     }
 
+    val zTerm = states.map((_, ZTerm())).toMap
+    val preStatesWithTTerm = new MHashMap[State, MHashSet[(State, Term)]]
+    for ((s, _, t, tTerm) <- transitionsWithTerm) {
+      val set = preStatesWithTTerm.getOrElseUpdate(t, new MHashSet)
+      set += ((s, tTerm))
+    }
     // consistent flow ///////////////////////////////////////////////////////////////
-    var consistentFlowFormula = disjFor(
+    var consistentFlowFormula = disj(
       for (acceptState <- acceptingStates)
-        yield conj(
-          for (s <- states)
-            yield {
-              val inFlow: LinearCombination =
-                if (s == initialState)
-                  inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-                else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-              val outFlow: LinearCombination =
-                if (s == acceptState)
-                  outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-                else outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-              inFlow === outFlow
-            }
-        )
+        yield {
+          val consistentFormulas =
+            for (s <- states)
+              yield {
+                val inFlow: LinearCombination =
+                  if (s == initialState)
+                    inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+                  else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
+                val outFlow: LinearCombination =
+                  if (s == acceptState)
+                    outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
+                  else outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
+                inFlow === outFlow
+              }
+          conj(consistentFormulas)
+        }
     )
 
     // every transtion term should greater than 0
     getTransitionsTerms.foreach { term =>
       consistentFlowFormula = conj(consistentFlowFormula, term >= 0)
     }
+    /////////////////////////////////////////////////////////////////////////////////
 
+    // connection //////////////////////////////////////////////////////////////////
+    val zVarInitFormulas = transitionsWithTerm.map { case (from, _, _, tTerm) =>
+      if (from == initialState)
+        (zTerm(from) === 0)
+      else
+        (tTerm === 0) | (zTerm(from) > 0)
+    }
+
+    val connectFormulas = states.map {
+      case s if s != initialState =>
+        (zTerm(s) === 0) | disj(
+          preStatesWithTTerm(s).map { case (from, tTerm) =>
+            if(from == initialState)
+             conj(tTerm > 0, zTerm(s) === 1)
+            else
+            conj(
+              zTerm(from) > 0,
+              tTerm > 0,
+              zTerm(s) === zTerm(from) + 1
+            )
+          }
+        )
+      case _: BState => Conjunction.TRUE
+    }
+
+    val connectionFormula = conj (zVarInitFormulas ++ connectFormulas)
     /////////////////////////////////////////////////////////////////////////////////
 
     // registers update formula ////////////////////////////////////////////////////
@@ -507,7 +540,7 @@ class CostEnrichedAutomaton(
     }
     /////////////////////////////////////////////////////////////////////////////////
 
-    conj(registerUpdateFormula, consistentFlowFormula)
+    conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
   }
 
   override lazy val getLengthAbstraction: Formula = Conjunction.TRUE
@@ -517,4 +550,6 @@ class CostEnrichedAutomaton(
       getTransitionsTerms + "\n" +
       registers + "\n\n"
 
+  println("states size:" + states.size)
+  println("transition size:" + transitions.size)
 }

@@ -8,7 +8,6 @@ import scala.collection.mutable.{
   ArrayStack
 }
 import ap.terfor.Term
-import ap.api.SimpleAPI
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
@@ -71,7 +70,7 @@ object ParikhUtil {
           Iterator(
             (
               Seq(),
-              lengthModel,
+              lengthModel.clone(),
               fisrtAut.LabelOps.enumLetters(intersectedLabels).next
             )
           )
@@ -88,7 +87,7 @@ object ParikhUtil {
               )
               .toSeq;
             if (lengthModel(term) > 0);
-            (tailNext, updatedModel, let) <- enumNext(
+            (tailNext, updatedModel, char) <- enumNext(
               otherAuts,
               otherStates,
               lengthModel + ((
@@ -98,7 +97,7 @@ object ParikhUtil {
               newILabel
             )
           )
-            yield (to +: tailNext, updatedModel, let)
+            yield (to +: tailNext, updatedModel, char)
         }
       }
 
@@ -116,7 +115,7 @@ object ParikhUtil {
     while (!todo.isEmpty) {
       val (next, lengthModel, w) = todo.pop
       for (
-        (reached, updatedModel, let) <-
+        (reached, updatedModel, char) <-
           enumNext(
             auts,
             next,
@@ -126,7 +125,7 @@ object ParikhUtil {
       ) {
         
         if (visitedStates.add((reached, updatedModel))) {
-          val newW = w :+ let
+          val newW = w :+ char
           val finishTrans = updatedModel.forall(_._2 == 0)
           if (isAccepting(reached) && finishTrans)
             return Some(newW)

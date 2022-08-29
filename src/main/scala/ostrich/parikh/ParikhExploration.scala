@@ -28,7 +28,7 @@ import ap.terfor.conjunctions.Conjunction
 import scala.collection.mutable.LinkedHashSet
 import ap.util.Seqs
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-
+import ostrich.parikh.Config.{strategy, IC3Based, ParikhBased, RegisterBased}
 class ParikhExploration(
     _funApps: Seq[(PreOp, Seq[Term], Term)],
     _initialConstraints: Seq[(Term, Automaton)],
@@ -117,7 +117,7 @@ class ParikhExploration(
           val store = constraintStores(t)
           store.getAcceptedWordOption match {
             case Some(w) => model.put(t, Right(w))
-            case None    => return Seq() // unknown
+            case None    => unknown = true; return Seq() // unknown
           }
         }
 
@@ -367,12 +367,12 @@ class ParikhExploration(
     // <code>inconsistentAutomata</code> that is watched
     private val watchedAutomata = new MHashMap[Automaton, List[Int]]
 
-    class ProductStrategy
-    case object RegisterBased extends ProductStrategy
-    case object IC3Based extends ProductStrategy
-    case object ParikhBased extends ProductStrategy
+    // class ProductStrategy
+    // case object RegisterBased extends ProductStrategy
+    // case object IC3Based extends ProductStrategy
+    // case object ParikhBased extends ProductStrategy
 
-    val strategy: ProductStrategy = RegisterBased
+    // val strategy: ProductStrategy = RegisterBased
 
     /** Given a sequence of automata, heuristicly product the parikh image of
       * them. This function is sound, but not complete.
@@ -384,18 +384,16 @@ class ParikhExploration(
       *   `StringSolverStatus.Unknown` otherwise.
       */
     def checkConsistenceByParikh(
-        auts: Seq[CostEnrichedAutomatonTrait]
+        auts: Seq[CostEnrichedAutomatonTrait],
+        syncMinLen: Int,
+        syncMaxLen: Int,
+        repeatTimes: Int
     ): StringSolverStatus.Value = {
-      val syncMinLen =
-        1 // greater than 0, 0 is meaningless and easy to lead `unknown`
-      val syncMaxLen = 3 // max length to synchorinize
-      val maxRepeat =
-        20 // max repeat times for find length model for each sychorinized length
 
       for (i <- syncMinLen until syncMaxLen + 1) {
         checkConsistenceByParikhStep(auts, i) match {
           case StringSolverStatus.Unknown => {
-            repeatFindAcceptedWord(currentParikhAuts, maxRepeat) match {
+            repeatFindAcceptedWord(currentParikhAuts, repeatTimes) match {
               case Some(_) => return StringSolverStatus.Sat
               case _       => // nothing
             }
@@ -451,7 +449,7 @@ class ParikhExploration(
         auts: Seq[CostEnrichedAutomatonTrait],
         maxRepeatTimes: Int
     ): Option[Seq[Int]] = {
-      for (_ <- 0 until maxRepeatTimes + 1) {
+      for (_ <- 0 until maxRepeatTimes) {
         println("repeat find word")
         resetTransTerm2Value(auts)
         findAcceptedWord(auts, transTerm2Value) match {
@@ -579,11 +577,14 @@ class ParikhExploration(
         var res = StringSolverStatus.Unknown
         pushLengthConstraints
         strategy match {
-          case RegisterBased =>
+          case ParikhBased(minSyncLen, maxSyncLen, repeatTimes) =>
+            println("Parikh based")
+            res = checkConsistenceByParikh(auts, minSyncLen, maxSyncLen, repeatTimes)
+          case RegisterBased() =>
+            println("Register based")
             res = checkConsistenceByProduct(auts)
-          case ParikhBased =>
-            res = checkConsistenceByParikh(auts)
-          case IC3Based =>
+          case IC3Based() =>
+            println("IC3 based")
             res = checkConsistenceByIC3(auts)
         }
         popLengthConstraints
@@ -682,12 +683,13 @@ class ParikhExploration(
       *   the accepted word
       */
     override def getAcceptedWordOption: Option[Seq[Int]] = {
-      var maxRepeatTimes = 0
+      var maxRepeatTimes = 1
       val finalCostraints = strategy match {
-        case ParikhBased   => 
-          maxRepeatTimes = 20
+        case ParikhBased(_,_,repeatTimes)   => 
+          maxRepeatTimes = repeatTimes
           currentParikhAuts
-        case RegisterBased => Seq(currentProduct)
+        case RegisterBased() => Seq(currentProduct)
+        case IC3Based() => Seq(currentProduct)
       }
       resetTransTerm2Value(finalCostraints)
       println("getAcceptedWordOption")

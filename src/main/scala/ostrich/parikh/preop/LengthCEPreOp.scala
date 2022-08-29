@@ -12,11 +12,18 @@ object LengthCEPreOp {
   def apply(length: Term): LengthCEPreOp = new LengthCEPreOp(length)
 }
 
-/** Generate pre-image (regular constraints) of length operation. e.g. length
-  * operation `i = length(x)` will generate new constraints `x in A_i` where
-  * `A_i` is the computed pre-image.
+/**
+  * Pre-op for length constraints. 
+  * Generate automata like below: 
+  * initial state: 0
+  * final state: 0
+  * transitions: 0 -> (sigma, 1) -> 0
+  * registers: (r1)
+  * intFormula: r1 === `length`
+  * @param length The length 
   */
 class LengthCEPreOp(length: Term) extends CEPreOp {
+
   override def toString = "lengthCEPreOp"
 
   def addLengthPreRegsFormula(lenPreAut: CostEnrichedAutomatonTrait): Unit = {

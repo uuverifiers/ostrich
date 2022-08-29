@@ -4,7 +4,7 @@ import ap.terfor.Term
 import ap.terfor.ConstantTerm
 import ap.terfor.TermOrder
 
-object TermGeneratorOrder{
+object TermGeneratorOrder {
   implicit var order: TermOrder = TermOrder.EMPTY
   def apply(): TermOrder = order
   def extend(t: ConstantTerm): Unit = {
@@ -45,5 +45,15 @@ object LabelTerm {
     val transTerm = new ConstantTerm(s"L$count")
     TermGeneratorOrder.extend(transTerm)
     transTerm
+  }
+}
+
+object ZTerm {
+  var count = 0
+  def apply(): Term = {
+    count += 1
+    val zTerm = new ConstantTerm(s"Z$count")
+    TermGeneratorOrder.extend(zTerm)
+    zTerm
   }
 }

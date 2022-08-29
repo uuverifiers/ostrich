@@ -142,10 +142,6 @@ class CostEnrichedAutomatonBuilder
     * cannot change
     */
   def getAutomaton: CostEnrichedAutomaton = {
-
-    // baut.restoreInvariant
-    // if (minimize && !CostEnrichedAutomaton.neverMinimize(baut))
-    //   baut.minimize
     val res = new CostEnrichedAutomaton(baut, etaMap, registers, transTermMap)
     res.addIntFormula(intFormula)
     res

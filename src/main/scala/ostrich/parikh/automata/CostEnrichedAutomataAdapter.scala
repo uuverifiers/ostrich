@@ -81,7 +81,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
 
   override def toString: String = internalise.toString()
 
-  val transitionsWithTerm = internalise.transitionsWithTerm
+  def transitionsWithTerm = internalise.transitionsWithTerm
   
   lazy val parikhImage = internalise.parikhImage
 
