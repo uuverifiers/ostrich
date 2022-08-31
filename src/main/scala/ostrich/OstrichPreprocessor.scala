@@ -250,7 +250,8 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 */
 
     case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
+          Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) 
+          => {
       // we need one epsilon and 5 quantifiers, so shift by 6
       val shift = 6
 

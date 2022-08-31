@@ -396,6 +396,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   import BricsAutomaton.toBAutomaton
   import OFlags.debug
 
+
   if (debug)
     Console.err.println("New automaton with " + underlying.getNumberOfStates +
                           " states")

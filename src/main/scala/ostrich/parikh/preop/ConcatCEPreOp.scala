@@ -8,7 +8,7 @@ import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 object ConcatCEPreOp extends CEPreOp {
-  override def toString(): String = "ConcatCEPreOp"
+  override def toString(): String = "concatCEPreOp"
 
   def addConcatPreRegsFormula(
       concatLeft: CostEnrichedAutomatonTrait,
@@ -22,7 +22,7 @@ object ConcatCEPreOp extends CEPreOp {
       (reg + rightRegs(i)) === resultRegs(i)
     })
     concatLeft.addIntFormula(regsRelation)
-    // concatRight.addIntFormula(regsRelation)
+    concatLeft.addIntFormula(result.intFormula)
   }
 
   def apply(

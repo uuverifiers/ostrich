@@ -2,11 +2,7 @@ package ostrich.parikh.automata
 
 import ostrich.automata._
 
-import dk.brics.automaton.{
-  Transition,
-  Automaton => BAutomaton,
-  State => BState
-}
+import dk.brics.automaton.{Transition, Automaton => BAutomaton, State => BState}
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.JavaConverters.asScalaIterator
 import ap.terfor.Term
@@ -15,6 +11,7 @@ import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import dk.brics.automaton.BasicOperations
 
 class CostEnrichedAutomatonBuilder
     extends AtomicStateAutomatonBuilder[
@@ -36,17 +33,18 @@ class CostEnrichedAutomatonBuilder
 
   private val etaMap: MHashMap[(State, TLabel, State), Seq[Int]] = new MHashMap
   private val registers: ArrayBuffer[Term] = new ArrayBuffer()
-  private val transTermMap: MHashMap[(State, TLabel, State), Term] = new MHashMap
+  private val transTermMap: MHashMap[(State, TLabel, State), Term] =
+    new MHashMap
   private var intFormula: Formula = Conjunction.TRUE
-  
+
   // add interger arithmatic to this aut
   def addIntFormula(f: Formula): Unit = {
     intFormula = conj(intFormula, f)
   }
 
   // prepends a regsiter
-  def addRegister(register: Term): ArrayBuffer[Term] = {
-    register +=: registers
+  def addRegister(_register: Term): ArrayBuffer[Term] = {
+    _register +=: registers
   }
 
   // prepends regsters
@@ -55,12 +53,16 @@ class CostEnrichedAutomatonBuilder
   }
 
   // add a (transition -> vector) map to etaMap
-  def addEtaMap(map: MHashMap[(State, TLabel, State), Seq[Int]]): MHashMap[(State, TLabel, State),Seq[Int]] = {
+  def addEtaMap(
+      map: MHashMap[(State, TLabel, State), Seq[Int]]
+  ): MHashMap[(State, TLabel, State), Seq[Int]] = {
     this.etaMap ++= map
   }
 
   // add a (transition -> term) map to transTermMap
-  def addTransTermMap(map: MHashMap[(State,TLabel,State), Term]): MHashMap[(State, TLabel, State),Term] = {
+  def addTransTermMap(
+      map: MHashMap[(State, TLabel, State), Term]
+  ): MHashMap[(State, TLabel, State), Term] = {
     this.transTermMap ++= map
   }
 
@@ -77,12 +79,13 @@ class CostEnrichedAutomatonBuilder
     */
   def getNewState: State = new BState()
 
+
   /** Set the initial state
     */
   def setInitialState(q: State): Unit =
     baut.setInitialState(q)
 
-  /** Add a new transition q1 --label,()--> q2
+  /** Add a new transition q1 --label,Seq[Int]--> q2
     */
   def addTransition(
       q1: State,
@@ -132,14 +135,13 @@ class CostEnrichedAutomatonBuilder
   ): Iterator[(State, TLabel)] =
     for (t <- asScalaIterator(q.getTransitions.iterator))
       yield (t.getDest, (t.getMin, t.getMax))
-      
+
   def setAccept(q: State, isAccepting: Boolean): Unit =
     q.setAccept(isAccepting)
 
   def isAccept(q: State): Boolean = q.isAccept
 
-  /** Returns built automaton. Can only be used once after which the automaton
-    * cannot change
+  /** Returns built automaton. 
     */
   def getAutomaton: CostEnrichedAutomaton = {
     val res = new CostEnrichedAutomaton(baut, etaMap, registers, transTermMap)

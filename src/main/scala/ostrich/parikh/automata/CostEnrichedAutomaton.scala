@@ -138,11 +138,13 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   def getTransitionsTerms: Seq[Term]
 
   def transitionsWithTerm: Iterator[(State, TLabel, State, Term)]
+
+  def transitionsWithVec: Iterator[(State, TLabel, State, Seq[Int])]
 }
 
 /** Wrapper for the BRICS automaton class. New features added:
   *   - registers: a sequence of registers that store integer values
-  *   - etaMap: a map from transitions to update functions of registers
+  *   - etaMap: a map from transitions to update vectors
   */
 class CostEnrichedAutomaton(
     val underlying: BAutomaton,
@@ -156,6 +158,11 @@ class CostEnrichedAutomaton(
       (from, l, to, transTermMap((from, l, to)))
     }
 
+  def transitionsWithVec: Iterator[(State, (Char, Char), State, Seq[Int])] = {
+    transitions.map {
+      case (from, l, to) => (from, l, to, etaMap((from, l, to)))
+    }
+  }
   /** constructor */
   def this(underlying: BAutomaton) =
     this(underlying, new MHashMap, Seq(), new MHashMap)
@@ -194,7 +201,7 @@ class CostEnrichedAutomaton(
     // old transtion term to a set of new transition terms
     // the value of old transtion term is the sum of values of new transtion terms
     // the value of olde transtion term will be used to find accepted word
-    val oldTerm2NewTerms = new MHashMap[Term, MHashSet[Term]]
+    // val oldTerm2NewTerms = new MHashMap[Term, MHashSet[Term]]
 
     // begin intersection
     val initialState1 = aut1.initialState
@@ -207,57 +214,53 @@ class CostEnrichedAutomaton(
     )
 
     // from old states pair to new state
-    val newStateMap = new MHashMap[(State, State), State]
-    var worklist = new ArrayStack[(State, State)]
+    val pair2state = new MHashMap[(State, State), State]
+    val worklist = new ArrayStack[(State, State)]
 
-    newStateMap.put((initialState1, initialState2), initialState)
+    pair2state.put((initialState1, initialState2), initialState)
     worklist.push((initialState1, initialState2))
 
     while (!worklist.isEmpty) {
-      val (state1, state2) = worklist.pop()
-      val state = newStateMap(state1, state2)
+      val (from1, from2) = worklist.pop()
+      val from = pair2state(from1, from2)
       for (
-        (t1, label1, vec1, term1) <- aut1.outgoingTransitionsWithInfo(state1);
-        (t2, label2, vec2, term2) <- aut2.outgoingTransitionsWithInfo(state2)
+        (to1, label1, vec1, term1) <- aut1.outgoingTransitionsWithInfo(from1);
+        (to2, label2, vec2, term2) <- aut2.outgoingTransitionsWithInfo(from2)
       ) {
         // intersect transition
         LabelOps.intersectLabels(label1, label2) match {
           case Some(label) => {
-            if (newStateMap.contains((t1, t2))) {
-              val newState = newStateMap((t1, t2))
-              val newVector = vec1 ++ vec2
-              val newTerm = TransitionTerm()
+            if (pair2state.contains((to1, to2))) {
+              val to = pair2state((to1, to2))
+              val vector = vec1 ++ vec2
+              val term = TransitionTerm()
               autBuilder.addTransition(
-                state,
+                from,
                 label,
-                newState,
-                newVector,
-                newTerm
+                to,
+                vector,
+                term
               )
-              oldTerm2NewTerms.getOrElseUpdate(term1, MHashSet()) += newTerm
-              oldTerm2NewTerms.getOrElseUpdate(term2, MHashSet()) += newTerm
               autBuilder.setAccept(
-                newState,
-                aut1.isAccept(t1) && aut2.isAccept(t2)
+                to,
+                aut1.isAccept(to1) && aut2.isAccept(to2)
               )
             } else {
-              val newState = autBuilder.getNewState
-              newStateMap.put((t1, t2), newState)
-              worklist.push((t1, t2))
-              val newVector = vec1 ++ vec2
-              val newTerm = TransitionTerm()
+              val to = autBuilder.getNewState
+              pair2state.put((to1, to2), to)
+              worklist.push((to1, to2))
+              val vector = vec1 ++ vec2
+              val term = TransitionTerm()
               autBuilder.addTransition(
-                state,
+                from,
                 label,
-                newState,
-                newVector,
-                newTerm
+                to,
+                vector,
+                term
               )
-              oldTerm2NewTerms.getOrElseUpdate(term1, MHashSet()) += newTerm
-              oldTerm2NewTerms.getOrElseUpdate(term2, MHashSet()) += newTerm
               autBuilder.setAccept(
-                newState,
-                aut1.isAccept(t1) && aut2.isAccept(t2)
+                to,
+                aut1.isAccept(to1) && aut2.isAccept(to2)
               )
             }
           }
@@ -265,13 +268,13 @@ class CostEnrichedAutomaton(
         }
       }
     }
-    // oldTerm2NewTerms.foreach { case (oldTerm, newTerms) =>
-    //   autBuilder.addIntFormula(oldTerm === newTerms.reduce(_ + _))
-    // }
     autBuilder.addIntFormula(aut1.intFormula)
     autBuilder.addIntFormula(aut2.intFormula)
     autBuilder.addRegisters(aut1.registers ++ aut2.registers)
-    autBuilder.getAutomaton
+    val res = autBuilder.getAutomaton
+    res.removeDeadTransitions()
+    // res.minimizeHopcroft()
+    res
   }
 
   /** @deprecated
@@ -543,13 +546,18 @@ class CostEnrichedAutomaton(
     conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
   }
 
+  def minimizeHopcroft() = {
+    underlying.minimize()
+  }
+
+  def removeDeadTransitions() = {
+    underlying.removeDeadTransitions()
+  }
+
   override lazy val getLengthAbstraction: Formula = Conjunction.TRUE
 
   override def toString: String =
     underlying.toString +
       getTransitionsTerms + "\n" +
       registers + "\n\n"
-
-  println("states size:" + states.size)
-  println("transition size:" + transitions.size)
 }

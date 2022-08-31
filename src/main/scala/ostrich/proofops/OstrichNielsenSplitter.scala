@@ -218,26 +218,26 @@ class OstrichNielsenSplitter(goal : Goal,
           points += SimpleDecompPoint(lit, leftTerms, len, t :: rightTerms)
       } else {
         (concatPerRes get t) match {
-          case Some(Seq(concatLit)) => {
-            genPoints(concatLit(0),
-                      leftTerms,
-                      len,
-                      concatLit(1) :: rightTerms,
-                      leftMost)
-            genPoints(concatLit(1),
-                      concatLit(0) :: leftTerms,
-                      len + lengthFor(concatLit(0)),
-                      rightTerms,
-                      false)
-          }
+          // case Some(Seq(concatLit)) => {
+          //   genPoints(concatLit(0),
+          //             leftTerms,
+          //             len,
+          //             concatLit(1) :: rightTerms,
+          //             leftMost)
+          //   genPoints(concatLit(1),
+          //             concatLit(0) :: leftTerms,
+          //             len + lengthFor(concatLit(0)),
+          //             rightTerms,
+          //             false)
+          // }
           case _ =>
             if (!leftMost)
               points += SimpleDecompPoint(lit, leftTerms, len, t :: rightTerms)
         }
       }
 
-    genPoints(lit(0), List(),       LinearCombination.ZERO, List(lit(1)), true)
-    genPoints(lit(1), List(lit(0)), lengthFor(lit(0)),      List(),       false)
+    // genPoints(lit(0), List(),       LinearCombination.ZERO, List(lit(1)), true)
+    // genPoints(lit(1), List(lit(0)), lengthFor(lit(0)),      List(),       false)
 
     points.toSeq
   }

@@ -52,6 +52,7 @@ import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
+import ostrich.parikh.OstrichCostEnrichEncoder
 
 object OstrichStringTheory {
 
@@ -359,7 +360,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
         } catch {
           case t : ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
+          case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
@@ -369,7 +370,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
         } catch {
           case t : ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
+          case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
       }
@@ -458,6 +459,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       Incompleteness.set
 
     val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    if(flags.useCostEnriched) return f 
     preprocessor.preprocess(f, order)
   }
 

@@ -50,6 +50,8 @@ import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
                                  HashSet => MHashSet, LinkedHashSet,
                                  BitSet => MBitSet}
 import ostrich.parikh.ParikhExploration
+import ap.terfor.Formula
+import ap.terfor.conjunctions.Conjunction
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
@@ -99,11 +101,6 @@ object Exploration {
      */
     def getAcceptedWordLen(len : Int) : Seq[Int]
 
-    /**
-     * Produce a word accepted by all the stored
-     * constraints, or None if no such word exists
-     */
-    def getAcceptedWordOption : Option[Seq[Int]] = None
   }
 
   def eagerExp(funApps : Seq[(PreOp, Seq[Term], Term)],
@@ -320,7 +317,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  protected val constraintStores = new MHashMap[Term, ConstraintStore]
+  private val constraintStores = new MHashMap[Term, ConstraintStore]
 
   /**
    * Check for existence of a model. A model maps each integer variable
@@ -705,6 +702,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       } else {
         currentConstraint match {
           case Some(oldAut) => {
+            println("check")
             val newAut = measure("intersection") { oldAut & aut }
             if (newAut.isEmpty) {
               Some(for (a <- aut :: constraints.toList)

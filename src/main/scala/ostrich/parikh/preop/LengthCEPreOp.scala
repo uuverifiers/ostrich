@@ -4,7 +4,6 @@ import ostrich.automata.Automaton
 import ap.terfor.{Term, TerForConvenience}
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
 
@@ -14,27 +13,20 @@ object LengthCEPreOp {
 
 /**
   * Pre-op for length constraints. 
-  * Generate automata like below: 
-  * initial state: 0
-  * final state: 0
-  * transitions: 0 -> (sigma, 1) -> 0
-  * registers: (r1)
-  * intFormula: r1 === `length`
   * @param length The length 
   */
 class LengthCEPreOp(length: Term) extends CEPreOp {
 
   override def toString = "lengthCEPreOp"
 
-  def addLengthPreRegsFormula(lenPreAut: CostEnrichedAutomatonTrait): Unit = {
-    lenPreAut.addIntFormula(lenPreAut.registers(0) === length)
-  }
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val builder = CostEnrichedAutomaton.getBuilder;
     val initalState = builder.initialState;
+
+    // 0 -> (sigma, 1) -> 0
     builder.addTransition(
       initalState,
       builder.LabelOps.sigmaLabel,
@@ -42,11 +34,12 @@ class LengthCEPreOp(length: Term) extends CEPreOp {
       Seq(1)
     )
     builder.setAccept(initalState, true)
-    builder.addRegister(RegisterTerm())
-
-    val baut = builder.getAutomaton
-    addLengthPreRegsFormula(baut)
-    (Iterator(Seq(baut)), Seq())
+    // registers: (r0)
+    val registers = Seq(RegisterTerm())
+    builder.addRegisters(registers)
+    // intFormula : r0 === `length`
+    builder.addIntFormula(registers(0) === length)
+    (Iterator(Seq(builder.getAutomaton)), Seq())
   }
 
   /** Evaluate the described function; return <code>None</code> if the function

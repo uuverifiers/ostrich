@@ -43,6 +43,7 @@ import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
 import ostrich.parikh.preop.ConcatCEPreOp
+import ostrich.parikh.preop.SubStringCEPreOp
 
 /**
  * Class for mapping string constraints to string functions.
@@ -53,7 +54,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_++, str_at, str_at_right, str_trim,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere,
-                 str_replaceallcg, str_replacecg, str_extract}
+                 str_replaceallcg, str_replacecg, str_extract,
+                 str_substr}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
   private val cgTranslator   = new Regex2PFA(theory,
@@ -76,6 +78,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
     case FunPred(`str_++`) if theory.getFlags.useCostEnriched =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
+    case FunPred(`str_substr`) if theory.getFlags.useCostEnriched =>
+      Some((() => SubStringCEPreOp(a(1), a(2)), Seq(a(0), a(1), a(2)), a(3)))
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) if strDatabase isConcrete a(1) => {

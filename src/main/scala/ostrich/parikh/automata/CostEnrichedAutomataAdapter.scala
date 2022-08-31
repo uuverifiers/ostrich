@@ -31,6 +31,7 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
       builder.setAccept(t, isAccept(s))
     }
 
+    builder.addIntFormula(intFormula)
     builder.addRegisters(registers)
     builder.setInitialState(smap(initialState))
     builder.getAutomaton
@@ -82,7 +83,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
   override def toString: String = internalise.toString()
 
   def transitionsWithTerm = internalise.transitionsWithTerm
-  
+  def transitionsWithVec = internalise.transitionsWithVec
   lazy val parikhImage = internalise.parikhImage
 
   def getTransitionsTerms = internalise.getTransitionsTerms
