@@ -31,7 +31,6 @@ import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.Config.{strategy, IC3Based, ParikhBased, RegisterBased}
 import ostrich.parikh.preop.SubStringCEPreOp
 import ap.terfor.Formula
-import javax.swing.SpringLayout.Constraints
 import ap.api.PartialModel
 import ostrich.automata.AtomicStateAutomatonAdapter
 object ParikhExploration {
@@ -175,6 +174,13 @@ class ParikhExploration(
         val leafTerms =
           allTerms filter { case t => !(resultTerms contains t) }
 
+        def trivalConflict : ConflictSet = {
+          for (
+            t <- leafTerms.toSeq;
+            aut <- constraintStores(t).getContents
+          ) yield TermConstraint(t, aut)
+        }
+
         strategy match {
           case RegisterBased() =>
             println("find word-----------------------------------------")
@@ -183,7 +189,7 @@ class ParikhExploration(
             })
             checkArithConstency(finalArith) match {
               case ProverStatus.Sat => // nothing
-              case _                => return Seq() // not sat
+              case _                => return trivalConflict // not sat
             }
           // case ParikhBased(minSyncLen, maxSyncLen, repeatTimes) =>
           //   val finalArith = conj(for (t <- leafTerms) yield {
@@ -332,16 +338,16 @@ class ParikhExploration(
 
           if (consistent) {
             val conflict = dfExploreOp(op, args, res, otherAuts, nextApps)
-            // if (
-            //   !conflict.isEmpty && Seqs.disjointSeq(newConstraints, conflict)
-            // ) {
-            //   // we can jump back, because the found conflict does not depend
-            //   // on the considered function application
-            //   println("backjump " + (conflict map {
-            //     case TermConstraint(t, aut) => (t, aut)
-            //   }))
-            //   return conflict
-            // }
+            if (
+              !conflict.isEmpty && Seqs.disjointSeq(newConstraints, conflict)
+            ) {
+              // we can jump back, because the found conflict does not depend
+              // on the considered function application
+              println("backjump " + (conflict map {
+                case TermConstraint(t, aut) => (t, aut)
+              }))
+              return conflict
+            }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
           }
         } finally {
