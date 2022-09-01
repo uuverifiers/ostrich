@@ -9,7 +9,7 @@ metals.sbt
 /.bsp
 
 # scalafmt conf
-*.conf
+*scala*.conf
 
 # my template files
 [0-9].*

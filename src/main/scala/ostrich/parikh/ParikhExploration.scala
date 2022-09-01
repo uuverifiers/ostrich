@@ -97,8 +97,8 @@ class ParikhExploration(
 
   /** Given a sequence of automata, update `termModel`.
     * @return
-    *   After this method is called, `termModel` will contain the mapping
-    *   from each transition term to its int value
+    *   After this method is called, `termModel` will contain the mapping from
+    *   each transition term to its int value
     */
   def resetTermModel: Unit = {
     val lModel = lengthModel.get
@@ -148,12 +148,12 @@ class ParikhExploration(
               disjFor(termModel.map { case (t, value) => t =/= value })
             }
           )
-          if (unsatCore.length == 0)  
+          if (unsatCore.length == 0)
             return ProverStatus.Sat
           currentF = conj(currentF, unsatCore)
           currentTime += 1
         case ProverStatus.Unsat => return ProverStatus.Unsat
-        case _ =>
+        case _                  =>
       }
     }
     ProverStatus.Unknown
@@ -226,8 +226,9 @@ class ParikhExploration(
                 })
                 repeatCheckArithConsistency(finalArith, repeatTimes) match {
                   case ProverStatus.Sat => return None
-                  case ProverStatus.Unsat => return Some(trivalConflict) // not sat
-                  case ProverStatus.Unknown => 
+                  case ProverStatus.Unsat =>
+                    return Some(trivalConflict) // not sat
+                  case ProverStatus.Unknown =>
                 }
                 // case IC3Based() => return Seq() // TODO
               }
@@ -479,7 +480,6 @@ class ParikhExploration(
     // Map from watched automata to the indexes of
     // <code>inconsistentAutomata</code> that is watched
     private val watchedAutomata = new MHashMap[Automaton, List[Int]]
-
 
     // calling for `p.???` will reset formula in p
     // Remember to use `pushLengthConstraints` and `popLengthConstraints`
