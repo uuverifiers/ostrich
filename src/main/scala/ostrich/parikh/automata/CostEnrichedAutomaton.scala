@@ -273,7 +273,6 @@ class CostEnrichedAutomaton(
     autBuilder.addRegisters(aut1.registers ++ aut2.registers)
     val res = autBuilder.getAutomaton
     res.removeDeadTransitions()
-    // res.minimizeHopcroft()
     res
   }
 

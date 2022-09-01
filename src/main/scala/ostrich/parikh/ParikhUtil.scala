@@ -17,10 +17,6 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 
 import ostrich.automata.BricsTLabelEnumerator
 
-object StringSolverStatus extends Enumeration {
-  val Sat, Unsat, Unknown = Value
-}
-
 object ParikhUtil {
 
   type State = CostEnrichedAutomatonTrait#State
@@ -150,7 +146,9 @@ object ParikhUtil {
       labels: MTreeSet[TLabel],
       synclen: Int
   ): (Seq[CostEnrichedAutomatonTrait], MMap[State, Seq[TLabel]]) = {
-    assert(synclen >= 1)
+    if(synclen <=0 ) {
+      return (auts, MMap())
+    } 
     val newState2Prefix = new MHashMap[State, Seq[TLabel]]
     val newAuts = auts.map { case aut =>
       val (newAut, map) = getSyncLenAut(aut, labels, synclen)
@@ -306,20 +304,4 @@ object ParikhUtil {
           j <- crossJoin(xs)
         } yield Traversable(i) ++ j
     }
-
-  /** Given a sequence of automata, consider them as an infinite transition
-    * system. The bad state is (q1, ..., qn, \varphi) where q1, ..., qn are
-    * accepted state and formula \varphi is consistent with other linear
-    * arithmetic constraints. Use algorithm **IC3** to solve this problem.
-    * @param auts
-    *   the automata
-    * @return
-    *   true if find a bad state; otherwise, false.
-    */
-  def checkConsistenceByIC3(
-      auts: Seq[CostEnrichedAutomatonTrait]
-  ): StringSolverStatus.Value = {
-    // TODO: implement it
-    StringSolverStatus.Unknown
-  }
 }
