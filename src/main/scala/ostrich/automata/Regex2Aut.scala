@@ -32,15 +32,14 @@
 
 package ostrich.automata
 
-import ostrich.{OstrichStringTheory, ECMARegexParser}
-
+import ostrich.{ECMARegexParser, OstrichStringTheory}
 import ap.basetypes.IdealInt
+import ap.parser.IExpression.Const
 import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
-
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
-                           Automaton => BAutomaton}
+import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
+import ostrich.automata.afa2.{AutomatonUtils, NFATranslator}
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack}
 import scala.collection.immutable.VectorBuilder
@@ -139,6 +138,144 @@ object Regex2Aut {
       case t => t
     }
 
+  }
+
+
+  class SyntacticTransformations(theory: OstrichStringTheory, parser: ECMARegexParser) {
+
+    import IExpression._
+    import theory._
+
+    import theory.{
+      re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
+      re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+      re_opt_?, re_loop_?,
+      re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
+      re_begin_anchor, re_end_anchor,
+      re_from_ecma2020, re_from_ecma2020_flags,
+      re_case_insensitive
+    }
+
+    def apply(t: ITerm) = transformNF(t)
+
+    /*
+    It transform the input formula in NF for the 2AFA transformation.
+    It reverses the lookbehinds and eliminate redundant operators.
+     */
+    def transformNF(t: ITerm, reverse: Boolean=false): ITerm = t match {
+      //Base cases
+      case IFunApp(`re_none` | `re_charrange` | `re_eps` | `re_all` | `re_allchar` | `re_range`,  _) => t
+
+      // Recursive cases
+      case IFunApp(`re_++`, Seq(l, r)) => if (reverse)
+                                            re_++(transformNF(r, reverse), transformNF(l, reverse))
+                                          else
+                                            re_++(transformNF(l, reverse), transformNF(r, reverse))
+
+      case IFunApp(parser.LookAhead, Seq(t)) => IFunApp(parser.LookAhead, Seq(transformNF(t, false)))
+
+      case IFunApp(parser.NegLookAhead, Seq(t)) => IFunApp(parser.NegLookAhead, Seq(transformNF(t, false)))
+
+      case IFunApp(parser.LookBehind, Seq(t)) => IFunApp(parser.LookBehind, Seq(transformNF(t, true)))
+
+      case IFunApp(parser.NegLookBehind, Seq(t)) => IFunApp(parser.NegLookBehind, Seq(transformNF(t, true)))
+
+      // I am subjectively interpreting the semantics
+      case IFunApp(parser.WordBoundary, _) => transformNF(
+        re_++(IFunApp(parser.LookBehind, Seq(re_allchar())),
+          IFunApp(parser.NegLookAhead, Seq(re_allchar()))),
+        reverse)
+
+      // I am subjectively interpreting the semantics
+      case IFunApp(parser.NonWordBoundary, _) =>
+        transformNF(
+          IFunApp(parser.NegLookAhead,
+            Seq(re_++(IFunApp(parser.LookBehind, Seq(re_allchar())),
+              IFunApp(parser.NegLookAhead, Seq(re_allchar()))
+            ))
+          ), reverse)
+
+      case IFunApp(`re_begin_anchor`, Seq()) => transformNF(IFunApp(parser.NegLookBehind, Seq(re_all())), reverse)
+
+      case IFunApp(`re_end_anchor`, _) => transformNF(IFunApp(parser.NegLookAhead, Seq(re_all())), reverse)
+
+      case IFunApp(x, y) => IFunApp(x, y.map(transformNF(_, reverse)))
+
+      case _ => throw new RuntimeException("This should not happen!")
+    }
+
+
+  }
+
+}
+
+class ECMA2Aut(theory : OstrichStringTheory, parser: ECMARegexParser) {
+
+  import ostrich.automata.afa2._
+  import theory.{
+    re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
+    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+    re_opt_?, re_loop_?,
+    re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
+    re_begin_anchor, re_end_anchor,
+    re_from_ecma2020, re_from_ecma2020_flags,
+    re_case_insensitive
+  }
+
+  // Just calls toAFABuilder with AFA2.Right direction and converts the result.
+  def toExt2AFA(t: ITerm) : ExtAFA2 = {
+    val builder = toAFABuilder(AFA2.Right, t)
+    println("Builder automaton: ")
+    println(builder)
+    val extAFA2 = builder.builderToExtAFA()
+    println("Ext2AFA automaton: ")
+    println(extAFA2)
+    extAFA2
+  }
+
+  def toAFABuilder(dir: AFA2.Step, t: ITerm) : MutableAFA2 = {
+    t match {
+
+      case IFunApp(`re_eps`, _) =>
+        MutableAFA2.epsAtomic2AFA(parser.alphabet, dir)
+
+      case IFunApp(`re_none`, _) =>
+        MutableAFA2.emptyAtomic2AFA(parser.alphabet, dir)
+
+      case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
+        MutableAFA2.charrangeAtomic2AFA(parser.alphabet, dir, new Range(l.intValue, u.intValue+1, 1))
+
+      case IFunApp(`re_allchar`, _) => MutableAFA2.allcharAtomic2AFA(parser.alphabet, dir)
+
+      case IFunApp(`re_all`, _) => MutableAFA2.allAtomic2AFA(parser.alphabet, dir)
+
+      case IFunApp(`re_++`, Seq(l, r)) =>
+        MutableAFA2.concat2AFA(dir, toAFABuilder(dir, l), toAFABuilder(dir, r))
+
+      case IFunApp(`re_union`, Seq(l, r)) =>
+        MutableAFA2.alternation2AFA(dir, toAFABuilder(dir, l), toAFABuilder(dir, r))
+
+      case IFunApp(`re_*`, Seq(t)) =>
+        MutableAFA2.star2AFA(dir, toAFABuilder(dir, t))
+
+      case IFunApp(parser.LookAhead, Seq(t)) =>
+        // Watch out here with the directions!
+        MutableAFA2.lookaround2AFA(dir, toAFABuilder(AFA2.Right, t))
+
+      case IFunApp(parser.LookBehind, Seq(t)) =>
+        MutableAFA2.lookaround2AFA(dir, toAFABuilder(AFA2.Left, t))
+
+      case IFunApp(parser.NegLookAhead, Seq(t)) =>
+        MutableAFA2.negLookaround2AFA(dir, toAFABuilder(AFA2.Right, t))
+
+      case IFunApp(parser.NegLookBehind, Seq(t)) =>
+        MutableAFA2.negLookaround2AFA(dir, toAFABuilder(AFA2.Left, t))
+
+      case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
+        MutableAFA2.loop3Aut2AFA(parser.alphabet, dir, n1.intValue, n2.intValue, toAFABuilder(dir, t))
+
+      case _ => throw new RuntimeException("This shouldn't happen!")
+    }
   }
 
 }
@@ -265,7 +402,21 @@ class Regex2Aut(theory : OstrichStringTheory) {
     case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
       val parser = new ECMARegexParser(theory)
       val s = parser.string2Term(str)
-      toBAutomaton(s, minimize)
+      //toBAutomaton(s, minimize)
+      println("Parser output:")
+      println(s)
+      val st = new SyntacticTransformations(theory, parser)
+      println("After transformation:")
+      val r = st.transformNF(s)
+      println(r)
+      println()
+
+      val ecma2Aut = new ECMA2Aut(theory, parser)
+      val syntTransf = new SyntacticTransformations(theory, parser)
+      val aut = ecma2Aut.toExt2AFA(syntTransf(s))
+      AutomatonUtils.printAutDotToFile(aut, "extafa2.dot")
+
+      NFATranslator(aut).underlying
     }
 
     case IFunApp(`re_from_ecma2020_flags`,

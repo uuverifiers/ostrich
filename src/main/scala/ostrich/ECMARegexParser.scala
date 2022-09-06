@@ -63,6 +63,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   val printer = new PrettyPrinterNonStatic
 
+  val PARTIAL_APPROACH = false
+
   def string2Term(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
     val res = TranslationVisitor(pat)
@@ -99,6 +101,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   val LookAhead       = new IFunction("LookAhead",  1, false, false)
   val LookBehind      = new IFunction("LookBehind", 1, false, false)
+  val NegLookAhead    = new IFunction("NegLookAhead", 1, false, false)
+  val NegLookBehind   = new IFunction("NegLookBehind", 1, false, false)
   val WordBoundary    = new IFunction("WordBoundary", 0, false, false)
   val NonWordBoundary = new IFunction("NonWordBoundary", 0, false, false)
 
@@ -111,7 +115,12 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
     private var captGroupNum = 1
 
-    def apply(pat : Pattern) = dropAssertions(this.visit(pat, true))
+    def apply(pat : Pattern) = {
+      PARTIAL_APPROACH match {
+        case true => dropAssertions (this.visit (pat, true) )
+        case false => this.visit (pat, true)
+      }
+    }
 
     def leaf(arg : VisitorArg) : ITerm = EPS
     def combine(x : ITerm, y : ITerm, arg : VisitorArg) : ITerm = reCat(x, y)
@@ -123,7 +132,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
                        outermost : VisitorArg) = {
       val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
 
-      if (outermost) {
+      if (outermost && PARTIAL_APPROACH) {
         // handle leading look-aheads and trailing look-behinds
 
         var midTerms = terms filterNot (_ == EPS)
@@ -274,6 +283,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
       }
     }
 
+
     private def catToList(t : ITerm) : Seq[ITerm] = t match {
       case IFunApp(`re_++`, Seq(a, b)) => catToList(a) ++ catToList(b)
       case t                         => List(t)
@@ -290,27 +300,50 @@ class ECMARegexParser(theory : OstrichStringTheory,
       // non-capture group
       reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
 
-    override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) =
-      LookAhead(
-        translateLookAhead(
-          reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)))
+    override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) = {
+      PARTIAL_APPROACH match {
+        case true => LookAhead(
+          translateLookAhead(
+            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*)))
 
-    override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) =
-      LookAhead(
-        re_comp(translateLookAhead(reUnionStar(
-          p.listalternativec_ map (_.accept(this, arg)) : _*))))
+        case false => {
+          println("Inside lookahead: " + p.listalternativec_)
+          LookAhead(p.listalternativec_ map (_.accept(this, arg)): _*)
+        }
+      }
+    }
+
+    override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) = {
+      PARTIAL_APPROACH match {
+        case true => NegLookAhead(
+                        re_comp(translateLookAhead(reUnionStar(
+                          p.listalternativec_ map (_.accept(this, arg)): _*))))
+
+        case false => NegLookAhead(p.listalternativec_ map (_.accept(this, arg)): _*)
+      }
+    }
 
     override def visit(p : ecma2020regex.Absyn.PosLookbehind,
-                       arg : VisitorArg) =
-      LookBehind(
-        translateLookBehind(reUnionStar(
-                              p.listalternativec_ map (_.accept(this, arg)) : _*)))
+                       arg : VisitorArg) = {
+      PARTIAL_APPROACH match {
+        case true => LookBehind(
+          translateLookBehind(reUnionStar(
+            p.listalternativec_ map (_.accept(this, arg)): _*)))
+        case false => {
+          println("Inside lookbehind: " + (p.listalternativec_ map (_.accept(this, arg))) )
+          LookBehind(p.listalternativec_ map (_.accept(this, arg)): _*)
+        }
+      }
+    }
 
-    override def visit(p : ecma2020regex.Absyn.NegLookbehind,
-                       arg : VisitorArg) =
-      LookBehind(
-        re_comp(translateLookBehind(reUnionStar(
-                  p.listalternativec_ map (_.accept(this, arg)) : _*))))
+    override def visit(p : ecma2020regex.Absyn.NegLookbehind, arg : VisitorArg) = {
+      PARTIAL_APPROACH match {
+        case true => NegLookBehind (
+      re_comp (translateLookBehind (reUnionStar (
+      p.listalternativec_ map (_.accept (this, arg) ): _*) ) ) )
+        case false => NegLookBehind(p.listalternativec_ map (_.accept(this, arg)): _*)
+      }
+    }
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
       if (flags contains "s")
@@ -641,8 +674,13 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   private def reInterStar(xs : ITerm*) = (ALL /: xs) (reInter _)
 
-  private lazy val decimal =
-    re_charrange(48, 57)
+  lazy val decimal = re_charrange(48, 57)
+  lazy val uppCaseChars = re_charrange(65, 90)
+  lazy val lowCaseChars = re_charrange(97, 122)
+  lazy val underscore = re_charrange(95, 95)
+
+  lazy val alphabet: Set[Int] = (48 to 57).toSet ++ (65 to 90).toSet ++ (97 to 122).toSet ++ Set(95)
+  //lazy val alphabet: Set[Int] = (0 to 255).toSet
 
   private lazy val whitespace =
     charSet(9,          // TAB,   \t
