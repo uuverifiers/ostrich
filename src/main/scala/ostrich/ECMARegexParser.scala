@@ -307,7 +307,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
             reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*)))
 
         case false => {
-          println("Inside lookahead: " + p.listalternativec_)
+          //println("Inside lookahead: " + p.listalternativec_)
           LookAhead(p.listalternativec_ map (_.accept(this, arg)): _*)
         }
       }
@@ -330,7 +330,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
           translateLookBehind(reUnionStar(
             p.listalternativec_ map (_.accept(this, arg)): _*)))
         case false => {
-          println("Inside lookbehind: " + (p.listalternativec_ map (_.accept(this, arg))) )
+          //println("Inside lookbehind: " + (p.listalternativec_ map (_.accept(this, arg))) )
           LookBehind(p.listalternativec_ map (_.accept(this, arg)): _*)
         }
       }
@@ -679,7 +679,10 @@ class ECMARegexParser(theory : OstrichStringTheory,
   lazy val lowCaseChars = re_charrange(97, 122)
   lazy val underscore = re_charrange(95, 95)
 
-  lazy val alphabet: Set[Int] = (48 to 57).toSet ++ (65 to 90).toSet ++ (97 to 122).toSet ++ Set(95)
+  lazy val alphabet: Set[Int] = (48 to 57).toSet ++ (65 to 90).toSet ++ (97 to 122).toSet ++ Set(95) ++ Set(9, 10, 11, 12, 13, 32, 160, 0xFEFF, 0x2028, 0x2029)
+
+  lazy val alphabetDebug = (97 to 101).toSet
+
   //lazy val alphabet: Set[Int] = (0 to 255).toSet
 
   private lazy val whitespace =

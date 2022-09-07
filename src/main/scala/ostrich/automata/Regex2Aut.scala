@@ -156,7 +156,12 @@ object Regex2Aut {
       re_case_insensitive
     }
 
-    def apply(t: ITerm) = transformNF(t)
+    def apply(t: ITerm) = {
+      val diffElimin = new Regex2Aut.DiffEliminator(theory)
+      val de = diffElimin(t);
+      println("After diff elimination:\n" + de)
+      transformNF(de)
+    }
 
     /*
     It transform the input formula in NF for the 2AFA transformation.
@@ -199,11 +204,22 @@ object Regex2Aut {
 
       case IFunApp(`re_end_anchor`, _) => transformNF(IFunApp(parser.NegLookAhead, Seq(re_all())), reverse)
 
+      case IFunApp(`re_capture`, Seq(_, t)) =>
+        Console.err.println("Warning: ignoring capture groups")
+        transformNF(t, reverse)
+
+      case IFunApp(`re_*?`, Seq(t)) =>
+        Console.err.println("Warning: ignoring lazy star")
+        IFunApp(`re_*`, Seq(transformNF(t, reverse)))
+
+      case IFunApp(`re_+` | `re_+?`, Seq(t)) => transformNF(re_++(t, re_*(t)))
+
+      case IFunApp(`re_loop` | `re_loop_?`, Seq(IIntLit(n1), IIntLit(n2), t)) => IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), transformNF(t, reverse)))
+
       case IFunApp(x, y) => IFunApp(x, y.map(transformNF(_, reverse)))
 
       case _ => throw new RuntimeException("This should not happen!")
     }
-
 
   }
 
@@ -222,57 +238,58 @@ class ECMA2Aut(theory : OstrichStringTheory, parser: ECMARegexParser) {
     re_case_insensitive
   }
 
-  // Just calls toAFABuilder with AFA2.Right direction and converts the result.
+  val builder = new AFA2Builder(parser.alphabetDebug)
+
+  // Just calls toMutableAFA2 with AFA2.Right direction and converts the result.
   def toExt2AFA(t: ITerm) : ExtAFA2 = {
-    val builder = toAFABuilder(AFA2.Right, t)
-    println("Builder automaton: ")
-    println(builder)
-    val extAFA2 = builder.builderToExtAFA()
-    println("Ext2AFA automaton: ")
-    println(extAFA2)
+    val mutAut = toMutableAFA2(AFA2.Right, t)
+    //println("Builder automaton:\n" + mutAut)
+    val extAFA2 = mutAut.builderToExtAFA()
+    //println("Ext2AFA automaton:\n" + extAFA2)
     extAFA2
   }
 
-  def toAFABuilder(dir: AFA2.Step, t: ITerm) : MutableAFA2 = {
+
+  private def toMutableAFA2(dir: AFA2.Step, t: ITerm) : MutableAFA2 = {
     t match {
 
       case IFunApp(`re_eps`, _) =>
-        MutableAFA2.epsAtomic2AFA(parser.alphabet, dir)
+        builder.epsAtomic2AFA(dir)
 
       case IFunApp(`re_none`, _) =>
-        MutableAFA2.emptyAtomic2AFA(parser.alphabet, dir)
+        builder.emptyAtomic2AFA(dir)
 
       case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
-        MutableAFA2.charrangeAtomic2AFA(parser.alphabet, dir, new Range(l.intValue, u.intValue+1, 1))
+        builder.charrangeAtomic2AFA(dir, new Range(l.intValue, u.intValue+1, 1))
 
-      case IFunApp(`re_allchar`, _) => MutableAFA2.allcharAtomic2AFA(parser.alphabet, dir)
+      case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
 
-      case IFunApp(`re_all`, _) => MutableAFA2.allAtomic2AFA(parser.alphabet, dir)
+      case IFunApp(`re_all`, _) => builder.allAtomic2AFA(dir)
 
       case IFunApp(`re_++`, Seq(l, r)) =>
-        MutableAFA2.concat2AFA(dir, toAFABuilder(dir, l), toAFABuilder(dir, r))
+        builder.concat2AFA(dir, toMutableAFA2(dir, l), toMutableAFA2(dir, r))
 
       case IFunApp(`re_union`, Seq(l, r)) =>
-        MutableAFA2.alternation2AFA(dir, toAFABuilder(dir, l), toAFABuilder(dir, r))
+        builder.alternation2AFA(dir, toMutableAFA2(dir, l), toMutableAFA2(dir, r))
 
       case IFunApp(`re_*`, Seq(t)) =>
-        MutableAFA2.star2AFA(dir, toAFABuilder(dir, t))
+        builder.star2AFA(dir, toMutableAFA2(dir, t))
 
       case IFunApp(parser.LookAhead, Seq(t)) =>
         // Watch out here with the directions!
-        MutableAFA2.lookaround2AFA(dir, toAFABuilder(AFA2.Right, t))
+        builder.lookaround2AFA(dir, toMutableAFA2(AFA2.Right, t))
 
       case IFunApp(parser.LookBehind, Seq(t)) =>
-        MutableAFA2.lookaround2AFA(dir, toAFABuilder(AFA2.Left, t))
+        builder.lookaround2AFA(dir, toMutableAFA2(AFA2.Left, t))
 
       case IFunApp(parser.NegLookAhead, Seq(t)) =>
-        MutableAFA2.negLookaround2AFA(dir, toAFABuilder(AFA2.Right, t))
+        builder.negLookaround2AFA(dir, toMutableAFA2(AFA2.Right, t))
 
       case IFunApp(parser.NegLookBehind, Seq(t)) =>
-        MutableAFA2.negLookaround2AFA(dir, toAFABuilder(AFA2.Left, t))
+        builder.negLookaround2AFA(dir, toMutableAFA2(AFA2.Left, t))
 
       case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
-        MutableAFA2.loop3Aut2AFA(parser.alphabet, dir, n1.intValue, n2.intValue, toAFABuilder(dir, t))
+        builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toMutableAFA2(dir, t))
 
       case _ => throw new RuntimeException("This shouldn't happen!")
     }
@@ -407,16 +424,20 @@ class Regex2Aut(theory : OstrichStringTheory) {
       println(s)
       val st = new SyntacticTransformations(theory, parser)
       println("After transformation:")
-      val r = st.transformNF(s)
+      val r = st(s)
       println(r)
       println()
 
       val ecma2Aut = new ECMA2Aut(theory, parser)
-      val syntTransf = new SyntacticTransformations(theory, parser)
-      val aut = ecma2Aut.toExt2AFA(syntTransf(s))
+      val aut = ecma2Aut.toExt2AFA(r)
       AutomatonUtils.printAutDotToFile(aut, "extafa2.dot")
 
-      NFATranslator(aut).underlying
+      throw new RuntimeException("Stop here.")
+      val t1 = System.nanoTime
+      val res = NFATranslator(aut).underlying
+      val duration = (System.nanoTime - t1) / 1e9d
+      println("Time for 2AFA -> NFA translation: " + duration)
+      res
     }
 
     case IFunApp(`re_from_ecma2020_flags`,
