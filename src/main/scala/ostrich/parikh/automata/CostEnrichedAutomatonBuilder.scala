@@ -11,7 +11,6 @@ import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
-import dk.brics.automaton.BasicOperations
 
 class CostEnrichedAutomatonBuilder
     extends AtomicStateAutomatonBuilder[

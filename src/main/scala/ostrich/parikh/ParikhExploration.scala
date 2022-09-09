@@ -9,7 +9,6 @@ import ap.SimpleAPI
 import ostrich.OFlags
 import scala.collection.mutable.{
   ArrayBuffer,
-  ArrayStack,
   HashMap => MHashMap,
   HashSet => MHashSet,
   BitSet => MBitSet
@@ -26,17 +25,12 @@ import ParikhUtil._
 import SimpleAPI.ProverStatus
 import scala.collection.mutable.LinkedHashSet
 import ap.util.Seqs
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.Config.{strategy, IC3Based, ParikhBased, RegisterBased}
+import ostrich.parikh.Config.{strategy, SyncSubstr, BasicProduct}
 import ostrich.parikh.preop.SubStringCEPreOp
 import ap.terfor.Formula
 import ap.api.PartialModel
-import ostrich.automata.AtomicStateAutomatonAdapter
-object ParikhExploration {
-  sealed trait LIAStrategy // linear integer arithmetic(LIA) generate strategy
-  case class ArithAfterProduct() extends LIAStrategy
-  case class ArithBeforeProduct(syncLen: Int) extends LIAStrategy
-}
+import ostrich.parikh.ParikhStore._
+object ParikhExploration {}
 
 class ParikhExploration(
     _funApps: Seq[(PreOp, Seq[Term], Term)],
@@ -57,12 +51,11 @@ class ParikhExploration(
     ) {
 
   import Exploration._
-  import ParikhExploration._
 
-  override val leafTerms =
+  override val leafTerms: Set[Term] =
     allTerms filter { case t => !(resultTerms contains t) }
 
-  private var lengthModel: Option[PartialModel] = None
+  private var integerModel: Option[PartialModel] = None
 
   private val constraintStores = new MHashMap[Term, ParikhStore]
 
@@ -72,36 +65,36 @@ class ParikhExploration(
   // if unknown is true, the unsat result is unsound, return empty conflict set
   var unknown = false
 
-  // all interger term
-  val integerTerm = new ArrayBuffer[Term]
-  // all string term
-  var allStrTerms = allTerms
-
-  funApps.foreach {
-    case (_: LengthCEPreOp, _, res) => // length op
-      allStrTerms -= res
-      integerTerm += res
-    case (_: SubStringCEPreOp, Seq(_, beginIdx, length), _) =>
-      allStrTerms -= beginIdx
-      allStrTerms -= length
-      integerTerm += length
-      integerTerm += beginIdx
-    case _ =>
+  // all integer terms and string terms
+  val (integerTerm, strTerms) = {
+    var _integerTerm = Set[Term]()
+    var _strTerms = allTerms
+    funApps.foreach {
+      case (_: LengthCEPreOp, _, res) => // length op
+        _strTerms -= res
+        _integerTerm += res
+      case (_: SubStringCEPreOp, Seq(_, beginIdx, length), _) =>
+        _strTerms -= beginIdx
+        _strTerms -= length
+        _integerTerm += length
+        _integerTerm += beginIdx
+      case _ =>
+    }
+    (_integerTerm, _strTerms)
   }
 
-  def updateLengthModel = {
-    lengthModel = {
+  /** update model of integers
+    */
+  def updateIntegerModel: Unit = {
+    integerModel = {
       Some(p.partialModel)
     }
   }
 
-  /** Given a sequence of automata, update `termModel`.
-    * @return
-    *   After this method is called, `termModel` will contain the mapping from
-    *   each transition term to its int value
+  /** Given a sequence of automata, update their `termModel`.
     */
   def resetTermModel: Unit = {
-    val lModel = lengthModel.get
+    val lModel = integerModel.get
     for (t <- leafTerms) {
       val store = constraintStores(t)
       store.termModel.clear()
@@ -114,39 +107,31 @@ class ParikhExploration(
     }
   }
 
-  def checkArithConstency(f: Formula): ProverStatus.Value = {
+  def checkArithConsistency(f: Formula): ProverStatus.Value = {
     pushLengthConstraints
     p.!!(f)
     p.addConstantsRaw(SymbolCollector constants f)
     val res = p.???
-    updateLengthModel
+    updateIntegerModel
     popLengthConstraints
     res
-  }
-
-  def findAcceptedWordForTerm(t: Term): Option[Seq[Int]] = {
-    resetTermModel
-    val store = constraintStores(t)
-    val auts = store.getCurrentAuts
-    val termModel = store.termModel
-    findAcceptedWord(auts, termModel)
   }
 
   def repeatCheckArithConsistency(
       f: Formula,
       repeatTime: Int
   ): ProverStatus.Value = {
-    println("repeat check arith consistency")
     var currentF = f
     var currentTime = 0
     while (currentTime < repeatTime) {
-      checkArithConstency(currentF) match {
+      checkArithConsistency(currentF) match {
         case ProverStatus.Sat =>
           val unsatCore = disjFor(
-            for (t <- leafTerms; if findAcceptedWordForTerm(t) == None) yield {
-              val termModel = constraintStores(t).termModel
-              disjFor(termModel.map { case (t, value) => t =/= value })
-            }
+            for (t <- leafTerms; if findAcceptedWordSpecificTerm(t) == None)
+              yield {
+                val termModel = constraintStores(t).termModel
+                disjFor(termModel.map { case (t, value) => t =/= value })
+              }
           )
           if (unsatCore.length == 0)
             return ProverStatus.Sat
@@ -157,6 +142,12 @@ class ParikhExploration(
       }
     }
     ProverStatus.Unknown
+  }
+
+  def findAcceptedWordSpecificTerm(t: Term): Option[Seq[Int]] = {
+    resetTermModel
+    val store = constraintStores(t)
+    findAcceptedWord(store.getCurrentAuts, store.termModel)
   }
 
   override def findModel: Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
@@ -196,7 +187,6 @@ class ParikhExploration(
 
         // we are finished and just have to construct a model
         val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
-
         // check linear arith consistency of final automata
         def trivalConflict: ConflictSet = {
           for (
@@ -205,19 +195,40 @@ class ParikhExploration(
           ) yield TermConstraint(t, aut)
         }
 
+        def catraFormat(auts: Seq[Automaton]) = {
+          s"""
+synchronised {
+  ${auts.map(_.toString).mkString("")}
+};
+"""
+        }
+
+        def printFinalConstraints = {
+          val term2Constraints =
+            leafTerms.map(constraintStores(_).getCurrentAuts)
+
+          val str =
+          s"""
+counter int ${term2Constraints.flatten
+      .flatMap(_.registers)
+      .mkString(",")};
+${term2Constraints.map(catraFormat).mkString("")}
+          """
+          println(str)
+        }
         def checkFinalArithConsistency: Option[ConflictSet] = {
           strategy match {
-            case RegisterBased() =>
-              println("find word-----------------------------------------")
+            case BasicProduct() =>
+              printFinalConstraints
               val finalArith = conj(for (t <- leafTerms) yield {
                 constraintStores(t).getArithFormula(ArithAfterProduct())
               })
-              checkArithConstency(finalArith) match {
+              checkArithConsistency(finalArith) match {
                 case ProverStatus.Sat => // nothing
                 case _                => return Some(trivalConflict) // not sat
               }
             // TODO: Implement parikh based
-            case ParikhBased(minSyncLen, maxSyncLen, repeatTimes) =>
+            case SyncSubstr(minSyncLen, maxSyncLen, repeatTimes) =>
               for (syncLen <- minSyncLen until maxSyncLen + 1) {
                 val finalArith = conj(for (t <- leafTerms) yield {
                   constraintStores(t).getArithFormula(
@@ -251,7 +262,7 @@ class ParikhExploration(
 
         // values for integer variables
         for (
-          lModel <- lengthModel;
+          lModel <- integerModel;
           c <- integerTerm;
           cVal <- evalTerm(c)(lModel)
         )
@@ -293,10 +304,10 @@ class ParikhExploration(
               case Left(value)  => _oldValue = Seq(value.intValueSafe)
               case Right(value) => _oldValue = value
             }
-            // if (_oldValue != resValue)
-            //   throw new Exception(
-            //     "Model extraction failed: " + _oldValue + " != " + resValue
-            //   )
+            if (_oldValue != resValue)
+              throw new Exception(
+                "Model extraction failed: " + _oldValue + " != " + resValue
+              )
           }
 
           // check the result string value is accepted by its automaton
@@ -379,9 +390,9 @@ class ParikhExploration(
             ) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-              println("backjump " + (conflict map {
-                case TermConstraint(t, aut) => (t, aut)
-              }))
+              // println("backjump " + (conflict map {
+              //   case TermConstraint(t, aut) => (t, aut)
+              // }))
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
@@ -431,7 +442,7 @@ class ParikhExploration(
     val additionalConstraints = new ArrayBuffer[(Term, Automaton)]
 
     // check whether any of the terms have concrete definitions
-    for (t <- allStrTerms)
+    for (t <- strTerms)
       for (w <- _strDatabase.term2List(t)) {
         val str: String = w.map(i => i.toChar)(breakOut)
         additionalConstraints += ((t, CostEnrichedAutomaton fromString str))
@@ -459,204 +470,6 @@ class ParikhExploration(
   }
 
   protected val needCompleteContentsForConflicts: Boolean = false
-  protected def newStore(t: Term): ParikhStore = new ParikhStore(t)
-
-  class ParikhStore(t: Term) extends ConstraintStore {
-
-    val termModel = new MHashMap[Term, Int]
-    // current product automaton
-    private var currentProduct: CostEnrichedAutomatonTrait =
-      CostEnrichedAutomaton.makeAnyString()
-    private var currentParikhAuts: Seq[CostEnrichedAutomatonTrait] =
-      Seq()
-
-    // constraints in this store
-    private val constraints = new ArrayBuffer[Automaton]
-    // the stack is used to push and pop constraints
-    private val constraintStack = new ArrayStack[Int]
-
-    // Combinations of automata that are known to have empty intersection
-    private val inconsistentAutomata = new ArrayBuffer[Seq[Automaton]]
-    // Map from watched automata to the indexes of
-    // <code>inconsistentAutomata</code> that is watched
-    private val watchedAutomata = new MHashMap[Automaton, List[Int]]
-
-    // calling for `p.???` will reset formula in p
-    // Remember to use `pushLengthConstraints` and `popLengthConstraints`
-    // to store formula !!
-    /** push to store current linear arith formula before add new constraints
-      */
-    def pushLengthConstraints: Unit = {
-      p.push
-    }
-
-    /** pop to restore the linear arith formula
-      */
-    def popLengthConstraints: Unit = {
-      p.pop
-    }
-
-    def push: Unit = {
-      constraintStack push constraints.size
-    }
-
-    def pop: Unit = {
-      val oldSize = constraintStack.pop
-      constraints reduceToSize oldSize
-    }
-
-    /** Check if there is directly confilct
-      * @param aut
-      *   new added aut
-      * @return
-      *   None if constraints belong to one of **inconsistentAutomata**;
-      *   ConflicSet otherwise.
-      */
-    private def directlyConflictSet(aut: Automaton): Option[ConflictSet] = {
-      var potentialConflictsIdxs = watchedAutomata.getOrElse(aut, List())
-      while (!potentialConflictsIdxs.isEmpty) {
-        val potentialConflictsIdx = potentialConflictsIdxs.head
-        val potentialConflicts = inconsistentAutomata(potentialConflictsIdx)
-        if (potentialConflicts.forall((constraints :+ aut).contains(_))) {
-          // constraints have become inconsistent!
-          println("Stored conflict applies!")
-          return Some(
-            for (a <- potentialConflicts.toList)
-              yield TermConstraint(t, a)
-          )
-        }
-        potentialConflictsIdxs = potentialConflictsIdxs.tail
-      }
-      None
-    }
-
-    /** Check if there is conflict among auts
-      * @param auts
-      *   the automata to check
-      * @return
-      *   ture if not conflict; false otherwise
-      */
-    private def isConsistency(
-        auts: Seq[CostEnrichedAutomatonTrait]
-    ): Boolean = {
-      if (auts.size == 1) {
-        currentProduct = AtomicStateAutomatonAdapter.intern(auts(0))
-        true
-      } else {
-        currentProduct = auts.reduceLeft(_ & _)
-        !currentProduct.isEmpty
-      }
-    }
-
-    /** Check if constraints are still consistent after adding `aut`
-      * @param aut
-      *   new added aut
-      * @return
-      *   None if constraints are still consistent; Some(unsatCore) otherwise.
-      */
-    private def checkConsistency(aut: Automaton): Option[Seq[Automaton]] = {
-      val consideredAuts = new ArrayBuffer[Automaton]
-      for (aut2 <- constraints :+ aut) {
-        consideredAuts += aut2
-        if (!isConsistency(consideredAuts))
-          return Some(consideredAuts.toSeq)
-      }
-      None
-    }
-    def assertConstraint(aut: Automaton): Option[ConflictSet] = {
-
-      if (!constraints.contains(aut)) {
-        // check if the stored automata is consistent after adding the aut
-        // 1. check if the aut is already in inconsistent core:
-        // We will maintain an ArrayBuffer **inconsistentAutomata** to store confilctSets.
-        // We return the conflictSet directly if current constraints with aut belongs to
-        // one confilctSet in **inconsistentAutomata**.
-        println("check")
-        directlyConflictSet(aut) match {
-          case Some(confilctSet) => return Some(confilctSet);
-          case None              => // do nothing
-        }
-
-        // 2. check if the stored automata are consistent after adding the aut:
-        checkConsistency(aut) match {
-          case Some(inconsistentAuts) => {
-            // add the inconsistent automata to the list of inconsistent automata
-            inconsistentAutomata += inconsistentAuts
-            // add the index of the inconsistent automata to the watched automata
-            for (inconsistentAut <- inconsistentAuts) {
-              watchedAutomata.put(
-                inconsistentAut,
-                watchedAutomata.getOrElse(
-                  inconsistentAut,
-                  List()
-                ) :+ inconsistentAutomata.size - 1
-              )
-            }
-            // return the conflictSet
-            return Some(
-              for (a <- inconsistentAuts.toList)
-                yield TermConstraint(t, a)
-            )
-          }
-          case None => {
-            constraints += aut
-            None
-          }
-        }
-      } else println("contain")
-      None
-    }
-
-    def getArithFormula(strategy: LIAStrategy): Formula = {
-      strategy match {
-        case ArithAfterProduct() =>
-          conj(currentProduct.intFormula, currentProduct.parikhImage)
-        case ArithBeforeProduct(syncLen) =>
-          val labels = split2MinLabels(constraints)
-          val (syncLenAuts, states2Prefix) =
-            getSyncLenAuts(constraints, labels, syncLen)
-          val syncFormula = sync(syncLenAuts, states2Prefix, labels, syncLen)
-          currentParikhAuts = syncLenAuts
-          conj(
-            syncLenAuts.map(_.parikhImage) ++: syncLenAuts.map(
-              _.intFormula
-            ) :+ syncFormula
-          )
-      }
-    }
-
-    def getContents: List[Automaton] = constraints.toList
-
-    def getCompleteContents: List[Automaton] = constraints.toList
-
-    def ensureCompleteLengthConstraints: Unit = None // do nothing
-
-    def isAcceptedWord(w: Seq[Int]): Boolean = {
-      val constraintSet = constraints.toSet
-      for (aut <- constraintSet) {
-        if (!aut(w)) {
-          return false
-        }
-      }
-      return true
-    }
-
-    def getAcceptedWord: Seq[Int] = {
-      val finalCostraints = getCurrentAuts
-      findAcceptedWord(finalCostraints, termModel) match {
-        case Some(w) => return w
-        case None    => throw new Exception("not find word") // do nothing
-      }
-    }
-    def getAcceptedWordLen(len: Int): Seq[Int] = Seq() // no need
-
-    def getCurrentAuts: Seq[Automaton] = strategy match {
-      case ParikhBased(_, _, _) =>
-        currentParikhAuts
-      case RegisterBased() =>
-        Seq(currentProduct)
-      case IC3Based() =>
-        Seq(currentProduct)
-    }
-  }
+  protected def newStore(t: Term): ParikhStore =
+    new ParikhStore(t)
 }

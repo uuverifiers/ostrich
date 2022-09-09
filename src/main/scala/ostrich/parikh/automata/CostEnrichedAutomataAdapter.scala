@@ -4,6 +4,15 @@ import ostrich.automata.AtomicStateAutomatonAdapter
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.{TransitionTerm, RegisterTerm}
 import ap.terfor.Term
+import ostrich.automata.Automaton
+
+object CostEnrichedAutomatonAdapter {
+  def intern(a: Automaton): CostEnrichedAutomaton = a match {
+    case a: CostEnrichedAutomatonAdapter[_] => a.internalise
+    case a: CostEnrichedAutomaton           => a
+    case _ => throw new IllegalArgumentException
+  }
+}
 
 abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
     val _underlying: A
@@ -19,7 +28,8 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
   override type TLabel = _underlying.TLabel
 
   override lazy val internalise: CostEnrichedAutomaton = {
-    val builder = underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
+    val builder =
+      underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
 
     for (s <- states)
       smap.put(s, builder.getNewState)
@@ -31,8 +41,8 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
       builder.setAccept(t, isAccept(s))
     }
 
-    builder.addIntFormula(intFormula)
-    builder.addRegisters(registers)
+    builder.addIntFormula(this.intFormula)
+    builder.addRegisters(this.registers)
     builder.setInitialState(smap(initialState))
     builder.getAutomaton
   }
@@ -84,10 +94,9 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
 
   def transitionsWithTerm = internalise.transitionsWithTerm
   def transitionsWithVec = internalise.transitionsWithVec
-  lazy val parikhImage = internalise.parikhImage
+  lazy val registersAbstraction = internalise.registersAbstraction
 
   def getTransitionsTerms = internalise.getTransitionsTerms
-
 
   override lazy val initialState = _initialState
 
@@ -131,7 +140,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
   def outgoingTransitionsWithTerm(
       q: State
   ): Iterator[(State, TLabel, Term)] =
-    // The transtion terms are unique for each internalise
+    // The transtion terms are unique for each CostEnrichedAutomatonAdapter
     // We can not use `underlying.outgoingTransitionsWithTerm(q)` directly
     internalise.outgoingTransitionsWithTerm(smap.getOrElse(q, q))
 

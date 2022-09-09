@@ -57,3 +57,13 @@ object ZTerm {
     zTerm
   }
 }
+
+object KTerm {
+  var count = 0
+  def apply(): Term = {
+    count += 1
+    val kTerm = new ConstantTerm(s"K$count")
+    TermGeneratorOrder.extend(kTerm)
+    kTerm
+  }
+}
