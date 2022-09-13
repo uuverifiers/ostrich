@@ -195,31 +195,12 @@ class ParikhExploration(
           ) yield TermConstraint(t, aut)
         }
 
-        def catraFormat(auts: Seq[Automaton]) = {
-          s"""
-synchronised {
-  ${auts.map(_.toString).mkString("")}
-};
-"""
-        }
+        
 
-        def printFinalConstraints = {
-          val term2Constraints =
-            leafTerms.map(constraintStores(_).getCurrentAuts)
-
-          val str =
-          s"""
-counter int ${term2Constraints.flatten
-      .flatMap(_.registers)
-      .mkString(",")};
-${term2Constraints.map(catraFormat).mkString("")}
-          """
-          println(str)
-        }
+        
         def checkFinalArithConsistency: Option[ConflictSet] = {
           strategy match {
             case BasicProduct() =>
-              printFinalConstraints
               val finalArith = conj(for (t <- leafTerms) yield {
                 constraintStores(t).getArithFormula(ArithAfterProduct())
               })
@@ -254,6 +235,7 @@ ${term2Constraints.map(catraFormat).mkString("")}
         }
 
         // values for leaf string variables
+        throw FoundModel(model.toMap)
         resetTermModel
         for (t <- leafTerms) {
           val store = constraintStores(t)

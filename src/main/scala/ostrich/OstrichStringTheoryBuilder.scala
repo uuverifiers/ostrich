@@ -80,7 +80,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useCostEnriched = value
       minimizeAuts = value  
       // when use cost enriched strategy, 
-      // the initial auts must be minimize so that the final state is unique. 
+      // the initial auts should be minimized to reduce the number of states
     case str =>
       super.parseParameter(str)
   }

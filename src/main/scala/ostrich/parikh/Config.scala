@@ -5,7 +5,6 @@ import pureconfig.generic.auto._
 object Config {
   sealed trait ProductStrategy
   case class BasicProduct() extends ProductStrategy
-  case class IC3Based() extends ProductStrategy
 
   sealed trait LengthAbstractStrategy
   case class Parikh() extends LengthAbstractStrategy
@@ -31,7 +30,6 @@ object Config {
   lazy val lengthAbsStrategy = config.right.get.lengthAbsStrategy
 
   strategy match {
-    case IC3Based()      => println("IC3Based")
     case BasicProduct() => println("RegisterBased")
     case SyncSubstr(minSyncLen, maxSyncLen, repeatTimes) =>
       println(s"SyncSubstr($minSyncLen, $maxSyncLen, $repeatTimes)")

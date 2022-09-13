@@ -534,35 +534,89 @@ class CostEnrichedAutomaton(
     conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
   }
 
+  def succWithVec(s: State): Iterator[(State, Seq[Int])] =
+    for ((t, lbl, vec) <- outgoingTransitionsWithVec(s)) yield (t, vec)
+
+  // e.g (1,1) + (1,0) = (2,1)
+  def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]) = {
+    seq1 zip seq2 map { case (a, b) => a + b }
+  }
+
+  /** computing S_(2n^2+n-1), ..., S_0. Terminate if S_(2n^2+n-1) is computed or
+    * succ(S_i) is empty
+    * @return
+    *   S
+    */
+  def computeS(sLen: Int) = {
+    val S = ArrayBuffer.fill(sLen)(Set[(State, Seq[Int])]())
+    S(0) = Set((initialState, Seq.fill(registers.size)(0)))
+    var idx = 0
+    while (idx < sLen - 1 && !S(idx).isEmpty) {
+      idx += 1
+      S(idx) =
+        for (
+          (s, regVal) <- S(idx - 1);
+          (t, vec) <- succWithVec(s)
+        ) yield {
+          (t, addTwoSeq(regVal, vec))
+        }
+    }
+    S
+  }
+
+  lazy val overApproximation: Formula = {
+    val n = states.size
+    val concreteLenBound = if(n>10) 100 else n*n + 10;
+    val s = computeS(concreteLenBound)
+    disjFor(
+      for (
+        j <- 0 until concreteLenBound;
+        if !s(j).isEmpty && !s(j).map(_._1).forall(!isAccept(_));
+        (_, regVal) <- s(j)
+      ) yield {
+        conj(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
+      }
+    )
+  }
+
   /** Treat this automaton as unary NFA because we only care the LIA on the
-    * automaton. Use algorithm in Saw Z, RP 2010 to get the formula of registers
+    * automaton. Based on algorithm in Saw Z, RP 2010
     */
   lazy val unaryNFAImage: Formula = {
-    val n = states.size
-    val concreteLen = 300
     println("unary ---------------------------------------------")
+    val n = states.size
+    val rLen = registers.size
+    val concreteLen = 2 * n * n + n
     val kSet = new MHashSet[Term]
-    def abstractionOfRi(i: Int): Formula = {
-      val s = computeS(i)
-      val t = computeT(i)
-      val periods = computePeriods(s(n), i)
+
+    def abstractionOfRegs: Formula = {
+      val s = computeS(concreteLen)
+      val t = computeT
       val r1Formula = disjFor(
         for (
           j <- 0 until concreteLen;
-          if !s(j).isEmpty && !s(j).forall(!isAccept(_))
+          if !s(j).isEmpty && !s(j).map(_._1).forall(!isAccept(_));
+          (_, regVal) <- s(j)
         ) yield {
-          registers(i) === j
+          conj(for (i <- 0 until rLen) yield registers(i) === regVal(i))
         }
       )
+
       val r2Formula = disjFor(
         for (
           d <- 1 until n + 1;
           c <- 2 * n * n - d until 2 * n * n;
-          if (periods.contains(d) && !t(c - n).isEmpty)
+          (from, regVal) <- s(n);
+          (period, loopVec) <- periods(from);
+          (to, tailVec) <- t(c - n);
+          if (period == d && from == to)
         ) yield {
           val k = KTerm()
           kSet += k
-          registers(i) === c + k * d
+          conj(
+            for (i <- 0 until rLen)
+              yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
+          )
         }
       )
       val kFormula = conj(
@@ -571,105 +625,57 @@ class CostEnrichedAutomaton(
         }
       )
 
-      conj(disj(r1Formula, r2Formula), kFormula)
-    }
-
-    /** computing S_(2n^2+n-1), ..., S_0. Terminate if S_(2n^2+n-1) is computed
-      * or succ(S_i) is empty
-      * @return
-      *   S
-      */
-    def computeS(i: Int) = {
-      states.size
-      val Slen = concreteLen
-      val S = ArrayBuffer.fill(Slen)(Set[State]())
-      S(0) = sameSucc(initialState, i).toSet
-      var idx = 0
-      while (idx < Slen - 1 && !S(idx).isEmpty) {
-        idx += 1
-        S(idx) = S(idx - 1).flatMap(succ(_, i))
-        S(idx) = S(idx).flatMap(sameSucc(_, i))
-      }
-      println("finish")
-      S
+      disj(r1Formula, conj(r2Formula, kFormula))
     }
 
     /** computing T_(2n^2-n-1), ..., T_0. Terminate if T_(2n^2-n-1) is computed
       * or pre(S_i) is empty
-      * @param i
       */
-    def computeT(i: Int) = {
-      val n = states.size
+    def computeT = {
       val Tlen = 2 * n * n - n
-      val T = ArrayBuffer.fill(Tlen)(Set[State]())
-      for (s <- acceptingStates) {
-        T(0) = samePre(s, i).toSet
-      }
+      val T = ArrayBuffer.fill(Tlen)(Set[(State, Seq[Int])]())
+      T(0) = acceptingStates.map((_, Seq.fill(rLen)(0)))
       var idx = 0
       while (idx < Tlen - 1 && !T(idx).isEmpty) {
         idx += 1
-        T(idx) = T(idx - 1).flatMap(pre(_, i))
-        T(idx) = T(idx).flatMap(samePre(_, i))
+        T(idx) =
+          for (
+            (t, regVal) <- T(idx - 1);
+            (s, vec) <- preWithVec(t)
+          ) yield {
+            (s, addTwoSeq(regVal, vec))
+          }
       }
       T
     }
 
-    def computePeriods(states: Set[State], i: Int): Set[Int] = {
-      val periods = new ArrayBuffer[Int]
-      for (s <- states) {
-        periods ++= computePeriodsStep(s, i)
-      }
-      periods.toSet
-    }
-
-    def computePeriodsStep(s: State, i: Int): Set[Int] = {
-      val periods = new ArrayBuffer[Int]
-      val n = states.size
+    def periods(s: State): Set[(Int, Seq[Int])] = {
+      val periods = new ArrayBuffer[(Int, Seq[Int])]
       var period = 0
-      val nextStates = succ(s, i).flatMap(sameSucc(_, i))
+      var periodVec = Seq.fill(rLen)(0)
+      val nextStates2Vec = succWithVec(s).toMap
+      val nextStates = nextStates2Vec.map(_._1).toSet
       while (period < n && !nextStates.isEmpty) {
         period += 1
         if (nextStates.contains(s)) {
-          periods.append(period)
+          periodVec = addTwoSeq(periodVec, nextStates2Vec(s))
+          periods.append((period, periodVec))
         }
       }
       periods.toSet
     }
 
-    def sameSucc(s: State, i: Int): Iterator[State] =
-      (for (
-        (t, lbl, vec) <- outgoingTransitionsWithVec(s);
-        if vec(i) == 0
-      ) yield {
-        Iterator(t) ++ sameSucc(t, i)
-      }).flatten ++ Iterator(s)
+    def preWithVec(t: State): Iterator[(State, Seq[Int])] =
+      for ((s, lbl) <- incomingTransitions(t).iterator)
+        yield (s, etaMap((s, lbl, t)))
 
-    def succ(s: State, i: Int): Iterator[State] =
-      for (
-        (t, lbl, vec) <- outgoingTransitionsWithVec(s);
-        if vec(i) > 0
-      ) yield t
+    abstractionOfRegs
 
-    def samePre(t: State, i: Int): Iterator[State] =
-      (for (
-        (s, lbl) <- incomingTransitions(t).iterator;
-        if etaMap((s, lbl, t))(i) == 0
-      ) yield {
-        Iterator(s) ++ samePre(s, i)
-      }).flatten ++ Iterator(t)
-
-    def pre(t: State, i: Int): Iterator[State] =
-      for (
-        (s, lbl) <- incomingTransitions(t).iterator;
-        if etaMap((s, lbl, t))(i) > 0
-      ) yield s
-
-    conj(for (i <- 0 until registers.size) yield abstractionOfRi(i))
   }
 
   lazy val registersAbstraction: Formula = Config.lengthAbsStrategy match {
     case Parikh() => parikhImage
-    case Unary()  => unaryNFAImage
+    case Unary()  => overApproximation
   }
 
   def removeDeadTransitions(): Unit = {
@@ -691,7 +697,7 @@ class CostEnrichedAutomaton(
     }
 
     s"""
-automaton ${states.size} {
+automaton a${states.size} {
   init s${state2Int(initialState)};
   ${transitionsWithVec.toSeq.sortBy(_._1).map(transition2Str).mkString("\n  ")}
   accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};

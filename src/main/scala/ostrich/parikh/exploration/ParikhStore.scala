@@ -14,7 +14,7 @@ import ap.terfor.TerForConvenience._
 import TermGeneratorOrder._
 import ParikhUtil._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.Config.{strategy, IC3Based, SyncSubstr, BasicProduct}
+import ostrich.parikh.Config.{strategy, SyncSubstr, BasicProduct}
 import ap.terfor.Formula
 import ostrich.automata.AtomicStateAutomatonAdapter
 import Exploration._
@@ -205,8 +205,6 @@ class ParikhStore(t: Term) extends ConstraintStore {
     case SyncSubstr(_, _, _) =>
       currentParikhAuts
     case BasicProduct() =>
-      Seq(currentProduct)
-    case IC3Based() =>
       Seq(currentProduct)
   }
 }
