@@ -20,7 +20,7 @@ ostrichParams=""
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh)
+        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | [+-]costenriched | [+-]help)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else

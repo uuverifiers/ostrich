@@ -92,6 +92,8 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
 
   override def toString: String = internalise.toString()
 
+  val etaMap = internalise.etaMap
+
   def transitionsWithTerm = internalise.transitionsWithTerm
   def transitionsWithVec = internalise.transitionsWithVec
   lazy val registersAbstraction = internalise.registersAbstraction

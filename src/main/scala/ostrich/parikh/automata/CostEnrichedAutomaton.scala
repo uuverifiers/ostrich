@@ -75,6 +75,10 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     */
   val registers: Seq[Term]
 
+  /** Map from transitions to its cost.
+    */
+  val etaMap: MHashMap[(State, TLabel, State), Seq[Int]]
+
   /** Enssential linear arithmatic constraints for the automaton.
     */
   var intFormula: Formula = Conjunction.TRUE
@@ -110,7 +114,7 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
       None
   }
 
-  /** Prikh image of the automaton
+  /** The linear arith abstraction of register values.
     */
   val registersAbstraction: Formula
 

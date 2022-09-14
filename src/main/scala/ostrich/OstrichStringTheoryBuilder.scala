@@ -38,6 +38,7 @@ import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
+import ap.theories.TheoryBuilder
 
 /** The entry class of the Ostrich string solver.
   */
@@ -55,6 +56,15 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
+
+  private val usage = 
+    s"""
+    Usage: <options> <files or directories>
+
+    Available options :
+       [+-]costenriched     -- use cost enriched automata               (default: -)
+       [+-]minimizeAutomata -- minimize the initial regular constraints (default: -)
+    """
 
   def setAlphabetSize(w: Int): Unit = ()
 
@@ -78,11 +88,13 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useParikh = value
     case CmdlParser.Opt("costenriched", value) =>
       useCostEnriched = value
-      minimizeAuts = value  
-      // when use cost enriched strategy, 
-      // the initial auts should be minimized to reduce the number of states
+    case CmdlParser.Opt("help", _) =>
+      println(usage)
+      System.exit(0)
     case str =>
-      super.parseParameter(str)
+      throw new TheoryBuilder.TheoryBuilderException(
+      "Parameter " + str + " is not supported by theory " + name + "\n" + usage)
+      // super.parseParameter(str)
   }
 
   import StringTheoryBuilder._

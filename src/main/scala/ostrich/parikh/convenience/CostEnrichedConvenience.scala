@@ -47,16 +47,6 @@ object CostEnrichedConvenience {
     }
   }
 
-  // implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomaton = {
-  //   if(aut.isInstanceOf[CostEnrichedAutomaton]) {
-  //     aut.asInstanceOf[CostEnrichedAutomaton]
-  //   } else {
-  //     val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
-  //     e.printStackTrace()
-  //     throw e
-  //   }
-  // }
-
   implicit def automaton2CostEnriched(
       auts: Seq[Automaton]
   ): Seq[CostEnrichedAutomatonTrait] =
