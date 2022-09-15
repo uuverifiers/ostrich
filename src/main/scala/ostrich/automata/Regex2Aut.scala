@@ -39,7 +39,7 @@ import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
-import ostrich.automata.afa2.{AutomatonUtils, NFATranslator}
+import ostrich.automata.afa2.{AFA2Utils, EpsReducer, NFATranslator}
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack}
 import scala.collection.immutable.VectorBuilder
@@ -430,9 +430,12 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
       val ecma2Aut = new ECMA2Aut(theory, parser)
       val aut = ecma2Aut.toExt2AFA(r)
-      AutomatonUtils.printAutDotToFile(aut, "extafa2.dot")
+      AFA2Utils.printAutDotToFile(aut, "extAFA2.dot")
 
-      throw new RuntimeException("Stop here.")
+      //val epsRed = new EpsReducer(aut)
+      //val reducedAut = epsRed.afa
+
+      //throw new RuntimeException("Stop here.")
       val t1 = System.nanoTime
       val res = NFATranslator(aut).underlying
       val duration = (System.nanoTime - t1) / 1e9d

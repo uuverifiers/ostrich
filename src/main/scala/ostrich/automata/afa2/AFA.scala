@@ -36,6 +36,8 @@ object AFA2 {
     extends Transition(_targets) {
 
     override def toString: String = "eps " + _targets
+
+    def isExistential() = this.targets.size==1
   }
 
 

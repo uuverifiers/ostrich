@@ -3,6 +3,7 @@ package ostrich.automata.afa2
 import ap.util.Combinatorics
 import ostrich.automata.{AutomataUtils, BricsAutomaton, BricsAutomatonBuilder}
 
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, MultiMap, HashMap => MHashMap, HashSet => MHashSet, Set => MSet}
 
 object NFATranslator {
@@ -13,6 +14,7 @@ object NFATranslator {
 
   def apply(afa : AFA2) : BricsAutomaton =
     new LazyNFATranslator(afa).result
+
 
   def apply(afa : ExtAFA2) : BricsAutomaton =
     new ExtNFATranslator(afa).result
@@ -521,7 +523,55 @@ class LazyNFATranslator(afa : AFA2) {
              yield t).size)
 }
 
+class ExtNFATranslator(extafa : ExtAFA2) {
+  import AFA2._
 
+  val epsReducer = new EpsReducer(extafa)
+  val simpleAFA = epsReducer.afa
+  val simpleAFA2 = AFA2StateDuplicator(simpleAFA)
+
+  //  println(simpleAFA)
+  //  println(simpleAFA2)
+
+  val preResult: BricsAutomaton =
+    NFATranslator(simpleAFA2)
+
+  val result = {
+    val builder =
+      new BricsAutomatonBuilder
+    val epsilons =
+      new MHashMap[BricsAutomaton#State, MSet[BricsAutomaton#State]]
+        with MultiMap[BricsAutomaton#State, BricsAutomaton#State]
+
+    val stateMap =
+      (for (s <- preResult.states) yield (s -> builder.getNewState)).toMap
+
+    builder.setInitialState(stateMap(preResult.initialState))
+
+    for ((s1, s2) <- stateMap)
+      if (preResult isAccept s1)
+        builder.setAccept(s2, true)
+
+    val BeginLabel = preResult.LabelOps.singleton(epsReducer.beginMarker.toChar)
+    val EndLabel = preResult.LabelOps.singleton(epsReducer.endMarker.toChar)
+
+    for ((s1, s2) <- stateMap)
+      for ((s3, l) <- preResult.outgoingTransitions(s1))
+        l match {
+          case BeginLabel | EndLabel =>
+            epsilons.addBinding(s2, stateMap(s3))
+          case l =>
+            builder.addTransition(s2, l, stateMap(s3))
+        }
+
+    AutomataUtils.buildEpsilons(builder, epsilons)
+
+    builder.getAutomaton
+  }
+
+}
+
+/* OLD VERSION
 class ExtNFATranslator(afa : ExtAFA2) {
 
   import AFA2._
@@ -636,4 +686,4 @@ class ExtNFATranslator(afa : ExtAFA2) {
     builder.getAutomaton
   }
 
-}
+}*/

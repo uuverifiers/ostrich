@@ -478,9 +478,9 @@ case class MutableAFA2(builder: AFA2Builder,
 	def complement(): MutableAFA2 = {
 		// Check consistency, otherwise the complementation algo does not work
 		this.checkConsistency()
-		AutomatonUtils.printAutDotToFile(this.builderToExtAFA(),"debug-trimmed.dot")
+		AFA2Utils.printAutDotToFile(this.builderToExtAFA(),"debug-trimmed.dot")
 		this.untrim()
-		AutomatonUtils.printAutDotToFile(this.builderToExtAFA(),"debug-untrimmed.dot")
+		AFA2Utils.printAutDotToFile(this.builderToExtAFA(),"debug-untrimmed.dot")
 		this.checkConsistency()
 
 		val oldStates = getStates()
@@ -561,7 +561,7 @@ case class MutableAFA2(builder: AFA2Builder,
 		            newTransitions)
 
 		res.checkConsistency()
-		AutomatonUtils.printAutDotToFile(res.builderToExtAFA(),"debug-complement.dot")
+		AFA2Utils.printAutDotToFile(res.builderToExtAFA(),"debug-complement.dot")
 		res
 
 	}
