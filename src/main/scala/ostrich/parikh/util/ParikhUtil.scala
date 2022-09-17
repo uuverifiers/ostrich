@@ -13,6 +13,10 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import TermGeneratorOrder._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonTrait.{
+  getIntFormula,
+  getRegisters
+}
 import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 
 import ostrich.automata.BricsTLabelEnumerator
@@ -22,16 +26,17 @@ object ParikhUtil {
   type State = CostEnrichedAutomatonTrait#State
   type TLabel = CostEnrichedAutomatonTrait#TLabel
 
-  /**
-    * Get all transition terms from given automata.
-    * @param auts automata
-    * @return all transition terms
+  /** Get all transition terms from given automata.
+    * @param auts
+    *   automata
+    * @return
+    *   all transition terms
     */
-  def getAllTransTerms(auts: Seq[CostEnrichedAutomatonTrait]): Seq[Term] = {
-    val termsSet = new MHashSet[Term]
-    auts.foreach(aut => termsSet ++= aut.getTransitionsTerms)
-    termsSet.toSeq
-  }
+  // def getAllTransTerms(auts: Seq[CostEnrichedAutomatonTrait]): Seq[Term] = {
+  //   val termsSet = new MHashSet[Term]
+  //   auts.foreach(aut => termsSet ++= aut.getTransitionsTerms)
+  //   termsSet.toSeq
+  // }
 
   /** Given lengthModel, check whether there is some word accepted by all of the
     * given automata. Note that this function heuristicly finds a word. It is
@@ -49,8 +54,8 @@ object ParikhUtil {
     /** Check whether all states are accepted
       */
     def isAccepting(states: Seq[State]): Boolean =
-      states zip auts forall {
-        case (state, aut) => aut.isAccept(state)
+      states zip auts forall { case (state, aut) =>
+        aut.isAccept(state)
       }
 
     /** One step of intersection
@@ -119,7 +124,7 @@ object ParikhUtil {
             auts(0).LabelOps.sigmaLabel
           )
       ) {
-        
+
         if (visitedStates.add((reached, updatedModel))) {
           val newW = w :+ char
           val finishTrans = updatedModel.forall(_._2 == 0)
@@ -146,9 +151,9 @@ object ParikhUtil {
       labels: MTreeSet[TLabel],
       synclen: Int
   ): (Seq[CostEnrichedAutomatonTrait], MMap[State, Seq[TLabel]]) = {
-    if(synclen <=0 ) {
+    if (synclen <= 0) {
       return (auts, MMap())
-    } 
+    }
     val newState2Prefix = new MHashMap[State, Seq[TLabel]]
     val newAuts = auts.map { case aut =>
       val (newAut, map) = getSyncLenAut(aut, labels, synclen)
@@ -217,8 +222,8 @@ object ParikhUtil {
         }
       }
     }
-    builder.addIntFormula(aut.intFormula)
-    builder.addRegisters(aut.registers)
+    builder addNewIntFormula (getIntFormula(aut))
+    builder prependRegisters (getRegisters(aut))
     (builder.getAutomaton, newState2Prefix)
   }
 
@@ -260,10 +265,10 @@ object ParikhUtil {
   ): Formula = {
     if (synclen == 0) return Conjunction.TRUE
     var finalFormula = Conjunction.TRUE
-    var strings : Seq[Traversable[TLabel]] = Seq()
-    for (i <- 0 until synclen + 1) 
+    var strings: Seq[Traversable[TLabel]] = Seq()
+    for (i <- 0 until synclen + 1)
       strings = strings ++: crossJoin(Seq.fill(i)(labels)).toSeq
-      
+
     val commonStr2LTerm = strings.map { case str => (str, LabelTerm()) }.toMap
     for (aut <- auts) {
       val lTerm2Terms = new MHashMap[Term, MHashSet[Term]]

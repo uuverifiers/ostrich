@@ -7,6 +7,7 @@ import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.RegisterTerm
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import CostEnrichedAutomatonTrait.{getRegisters}
 
 object SubStringCEPreOp {
   def apply(beginIdx: Term, length: Term) =
@@ -32,7 +33,7 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     val lbOps = builder.LabelOps
 
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonTrait]
-    val noUpdate = Seq.fill(res.registers.size)(0)
+    val noUpdate = Seq.fill(getRegisters(res).size)(0)
     val resState2new = res.states.map { case s =>
       (s, builder.getNewState)
     }.toMap
@@ -87,8 +88,8 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
 
     // registers : (r0, r1)
     val registers = Seq.fill(2)(RegisterTerm())
-    builder.addRegisters(registers ++ res.registers)
-    builder.addIntFormula(
+    builder.prependRegisters(registers ++ getRegisters(res))
+    builder.addNewIntFormula(
       (registers(0) === beginIdx) & (registers(1) === length)
     )
 

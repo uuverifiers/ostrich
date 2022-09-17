@@ -26,10 +26,6 @@ import scala.collection.mutable.ArrayBuffer
 import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.ArrayStack
 import ostrich.parikh._
-import ap.terfor.TerForConvenience._
-import ostrich.parikh.TermGeneratorOrder._
-import ostrich.parikh.Config.Parikh
-import ostrich.parikh.Config.Unary
 object CostEnrichedAutomaton {
 
   type State = CostEnrichedAutomaton#State
@@ -60,71 +56,19 @@ object CostEnrichedAutomaton {
     new CostEnrichedAutomatonBuilder
   }
 
+  def initMap(aut: CostEnrichedAutomaton): Unit = {
+    val transitions = aut.transitions
+    val registers = aut.registers
+
+    transitions.foreach { transition =>
+      val initEtaMap = (transition -> Seq.fill(registers.size)(0))
+      aut.etaMap += initEtaMap
+      val initTransTermMap = (transition -> TransitionTerm())
+      aut.transTermMap += initTransTermMap
+    }
+  }
+
   private val MINIMIZE_LIMIT = 100000
-}
-
-import CostEnrichedAutomaton._
-
-trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
-
-  type State = BState
-
-  type TLabel = (Char, Char)
-
-  /** Registers storing count value for accepting state.
-    */
-  val registers: Seq[Term]
-
-  /** Map from transitions to its cost.
-    */
-  val etaMap: MHashMap[(State, TLabel, State), Seq[Int]]
-
-  /** Enssential linear arithmatic constraints for the automaton.
-    */
-  var intFormula: Formula = Conjunction.TRUE
-
-  /** Add linear arithmatic constraints to the automaton.
-    * @param f
-    *   the LIA constraints
-    */
-  def addIntFormula(f: Formula): Unit = {
-    intFormula = conj(intFormula, f)
-  }
-
-  /** Given a state, iterate over all outgoing transitons with vector
-    */
-  def outgoingTransitionsWithVec(q: State): Iterator[(State, TLabel, Seq[Int])]
-
-  /** Given a state, iterate over all outgoing transitons with their terms, try
-    * to be deterministic
-    */
-  def outgoingTransitionsWithTerm(q: State): Iterator[(State, TLabel, Term)]
-
-  /** Given a state, iterate over all outgoing transitons with vector and term
-    */
-  def outgoingTransitionsWithInfo(
-      q: State
-  ): Iterator[(State, TLabel, Seq[Int], Term)]
-
-  lazy val uniqueAcceptedWordLengths: Option[Seq[Int]] = {
-    val lengths = for (s <- acceptingStates) yield (uniqueLengthStates get s)
-    if (lengths.size > 0 && !(lengths contains None))
-      Some(lengths.filter(_ != None).map(_.get).toSeq)
-    else
-      None
-  }
-
-  /** The linear arith abstraction of register values.
-    */
-  val registersAbstraction: Formula
-
-  /** Return a sequence of terms representing transtions
-    */
-  def getTransitionsTerms: Seq[Term]
-
-  def transitionsWithTerm: Iterator[(State, TLabel, State, Term)]
-
-  def transitionsWithVec: Iterator[(State, TLabel, State, Seq[Int])]
 }
 
 /** Wrapper for the BRICS automaton class. New features added:
@@ -132,50 +76,13 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   *   - etaMap: a map from transitions to update vectors
   */
 class CostEnrichedAutomaton(
-    val underlying: BAutomaton,
-    val etaMap: MHashMap[(State, TLabel, State), Seq[Int]],
-    val registers: Seq[Term],
-    val transTermMap: MHashMap[(State, TLabel, State), Term]
+    val underlying: BAutomaton
 ) extends CostEnrichedAutomatonTrait {
 
-  def transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
-    transitions.map { case (from, l, to) =>
-      (from, l, to, transTermMap((from, l, to)))
-    }
+  import CostEnrichedAutomaton.{initMap}
 
-  def transitionsWithVec: Iterator[(State, (Char, Char), State, Seq[Int])] = {
-    transitions.map { case (from, l, to) =>
-      (from, l, to, etaMap((from, l, to)))
-    }
-  }
-
-  /** constructor */
-  def this(underlying: BAutomaton) =
-    this(underlying, new MHashMap, Seq(), new MHashMap)
-
-  def this(
-      underlying: BAutomaton,
-      etaMap: MHashMap[(State, TLabel, State), Seq[Int]],
-      registers: Seq[Term]
-  ) =
-    this(underlying, etaMap, registers, new MHashMap)
-
-  // Traverse etaMap and transTermMap and init all undefined keys
-  def initMaps = {
-    transitions.foreach { transition =>
-      if (!etaMap.contains(transition)) {
-        etaMap.put(transition, Seq.fill(registers.size)(0))
-      } else {
-        assert(etaMap(transition).size == registers.size)
-      }
-      if (!transTermMap.contains(transition)) {
-        transTermMap.put(transition, TransitionTerm())
-      }
-    }
-  }
-
-  initMaps
-
+  initMap(this) // init etaMap and transTermMap
+  
   /** @deprecated
     *   not implemented
     */
@@ -187,11 +94,6 @@ class CostEnrichedAutomaton(
     val aut1 = this
     val aut2 = intern(that)
     val autBuilder = new CostEnrichedAutomatonBuilder
-
-    // old transtion term to a set of new transition terms
-    // the value of old transtion term is the sum of values of new transtion terms
-    // the value of olde transtion term will be used to find accepted word
-    // val oldTerm2NewTerms = new MHashMap[Term, MHashSet[Term]]
 
     // begin intersection
     val initialState1 = aut1.initialState
@@ -258,9 +160,9 @@ class CostEnrichedAutomaton(
         }
       }
     }
-    autBuilder.addIntFormula(aut1.intFormula)
-    autBuilder.addIntFormula(aut2.intFormula)
-    autBuilder.addRegisters(aut1.registers ++ aut2.registers)
+    autBuilder.addNewIntFormula(aut1.regsRelation)
+    autBuilder.addNewIntFormula(aut2.regsRelation)
+    autBuilder.prependRegisters(aut1.registers ++ aut2.registers)
     val res = autBuilder.getAutomaton
     res.removeDeadTransitions()
     res
@@ -326,64 +228,6 @@ class CostEnrichedAutomaton(
       )
   }
 
-  def outgoingTransitionsWithTerm(q: State): Iterator[(State, TLabel, Term)] = {
-    for (t <- q.getSortedTransitions(true).iterator)
-      yield (
-        t.getDest,
-        (t.getMin, t.getMax),
-        transTermMap((q, (t.getMin, t.getMax), t.getDest))
-      )
-  }
-
-  def outgoingTransitionsWithVec(
-      q: State
-  ): Iterator[(State, TLabel, Seq[Int])] = {
-    for (t <- q.getSortedTransitions(true).iterator)
-      yield (
-        t.getDest,
-        (t.getMin, t.getMax),
-        etaMap((q, (t.getMin, t.getMax), t.getDest))
-      )
-  }
-
-  def outgoingTransitionsWithInfo(
-      q: State
-  ): Iterator[(State, (Char, Char), Seq[Int], Term)] = {
-    for (t <- q.getSortedTransitions(true).iterator)
-      yield (
-        t.getDest,
-        (t.getMin, t.getMax),
-        etaMap((q, (t.getMin, t.getMax), t.getDest)),
-        transTermMap((q, (t.getMin, t.getMax), t.getDest))
-      )
-  }
-
-  /** Map state to its incoming transitions
-    */
-  lazy val incomingTransitions: Map[State, Set[(State, TLabel)]] = {
-    val map = new MHashMap[State, Set[(State, TLabel)]]
-    val worklist = new MStack[State]
-    val seenstates = new MLinkedHashSet[State]
-
-    map.put(initialState, Set.empty)
-
-    worklist.push(initialState)
-    seenstates.add(initialState)
-
-    while (!worklist.isEmpty) {
-      val s = worklist.pop
-      outgoingTransitions(s).foreach { case (to, lbl) =>
-        val set = map.getOrElseUpdate(to, Set.empty)
-        map.put(to, set + ((s, lbl)))
-        if (!seenstates.contains(to)) {
-          worklist.push(to)
-          seenstates.add(to)
-        }
-      }
-    }
-    map.toMap
-  }
-
   def isAccept(s: State): Boolean = s.isAccept
 
   def getBuilder: AtomicStateAutomatonBuilder[State, TLabel] = {
@@ -394,16 +238,6 @@ class CostEnrichedAutomaton(
     BricsTransducer.getBuilder
 
   def toDetailedString: String = underlying.toString()
-
-  /** Get terms representing the transtions
-    */
-  def getTransitionsTerms: Seq[Term] = {
-    val terms = new ArrayBuffer[Term]
-    transTermMap.foreach({ case (_, term) =>
-      terms += term
-    })
-    terms
-  }
 
   /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
     * Encode the formula of registers meanwhile.
@@ -459,7 +293,8 @@ class CostEnrichedAutomaton(
     )
 
     // every transtion term should greater than 0
-    getTransitionsTerms.foreach { term =>
+    val transtionTerms = transTermMap.map(_._2).toSeq
+    transtionTerms.foreach { term =>
       consistentFlowFormula = conj(consistentFlowFormula, term >= 0)
     }
     /////////////////////////////////////////////////////////////////////////////////
@@ -536,150 +371,6 @@ class CostEnrichedAutomaton(
     /////////////////////////////////////////////////////////////////////////////////
 
     conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
-  }
-
-  def succWithVec(s: State): Iterator[(State, Seq[Int])] =
-    for ((t, lbl, vec) <- outgoingTransitionsWithVec(s)) yield (t, vec)
-
-  // e.g (1,1) + (1,0) = (2,1)
-  def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]) = {
-    seq1 zip seq2 map { case (a, b) => a + b }
-  }
-
-  /** computing S_(2n^2+n-1), ..., S_0. Terminate if S_(2n^2+n-1) is computed or
-    * succ(S_i) is empty
-    * @return
-    *   S
-    */
-  def computeS(sLen: Int) = {
-    val S = ArrayBuffer.fill(sLen)(Set[(State, Seq[Int])]())
-    S(0) = Set((initialState, Seq.fill(registers.size)(0)))
-    var idx = 0
-    while (idx < sLen - 1 && !S(idx).isEmpty) {
-      idx += 1
-      S(idx) =
-        for (
-          (s, regVal) <- S(idx - 1);
-          (t, vec) <- succWithVec(s)
-        ) yield {
-          (t, addTwoSeq(regVal, vec))
-        }
-    }
-    S
-  }
-
-  lazy val overApproximation: Formula = {
-    val n = states.size
-    val concreteLenBound = if(n>10) 100 else n*n + 10;
-    val s = computeS(concreteLenBound)
-    disjFor(
-      for (
-        j <- 0 until concreteLenBound;
-        if !s(j).isEmpty && !s(j).map(_._1).forall(!isAccept(_));
-        (_, regVal) <- s(j)
-      ) yield {
-        conj(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
-      }
-    )
-  }
-
-  /** Treat this automaton as unary NFA because we only care the LIA on the
-    * automaton. Based on algorithm in Saw Z, RP 2010
-    */
-  lazy val unaryNFAImage: Formula = {
-    println("unary ---------------------------------------------")
-    val n = states.size
-    val rLen = registers.size
-    val concreteLen = 2 * n * n + n
-    val kSet = new MHashSet[Term]
-
-    def abstractionOfRegs: Formula = {
-      val s = computeS(concreteLen)
-      val t = computeT
-      val r1Formula = disjFor(
-        for (
-          j <- 0 until concreteLen;
-          if !s(j).isEmpty && !s(j).map(_._1).forall(!isAccept(_));
-          (_, regVal) <- s(j)
-        ) yield {
-          conj(for (i <- 0 until rLen) yield registers(i) === regVal(i))
-        }
-      )
-
-      val r2Formula = disjFor(
-        for (
-          d <- 1 until n + 1;
-          c <- 2 * n * n - d until 2 * n * n;
-          (from, regVal) <- s(n);
-          (period, loopVec) <- periods(from);
-          (to, tailVec) <- t(c - n);
-          if (period == d && from == to)
-        ) yield {
-          val k = KTerm()
-          kSet += k
-          conj(
-            for (i <- 0 until rLen)
-              yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
-          )
-        }
-      )
-      val kFormula = conj(
-        for (k <- kSet) yield {
-          k >= 1
-        }
-      )
-
-      disj(r1Formula, conj(r2Formula, kFormula))
-    }
-
-    /** computing T_(2n^2-n-1), ..., T_0. Terminate if T_(2n^2-n-1) is computed
-      * or pre(S_i) is empty
-      */
-    def computeT = {
-      val Tlen = 2 * n * n - n
-      val T = ArrayBuffer.fill(Tlen)(Set[(State, Seq[Int])]())
-      T(0) = acceptingStates.map((_, Seq.fill(rLen)(0)))
-      var idx = 0
-      while (idx < Tlen - 1 && !T(idx).isEmpty) {
-        idx += 1
-        T(idx) =
-          for (
-            (t, regVal) <- T(idx - 1);
-            (s, vec) <- preWithVec(t)
-          ) yield {
-            (s, addTwoSeq(regVal, vec))
-          }
-      }
-      T
-    }
-
-    def periods(s: State): Set[(Int, Seq[Int])] = {
-      val periods = new ArrayBuffer[(Int, Seq[Int])]
-      var period = 0
-      var periodVec = Seq.fill(rLen)(0)
-      val nextStates2Vec = succWithVec(s).toMap
-      val nextStates = nextStates2Vec.map(_._1).toSet
-      while (period < n && !nextStates.isEmpty) {
-        period += 1
-        if (nextStates.contains(s)) {
-          periodVec = addTwoSeq(periodVec, nextStates2Vec(s))
-          periods.append((period, periodVec))
-        }
-      }
-      periods.toSet
-    }
-
-    def preWithVec(t: State): Iterator[(State, Seq[Int])] =
-      for ((s, lbl) <- incomingTransitions(t).iterator)
-        yield (s, etaMap((s, lbl, t)))
-
-    abstractionOfRegs
-
-  }
-
-  lazy val registersAbstraction: Formula = Config.lengthAbsStrategy match {
-    case Parikh() => parikhImage
-    case Unary()  => overApproximation
   }
 
   def removeDeadTransitions(): Unit = {

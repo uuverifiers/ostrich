@@ -52,6 +52,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.CostEnrichedConvenience
+import ostrich.parikh.core.AtomConstraints
+import ostrich.parikh.core.AtomConstraintsSolver
 
 object OstrichSolver {
 
@@ -298,6 +300,8 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
+    AtomConstraintsSolver.initialLIA = goal.facts.arithConj
+    
     SimpleAPI.withProver { lengthProver =>
       val lProver =
         if (useLength) {

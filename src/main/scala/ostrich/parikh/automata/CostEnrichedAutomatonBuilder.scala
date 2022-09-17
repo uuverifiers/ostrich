@@ -11,6 +11,7 @@ import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import ostrich.parikh.TransitionTerm
 
 class CostEnrichedAutomatonBuilder
     extends AtomicStateAutomatonBuilder[
@@ -37,29 +38,28 @@ class CostEnrichedAutomatonBuilder
   private var intFormula: Formula = Conjunction.TRUE
 
   // add interger arithmatic to this aut
-  def addIntFormula(f: Formula): Unit = {
+  def addNewIntFormula(f: Formula): Unit = {
     intFormula = conj(intFormula, f)
   }
 
   // prepends a regsiter
-  def addRegister(_register: Term): ArrayBuffer[Term] = {
-    _register +=: registers
-  }
+  def prependRegister(_register: Term): ArrayBuffer[Term] =
+    prependRegisters(Seq(_register))
 
   // prepends regsters
-  def addRegisters(_registers: Seq[Term]): ArrayBuffer[Term] = {
+  def prependRegisters(_registers: Seq[Term]): ArrayBuffer[Term] = 
     _registers ++=: registers
-  }
+  
 
-  // add a (transition -> vector) map to etaMap
+  // add (transition -> vector) map to etaMap
   def addEtaMap(
       map: MHashMap[(State, TLabel, State), Seq[Int]]
   ): MHashMap[(State, TLabel, State), Seq[Int]] = {
     this.etaMap ++= map
   }
 
-  // add a (transition -> term) map to transTermMap
-  def addTransTermMap(
+  // add (transition -> term) map to transTermMap
+  def addTermMap(
       map: MHashMap[(State, TLabel, State), Term]
   ): MHashMap[(State, TLabel, State), Term] = {
     this.transTermMap ++= map
@@ -78,7 +78,6 @@ class CostEnrichedAutomatonBuilder
     */
   def getNewState: State = new BState()
 
-
   /** Set the initial state
     */
   def setInitialState(q: State): Unit =
@@ -90,12 +89,7 @@ class CostEnrichedAutomatonBuilder
       q1: State,
       label: TLabel,
       q2: State
-  ): Unit = {
-    if (LabelOps.isNonEmptyLabel(label)) {
-      val (min, max) = label
-      q1.addTransition(new Transition(min, max, q2))
-    }
-  }
+  ): Unit = addTransition(q1, label, q2, Seq())
 
   /** Add a new transition q1 --label,vector--> q2
     */
@@ -104,13 +98,7 @@ class CostEnrichedAutomatonBuilder
       label: TLabel,
       q2: State,
       vector: Seq[Int]
-  ): Unit = {
-    if (LabelOps.isNonEmptyLabel(label)) {
-      val (min, max) = label
-      q1.addTransition(new Transition(min, max, q2))
-      etaMap += ((q1, (min, max), q2) -> vector)
-    }
-  }
+  ): Unit = addTransition(q1, label, q2, vector, TransitionTerm())
 
   /** Add a new transition q1 --label,vector--> q2, set its term to t
     */
@@ -140,11 +128,15 @@ class CostEnrichedAutomatonBuilder
 
   def isAccept(q: State): Boolean = q.isAccept
 
-  /** Returns built automaton. 
+  /** Returns built automaton.
     */
   def getAutomaton: CostEnrichedAutomaton = {
-    val res = new CostEnrichedAutomaton(baut, etaMap, registers, transTermMap)
-    res.addIntFormula(intFormula)
+    import CostEnrichedAutomatonTrait._
+    val res = new CostEnrichedAutomaton(baut)
+    setRegisters(res, registers)
+    setEtaMap(res, etaMap.toMap)
+    setTransTermMap(res, transTermMap.toMap)
+    setRegsRelation(res, intFormula)
     res
   }
 }

@@ -702,7 +702,6 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       } else {
         currentConstraint match {
           case Some(oldAut) => {
-            println("check")
             val newAut = measure("intersection") { oldAut & aut }
             if (newAut.isEmpty) {
               Some(for (a <- aut :: constraints.toList)
@@ -830,7 +829,6 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
         println("contain")
         None
       } else {
-        println("check")
         var potentialConflicts =
           (watchedAutomata get aut) match {
             case Some(incAuts) => {

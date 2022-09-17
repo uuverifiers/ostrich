@@ -3,15 +3,29 @@ package ostrich.parikh.automata
 import ostrich.automata.AtomicStateAutomatonAdapter
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.{TransitionTerm, RegisterTerm}
-import ap.terfor.Term
 import ostrich.automata.Automaton
 
 object CostEnrichedAutomatonAdapter {
+  import CostEnrichedAutomatonTrait._
   def intern(a: Automaton): CostEnrichedAutomaton = a match {
     case a: CostEnrichedAutomatonAdapter[_] => a.internalise
     case a: CostEnrichedAutomaton           => a
     case _ => throw new IllegalArgumentException
   }
+
+  def underlying(a: Automaton): CostEnrichedAutomatonTrait = a match {
+    case a: CostEnrichedAutomatonAdapter[_] => a.underlying
+    case a: CostEnrichedAutomaton           => a
+    case _ => throw new IllegalArgumentException
+  }
+
+  def init(a: CostEnrichedAutomatonAdapter[_]): Unit = {
+    val underlyingRegs = getRegisters(underlying(a))
+    val internaliseRegs = Seq.fill(underlyingRegs.size)(RegisterTerm())
+    setRegisters(a, internaliseRegs)
+    setEtaMap(a, getEtaMap(underlying(a)))
+  }
+
 }
 
 abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
@@ -19,15 +33,15 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
 ) extends AtomicStateAutomatonAdapter[A](_underlying)
     with CostEnrichedAutomatonTrait {
 
-  val registers: Seq[Term] = Seq.fill(underlying.registers.size)(RegisterTerm())
-
-  val smap = new MHashMap[underlying.State, underlying.State]
+  import CostEnrichedAutomatonAdapter.{init}
 
   override type State = _underlying.State
 
   override type TLabel = _underlying.TLabel
 
   override lazy val internalise: CostEnrichedAutomaton = {
+    val smap = new MHashMap[_underlying.State, _underlying.State]
+
     val builder =
       underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
 
@@ -41,11 +55,13 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
       builder.setAccept(t, isAccept(s))
     }
 
-    builder.addIntFormula(this.intFormula)
-    builder.addRegisters(this.registers)
+    builder.addNewIntFormula(this.regsRelation)
+    builder.prependRegisters(this.registers)
     builder.setInitialState(smap(initialState))
     builder.getAutomaton
   }
+
+  init(this)
 }
 
 object CostEnrichedInitFinalAutomaton {
@@ -90,15 +106,8 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     val _acceptingStates: Set[A#State]
 ) extends CostEnrichedAutomatonAdapter[A](_underlying) {
 
-  override def toString: String = internalise.toString()
-
-  val etaMap = internalise.etaMap
-
-  def transitionsWithTerm = internalise.transitionsWithTerm
-  def transitionsWithVec = internalise.transitionsWithVec
-  lazy val registersAbstraction = internalise.registersAbstraction
-
-  def getTransitionsTerms = internalise.getTransitionsTerms
+  override def toString: String =
+    "_CostEnrichedInitFinalAutomaton \n" + internalise.toString()
 
   override lazy val initialState = _initialState
 
@@ -116,34 +125,4 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     )
       yield p
   }
-
-  def outgoingTransitionsWithInfo(
-      q: State
-  ): Iterator[(State, TLabel, Seq[Int], Term)] = {
-    val _states = states
-    for (
-      p @ (s, _, _, _) <- underlying.outgoingTransitionsWithInfo(q);
-      if _states contains s
-    )
-      yield p
-  }
-
-  def outgoingTransitionsWithVec(
-      q: State
-  ): Iterator[(State, TLabel, Seq[Int])] = {
-    val _states = states
-    for (
-      p @ (s, _, _) <- underlying.outgoingTransitionsWithVec(q);
-      if _states contains s
-    )
-      yield p
-  }
-
-  def outgoingTransitionsWithTerm(
-      q: State
-  ): Iterator[(State, TLabel, Term)] =
-    // The transtion terms are unique for each CostEnrichedAutomatonAdapter
-    // We can not use `underlying.outgoingTransitionsWithTerm(q)` directly
-    internalise.outgoingTransitionsWithTerm(smap.getOrElse(q, q))
-
 }

@@ -6,6 +6,7 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.automata.CostEnrichedInitFinalAutomaton
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import ostrich.parikh.automata.CostEnrichedAutomatonTrait._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "concatCEPreOp"
@@ -15,14 +16,15 @@ object ConcatCEPreOp extends CEPreOp {
       concatRight: CostEnrichedAutomatonTrait,
       result: CostEnrichedAutomatonTrait
   ): Unit = {
-    val leftRegs = concatLeft.registers
-    val rightRegs = concatRight.registers
-    val resultRegs = result.registers
+    val leftRegs = getRegisters(concatLeft)
+    val rightRegs = getRegisters(concatRight)
+    val resultRegs = getRegisters(result)
     val regsRelation = conj(leftRegs.zipWithIndex.map { case (reg, i) =>
       (reg + rightRegs(i)) === resultRegs(i)
     })
-    concatLeft.addIntFormula(regsRelation)
-    concatLeft.addIntFormula(result.intFormula)
+    val oldIntFormula = getIntFormula(concatLeft)
+    val resIntFormula = getIntFormula(result)
+    setRegsRelation(concatLeft, conj(oldIntFormula, regsRelation, resIntFormula))
   }
 
   def apply(
