@@ -255,7 +255,7 @@ case class ExtAFA2(initialStates    : Seq[Int],
 }
 
 
-case class ExtSymbAFA2(initialStates : Seq[Int],
+case class SymbExtAFA2(initialStates : Seq[Int],
                        finalBeginStates: Seq[Int],
                        finalEndStates: Seq[Int],
                        transitions   : Map[Int, Seq[AFA2.Transition]]) {
@@ -438,13 +438,13 @@ case class ExtSymbAFA2(initialStates : Seq[Int],
 
     seqToMap(newTrans.toList)
      */
-    
+
     newTrans.toSeq.groupBy(_._1).mapValues(l => l map (_._2))
-    
+
   }
 
   // It returns a new SymbAFA2 where all transitions are disjoint. (It does not side effects the original automaton.)
-  def toSymbDisjointAFA2 : ExtSymbAFA2 = ExtSymbAFA2(initialStates, finalBeginStates, finalEndStates, toSymbDisjointTrans)
+  def toSymbDisjointAFA2 : SymbExtAFA2 = SymbExtAFA2(initialStates, finalBeginStates, finalEndStates, toSymbDisjointTrans)
 
   // TODO: toAFA2 (returns also a map from int to Ranges).
 }

@@ -225,7 +225,82 @@ object Regex2Aut {
 
 }
 
-class ECMA2Aut(theory : OstrichStringTheory, parser: ECMARegexParser) {
+
+class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
+
+  import ostrich.automata.afa2._
+  import theory.{
+    re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
+    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+    re_opt_?, re_loop_?,
+    re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
+    re_begin_anchor, re_end_anchor,
+    re_from_ecma2020, re_from_ecma2020_flags,
+    re_case_insensitive
+  }
+
+  val builder = new SymbAFA2Builder(theory)
+
+  // Just calls toMutableAFA2 with AFA2.Right direction and converts the result.
+  def toSymbExt2AFA(t: ITerm) : SymbExtAFA2 = {
+    val symbMutAut = toSymbMutableAFA2(AFA2.Right, t)
+    //println("Builder automaton:\n" + mutAut)
+    val extSymbAFA2 = symbMutAut.builderToSymbExtAFA()
+    //println("Ext2AFA automaton:\n" + extAFA2)
+    extSymbAFA2
+  }
+
+
+  private def toSymbMutableAFA2(dir: AFA2.Step, t: ITerm) : SymbMutableAFA2 = {
+    t match {
+
+      case IFunApp(`re_eps`, _) =>
+        builder.epsAtomic2AFA(dir)
+
+      case IFunApp(`re_none`, _) =>
+        builder.emptyAtomic2AFA(dir)
+
+      case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
+        builder.charrangeAtomic2AFA(dir, new Range(l.intValue, u.intValue+1, 1))
+
+      case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
+
+      case IFunApp(`re_all`, _) => builder.allAtomic2AFA(dir)
+
+      case IFunApp(`re_++`, Seq(l, r)) =>
+        builder.concat2AFA(dir, toSymbMutableAFA2(dir, l), toSymbMutableAFA2(dir, r))
+
+      case IFunApp(`re_union`, Seq(l, r)) =>
+        builder.alternation2AFA(dir, toSymbMutableAFA2(dir, l), toSymbMutableAFA2(dir, r))
+
+      case IFunApp(`re_*`, Seq(t)) =>
+        builder.star2AFA(dir, toSymbMutableAFA2(dir, t))
+
+      case IFunApp(parser.LookAhead, Seq(t)) =>
+        // Watch out here with the directions!
+        builder.lookaround2AFA(dir, toSymbMutableAFA2(AFA2.Right, t))
+
+      case IFunApp(parser.LookBehind, Seq(t)) =>
+        builder.lookaround2AFA(dir, toSymbMutableAFA2(AFA2.Left, t))
+
+      case IFunApp(parser.NegLookAhead, Seq(t)) =>
+        builder.negLookaround2AFA(dir, toSymbMutableAFA2(AFA2.Right, t))
+
+      case IFunApp(parser.NegLookBehind, Seq(t)) =>
+        builder.negLookaround2AFA(dir, toSymbMutableAFA2(AFA2.Left, t))
+
+      case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
+        builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toSymbMutableAFA2(dir, t))
+
+      case _ => throw new RuntimeException("This shouldn't happen!")
+    }
+  }
+
+}
+
+
+
+class ECMAToAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
   import ostrich.automata.afa2._
   import theory.{
@@ -345,7 +420,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
         // TODO: this translation has to be checked more carefully, there might
         // be problems due to escaping. The processing of regexes can also
         // only be done correctly within a proper regex parser.
-  
+
         ShortCutResult(jsRegex2BricsRegex(StringTheory.term2String(a)))
       }
 
@@ -411,7 +486,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       // TODO: this translation has to be checked more carefully, there might
       // be problems due to escaping. The processing of regexes can also
       // only be done correctly within a proper regex parser.
-  
+
       val bricsPattern = jsRegex2BricsRegex(str)
       new RegExp(bricsPattern).toAutomaton(minimize)
     }
@@ -428,7 +503,15 @@ class Regex2Aut(theory : OstrichStringTheory) {
       println(r)
       println()
 
-      val ecma2Aut = new ECMA2Aut(theory, parser)
+      // -----------Symbolic case---------------
+      val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
+      val aut = ecmaAFA.toSymbExt2AFA(r)
+      AFA2Utils.printAutDotToFile(aut, "extSymbAFA2.dot")
+      throw new RuntimeException("Stop here.")
+
+
+      /* -----------Concrete case---------------
+      val ecma2Aut = new ECMAToAFA2(theory, parser)
       val aut = ecma2Aut.toExt2AFA(r)
       AFA2Utils.printAutDotToFile(aut, "extAFA2.dot")
 
@@ -441,6 +524,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val duration = (System.nanoTime - t1) / 1e9d
       println("Time for 2AFA -> NFA translation: " + duration)
       res
+       */
     }
 
     case IFunApp(`re_from_ecma2020_flags`,

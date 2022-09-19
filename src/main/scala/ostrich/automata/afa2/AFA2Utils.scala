@@ -3,7 +3,7 @@ package ostrich.automata.afa2
 import ostrich.automata.afa2.AFA2.{EpsTransition, StepTransition, SymbTransition}
 
 import java.io.{BufferedWriter, File, FileWriter}
-import scala.collection.mutable
+import scala.collection.{breakOut, mutable}
 
 object AFA2Utils {
 
@@ -65,7 +65,36 @@ object AFA2Utils {
     "turquoise",
     "violet")
 
-  def toDot(aut: ExtSymbAFA2): String = {
+  /*
+  Given a set ranges of (non-overlapping) Ranges, and a given a new range toRem, it subtracts toRem
+  to ranges, as follows:
+  (1) - generate first an ordered Seq[Int] of integers in ranges but not in toRem
+  (2) - reconstruct the set of Ranges from the Seq[Int]
+   */
+  def rangeDiff(ranges: Set[Range], toRem: Range) : Set[Range] = {
+    // Step (1)
+    val newSeq = ((for (rng <- ranges) yield rng.filter(x => !toRem.contains(x))).flatten).toIndexedSeq.sorted(Ordering[Int])
+
+    //Step (2). Sweeping newSeq with two indexes until next element is previous+1
+    val newRanges = mutable.Set[Range]()
+    var lastInd, currInd = 0
+    //println("Indexes set = " + newSeq.indices)
+    if (newSeq.nonEmpty) {
+      while (currInd < newSeq.length) {
+        if (currInd + 1 < newSeq.length && newSeq(currInd + 1) != newSeq(currInd) + 1) {
+          newRanges += (new Range(newSeq(lastInd), newSeq(currInd) + 1, 1))
+          lastInd = currInd + 1
+        }
+        currInd += 1
+      }
+      newRanges += (new Range(newSeq(lastInd), newSeq(currInd - 1) + 1, 1))
+    }
+    newRanges.toSet
+  }
+
+
+
+  def toDot(aut: SymbExtAFA2): String = {
     val res = new mutable.StringBuilder("digraph Automaton {\n")
     res.append("  rankdir = LR;\n")
     res.append("  initial [shape=plaintext,label=\"\"];\n");
@@ -218,7 +247,7 @@ object AFA2Utils {
   }
 
 
-  def printAutDotToFile(aut: ExtSymbAFA2, fileName: String): Unit = {
+  def printAutDotToFile(aut: SymbExtAFA2, fileName: String): Unit = {
     //val path = Paths.get("/out")
     //Files.createDirectories(path)
     //val file = new File("/out/"+fileName)

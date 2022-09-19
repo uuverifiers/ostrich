@@ -17,14 +17,14 @@ class BState(_dir: Step) {
 	override def clone() = new BState(this.dir)
 }
 
-abstract sealed class BTransition(val targets: Seq[BState])
+protected abstract sealed class BTransition(val targets: Seq[BState])
 
-case class BEpsTransition(_targets: Seq[BState]) extends BTransition(_targets) {
+protected case class BEpsTransition(_targets: Seq[BState]) extends BTransition(_targets) {
 	def isUniversal(): Boolean = targets.size > 1
 	def isExistential(): Boolean = targets.size == 1
 }
 
-case class BStepTransition(label: Int,
+protected case class BStepTransition(label: Int,
                            step: Step,
                            _targets: Seq[BState]) extends BTransition(_targets)
 
@@ -474,10 +474,9 @@ case class MutableAFA2(builder: AFA2Builder,
 
 	**WARNING:** All step transitions are deterministic!
 	*/
-	// TODO: Remove consistency checks! Remove debug prints!
 	def complement(): MutableAFA2 = {
 		// Check consistency, otherwise the complementation algo does not work
-		this.checkConsistency()
+		//this.checkConsistency()
 		AFA2Utils.printAutDotToFile(this.builderToExtAFA(),"debug-trimmed.dot")
 		this.untrim()
 		AFA2Utils.printAutDotToFile(this.builderToExtAFA(),"debug-untrimmed.dot")
