@@ -1,10 +1,10 @@
-package ostrich.automata.afa2
+package ostrich.automata.afa2.concrete
 
 import ap.util.Combinatorics
+import ostrich.automata.afa2.StepTransition
 import ostrich.automata.{AutomataUtils, BricsAutomaton, BricsAutomatonBuilder}
 
-import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, MultiMap, HashMap => MHashMap, HashSet => MHashSet, Set => MSet}
+import scala.collection.mutable.{MultiMap, HashMap => MHashMap, HashSet => MHashSet, Set => MSet}
 
 object NFATranslator {
 
@@ -23,9 +23,9 @@ object NFATranslator {
 
 class NFATranslator(afa : AFA2) {
 
-  import AFA2.{Step, StepTransition}
   import NFATranslator._
   import afa._
+  import ostrich.automata.afa2.{Left, Right, Step}
 
   val categorisedStates =
     irStates ++ llStates ++ lrStates ++ rlStates ++ rrStates ++ rfStates
@@ -60,7 +60,7 @@ class NFATranslator(afa : AFA2) {
   def existsGoingLeft(ts : Seq[(Step, Seq[Int])],
                       f : Seq[Int] => Boolean) : Boolean = {
     ts exists {
-      case (AFA2.Left, targets) => f(targets)
+      case (Left, targets) => f(targets)
       case _                    => false
     }
   }
@@ -68,7 +68,7 @@ class NFATranslator(afa : AFA2) {
   def existsGoingRight(ts : Seq[(Step, Seq[Int])],
                        f : Seq[Int] => Boolean) : Boolean = {
     ts exists {
-      case (AFA2.Right, targets) => f(targets)
+      case (Right, targets) => f(targets)
       case _                     => false
     }
   }
@@ -219,8 +219,8 @@ class NFATranslator(afa : AFA2) {
 
 class LazyNFATranslator(afa : AFA2) {
 
-  import AFA2.{Step, StepTransition}
   import afa._
+  import ostrich.automata.afa2.{Left, Right, Step}
 
   val categorisedStates =
     irStates ++ llStates ++ lrStates ++ rlStates ++ rrStates ++ rfStates
@@ -257,7 +257,7 @@ class LazyNFATranslator(afa : AFA2) {
   def existsGoingLeft(ts : Seq[(Step, Seq[Int])],
                       f : Seq[Int] => Boolean) : Boolean = {
     ts exists {
-      case (AFA2.Left, targets) => f(targets)
+      case (Left, targets) => f(targets)
       case _                    => false
     }
   }
@@ -265,7 +265,7 @@ class LazyNFATranslator(afa : AFA2) {
   def existsGoingRight(ts : Seq[(Step, Seq[Int])],
                        f : Seq[Int] => Boolean) : Boolean = {
     ts exists {
-      case (AFA2.Right, targets) => f(targets)
+      case (Right, targets) => f(targets)
       case _                     => false
     }
   }
@@ -306,7 +306,7 @@ class LazyNFATranslator(afa : AFA2) {
     (for (label <- letters.iterator; state <- states.iterator) yield {
        (state, label) -> {
          (if (xrStates contains state)
-            List(minElements(for ((AFA2.Right, targets) <- outgoing(state, label))
+            List(minElements(for ((Right, targets) <- outgoing(state, label))
                              yield targets))
           else
             List()) ++
@@ -524,7 +524,6 @@ class LazyNFATranslator(afa : AFA2) {
 }
 
 class ExtNFATranslator(extafa : ExtAFA2) {
-  import AFA2._
 
   val epsReducer = new EpsReducer(extafa)
   val simpleAFA = epsReducer.afa

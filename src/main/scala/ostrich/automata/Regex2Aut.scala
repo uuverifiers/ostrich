@@ -39,7 +39,9 @@ import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
-import ostrich.automata.afa2.{AFA2Utils, EpsReducer, NFATranslator}
+import ostrich.automata.afa2.concrete.{AFA2, AFA2Builder, EpsReducer, ExtAFA2, MutableAFA2, NFATranslator}
+import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2}
+import ostrich.automata.afa2.AFA2Utils
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack}
 import scala.collection.immutable.VectorBuilder
@@ -243,7 +245,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
   // Just calls toMutableAFA2 with AFA2.Right direction and converts the result.
   def toSymbExt2AFA(t: ITerm) : SymbExtAFA2 = {
-    val symbMutAut = toSymbMutableAFA2(AFA2.Right, t)
+    val symbMutAut = toSymbMutableAFA2(Right, t)
     //println("Builder automaton:\n" + mutAut)
     val extSymbAFA2 = symbMutAut.builderToSymbExtAFA()
     //println("Ext2AFA automaton:\n" + extAFA2)
@@ -251,7 +253,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
   }
 
 
-  private def toSymbMutableAFA2(dir: AFA2.Step, t: ITerm) : SymbMutableAFA2 = {
+  private def toSymbMutableAFA2(dir: Step, t: ITerm) : SymbMutableAFA2 = {
     t match {
 
       case IFunApp(`re_eps`, _) =>
@@ -278,16 +280,16 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
       case IFunApp(parser.LookAhead, Seq(t)) =>
         // Watch out here with the directions!
-        builder.lookaround2AFA(dir, toSymbMutableAFA2(AFA2.Right, t))
+        builder.lookaround2AFA(dir, toSymbMutableAFA2(Right, t))
 
       case IFunApp(parser.LookBehind, Seq(t)) =>
-        builder.lookaround2AFA(dir, toSymbMutableAFA2(AFA2.Left, t))
+        builder.lookaround2AFA(dir, toSymbMutableAFA2(Left, t))
 
       case IFunApp(parser.NegLookAhead, Seq(t)) =>
-        builder.negLookaround2AFA(dir, toSymbMutableAFA2(AFA2.Right, t))
+        builder.negLookaround2AFA(dir, toSymbMutableAFA2(Right, t))
 
       case IFunApp(parser.NegLookBehind, Seq(t)) =>
-        builder.negLookaround2AFA(dir, toSymbMutableAFA2(AFA2.Left, t))
+        builder.negLookaround2AFA(dir, toSymbMutableAFA2(Left, t))
 
       case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
         builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toSymbMutableAFA2(dir, t))
@@ -317,7 +319,7 @@ class ECMAToAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
   // Just calls toMutableAFA2 with AFA2.Right direction and converts the result.
   def toExt2AFA(t: ITerm) : ExtAFA2 = {
-    val mutAut = toMutableAFA2(AFA2.Right, t)
+    val mutAut = toMutableAFA2(Right, t)
     //println("Builder automaton:\n" + mutAut)
     val extAFA2 = mutAut.builderToExtAFA()
     //println("Ext2AFA automaton:\n" + extAFA2)
@@ -325,7 +327,7 @@ class ECMAToAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
   }
 
 
-  private def toMutableAFA2(dir: AFA2.Step, t: ITerm) : MutableAFA2 = {
+  private def toMutableAFA2(dir: Step, t: ITerm) : MutableAFA2 = {
     t match {
 
       case IFunApp(`re_eps`, _) =>
@@ -352,16 +354,16 @@ class ECMAToAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
       case IFunApp(parser.LookAhead, Seq(t)) =>
         // Watch out here with the directions!
-        builder.lookaround2AFA(dir, toMutableAFA2(AFA2.Right, t))
+        builder.lookaround2AFA(dir, toMutableAFA2(Right, t))
 
       case IFunApp(parser.LookBehind, Seq(t)) =>
-        builder.lookaround2AFA(dir, toMutableAFA2(AFA2.Left, t))
+        builder.lookaround2AFA(dir, toMutableAFA2(Left, t))
 
       case IFunApp(parser.NegLookAhead, Seq(t)) =>
-        builder.negLookaround2AFA(dir, toMutableAFA2(AFA2.Right, t))
+        builder.negLookaround2AFA(dir, toMutableAFA2(Right, t))
 
       case IFunApp(parser.NegLookBehind, Seq(t)) =>
-        builder.negLookaround2AFA(dir, toMutableAFA2(AFA2.Left, t))
+        builder.negLookaround2AFA(dir, toMutableAFA2(Left, t))
 
       case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
         builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toMutableAFA2(dir, t))
@@ -507,6 +509,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
       val aut = ecmaAFA.toSymbExt2AFA(r)
       AFA2Utils.printAutDotToFile(aut, "extSymbAFA2.dot")
+
+      val epsRed = new SymbEpsReducer(theory, aut)
+      val reducedAut = epsRed.afa
+
       throw new RuntimeException("Stop here.")
 
 

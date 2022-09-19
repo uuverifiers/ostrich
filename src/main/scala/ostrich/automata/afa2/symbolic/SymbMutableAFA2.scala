@@ -1,8 +1,12 @@
-package ostrich.automata.afa2
+package ostrich.automata.afa2.symbolic
+
+import ostrich.automata.afa2.concrete.BState
+import ostrich.automata.afa2.{EpsTransition, Left, Right, Step, SymbTransition}
 
 abstract sealed class SymbBTransition(val targets: Seq[BState])
 import ostrich.OstrichStringTheory
-import ostrich.automata.afa2.AFA2.{Left, Right, Step}
+import ostrich.automata.afa2.concrete.{AFA2, BState}
+import ostrich.automata.afa2.AFA2Utils
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -17,7 +21,7 @@ case class SymbBStepTransition(label: Range,
                                step: Step,
                                _targets: Seq[BState]) extends SymbBTransition(_targets)
 
-class SymbAFA2Builder(theory : OstrichStringTheory) {
+class SymbAFA2Builder(theory: OstrichStringTheory) {
   val alphabet_size = theory.alphabetSize
   val max_char = theory.upperBound
   val min_char = 0
@@ -286,8 +290,8 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
     val trans = for ((st, tr) <- this.transitions)
       yield (stMap.get(st).get,
         tr match {
-          case st: SymbBStepTransition => AFA2.SymbTransition(st.label, st.step, st._targets.map(stMap))
-          case et: SymbBEpsTransition => AFA2.EpsTransition(et._targets.map(stMap))
+          case st: SymbBStepTransition => SymbTransition(st.label, st.step, st._targets.map(stMap))
+          case et: SymbBEpsTransition => EpsTransition(et._targets.map(stMap))
         })
 
     val transMap = trans.groupBy(_._1).mapValues(l => l map (_._2))

@@ -1,7 +1,7 @@
-package ostrich.automata.afa2
-
+package ostrich.automata.afa2.concrete
 
 import ap.util.Combinatorics
+import ostrich.automata.afa2.StepTransition
 
 object AFA2StateDuplicator {
 
@@ -16,7 +16,7 @@ object AFA2StateDuplicator {
  */
 class AFA2StateDuplicator(afa : AFA2) {
 
-  import AFA2.{Step, StepTransition}
+  import ostrich.automata.afa2.{Step, Left, Right}
   import afa.{finalStates, initialStates, transitions}
 
   def ir(s : Int) = 6*s + 0
@@ -45,9 +45,9 @@ class AFA2StateDuplicator(afa : AFA2) {
 
   def rewrSources(s : Int, step : Step) : Iterator[Int] =
     step match {
-      case AFA2.Left  =>
+      case Left  =>
         Iterator(ll(s), rl(s))
-      case AFA2.Right =>
+      case Right =>
         Iterator(lr(s), rr(s)) ++
         (if (initialStates contains s) Iterator(ir(s)) else Iterator())
     }
@@ -57,9 +57,9 @@ class AFA2StateDuplicator(afa : AFA2) {
     val domains =
       for (s <- targets) yield {
         step match {
-          case AFA2.Left  =>
+          case Left  =>
             List(ll(s), lr(s))
-          case AFA2.Right =>
+          case Right =>
             List(rl(s), rr(s)) ++
             (if (finalStates contains s) List(rf(s)) else List())
         }

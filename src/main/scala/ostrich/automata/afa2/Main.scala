@@ -2,6 +2,16 @@ package ostrich.automata.afa2
 
 object Main extends App {
 
+  val range1 = new Range(1, 10, 1)
+  val range2 = new Range(2, 30, 1)
+  val seq = Seq(range1, range2)
+
+  //val boh = (for(rgs <- seq) yield rgs.flatten).toSet.toIndexedSeq.sorted
+
+  //println(boh)
+
+
+  /*
   val map = Map(1 -> Seq("uno", "unobis"), 2 -> Seq("due", "duebis"), 3 -> Seq("tre", "trebis"))
   val set = Set(8, 9, 5)
 
@@ -11,7 +21,7 @@ object Main extends App {
 
   println(res)
 
-  /*
+
   val input = Set(new Range(0, 1, 1),
     new Range(5, 9, 1),
     new Range(9, 10, 1),

@@ -1,27 +1,9 @@
-package ostrich.automata.afa2
+package ostrich.automata.afa2.concrete
 
-import ostrich.automata.afa2.AFA2.{EpsTransition, Step, StepTransition, Transition, goLeft, goRight}
+import ostrich.automata.afa2.{AFA2Utils, EpsTransition, Step, StepTransition, Transition, Left, Right}
 
-import scala.collection.{Seq, mutable}
 import scala.collection.mutable.ArrayBuffer
-
-// Used for intermediate computations
-case class EpsAFA2(initialState: Int,
-                   finalStates: Seq[Int],
-                   transitions: Map[Int, Seq[AFA2.Transition]]) {
-
-  lazy val states = {
-    val states = mutable.Set[Int](initialState)
-    states ++= finalStates
-    for ((s, ts) <- transitions;
-         t <- ts) {
-      states += s
-      states ++= t.targets
-    }
-    states.toIndexedSeq.sorted
-    states
-  }
-}
+import scala.collection.{Seq, mutable}
 
 
 // Classes for the MacroStates for subset construction
@@ -59,6 +41,7 @@ class EpsReducer(extafa : ExtAFA2) {
   val maxLetter = if (extafa.letters.isEmpty) 0 else extafa.letters.max
   val maxState = extafa.states.max
 
+  // TODO: this is WRONG! Replace with integer outside the alphabet!
   val beginMarker = maxLetter + 2
   val endMarker = maxLetter + 4
 
@@ -96,7 +79,8 @@ class EpsReducer(extafa : ExtAFA2) {
           val newTargets = for (_ <- targets) yield newState
           epsBackwardsSteps ++= newTargets zip targets
           for (l <- letters ++ List(endMarker))
-            yield goRight(l, newTargets: _*)
+            //yield goRight(l, newTargets: _*)
+          yield StepTransition(l, Right, newTargets)
         }
       }
 
@@ -109,7 +93,8 @@ class EpsReducer(extafa : ExtAFA2) {
     val extraTransitions: Seq[(Int, StepTransition)] =
       for ((source, target) <- epsBackwardsSteps;
            l <- letters ++ List(endMarker))
-      yield (source -> goLeft(l, target))
+      //yield (source -> goLeft(l, target))
+      yield (source -> StepTransition(l, Left, Seq(target)))
 
     val newFlatTransitions = newFlatPreTransitions ++ extraTransitions
 
@@ -136,16 +121,20 @@ class EpsReducer(extafa : ExtAFA2) {
 
     newFlatTransWEps ++= (
       for (s <- extafa.initialStates)
-        yield (newInitialState -> goRight(beginMarker, s))
+        //yield (newInitialState -> goRight(beginMarker, s))
+        yield (newInitialState -> StepTransition(beginMarker, Right, Seq(s)))
       ) ++ (
       for (s <- extafa.finalRightStates)
-        yield (s -> goRight(endMarker, newFinalEndState))
+        //yield (s -> goRight(endMarker, newFinalEndState))
+        yield (s -> StepTransition(endMarker, Right, Seq(newFinalEndState)))
       ) ++ (
       for (l <- extafa.letters ++ List(beginMarker, endMarker))
-        yield (newFinalBeginState -> goRight(l, newFinalBeginState))
+        //yield (newFinalBeginState -> goRight(l, newFinalBeginState))
+        yield (newFinalBeginState -> StepTransition(l, Right, Seq(newFinalBeginState)))
       ) ++ (
       for (s <- extafa.finalLeftStates)
-        yield (s -> goLeft(beginMarker, newFinalBeginState))
+        //yield (s -> goLeft(beginMarker, newFinalBeginState))
+        yield (s -> StepTransition(beginMarker, Left, Seq(newFinalBeginState)))
       )
 
     val transWEps = newFlatTransWEps groupBy (_._1) mapValues { l => l map (_._2) }

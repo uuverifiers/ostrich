@@ -1,7 +1,6 @@
-package ostrich.automata.afa2
+package ostrich.automata.afa2.concrete
 
-
-import ostrich.automata.afa2.AFA2.{Left, Right, Step}
+import ostrich.automata.afa2.{AFA2Utils, EpsTransition, Left, Right, Step, StepTransition}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -574,8 +573,8 @@ case class MutableAFA2(builder: AFA2Builder,
 		val trans = for ((st, tr) <- this.transitions)
 									yield (stMap.get(st).get,
 										tr match {
-											case st: BStepTransition => AFA2.StepTransition(st.label, st.step, st._targets.map(stMap))
-											case et: BEpsTransition => AFA2.EpsTransition(et._targets.map(stMap))
+											case st: BStepTransition => StepTransition(st.label, st.step, st._targets.map(stMap))
+											case et: BEpsTransition => EpsTransition(et._targets.map(stMap))
 										})
 
 		val transMap = trans.groupBy(_._1).mapValues(l => l map (_._2))

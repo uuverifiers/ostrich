@@ -1,6 +1,7 @@
 package ostrich.automata.afa2
 
-import ostrich.automata.afa2.AFA2.{EpsTransition, StepTransition, SymbTransition}
+import ostrich.automata.afa2.concrete.{AFA2, EpsAFA2, ExtAFA2}
+import ostrich.automata.afa2.symbolic.{SymbAFA2, SymbExtAFA2}
 
 import java.io.{BufferedWriter, File, FileWriter}
 import scala.collection.{breakOut, mutable}
@@ -103,7 +104,7 @@ object AFA2Utils {
     for (s <- aut.states) {
       res.append("  " + s)
 
-      if (aut.finalBeginStates.contains(s) || aut.finalEndStates.contains(s)) res.append(" [shape=doublecircle,label=\"" + s + "\"];\n")
+      if (aut.finalLeftStates.contains(s) || aut.finalRightStates.contains(s)) res.append(" [shape=doublecircle,label=\"" + s + "\"];\n")
       else res.append(" [shape=circle,label=\"" + s + "\"];\n")
 
       if (aut.initialStates.contains(s)) {
@@ -118,10 +119,10 @@ object AFA2Utils {
 
       res.append("  " + source)
       t match {
-        case StepTransition(label, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
-        case StepTransition(label, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
-        case SymbTransition(_, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
-        case SymbTransition(_, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case StepTransition(label, Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
+        case StepTransition(label, Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
+        case SymbTransition(_, Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case SymbTransition(_, Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
         case EpsTransition(_) => res.append(" -> " + target + " [label=\"eps\"")
       }
 
@@ -156,10 +157,10 @@ object AFA2Utils {
 
       res.append("  " + source)
       t match {
-        case StepTransition(label, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
-        case StepTransition(label, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
-        case SymbTransition(_, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
-        case SymbTransition(_, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case StepTransition(label, Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
+        case StepTransition(label, Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
+        case SymbTransition(_, Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case SymbTransition(_, Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
         case EpsTransition(_) => res.append(" -> " + target + " [label=\"eps\"")
       }
 
@@ -194,10 +195,10 @@ object AFA2Utils {
 
       res.append("  " + source)
       t match {
-        case StepTransition(label, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
-        case StepTransition(label, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
-        //case SymbTransition(_, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
-        //case SymbTransition(_, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case StepTransition(label, Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
+        case StepTransition(label, Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
+        case SymbTransition(_, Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case SymbTransition(_, Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
         case EpsTransition(_) => res.append(" -> " + target + " [label=\"eps\"")
       }
 
@@ -233,10 +234,46 @@ object AFA2Utils {
 
       res.append("  " + source)
       t match {
-        case StepTransition(label, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
-        case StepTransition(label, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
+        case StepTransition(label, Left, _) => res.append(" -> " + target + " [label=\"<- " + label + "\"")
+        case StepTransition(label, Right, _) => res.append(" -> " + target + " [label=\"-> " + label + "\"")
         //case SymbTransition(_, AFA2.Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
         //case SymbTransition(_, AFA2.Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+      }
+
+      // universal transitions are red
+      if (t.targets.length > 1) res.append(",color=" + color)
+      res.append("]\n")
+    }
+    res.append("}\n") toString()
+  }
+
+
+  def toDot(aut: SymbAFA2): String = {
+    val res = new mutable.StringBuilder("digraph Automaton {\n")
+    res.append("  rankdir = LR;\n")
+    res.append("  initial [shape=plaintext,label=\"\"];\n");
+
+    // Printing states
+    for (s <- aut.states) {
+      res.append("  " + s)
+
+      if (aut.finalStates.contains(s)) res.append(" [shape=doublecircle,label=\"" + s + "\"];\n")
+      else res.append(" [shape=circle,label=\"" + s + "\"];\n")
+
+      if (aut.initialStates.contains(s)) {
+        res.append("  initial -> " + s + "\n")
+      }
+    }
+
+    // printing transitions
+    for ((source, transitions) <- aut.transitions;
+         t <- transitions; rand = scala.util.Random; color = svg(rand.nextInt(svg.length));
+         target <- t.targets) {
+
+      res.append("  " + source)
+      t match {
+        case SymbTransition(_, Left, _) => res.append(" -> " + target + " [label=\"<- " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
+        case SymbTransition(_, Right, _) => res.append(" -> " + target + " [label=\"-> " + t.asInstanceOf[SymbTransition].toStringLabel() + "\"")
       }
 
       // universal transitions are red
@@ -279,6 +316,17 @@ object AFA2Utils {
   }
 
   def printAutDotToFile(aut: AFA2, fileName: String): Unit = {
+    //val path = Paths.get("/out")
+    //Files.createDirectories(path)
+    //val file = new File("/out/"+fileName)
+    val file = new File(fileName)
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(toDot(aut))
+    bw.close()
+  }
+
+
+  def printAutDotToFile(aut: SymbAFA2, fileName: String): Unit = {
     //val path = Paths.get("/out")
     //Files.createDirectories(path)
     //val file = new File("/out/"+fileName)
