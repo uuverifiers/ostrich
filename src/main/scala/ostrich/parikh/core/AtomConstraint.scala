@@ -15,6 +15,7 @@ import ap.terfor.conjunctions.Conjunction
 import ostrich.parikh.ZTerm
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.CostEnrichedConvenience._
+import ap.terfor.preds.Atom
 
 object AtomConstraint {
   def unaryHeuristicAC(aut: CostEnrichedAutomatonTrait) =
@@ -22,6 +23,9 @@ object AtomConstraint {
   
   def parikhAC(aut: CostEnrichedAutomatonTrait) =
     new ParikhAC(aut)
+
+  def catraAC(aut: CostEnrichedAutomatonTrait) = 
+    new CatraAC(aut)
 }
 
 trait AtomConstraint {
@@ -207,6 +211,9 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
 }
 
+
+// TODO: BUG!! Bug occurs when running benchmark `bigSubStrIdx.smt2`
+
 class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
 
   def product(that: AtomConstraint): AtomConstraint = {
@@ -348,3 +355,5 @@ class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
   }
 
 }
+
+class CatraAC(override val aut: CostEnrichedAutomatonTrait) extends ParikhAC(aut)

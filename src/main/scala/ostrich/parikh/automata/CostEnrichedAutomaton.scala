@@ -79,86 +79,7 @@ class CostEnrichedAutomaton(
     val underlying: BAutomaton
 ) extends CostEnrichedAutomatonTrait {
 
-  import CostEnrichedAutomaton.{initMap}
-
-  initMap(this) // init etaMap and transTermMap
-
-  /** @deprecated
-    *   not implemented
-    */
-  def |(that: Automaton): Automaton =
-    new CostEnrichedAutomaton(new BAutomaton)
-
-  import CostEnrichedAutomatonAdapter.intern
-
-  def &(that: Automaton): Automaton = this & (intern(that))
-
-  def &(aut2: CostEnrichedAutomaton): CostEnrichedAutomaton = {
-    val aut1 = this
-    val autBuilder = new CostEnrichedAutomatonBuilder
-
-    // begin intersection
-    val initialState1 = aut1.initialState
-    val initialState2 = aut2.initialState
-    val initialState = autBuilder.getNewState
-    autBuilder.setInitialState(initialState)
-    autBuilder.setAccept(
-      initialState,
-      aut1.isAccept(initialState1) && aut2.isAccept(initialState2)
-    )
-
-    // from old states pair to new state
-    val pair2state = new MHashMap[(State, State), State]
-    val worklist = new ArrayStack[(State, State)]
-
-    pair2state.put((initialState1, initialState2), initialState)
-    worklist.push((initialState1, initialState2))
-
-    while (!worklist.isEmpty) {
-      val (from1, from2) = worklist.pop()
-      val from = pair2state(from1, from2)
-      for (
-        (to1, label1, vec1, term1) <- aut1.outgoingTransitionsWithInfo(from1);
-        (to2, label2, vec2, term2) <- aut2.outgoingTransitionsWithInfo(from2)
-      ) {
-        // intersect transition
-        LabelOps.intersectLabels(label1, label2) match {
-          case Some(label) => {
-            val to = pair2state.getOrElseUpdate(
-              (to1, to2), {
-                val newState = autBuilder.getNewState
-                worklist.push((to1, to2))
-                newState
-              }
-            )
-            val vector = vec1 ++ vec2
-            autBuilder.addTransition(
-              from,
-              label,
-              to,
-              vector
-            )
-            autBuilder.setAccept(
-              to,
-              aut1.isAccept(to1) && aut2.isAccept(to2)
-            )
-          }
-          case _ => // do nothing
-        }
-      }
-    }
-    autBuilder.addNewIntFormula(aut1.regsRelation)
-    autBuilder.addNewIntFormula(aut2.regsRelation)
-    autBuilder.prependRegisters(aut1.registers ++ aut2.registers)
-    val res = autBuilder.getAutomaton
-    res
-  }
-
-  /** @deprecated
-    *   not implemented
-    */
-  def unary_! : Automaton =
-    new CostEnrichedAutomaton(new BAutomaton)
+  CostEnrichedAutomaton.initMap(this)
 
   def isEmpty: Boolean = underlying.isEmpty
 
@@ -173,8 +94,6 @@ class CostEnrichedAutomaton(
       case null => None
       case str  => Some(for (c <- str) yield c.toInt)
     }
-
-  override val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
 
   lazy val initialState: State = underlying.getInitialState
 
@@ -203,9 +122,6 @@ class CostEnrichedAutomaton(
     seenstates
   }
 
-  val labelEnumerator: TLabelEnumerator[TLabel] =
-    new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
-
   def outgoingTransitions(from: State): Iterator[(State, TLabel)] = {
     for (t <- from.getSortedTransitions(true).iterator)
       yield (
@@ -216,155 +132,11 @@ class CostEnrichedAutomaton(
 
   def isAccept(s: State): Boolean = s.isAccept
 
-  def getBuilder: AtomicStateAutomatonBuilder[State, TLabel] = {
-    new CostEnrichedAutomatonBuilder
-  }
-
-  def getTransducerBuilder: TransducerBuilder[State, TLabel] =
-    BricsTransducer.getBuilder
-
   def toDetailedString: String = underlying.toString()
 
-  /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
-    * Encode the formula of registers meanwhile.
-    */
-  lazy val parikhImage: Formula = {
-    // Bug : do not consider connection
-    import ap.terfor.TerForConvenience._
-    import TermGeneratorOrder._
-
-    println("parikh ---------------------------------")
-    def outFlowTerms(from: State): Seq[Term] = {
-      val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
-      outgoingTransitions(from).foreach { case (to, lbl) =>
-        outFlowTerms += transTermMap(from, lbl, to)
-      }
-      outFlowTerms
-    }
-
-    def inFlowTerms(to: State): Seq[Term] = {
-      val inFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
-      incomingTransitions(to).foreach { case (from, lbl) =>
-        inFlowTerms += transTermMap(from, lbl, to)
-      }
-      inFlowTerms
-    }
-
-    val zTerm = states.map((_, ZTerm())).toMap
-
-    val preStatesWithTTerm = new MHashMap[State, MHashSet[(State, Term)]]
-    for ((s, _, t, tTerm) <- transitionsWithTerm) {
-      val set = preStatesWithTTerm.getOrElseUpdate(t, new MHashSet)
-      set += ((s, tTerm))
-    }
-    // consistent flow ///////////////////////////////////////////////////////////////
-    var consistentFlowFormula = disj(
-      for (acceptState <- acceptingStates)
-        yield {
-          val consistentFormulas =
-            for (s <- states)
-              yield {
-                val inFlow: LinearCombination =
-                  if (s == initialState)
-                    inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-                  else inFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-                val outFlow: LinearCombination =
-                  if (s == acceptState)
-                    outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0)) + 1
-                  else outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(l(0))
-                inFlow === outFlow
-              }
-          conj(consistentFormulas)
-        }
-    )
-
-    // every transtion term should greater than 0
-    val transtionTerms = transTermMap.map(_._2).toSeq
-    transtionTerms.foreach { term =>
-      consistentFlowFormula = conj(consistentFlowFormula, term >= 0)
-    }
-    /////////////////////////////////////////////////////////////////////////////////
-
-    // connection //////////////////////////////////////////////////////////////////
-    val zVarInitFormulas = transitionsWithTerm.map { case (from, _, _, tTerm) =>
-      if (from == initialState)
-        (zTerm(from) === 0)
-      else
-        (tTerm === 0) | (zTerm(from) > 0)
-    }
-
-    val connectFormulas = states.map {
-      case s if s != initialState =>
-        (zTerm(s) === 0) | disj(
-          preStatesWithTTerm(s).map { case (from, tTerm) =>
-            if (from == initialState)
-              conj(tTerm > 0, zTerm(s) === 1)
-            else
-              conj(
-                zTerm(from) > 0,
-                tTerm > 0,
-                zTerm(s) === zTerm(from) + 1
-              )
-          }
-        )
-      case _: BState => Conjunction.TRUE
-    }
-
-    val connectionFormula = conj(zVarInitFormulas ++ connectFormulas)
-    /////////////////////////////////////////////////////////////////////////////////
-
-    // registers update formula ////////////////////////////////////////////////////
-    // registers update map
-    val registerUpdateMap: Map[Term, ArrayBuffer[LinearCombination]] = {
-      val registerUpdateMap = new MHashMap[Term, ArrayBuffer[LinearCombination]]
-      val transitionsWithVector: Iterator[(State, TLabel, State, Seq[Int])] =
-        for (
-          s <- states.iterator;
-          (to, label, vec) <- outgoingTransitionsWithVec(s)
-        )
-          yield (
-            (
-              s,
-              label,
-              to,
-              vec
-            )
-          )
-      transitionsWithVector.foreach { case (from, lbl, to, vec) =>
-        val trasitionTerm = transTermMap(from, lbl, to)
-        vec.zipWithIndex.foreach {
-          case (veci, i) => {
-            val registerTerm = registers(i)
-            val update =
-              registerUpdateMap.getOrElseUpdate(
-                registerTerm,
-                new ArrayBuffer[LinearCombination]
-              )
-            update.append(trasitionTerm * veci)
-          }
-        }
-      }
-      registerUpdateMap.toMap
-    }
-
-    val registerUpdateFormula = conj(
-      for ((registerTerm, update) <- registerUpdateMap)
-        yield {
-          registerTerm === update.reduce(_ + _)
-        }
-    )
-
-    /////////////////////////////////////////////////////////////////////////////////
-
-    conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
-  }
-
-  def removeDeadTransitions(): Unit = {
+  def removeDeadTransitions(): Unit = 
     underlying.removeDeadTransitions()
-  }
-
-  override lazy val getLengthAbstraction: Formula = Conjunction.TRUE
-
+  
   override def toString: String = {
     val state2Int = states.zipWithIndex.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
@@ -378,11 +150,11 @@ class CostEnrichedAutomaton(
     }
 
     s"""
-automaton a${states.size} {
-  init s${state2Int(initialState)};
-  ${transitionsWithVec.toSeq.sortBy(_._1).map(transition2Str).mkString("\n  ")}
-  accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
-};
+    automaton a${states.size} {
+      init s${state2Int(initialState)};
+      ${transitionsWithVec.toSeq.sortBy(_._1).map(transition2Str).mkString("\n  ")}
+      accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
+    };
     """
   }
 

@@ -9,6 +9,7 @@ object Config {
   sealed trait LengthAbstractStrategy
   case class Parikh() extends LengthAbstractStrategy
   case class Unary() extends LengthAbstractStrategy
+  case class Catra() extends LengthAbstractStrategy
 
   case class SyncSubstr(
       minSyncLen: Int =

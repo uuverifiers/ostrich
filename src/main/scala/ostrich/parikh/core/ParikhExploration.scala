@@ -25,6 +25,7 @@ import ostrich.parikh.preop.SubStringCEPreOp
 import ostrich.parikh.core.LinearAbstractionSolver
 import ostrich.parikh.core.Model.{IntValue, StringValue}
 import ostrich.parikh.preop.IndexOfCEPreOp
+import ostrich.parikh.core.CatraBasedSolver
 
 object ParikhExploration {
   def isStringResult(op: PreOp): Boolean = op match {
@@ -66,7 +67,7 @@ object ParikhExploration {
         }
         if (_oldValue != resValue)
           throw new Exception(
-            "Model extraction failed: " + _oldValue + " != " + resValue
+            "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
           )
       }
 
@@ -166,7 +167,7 @@ class ParikhExploration(
 
         // check linear arith consistency of final automata
 
-        val solver = new LinearAbstractionSolver
+        val solver = new CatraBasedSolver
         solver.setInterestTerm(integerTerm)
         for (t <- leafTerms) {
           solver.addConstraint(t, constraintStores(t).getContents)

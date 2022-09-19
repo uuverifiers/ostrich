@@ -31,7 +31,7 @@ class Result {
   def updateModel(t: Term, v: IdealInt): Unit = model.update(t, v)
 
   def updateModel(t: Term, v: Seq[Int]): Unit = model.update(t, v)
-  
+
   def getModel = model.getModel
 }
 
@@ -39,30 +39,31 @@ import AtomConstraintsSolver._
 
 trait AtomConstraintsSolver {
 
+  def solve: Result
+
   protected var constraints: Seq[AtomConstraints] = Seq()
 
   protected var interestTerms: Set[Term] = Set()
 
   def setInterestTerm(terms: Set[Term]): Unit = interestTerms = terms
 
-  def addConstraint(constraint: AtomConstraints): Unit =
-    constraints ++= Seq(constraint)
-
-  def solve: Result
-
-}
-
-class LinearAbstractionSolver extends AtomConstraintsSolver {
-
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
 
     val constraint = lengthAbsStrategy match {
       case Unary()  => unaryHeuristicACs(t, auts)
       case Parikh() => parikhACs(t, auts)
+      case Catra()  => catraACs(t, auts)
     }
 
-    super.addConstraint(constraint)
+    addConstraint(constraint)
   }
+
+  def addConstraint(constraint: AtomConstraints): Unit =
+    constraints ++= Seq(constraint)
+
+}
+
+class LinearAbstractionSolver extends AtomConstraintsSolver {
 
   def solve: Result = {
     // Sometimes computation of linear abstraction is very expensive
@@ -116,4 +117,96 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
     res
   }
 
+}
+
+// TODO: Encode the final atom constraints to catra input format,
+// and then call catra to solve the constraints
+class CatraBasedSolver extends AtomConstraintsSolver {
+
+  lazy val automatas: Seq[Seq[CostEnrichedAutomatonTrait]] =
+    constraints.map(_.getAutomata)
+
+  def toCatraInput: String = {
+    val sb = new StringBuilder
+    sb.append(toCatraInputInteger)
+    sb.append(toCatraInputAutomata)
+    sb.append(toCatraInputLIA)
+    sb.toString()
+  }
+
+  def toCatraInputInteger: String = {
+    val sb = new StringBuilder
+    sb.append("counter int ")
+    val allIntTerms = interestTerms ++ constraints.flatMap(_.interestTerms)
+    sb.append(allIntTerms.mkString(", "))
+    sb.append(";\n")
+    sb.toString()
+  }
+
+  def toCatraInputAutomata: String = {
+    val sb = new StringBuilder
+    for (constraint <- constraints) {
+      sb.append("synchronised {\n")
+      val autNamePrefix = constraint.strId.toString
+      for ((aut, i) <- constraint.getAutomata.zipWithIndex) {
+        sb.append(toCatraInputAutomaton(aut, autNamePrefix + i))
+      }
+      sb.append("};\n")
+    }
+    sb.toString()
+  }
+
+  def toCatraInputAutomaton(
+      aut: CostEnrichedAutomatonTrait,
+      name: String
+  ): String = {
+    val sb = new StringBuilder
+    val state2Int = aut.states.zipWithIndex.toMap
+    sb.append(s"automaton $name {\n")
+    sb.append(s"\tinit s${state2Int(aut.initialState)};\n")
+    for ((s, lbl, t, vec) <- aut.transitionsWithVec) {
+      sb.append(
+        s"\ts${state2Int(s)} -> s${state2Int(t)} ${toCatraInputTLabel(lbl)} "
+      )
+      sb.append(toCatraInputRegisterUpdate(aut, vec))
+      sb.append(";\n")
+    }
+    sb.append("\taccepting ")
+    sb.append(aut.acceptingStates.map("s" + state2Int(_)).mkString(", "))
+    sb.append(";\n")
+    sb.append("};\n")
+    sb.toString()
+  }
+
+  def toCatraInputTLabel(lbl: (Char, Char)) = {
+    val (c1, c2) = lbl
+    s"[${c1.toInt}, ${c2.toInt}]"
+  }
+
+  def toCatraInputRegisterUpdate(
+      aut: CostEnrichedAutomatonTrait,
+      update: Seq[Int]
+  ) = {
+    val sb = new StringBuilder
+    sb.append("{")
+    val updateStringSeq = 
+    for ((v, i) <- update.zipWithIndex; if v > 0) yield 
+      s"${aut.getRegisters(i)} += $v"
+    sb.append(updateStringSeq.mkString(", "))
+    sb.append("}")
+    sb.toString()
+  }
+
+  def toCatraInputLIA: String = {
+    val sb = new StringBuilder
+    sb.append("constraint ")
+    sb.append(initialLIA.toString.replaceAll("&", "&&"))
+    sb.append(";\n")
+    sb.toString()
+  }
+
+  def solve: Result = {
+    println(toCatraInput)
+    new Result
+  }
 }

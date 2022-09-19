@@ -28,6 +28,11 @@ object AtomConstraints {
     new ParikhACs(t, atomConstraints)
   }
 
+  def catraACs(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): CatraACs = {
+    val atomConstraints = auts.map(catraAC(_))
+    new CatraACs(t, atomConstraints)
+  }
+
   def evalTerm(t: Term, model: PartialModel): IdealInt = {
     val value = evalTerm(t)(model)
     if (!value.isDefined)
@@ -58,10 +63,6 @@ object AtomConstraints {
 import AtomConstraints._
 trait AtomConstraints {
 
-  protected var interestTermsModel: Map[Term, IdealInt] = Map()
-
-  lazy val productAtom: AtomConstraint = atoms.reduceLeft(_ product _)
-
   val strId: Term
 
   val atoms: Seq[AtomConstraint]
@@ -69,6 +70,12 @@ trait AtomConstraints {
   val interestTerms: Seq[Term]
 
   def getModel: Seq[Int]
+
+  protected var interestTermsModel: Map[Term, IdealInt] = Map()
+
+  lazy val productAtom: AtomConstraint = atoms.reduceLeft(_ product _)
+
+  def getAutomata = atoms.map(_.aut)
 
   def getOverApprox: Formula = productAtom.getOverApprox
 
@@ -106,5 +113,17 @@ class ParikhACs(
     val transtionModel = MHashMap() ++ interestTermsModel
     ParikhUtil.findAcceptedWordByTranstions(Seq(productAtom.aut), transtionModel).get
   }
+}
 
+class CatraACs(
+    override val strId: Term,
+    override val atoms: Seq[AtomConstraint]
+) extends AtomConstraints {
+
+  val interestTerms: Seq[Term] = atoms.map(_.aut).flatMap(_.getRegisters)
+
+  def getModel: Seq[Int] = {
+    val registersModel = MHashMap() ++ interestTermsModel
+    ParikhUtil.findAcceptedWordByRegisters(atoms.map(_.aut), registersModel).get
+  }
 }
