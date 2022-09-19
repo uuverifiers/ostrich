@@ -12,58 +12,50 @@ import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import TermGeneratorOrder._
+import CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait.{
-  getIntFormula,
-  getRegisters
-}
 import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 
 import ostrich.automata.BricsTLabelEnumerator
+import ap.basetypes.IdealInt
 
 object ParikhUtil {
 
   type State = CostEnrichedAutomatonTrait#State
   type TLabel = CostEnrichedAutomatonTrait#TLabel
 
-  /** Get all transition terms from given automata.
-    * @param auts
-    *   automata
-    * @return
-    *   all transition terms
+  /** Check whether all states are accepted
     */
-  // def getAllTransTerms(auts: Seq[CostEnrichedAutomatonTrait]): Seq[Term] = {
-  //   val termsSet = new MHashSet[Term]
-  //   auts.foreach(aut => termsSet ++= aut.getTransitionsTerms)
-  //   termsSet.toSeq
-  // }
-
-  /** Given lengthModel, check whether there is some word accepted by all of the
-    * given automata. Note that this function heuristicly finds a word. It is
-    * sound, but not complete.
-    */
-  def findAcceptedWord(
+  def isAccepting(
       auts: Seq[CostEnrichedAutomatonTrait],
-      lengthModel: MMap[Term, Int]
+      states: Seq[State],
+      integerModel: MMap[Term, Int]
+  ): Boolean =
+    (states zip auts forall { case (state, aut) =>
+      aut.isAccept(state)
+    }) && (integerModel.map(_._2).forall(_ == 0))
+
+  def findAcceptedWordByRegisters(
+      auts: Seq[CostEnrichedAutomatonTrait],
+      registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
-    type State = CostEnrichedAutomatonTrait#State
-    type TLabel = CostEnrichedAutomatonTrait#TLabel
 
+    if(registersModel.isEmpty) {
+      // no registers
+      return auts.reduceLeft(_ & _).getAcceptedWord
+    }
+
+    val registersValue = registersModel.map { case (t, r) =>
+      (t, r.intValue)
+    }
     val fisrtAut = auts(0)
-
-    /** Check whether all states are accepted
-      */
-    def isAccepting(states: Seq[State]): Boolean =
-      states zip auts forall { case (state, aut) =>
-        aut.isAccept(state)
-      }
 
     /** One step of intersection
       */
     def enumNext(
         auts: Seq[CostEnrichedAutomatonTrait],
         states: Seq[State],
-        lengthModel: MMap[Term, Int],
+        registersModel: MMap[Term, Int],
         intersectedLabels: TLabel
     ): Iterator[(Seq[State], MMap[Term, Int], Int)] =
       auts match {
@@ -71,30 +63,33 @@ object ParikhUtil {
           Iterator(
             (
               Seq(),
-              lengthModel.clone(),
+              registersModel.clone(),
               fisrtAut.LabelOps.enumLetters(intersectedLabels).next
             )
           )
         case aut +: otherAuts => {
           val state +: otherStates = states
+          val registers = aut.getRegisters
           for (
-            (to, label, term) <- aut.outgoingTransitionsWithTerm(
+            (to, label, vec) <- aut.outgoingTransitionsWithVec(
               state
             );
             newILabel <- aut.LabelOps
               .intersectLabels(
                 intersectedLabels,
                 label
-              )
-              .toSeq;
-            if (lengthModel(term) > 0);
+              ).toSeq;
+            if !(vec.zipWithIndex.forall { case (v, i) =>
+              v == 0 || registersModel(registers(i)) < v
+            });
             (tailNext, updatedModel, char) <- enumNext(
               otherAuts,
               otherStates,
-              lengthModel + ((
-                term,
-                lengthModel(term) - 1
-              )), // update lengthModel
+              registersModel ++ (for ((v, i) <- vec.zipWithIndex; if v > 0)
+                yield (
+                  registers(i),
+                  registersModel(registers(i)) - v
+                )).toMap, // update lengthModel
               newILabel
             )
           )
@@ -104,14 +99,14 @@ object ParikhUtil {
 
     val initial = (auts map (_.initialState))
 
-    if (isAccepting(initial) && lengthModel.forall(_._2 == 0))
+    if (isAccepting(auts, initial, registersValue))
       return Some(Seq())
 
     val visitedStates = new MHashSet[(Seq[State], MMap[Term, Int])]
     val todo = new ArrayStack[(Seq[State], MMap[Term, Int], Seq[Int])]
 
-    visitedStates += ((initial, lengthModel))
-    todo push ((initial, lengthModel, Seq()))
+    visitedStates += ((initial, registersValue))
+    todo push ((initial, registersValue, Seq()))
 
     while (!todo.isEmpty) {
       val (next, lengthModel, w) = todo.pop
@@ -127,11 +122,101 @@ object ParikhUtil {
 
         if (visitedStates.add((reached, updatedModel))) {
           val newW = w :+ char
-          val finishTrans = updatedModel.forall(_._2 == 0)
-          if (isAccepting(reached) && finishTrans)
+          if (isAccepting(auts, reached, updatedModel))
             return Some(newW)
-          if (!finishTrans)
-            todo push (reached, updatedModel, newW)
+          todo push (reached, updatedModel, newW)
+        }
+      }
+    }
+    None
+  }
+
+  /** Given transtion repeat times, check whether there is some word accepted by
+    * all of the given automata. Note that this function heuristicly finds a
+    * word. It is sound, but not complete.
+    */
+  def findAcceptedWordByTranstions(
+      auts: Seq[CostEnrichedAutomatonTrait],
+      transtionsModel: MMap[Term, IdealInt]
+  ): Option[Seq[Int]] = {
+
+    val transitionRepeatTimes = transtionsModel.map { case (t, i) =>
+      (t, i.intValue)
+    }
+    val fisrtAut = auts(0)
+
+    /** One step of intersection
+      */
+    def enumNext(
+        auts: Seq[CostEnrichedAutomatonTrait],
+        states: Seq[State],
+        transitionModel: MMap[Term, Int],
+        intersectedLabels: TLabel
+    ): Iterator[(Seq[State], MMap[Term, Int], Int)] =
+      auts match {
+        case Seq() =>
+          Iterator(
+            (
+              Seq(),
+              transitionModel.clone(),
+              fisrtAut.LabelOps.enumLetters(intersectedLabels).next
+            )
+          )
+        case aut +: otherAuts => {
+          val state +: otherStates = states
+          for (
+            (to, label, term) <- aut.outgoingTransitionsWithTerm(
+              state
+            );
+            newILabel <- aut.LabelOps
+              .intersectLabels(
+                intersectedLabels,
+                label
+              )
+              .toSeq;
+            if (transitionModel(term) > 0);
+            (tailNext, updatedModel, char) <- enumNext(
+              otherAuts,
+              otherStates,
+              transitionModel + ((
+                term,
+                transitionModel(term) - 1
+              )), // update lengthModel
+              newILabel
+            )
+          )
+            yield (to +: tailNext, updatedModel, char)
+        }
+      }
+
+    val initial = (auts map (_.initialState))
+
+    if (isAccepting(auts, initial, transitionRepeatTimes))
+      return Some(Seq())
+
+    val visitedStates = new MHashSet[(Seq[State], MMap[Term, Int])]
+    val todo = new ArrayStack[(Seq[State], MMap[Term, Int], Seq[Int])]
+
+    visitedStates += ((initial, transitionRepeatTimes))
+    todo push ((initial, transitionRepeatTimes, Seq()))
+
+    while (!todo.isEmpty) {
+      val (next, lengthModel, w) = todo.pop
+      for (
+        (reached, updatedModel, char) <-
+          enumNext(
+            auts,
+            next,
+            lengthModel,
+            auts(0).LabelOps.sigmaLabel
+          )
+      ) {
+
+        if (visitedStates.add((reached, updatedModel))) {
+          val newW = w :+ char
+          if (isAccepting(auts, reached, updatedModel))
+            return Some(newW)
+          todo push (reached, updatedModel, newW)
         }
       }
     }
@@ -222,8 +307,8 @@ object ParikhUtil {
         }
       }
     }
-    builder addNewIntFormula (getIntFormula(aut))
-    builder prependRegisters (getRegisters(aut))
+    builder addNewIntFormula (aut.getRegsRelation)
+    builder prependRegisters (aut.getRegisters)
     (builder.getAutomaton, newState2Prefix)
   }
 

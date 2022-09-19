@@ -47,9 +47,8 @@ class CostEnrichedAutomatonBuilder
     prependRegisters(Seq(_register))
 
   // prepends regsters
-  def prependRegisters(_registers: Seq[Term]): ArrayBuffer[Term] = 
+  def prependRegisters(_registers: Seq[Term]): ArrayBuffer[Term] =
     _registers ++=: registers
-  
 
   // add (transition -> vector) map to etaMap
   def addEtaMap(
@@ -131,12 +130,12 @@ class CostEnrichedAutomatonBuilder
   /** Returns built automaton.
     */
   def getAutomaton: CostEnrichedAutomaton = {
-    import CostEnrichedAutomatonTrait._
     val res = new CostEnrichedAutomaton(baut)
-    setRegisters(res, registers)
-    setEtaMap(res, etaMap.toMap)
-    setTransTermMap(res, transTermMap.toMap)
-    setRegsRelation(res, intFormula)
+    res.setRegisters(registers)
+    res.setEtaMap(etaMap.toMap)
+    res.setTransTermMap(transTermMap.toMap)
+    res.setRegsRelation(intFormula)
+    res.removeDeadTransitions()
     res
   }
 }

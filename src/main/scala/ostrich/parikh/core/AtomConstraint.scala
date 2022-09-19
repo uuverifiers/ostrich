@@ -1,11 +1,6 @@
 package ostrich.parikh.core
 
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait.{
-  getRegisters,
-  getEtaMap,
-  getTransTermMap
-}
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ap.terfor.Formula
@@ -24,6 +19,9 @@ import ostrich.parikh.CostEnrichedConvenience._
 object AtomConstraint {
   def unaryHeuristicAC(aut: CostEnrichedAutomatonTrait) =
     new UnaryHeuristicAC(aut)
+  
+  def parikhAC(aut: CostEnrichedAutomatonTrait) =
+    new ParikhAC(aut)
 }
 
 trait AtomConstraint {
@@ -36,11 +34,11 @@ trait AtomConstraint {
 
   val states = aut.states
 
-  val registers: Seq[Term] = getRegisters(aut)
+  val registers: Seq[Term] = aut.getRegisters
 
-  val etaMap: Map[(State, TLabel, State),Seq[Int]] = getEtaMap(aut)
+  val etaMap: Map[(State, TLabel, State),Seq[Int]] = aut.getEtaMap
 
-  val transTermMap: Map[(State, TLabel, State),Term] = getTransTermMap(aut)
+  val transTermMap: Map[(State, TLabel, State),Term] = aut.getTransTermMap
 
   def product(that: AtomConstraint): AtomConstraint
 
@@ -60,10 +58,11 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   }
 
   def getOverApprox: Formula = {
+    println("unary over-approximation------------------")
     val n = aut.states.size
     val concreteLenBound = if (n > 10) 100 else n * n + 10;
     val s = computeS(concreteLenBound)
-    val registers = getRegisters(aut)
+    val registers = aut.getRegisters
     disjFor(
       for (
         j <- 0 until concreteLenBound;
@@ -153,7 +152,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   def computeT: ArrayBuffer[Set[(State, Seq[Int])]] = {
     val n = aut.states.size
     val acceptingStates = aut.acceptingStates
-    val rLen = getRegisters(aut).size
+    val rLen = aut.getRegisters.size
     val Tlen = 2 * n * n - n
     val T = ArrayBuffer.fill(Tlen)(Set[(State, Seq[Int])]())
     T(0) = acceptingStates.map((_, Seq.fill(rLen)(0)))
@@ -175,7 +174,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     val periods = new ArrayBuffer[(Int, Seq[Int])]
     var period = 0
     val n = aut.states.size
-    val rLen = getRegisters(aut).size
+    val rLen = aut.getRegisters.size
 
     var periodVec = Seq.fill(rLen)(0)
     val nextStates2Vec = succWithVec(s).toMap
@@ -217,6 +216,9 @@ class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
 
   def getRegsRelation: Formula = aut.getRegsRelation
 
+  /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
+    * Encode the formula of registers meanwhile.
+    */
   def getLinearAbs: Formula = {
     println("parikh ---------------------------------")
     def outFlowTerms(from: State): Seq[Term] = {

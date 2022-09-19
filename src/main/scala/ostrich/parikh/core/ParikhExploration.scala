@@ -22,9 +22,60 @@ import SimpleAPI.ProverStatus
 import scala.collection.mutable.LinkedHashSet
 import ap.util.Seqs
 import ostrich.parikh.preop.SubStringCEPreOp
-import ap.api.PartialModel
 import ostrich.parikh.core.LinearAbstractionSolver
-object ParikhExploration {}
+import ostrich.parikh.core.Model.{IntValue, StringValue}
+import ostrich.parikh.preop.IndexOfCEPreOp
+
+object ParikhExploration {
+  def isStringResult(op: PreOp): Boolean = op match {
+    case _: LengthCEPreOp  => false
+    case _: IndexOfCEPreOp => false
+    case _                 => true
+  }
+
+  def generateResultModel(
+      apps: Iterator[(PreOp, Seq[Term], Term)],
+      model: MHashMap[Term, Either[IdealInt, Seq[Int]]]
+  ): MHashMap[Term,Either[IdealInt,Seq[Int]]] = {
+    for (
+      (op, args, res) <- apps;
+      argValues = args map model
+    ) {
+
+      val args: Seq[Seq[Int]] = argValues map {
+        case Left(value)   => Seq(value.intValueSafe)
+        case Right(values) => values
+      }
+
+      val resValue =
+        op.eval(args) match {
+          case Some(v) => v
+          case None =>
+            throw new Exception(
+              "Model extraction failed: " + op + " is not defined for " +
+                args.mkString(", ")
+            )
+        }
+
+      // check the consistence of old result values and computed result values
+      for (oldValue <- model get res) {
+        var _oldValue: Seq[Int] = Seq()
+        oldValue match {
+          case Left(value)  => _oldValue = Seq(value.intValueSafe)
+          case Right(value) => _oldValue = value
+        }
+        if (_oldValue != resValue)
+          throw new Exception(
+            "Model extraction failed: " + _oldValue + " != " + resValue
+          )
+      }
+
+      if (isStringResult(op))
+        model += (res -> Right(resValue))
+    }
+    model
+  }
+}
 
 class ParikhExploration(
     _funApps: Seq[(PreOp, Seq[Term], Term)],
@@ -56,15 +107,7 @@ class ParikhExploration(
     ) yield TermConstraint(t, aut)
   }
 
-  private var integerModel: Option[PartialModel] = None
-
   private val constraintStores = new MHashMap[Term, ParikhStore]
-
-  // lengthProver p is used to solve linear arithmatic constraints
-  val p = _lengthProver.get
-
-  // if unknown is true, the unsat result is unsound, return empty conflict set
-  var unknown = false
 
   // all integer terms and string terms
   val (integerTerm, strTerms) = {
@@ -83,73 +126,6 @@ class ParikhExploration(
     }
     (_integerTerm, _strTerms)
   }
-
-  /** update model of integers
-    */
-  // def updateIntegerModel: Unit = {
-  //   integerModel = {
-  //     Some(p.partialModel)
-  //   }
-  // }
-
-  /** Given a sequence of automata, update their `termModel`.
-    */
-  // def resetTermModel: Unit = {
-  //   val lModel = integerModel.get
-  //   for (t <- leafTerms) {
-  //     val store = constraintStores(t)
-  //     store.termModel.clear()
-  //     for (
-  //       term <- getAllTransTerms(store.getCurrentAuts);
-  //       if term.constants.size == 1;
-  //       tVal <- evalTerm(term)(lModel)
-  //     )
-  //       store.termModel.put(term, tVal.intValue)
-  //   }
-  // }
-
-  // def checkArithConsistency(f: Formula): ProverStatus.Value = {
-  //   pushLengthConstraints
-  //   p.!!(f)
-  //   p.addConstantsRaw(SymbolCollector constants f)
-  //   val res = p.???
-  //   updateIntegerModel
-  //   popLengthConstraints
-  //   res
-  // }
-
-  // def repeatCheckArithConsistency(
-  //     f: Formula,
-  //     repeatTime: Int
-  // ): ProverStatus.Value = {
-  //   var currentF = f
-  //   var currentTime = 0
-  //   while (currentTime < repeatTime) {
-  //     checkArithConsistency(currentF) match {
-  //       case ProverStatus.Sat =>
-  //         val unsatCore = disjFor(
-  //           for (t <- leafTerms; if findAcceptedWordSpecificTerm(t) == None)
-  //             yield {
-  //               val termModel = constraintStores(t).termModel
-  //               disjFor(termModel.map { case (t, value) => t =/= value })
-  //             }
-  //         )
-  //         if (unsatCore.length == 0)
-  //           return ProverStatus.Sat
-  //         currentF = conj(currentF, unsatCore)
-  //         currentTime += 1
-  //       case ProverStatus.Unsat => return ProverStatus.Unsat
-  //       case _                  =>
-  //     }
-  //   }
-  //   ProverStatus.Unknown
-  // }
-
-  // def findAcceptedWordSpecificTerm(t: Term): Option[Seq[Int]] = {
-  //   resetTermModel
-  //   val store = constraintStores(t)
-  //   findAcceptedWord(store.getCurrentAuts, store.termModel)
-  // }
 
   override def findModel: Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     for (t <- allTerms)
@@ -187,127 +163,42 @@ class ParikhExploration(
 
         // we are finished and just have to construct a model
         val model = new MHashMap[Term, Either[IdealInt, Seq[Int]]]
-        
+
         // check linear arith consistency of final automata
 
         val solver = new LinearAbstractionSolver
+        solver.setInterestTerm(integerTerm)
         for (t <- leafTerms) {
           solver.addConstraint(t, constraintStores(t).getContents)
         }
 
         val res = solver.solve
-        
+
         res.getStatus match {
           case ProverStatus.Sat => {
+            import ParikhExploration.generateResultModel
+            // model of leaf term
+            for ((t, v) <- res.getModel) {
+              v match {
+                case IntValue(i)    => model.put(t, Left(i))
+                case StringValue(s) => model.put(t, Right(s))
+              }
+            }
+
+            // model of result term
+            val allFunApps: Iterator[(PreOp, Seq[Term], Term)] =
+              (for (
+                (ops, res) <- sortedFunApps.reverseIterator;
+                (op, args) <- ops.iterator
+              )
+                yield (op, args, res)) ++
+                ignoredApps.iterator // TODO: reverseIterator?
+            model ++= generateResultModel(allFunApps, model)
             throw FoundModel(model.toMap)
           }
           case _ => return trivalConflict
         }
 
-        // def checkFinalArithConsistency: Option[ConflictSet] = {
-        //   strategy match {
-        //     case BasicProduct() =>
-        //       val finalArith = conj(for (t <- leafTerms) yield {
-        //         constraintStores(t).getArithFormula(ArithAfterProduct())
-        //       })
-        //       checkArithConsistency(finalArith) match {
-        //         case ProverStatus.Sat => // nothing
-        //         case _                => return Some(trivalConflict) // not sat
-        //       }
-
-        //     case SyncSubstr(minSyncLen, maxSyncLen, repeatTimes) =>
-        //       for (syncLen <- minSyncLen until maxSyncLen + 1) {
-        //         val finalArith = conj(for (t <- leafTerms) yield {
-        //           constraintStores(t).getArithFormula(
-        //             ArithBeforeProduct(syncLen)
-        //           )
-        //         })
-        //         repeatCheckArithConsistency(finalArith, repeatTimes) match {
-        //           case ProverStatus.Sat => return None
-        //           case ProverStatus.Unsat =>
-        //             return Some(trivalConflict) // not sat
-        //           case ProverStatus.Unknown =>
-        //         }
-        //         // case IC3Based() => return Seq() // TODO
-        //       }
-        //       // neither sat not unsat, throw unkonwn
-        //       throw new Exception("unknown")
-        //   }
-        //   None
-        // }
-        // checkFinalArithConsistency match {
-        //   case None              => // nothing
-        //   case Some(confilctSet) => return confilctSet
-        // }
-
-        // values for leaf string variables
-        // resetTermModel
-        for (t <- leafTerms) {
-          val store = constraintStores(t)
-          model.put(t, Right(store.getAcceptedWord))
-        }
-
-        // values for integer variables
-        for (
-          lModel <- integerModel;
-          c <- integerTerm;
-          cVal <- evalTerm(c)(lModel)
-        )
-          model.put(c, Left(cVal))
-
-        // values for result variables
-        val allFunApps: Iterator[(PreOp, Seq[Term], Term)] =
-          (for (
-            (ops, res) <- sortedFunApps.reverseIterator;
-            (op, args) <- ops.iterator
-          )
-            yield (op, args, res)) ++
-            ignoredApps.iterator // TODO: reverseIterator?
-
-        for (
-          (op, args, res) <- allFunApps;
-          argValues = args map model
-        ) {
-
-          val args: Seq[Seq[Int]] = argValues map {
-            case Left(value)   => Seq(value.intValueSafe)
-            case Right(values) => values
-          }
-
-          val resValue =
-            op.eval(args) match {
-              case Some(v) => v
-              case None =>
-                throw new Exception(
-                  "Model extraction failed: " + op + " is not defined for " +
-                    args.mkString(", ")
-                )
-            }
-
-          // check the consistence of old result values and computed result values
-          for (oldValue <- model get res) {
-            var _oldValue: Seq[Int] = Seq()
-            oldValue match {
-              case Left(value)  => _oldValue = Seq(value.intValueSafe)
-              case Right(value) => _oldValue = value
-            }
-            if (_oldValue != resValue)
-              throw new Exception(
-                "Model extraction failed: " + _oldValue + " != " + resValue
-              )
-          }
-
-          // check the result string value is accepted by its automaton
-          if (!integerTerm.contains(res)) {
-            if (!(constraintStores(res) isAcceptedWord resValue))
-              throw new Exception(
-                "Could not satisfy regex constraints for " + res +
-                  ", maybe the problems involves non-functional transducers?"
-              )
-            model.put(res, Right(resValue))
-          }
-        }
-        throw FoundModel(model.toMap)
       }
       case (op, args, res) :: otherApps => {
         dfExploreOp(op, args, res, constraintStores(res).getContents, otherApps)
@@ -359,10 +250,7 @@ class ParikhExploration(
                 case Some(conflict) => {
                   consistent = false
 
-                  if (conflict.size == 0)
-                    unknown = true
-                  else
-                    assert(!Seqs.disjointSeq(newConstraints, conflict))
+                  assert(!Seqs.disjointSeq(newConstraints, conflict))
                   collectedConflicts ++=
                     (conflict.iterator filterNot newConstraints)
                 }
@@ -443,7 +331,7 @@ class ParikhExploration(
         if (!(coveredTerms contains n)) {
           coveredTerms += n
           additionalConstraints +=
-            ((sortedFunApps(n)._2, CostEnrichedAutomaton makeAnyString ))
+            ((sortedFunApps(n)._2, CostEnrichedAutomaton makeAnyString))
         }
         true
       };

@@ -10,25 +10,44 @@ import ap.basetypes.IdealInt
 import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
 import ap.terfor.linearcombination.LinearCombination
-import shapeless.ops.product
+import scala.collection.mutable.{HashMap => MHashMap}
+import ostrich.parikh.ParikhUtil
 
 object AtomConstraints {
   import AtomConstraint._
-  def unaryHeuristicACs(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): UnaryHeuristicACs = {
+  def unaryHeuristicACs(
+      t: Term,
+      auts: Seq[CostEnrichedAutomatonTrait]
+  ): UnaryHeuristicACs = {
     val atomConstraints = auts.map(unaryHeuristicAC(_))
     new UnaryHeuristicACs(t, atomConstraints)
   }
 
-  def evalTerm(t : Term)(model : PartialModel)
-                      : Option[IdealInt] = t match {
-    case c : ConstantTerm =>
+  def parikhACs(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): ParikhACs = {
+    val atomConstraints = auts.map(parikhAC(_))
+    new ParikhACs(t, atomConstraints)
+  }
+
+  def evalTerm(t: Term, model: PartialModel): IdealInt = {
+    val value = evalTerm(t)(model)
+    if (!value.isDefined)
+      throw new Exception("Term " + t + " is not defined in the model")
+    value.get
+  }
+
+  def evalTerm(t: Term)(model: PartialModel): Option[IdealInt] = t match {
+    case c: ConstantTerm =>
       model eval c
     case OneTerm =>
       Some(IdealInt.ONE)
-    case lc : LinearCombination => {
+    case lc: LinearCombination => {
       val terms = for ((coeff, t) <- lc) yield (coeff, evalTerm(t)(model))
-      if (terms forall { case (_, None) => false
-                         case _ => true })
+      if (
+        terms forall {
+          case (_, None) => false
+          case _         => true
+        }
+      )
         Some((for ((coeff, Some(v)) <- terms) yield (coeff * v)).sum)
       else
         None
@@ -39,55 +58,53 @@ object AtomConstraints {
 import AtomConstraints._
 trait AtomConstraints {
 
-  protected val t: Term
+  protected var interestTermsModel: Map[Term, IdealInt] = Map()
 
-  protected var interestTermsModel: Map[Term, Int] = Map()
+  lazy val productAtom: AtomConstraint = atoms.reduceLeft(_ product _)
 
-  protected val atoms: Seq[AtomConstraint]
+  val strId: Term
 
-  protected val interestTerms: Seq[Term]
+  val atoms: Seq[AtomConstraint]
 
-  def getOverApprox: Formula
-
-  def getLinearAbs: Formula
-
-  def getRegsRelation: Formula
+  val interestTerms: Seq[Term]
 
   def getModel: Seq[Int]
 
-  def getTerm: Term = t
+  def getOverApprox: Formula = productAtom.getOverApprox
 
-  def setTermModel(partialModel: PartialModel): Unit = {
-    for (term <- interestTerms) {
-      val value = evalTerm(term)(partialModel)
-      if(!value.isDefined) throw new Exception("Term " + term + " is not defined in the model")
-      interestTermsModel += (term -> value.get.intValue)
-    }
-  }
+  def getLinearAbs: Formula = productAtom.getLinearAbs
+
+  def getRegsRelation: Formula = conj(atoms.map(_.getRegsRelation))
+
+  def setInterestTermModel(partialModel: PartialModel): Unit = 
+    for (term <- interestTerms) 
+      interestTermsModel += (term -> evalTerm(term, partialModel))
 }
 
 class UnaryHeuristicACs(
-    override protected val t: Term,
-    override protected val atoms: Seq[AtomConstraint]
+    override val strId: Term,
+    override val atoms: Seq[AtomConstraint]
 ) extends AtomConstraints {
 
-  protected val interestTerms: Seq[Term] = atoms.map(_.registers).flatten
+  val interestTerms: Seq[Term] = productAtom.registers
 
-  def getOverApprox: Formula = atoms.reduceLeft(_ product _).getOverApprox
-
-  def getLinearAbs: Formula = atoms.reduceLeft(_ product _).getLinearAbs
-
-  def getRegsRelation: Formula = conj(atoms.map(_.getRegsRelation))
   def getModel: Seq[Int] = {
-    Seq(1)
+    val registersModel = MHashMap() ++ interestTermsModel
+    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel).get
   }
 
 }
 
-// class TransTermModeledSC(automata: Seq[CostEnrichedAutomatonTrait])
-//     extends StringConstraints {
+class ParikhACs(
+    override val strId: Term,
+    override val atoms: Seq[AtomConstraint]
+) extends AtomConstraints {
 
-//   def getInterestingTerms: Set[Term] =
-//     automata.flatMap(getTransitionsTerms(_)).toSet
+  val interestTerms: Seq[Term] = productAtom.transTermMap.map(_._2).toSeq
 
-// }
+  def getModel: Seq[Int] = {
+    val transtionModel = MHashMap() ++ interestTermsModel
+    ParikhUtil.findAcceptedWordByTranstions(Seq(productAtom.aut), transtionModel).get
+  }
+
+}

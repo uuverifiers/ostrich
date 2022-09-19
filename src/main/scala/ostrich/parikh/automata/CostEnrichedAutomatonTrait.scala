@@ -11,55 +11,7 @@ import ap.terfor.Term
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import scala.collection.immutable.Map
-import CostEnrichedAutomaton._
 
-object CostEnrichedAutomatonTrait {
-  // getter
-  def getRegisters(aut: CostEnrichedAutomatonTrait): Seq[Term] = aut.registers
-
-  def getEtaMap(
-      aut: CostEnrichedAutomatonTrait
-  ): Map[(State, TLabel, State), Seq[Int]] =
-    aut.etaMap
-
-  def getTransTermMap(
-      aut: CostEnrichedAutomatonTrait
-  ): Map[(State, TLabel, State), Term] =
-    aut.transTermMap
-
-  def getIntFormula(aut: CostEnrichedAutomatonTrait): Formula = aut.regsRelation
-
-  def getTransitionsTerms(aut: CostEnrichedAutomatonTrait): Seq[Term] = 
-    aut.transTermMap.map(_._2).toSeq
-
-  // setter
-  def setRegisters(
-      aut: CostEnrichedAutomatonTrait,
-      registers: Seq[Term]
-  ): Unit =
-    aut.registers = registers
-
-  def setEtaMap(
-      aut: CostEnrichedAutomatonTrait,
-      etaMaps: Map[
-        (State, TLabel, State),
-        Seq[Int]
-      ]
-  ): Unit =
-    aut.etaMap = etaMaps
-
-  def setTransTermMap(
-      aut: CostEnrichedAutomatonTrait,
-      transTermMaps: Map[
-        (State, TLabel, State),
-        Term
-      ]
-  ): Unit =
-    aut.transTermMap = transTermMaps
-    
-  def setRegsRelation(aut: CostEnrichedAutomatonTrait, f: Formula): Unit =
-    aut.regsRelation = f
-}
 
 trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   type State = BState
@@ -146,6 +98,8 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     */
   def transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
     transitions.map { case (s, lbl, t) =>
+      if(!transTermMap.contains(s, lbl, t))
+         println("hhh")
       (s, lbl, t, transTermMap((s, lbl, t)))
     }
 
@@ -155,7 +109,26 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     transitions.map { case (s, lbl, t) =>
       (s, lbl, t, etaMap((s, lbl, t)))
     }
-  
+
   def getRegsRelation = regsRelation
+
+  def getRegisters = registers
+
+  def getEtaMap = etaMap
+
+  def getTransTermMap = transTermMap
+
+  def getTransitionsTerms = transTermMap.map(_._2).toSeq
+
+  def setRegisters(_registers: Seq[Term]) = registers = _registers
+
+  def setEtaMap(_etaMap: Map[(State, TLabel, State), Seq[Int]]) =
+    etaMap = _etaMap
+  
+  def setTransTermMap(_transTermMap: Map[(State, TLabel, State), Term]) =
+    transTermMap = _transTermMap
+
+  def setRegsRelation(f: Formula) = regsRelation = f
+
 
 }

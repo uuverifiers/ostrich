@@ -8,9 +8,11 @@ import ap.parser.Internal2InputAbsy
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import AtomConstraints.{unaryHeuristicACs}
+import AtomConstraints._
 import ap.terfor.Term
 import ap.terfor.Formula
+import ostrich.parikh.Config._
+import ap.basetypes.IdealInt
 
 object AtomConstraintsSolver {
   var initialLIA: Formula = Conjunction.TRUE
@@ -26,9 +28,11 @@ class Result {
 
   def getStatus = status
 
-  def updateModel(t: Term, v: Int): Unit = model.update(t, v)
+  def updateModel(t: Term, v: IdealInt): Unit = model.update(t, v)
 
   def updateModel(t: Term, v: Seq[Int]): Unit = model.update(t, v)
+  
+  def getModel = model.getModel
 }
 
 import AtomConstraintsSolver._
@@ -36,6 +40,10 @@ import AtomConstraintsSolver._
 trait AtomConstraintsSolver {
 
   protected var constraints: Seq[AtomConstraints] = Seq()
+
+  protected var interestTerms: Set[Term] = Set()
+
+  def setInterestTerm(terms: Set[Term]): Unit = interestTerms = terms
 
   def addConstraint(constraint: AtomConstraints): Unit =
     constraints ++= Seq(constraint)
@@ -47,7 +55,12 @@ trait AtomConstraintsSolver {
 class LinearAbstractionSolver extends AtomConstraintsSolver {
 
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
-    val constraint = unaryHeuristicACs(t, auts)
+
+    val constraint = lengthAbsStrategy match {
+      case Unary()  => unaryHeuristicACs(t, auts)
+      case Parikh() => parikhACs(t, auts)
+    }
+
     super.addConstraint(constraint)
   }
 
@@ -58,7 +71,7 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
     val approxRes = solveOverApprox
     approxRes.getStatus match {
       case ProverStatus.Sat => approxRes
-      case _ => solveLinearAbs
+      case _                => solveLinearAbs
     }
   }
 
@@ -71,6 +84,7 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
   )
 
   def solveFixedFormula(f: Formula): Result = {
+    import AtomConstraints.evalTerm
     val res = new Result
     SimpleAPI.withProver { p =>
       p setConstructProofs true
@@ -83,11 +97,18 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
       p.??? match {
         case ProverStatus.Sat =>
           val partialModel = p.partialModel
-          for (c <- constraints) {
-            c.setTermModel(partialModel)
-            val value = c.getModel
-            res.updateModel(c.getTerm, value)
+          // update string model
+          for (singleString <- constraints) {
+            singleString.setInterestTermModel(partialModel)
+            val value = singleString.getModel
+            res.updateModel(singleString.strId, value)
           }
+          // update integer model
+          for (term <- interestTerms) {
+            val value = evalTerm(term, partialModel)
+            res.updateModel(term, value)
+          }
+
           res.setStatus(ProverStatus.Sat)
         case _ => res.setStatus(_)
       }

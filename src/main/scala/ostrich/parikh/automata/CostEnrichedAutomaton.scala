@@ -82,17 +82,19 @@ class CostEnrichedAutomaton(
   import CostEnrichedAutomaton.{initMap}
 
   initMap(this) // init etaMap and transTermMap
-  
+
   /** @deprecated
     *   not implemented
     */
   def |(that: Automaton): Automaton =
     new CostEnrichedAutomaton(new BAutomaton)
 
-  def &(that: Automaton): Automaton = {
-    import CostEnrichedAutomatonAdapter.intern
+  import CostEnrichedAutomatonAdapter.intern
+
+  def &(that: Automaton): Automaton = this & (intern(that))
+
+  def &(aut2: CostEnrichedAutomaton): CostEnrichedAutomaton = {
     val aut1 = this
-    val aut2 = intern(that)
     val autBuilder = new CostEnrichedAutomatonBuilder
 
     // begin intersection
@@ -122,39 +124,24 @@ class CostEnrichedAutomaton(
         // intersect transition
         LabelOps.intersectLabels(label1, label2) match {
           case Some(label) => {
-            if (pair2state.contains((to1, to2))) {
-              val to = pair2state((to1, to2))
-              val vector = vec1 ++ vec2
-              val term = TransitionTerm()
-              autBuilder.addTransition(
-                from,
-                label,
-                to,
-                vector,
-                term
-              )
-              autBuilder.setAccept(
-                to,
-                aut1.isAccept(to1) && aut2.isAccept(to2)
-              )
-            } else {
-              val to = autBuilder.getNewState
-              pair2state.put((to1, to2), to)
-              worklist.push((to1, to2))
-              val vector = vec1 ++ vec2
-              val term = TransitionTerm()
-              autBuilder.addTransition(
-                from,
-                label,
-                to,
-                vector,
-                term
-              )
-              autBuilder.setAccept(
-                to,
-                aut1.isAccept(to1) && aut2.isAccept(to2)
-              )
-            }
+            val to = pair2state.getOrElseUpdate(
+              (to1, to2), {
+                val newState = autBuilder.getNewState
+                worklist.push((to1, to2))
+                newState
+              }
+            )
+            val vector = vec1 ++ vec2
+            autBuilder.addTransition(
+              from,
+              label,
+              to,
+              vector
+            )
+            autBuilder.setAccept(
+              to,
+              aut1.isAccept(to1) && aut2.isAccept(to2)
+            )
           }
           case _ => // do nothing
         }
@@ -164,7 +151,6 @@ class CostEnrichedAutomaton(
     autBuilder.addNewIntFormula(aut2.regsRelation)
     autBuilder.prependRegisters(aut1.registers ++ aut2.registers)
     val res = autBuilder.getAutomaton
-    res.removeDeadTransitions()
     res
   }
 

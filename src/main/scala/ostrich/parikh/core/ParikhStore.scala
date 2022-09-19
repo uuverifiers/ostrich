@@ -3,14 +3,9 @@ package ostrich.parikh
 import ostrich.Exploration
 import ap.terfor.Term
 import ostrich.automata.Automaton
-import scala.collection.mutable.{
-  ArrayBuffer,
-  ArrayStack,
-  HashMap => MHashMap
-}
+import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.CostEnrichedConvenience._
-import ParikhUtil._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.Config.{strategy, SyncSubstr, BasicProduct}
 import ap.terfor.Formula
@@ -24,16 +19,8 @@ object ParikhStore {
   case class ArithBeforeProduct(syncLen: Int) extends LIAStrategy
 }
 
-
 class ParikhStore(t: Term) extends ConstraintStore {
 
-  import ParikhStore._
-  val termModel = new MHashMap[Term, Int]
-  // current product automaton
-  private var currentProduct: CostEnrichedAutomatonTrait =
-    CostEnrichedAutomaton.makeAnyString()
-  private var currentParikhAuts: Seq[CostEnrichedAutomatonTrait] =
-    Seq()
 
   // constraints in this store
   private val constraints = new ArrayBuffer[Automaton]
@@ -89,13 +76,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
   private def isConsistency(
       auts: Seq[CostEnrichedAutomatonTrait]
   ): Boolean = {
-    if (auts.size == 1) {
-      currentProduct = AtomicStateAutomatonAdapter.intern(auts(0))
-      true
-    } else {
-      currentProduct = auts.reduceLeft(_ & _)
-      !currentProduct.isEmpty
-    }
+    !auts.reduceLeft(_ & _).isEmpty
   }
 
   /** Check if constraints are still consistent after adding `aut`
@@ -156,52 +137,15 @@ class ParikhStore(t: Term) extends ConstraintStore {
     None
   }
 
-  def getArithFormula(strategy: LIAStrategy): Formula = {
-    Conjunction.TRUE
-    // strategy match {
-    //   case ArithAfterProduct() =>
-    //     getCompleteFormula(currentProduct)
-    //   case ArithBeforeProduct(syncLen) =>
-    //     val labels = split2MinLabels(constraints)
-    //     val (syncLenAuts, states2Prefix) =
-    //       getSyncLenAuts(constraints, labels, syncLen)
-    //     val syncFormula = sync(syncLenAuts, states2Prefix, labels, syncLen)
-    //     currentParikhAuts = syncLenAuts
-    //     conj(
-    //       syncLenAuts.map(getCompleteFormula(_)) :+ syncFormula
-    //     )
-    // }
-  }
-
   def getContents: List[Automaton] = constraints.toList
 
   def getCompleteContents: List[Automaton] = constraints.toList
 
-  def ensureCompleteLengthConstraints: Unit = None // do nothing
+  def ensureCompleteLengthConstraints: Unit = None // no need
 
-  def isAcceptedWord(w: Seq[Int]): Boolean = {
-    val constraintSet = constraints.toSet
-    for (aut <- constraintSet) {
-      if (!aut(w)) {
-        return false
-      }
-    }
-    return true
-  }
+  def isAcceptedWord(w: Seq[Int]): Boolean = false // no need
 
-  def getAcceptedWord: Seq[Int] = {
-    val finalCostraints = getCurrentAuts
-    findAcceptedWord(finalCostraints, termModel) match {
-      case Some(w) => return w
-      case None    => throw new Exception("not find word") // do nothing
-    }
-  }
+  def getAcceptedWord: Seq[Int] = Seq() // no need
   def getAcceptedWordLen(len: Int): Seq[Int] = Seq() // no need
 
-  def getCurrentAuts: Seq[Automaton] = strategy match {
-    case SyncSubstr(_, _, _) =>
-      currentParikhAuts
-    case BasicProduct() =>
-      Seq(currentProduct)
-  }
 }

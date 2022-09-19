@@ -2,7 +2,6 @@ package ostrich.parikh.util
 
 import ostrich.automata.Automaton
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import CostEnrichedAutomatonTrait.{getRegisters}
 
 object Print {
   def catraFormat(auts: Seq[Automaton]): String = {
@@ -20,7 +19,7 @@ synchronised {
     val str =
 s"""
 counter int ${termConstraints.flatten
-          .flatMap(getRegisters(_))
+          .flatMap(_.getRegisters)
           .mkString(",")};
 ${termConstraints.map(catraFormat).mkString("")}
 """
