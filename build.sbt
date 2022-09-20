@@ -1,7 +1,8 @@
 lazy val commonSettings = Seq(
-  name := "ostrich",
-  organization := "uuverifiers",
-  version := "1.2",
+  name                  := "ostrich",
+  organization          := "uuverifiers",
+  version               := "1.1",
+  maxErrors             := 5,
 //
   homepage := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses := Seq(
@@ -48,25 +49,12 @@ lazy val commonSettings = Seq(
     )
   ),
 //
-  scalaVersion := "2.12.16",
-  crossScalaVersions := Seq("2.11.12", "2.12.16", "2.13.8"),
-  scalacOptions += "-deprecation",
-  // -- scalafix --
-  scalacOptions += "-Ywarn-unused",
-  semanticdbEnabled := true,
-  semanticdbVersion := scalafixSemanticdb.revision,
-  // --         --
-  // -- bloop --
-  // bloopAggregateSourceDependencies in Global := true,
-  // bloopExportJarClassifiers in Global := Some(Set("sources")),
-  // --       --
-  // change the defalut unmanaged dependencies directory (default is `lib`)
-  // unmanagedBase := baseDirectory.value / "ecma2020",
-  run / fork := true,
-  Global / cancelable := true,
-  publishTo := Some(
-    Resolver.file("file", new File("/home/wv/public_html/maven/"))
-  )
+  scalaVersion          := "2.13.7",
+//  scalacOptions         += "-deprecation",
+  fork in run           := true,
+  cancelable in Global  := true,
+//
+  publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )
 )
 
 // lazy val parserSettings = Seq(

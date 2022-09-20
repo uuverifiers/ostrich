@@ -359,7 +359,7 @@ class OstrichSolver(theory : OstrichStringTheory,
             flags
           )
         else
-          Exploration.lazyExp(funApps, regexes, strDatabase,
+          Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
       val result = exploration.findModel
