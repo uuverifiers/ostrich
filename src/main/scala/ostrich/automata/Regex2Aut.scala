@@ -524,10 +524,12 @@ class Regex2Aut(theory : OstrichStringTheory) {
       //throw new RuntimeException("Stop here.")
       val transl = new SymbToConcTranslator(reducedAut)
       val concAut = transl.forth()
+      AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
       val t1 = System.nanoTime
-      val res = NFATranslator(AFA2StateDuplicator(concAut), Some(transl.rangeMap.map(_.swap))).underlying
+      val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
       val duration = (System.nanoTime - t1) / 1e9d
       println("Time for 2AFA -> NFA translation: " + duration)
+      println("BricsAutomaton:\n" + res)
       res
 
 

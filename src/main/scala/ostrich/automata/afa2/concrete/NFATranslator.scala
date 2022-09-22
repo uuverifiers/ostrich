@@ -2,6 +2,7 @@ package ostrich.automata.afa2.concrete
 
 import ap.util.Combinatorics
 import ostrich.automata.afa2.StepTransition
+import ostrich.automata.afa2.symbolic.SymbEpsReducer
 import ostrich.automata.{AutomataUtils, BricsAutomaton, BricsAutomatonBuilder}
 
 import scala.collection.mutable.{MultiMap, HashMap => MHashMap, HashSet => MHashSet, Set => MSet}
@@ -12,15 +13,17 @@ object NFATranslator {
   // NFA. The resulting minimized automaton should always be the same.
   val StrictConditions = true
 
-  def apply(afa : AFA2) : BricsAutomaton =
-    apply(afa, None)
+  def apply(afa : AFA2, epsRed: SymbEpsReducer) : BricsAutomaton =
+    apply(afa, epsRed, None)
 
-  def apply(afa: AFA2, charMap: Option[Map[Int, Range]]): BricsAutomaton =
-    new LazyNFATranslator(afa, charMap).result
+  def apply(afa: AFA2, epsRed: SymbEpsReducer, charMap: Option[Map[Int, Range]]): BricsAutomaton =
+    new LazyNFATranslator(afa, epsRed, charMap).result
 
 
-  def apply(afa : ExtAFA2) : BricsAutomaton =
+/*  def apply(afa : ExtAFA2) : BricsAutomaton =
     new ExtNFATranslator(afa).result
+
+ */
 
 }
 
@@ -220,7 +223,7 @@ class NFATranslator(afa : AFA2) {
 }
 
 
-class LazyNFATranslator(afa : AFA2, charMap: Option[Map[Int, Range]]) {
+class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map[Int, Range]]) {
 
   import afa._
   import ostrich.automata.afa2.{Left, Right, Step}
@@ -525,6 +528,41 @@ class LazyNFATranslator(afa : AFA2, charMap: Option[Map[Int, Range]]) {
 
   val result = builder.getAutomaton
 
+  /*
+  val result = {
+    val builder =
+      new BricsAutomatonBuilder
+    val epsilons =
+      new MHashMap[BricsAutomaton#State, MSet[BricsAutomaton#State]]
+        with MultiMap[BricsAutomaton#State, BricsAutomaton#State]
+
+    val stateMap =
+      (for (s <- preResult.states) yield (s -> builder.getNewState)).toMap
+
+    builder.setInitialState(stateMap(preResult.initialState))
+
+    for ((s1, s2) <- stateMap)
+      if (preResult isAccept s1)
+        builder.setAccept(s2, true)
+
+    val BeginLabel = preResult.LabelOps.singleton(epsRed.beginMarker.toChar)
+    val EndLabel = preResult.LabelOps.singleton(epsRed.endMarker.toChar)
+
+    for ((s1, s2) <- stateMap)
+      for ((s3, l) <- preResult.outgoingTransitions(s1))
+        l match {
+          case BeginLabel | EndLabel =>
+            epsilons.addBinding(s2, stateMap(s3))
+          case l =>
+            builder.addTransition(s2, l, stateMap(s3))
+        }
+
+    AutomataUtils.buildEpsilons(builder, epsilons)
+
+    builder.getAutomaton
+
+  }*/
+
   println
   println("#states after minimization:      " + result.states.size)
   println("#transitions after minimization: " +
@@ -533,6 +571,9 @@ class LazyNFATranslator(afa : AFA2, charMap: Option[Map[Int, Range]]) {
              yield t).size)
 }
 
+
+
+/*
 class ExtNFATranslator(extafa : ExtAFA2) {
 
   val epsReducer = new EpsReducer(extafa)
@@ -579,6 +620,8 @@ class ExtNFATranslator(extafa : ExtAFA2) {
   }
 
 }
+
+ */
 
 /* OLD VERSION
 class ExtNFATranslator(afa : ExtAFA2) {
