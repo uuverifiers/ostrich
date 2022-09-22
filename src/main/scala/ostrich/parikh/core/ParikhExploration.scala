@@ -15,7 +15,6 @@ import scala.collection.mutable.{
 }
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.CostEnrichedConvenience._
-import scala.collection.breakOut
 import ostrich.parikh.preop.LengthCEPreOp
 import ap.basetypes.IdealInt
 import SimpleAPI.ProverStatus
@@ -26,6 +25,10 @@ import ostrich.parikh.core.LinearAbstractionSolver
 import ostrich.parikh.core.Model.{IntValue, StringValue}
 import ostrich.parikh.preop.IndexOfCEPreOp
 import ostrich.parikh.core.CatraBasedSolver
+import ostrich.parikh.Config.Catra
+import ostrich.parikh.Config.Parikh
+import ostrich.parikh.Config.Unary
+import ostrich.parikh.core.AtomConstraintsSolver
 
 object ParikhExploration {
   def isStringResult(op: PreOp): Boolean = op match {
@@ -37,7 +40,7 @@ object ParikhExploration {
   def generateResultModel(
       apps: Iterator[(PreOp, Seq[Term], Term)],
       model: MHashMap[Term, Either[IdealInt, Seq[Int]]]
-  ): MHashMap[Term,Either[IdealInt,Seq[Int]]] = {
+  ): MHashMap[Term, Either[IdealInt, Seq[Int]]] = {
     for (
       (op, args, res) <- apps;
       argValues = args map model
@@ -167,13 +170,20 @@ class ParikhExploration(
 
         // check linear arith consistency of final automata
 
-        val solver = new CatraBasedSolver
-        solver.setInterestTerm(integerTerm)
+        // val solver = new CatraBasedSolver
+        val backendSolver: AtomConstraintsSolver =
+          Config.lengthAbsStrategy match {
+            case Catra()  => new CatraBasedSolver
+            case Parikh() => new LinearAbstractionSolver
+            case Unary()  => new LinearAbstractionSolver
+          }
+
+        backendSolver.setInterestTerm(integerTerm)
         for (t <- leafTerms) {
-          solver.addConstraint(t, constraintStores(t).getContents)
+          backendSolver.addConstraint(t, constraintStores(t).getContents)
         }
 
-        val res = solver.solve
+        val res = backendSolver.solve
 
         res.getStatus match {
           case ProverStatus.Sat => {
@@ -320,7 +330,7 @@ class ParikhExploration(
     // check whether any of the terms have concrete definitions
     for (t <- strTerms)
       for (w <- _strDatabase.term2List(t)) {
-        val str: String = w.map(i => i.toChar)(breakOut)
+        val str: String = w.view.map(i => i.toChar).mkString("")
         additionalConstraints += ((t, CostEnrichedAutomaton fromString str))
         for (ind <- term2Index get t)
           coveredTerms += ind
@@ -332,7 +342,7 @@ class ParikhExploration(
         if (!(coveredTerms contains n)) {
           coveredTerms += n
           additionalConstraints +=
-            ((sortedFunApps(n)._2, CostEnrichedAutomaton makeAnyString))
+            ((sortedFunApps(n)._2, CostEnrichedAutomaton.makeAnyString))
         }
         true
       };

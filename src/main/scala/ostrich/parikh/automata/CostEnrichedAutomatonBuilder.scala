@@ -131,7 +131,7 @@ class CostEnrichedAutomatonBuilder
     */
   def getAutomaton: CostEnrichedAutomaton = {
     val res = new CostEnrichedAutomaton(baut)
-    res.setRegisters(registers)
+    res.setRegisters(registers.toSeq)
     res.setEtaMap(etaMap.toMap)
     res.setTransTermMap(transTermMap.toMap)
     res.setRegsRelation(intFormula)

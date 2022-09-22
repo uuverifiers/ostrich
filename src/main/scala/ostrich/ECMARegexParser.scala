@@ -61,9 +61,9 @@ class ECMARegexParser(theory : OstrichStringTheory,
   import IExpression._
   import ECMARegexParser._
 
-  for (flag <- UnsupportedFlag.findAllMatchIn(flags))
-    Console.err.println("Warning: ignoring unsupported regex flag " +
-                          flag.matched)
+  // for (flag <- UnsupportedFlag.findAllMatchIn(flags))
+  //   Console.err.println("Warning: ignoring unsupported regex flag " +
+  //                         flag.matched)
 
   val printer = new PrettyPrinterNonStatic
 

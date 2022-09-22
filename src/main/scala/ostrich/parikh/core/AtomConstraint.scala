@@ -233,7 +233,7 @@ class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
       aut.outgoingTransitions(from).foreach { case (to, lbl) =>
         outFlowTerms += transTermMap(from, lbl, to)
       }
-      outFlowTerms
+      outFlowTerms.toSeq
     }
 
     def inFlowTerms(to: State): Seq[Term] = {
@@ -241,7 +241,7 @@ class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
       aut.incomingTransitions(to).foreach { case (from, lbl) =>
         inFlowTerms += transTermMap(from, lbl, to)
       }
-      inFlowTerms
+      inFlowTerms.toSeq
     }
 
     val zTerm = states.map((_, ZTerm())).toMap

@@ -52,7 +52,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
   private val p = theory.functionPredicateMap
 
   def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
-    implicit val _ = order
+    implicit val o = order
     import TerForConvenience._
 
     // As a heuristic, we generate length predicate whenever the
@@ -90,7 +90,6 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
           val lenAtoms =
             for ((t, n) <- (args ++ List(result)).zipWithIndex)
             yield _str_len(List(shifter(l(t)), lenVar(n)))
-
           val charCountAtoms =
             for ((t, n) <- (args ++ List(result)).zipWithIndex;
                  (c, m) <- characters.zipWithIndex)

@@ -79,9 +79,9 @@ object ParikhUtil {
                 intersectedLabels,
                 label
               ).toSeq;
-            if !(vec.zipWithIndex.forall { case (v, i) =>
-              v == 0 || registersModel(registers(i)) < v
-            });
+            // if !(vec.zipWithIndex.forall { case (v, i) =>
+            //   v == 0 || registersModel(registers(i)) < v
+            // });
             (tailNext, updatedModel, char) <- enumNext(
               otherAuts,
               otherStates,
@@ -124,7 +124,7 @@ object ParikhUtil {
           val newW = w :+ char
           if (isAccepting(auts, reached, updatedModel))
             return Some(newW)
-          todo push (reached, updatedModel, newW)
+          todo push ((reached, updatedModel, newW))
         }
       }
     }
@@ -216,7 +216,7 @@ object ParikhUtil {
           val newW = w :+ char
           if (isAccepting(auts, reached, updatedModel))
             return Some(newW)
-          todo push (reached, updatedModel, newW)
+          todo push ((reached, updatedModel, newW))
         }
       }
     }
@@ -394,4 +394,11 @@ object ParikhUtil {
           j <- crossJoin(xs)
         } yield Traversable(i) ++ j
     }
+
+  def measure[A](op : String)(comp : => A) : A =
+    if (Config.measureTime)
+      ap.util.Timer.measure(op)(comp)
+    else
+      comp
+
 }

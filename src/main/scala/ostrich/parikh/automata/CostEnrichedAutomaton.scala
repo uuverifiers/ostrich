@@ -2,7 +2,7 @@ package ostrich.parikh.automata
 
 import ostrich.automata._
 
-import scala.collection.JavaConversions.asScalaIterator
+import scala.collection.JavaConverters.asScala
 
 import dk.brics.automaton.{
   BasicAutomata,
@@ -123,11 +123,11 @@ class CostEnrichedAutomaton(
   }
 
   def outgoingTransitions(from: State): Iterator[(State, TLabel)] = {
-    for (t <- from.getSortedTransitions(true).iterator)
+    (for (t <- asScala(from.getSortedTransitions(true)))
       yield (
         t.getDest,
         (t.getMin, t.getMax)
-      )
+      )).iterator
   }
 
   def isAccept(s: State): Boolean = s.isAccept

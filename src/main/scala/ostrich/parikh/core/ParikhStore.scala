@@ -7,11 +7,12 @@ import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.Config.{strategy, SyncSubstr, BasicProduct}
+import ostrich.parikh.Config.{productStrategy, SyncSubstr, BasicProduct}
 import ap.terfor.Formula
 import ostrich.automata.AtomicStateAutomatonAdapter
 import Exploration._
 import ap.terfor.conjunctions.Conjunction
+import ap.util.Seqs
 
 object ParikhStore {
   sealed trait LIAStrategy // linear integer arithmetic generating strategy
@@ -39,7 +40,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
 
   def pop: Unit = {
     val oldSize = constraintStack.pop
-    constraints reduceToSize oldSize
+    Seqs.reduceToSize(constraints, oldSize)
   }
 
   /** Check if there is directly confilct
@@ -89,7 +90,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
     val consideredAuts = new ArrayBuffer[Automaton]
     for (aut2 <- constraints :+ aut) {
       consideredAuts += aut2
-      if (!isConsistency(consideredAuts))
+      if (!isConsistency(consideredAuts.toSeq))
         return Some(consideredAuts.toSeq)
     }
     None

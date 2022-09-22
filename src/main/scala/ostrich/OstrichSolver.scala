@@ -47,7 +47,6 @@ import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
-import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 import ostrich.parikh.TermGeneratorOrder
@@ -301,6 +300,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     // Start the actual OSTRICH solver
 
     AtomConstraintsSolver.initialLIA = goal.facts.arithConj
+    AtomConstraintsSolver.initialConstTerms = order sort order.orderedConstants
     
     SimpleAPI.withProver { lengthProver =>
       val lProver =
@@ -339,8 +339,8 @@ class OstrichSolver(theory : OstrichStringTheory,
       val exploration =
         if(useCostEnriched)
           Exploration.parikhExp(
-            funApps,
-            regexes,
+            funApps.toSeq,
+            regexes.toSeq,
             strDatabase,
             lProver,
             lengthVars.toMap,
@@ -350,8 +350,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         else 
         if (eagerMode)
           Exploration.eagerExp(
-            funApps,
-            regexes,
+            funApps.toSeq,
+            regexes.toSeq,
             strDatabase,
             lProver,
             lengthVars.toMap,

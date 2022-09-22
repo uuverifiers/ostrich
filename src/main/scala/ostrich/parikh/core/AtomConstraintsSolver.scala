@@ -4,8 +4,8 @@ import ap.terfor.conjunctions.Conjunction
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
-import ap.parser.Internal2InputAbsy
 import ap.terfor.TerForConvenience._
+import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import AtomConstraints._
@@ -13,10 +13,30 @@ import ap.terfor.Term
 import ap.terfor.Formula
 import ostrich.parikh.Config._
 import ap.basetypes.IdealInt
+import ostrich.parikh.writer.CatraWriter
+import uuverifiers.catra.CommandLineOptions
+import scala.io.Source
+import uuverifiers.catra.InputFileParser
+import fastparse.Parsed
+import uuverifiers.catra.{Invalid, Valid}
+import scala.util.Failure
+import uuverifiers.catra.SolveRegisterAutomata.runInstance
+import scala.util.Try
+import uuverifiers.catra.{Result => CatraResult}
+import uuverifiers.catra.ChooseLazy
+import uuverifiers.catra.SolveSatisfy
+import scala.util.Success
+import uuverifiers.catra.Sat
+import uuverifiers.catra.OutOfMemory
+import uuverifiers.catra.Timeout
+import uuverifiers.catra.Unsat
+import ap.terfor.ConstantTerm
+import ap.terfor.linearcombination.LinearCombination
+import ostrich.parikh.ParikhUtil.measure
 
 object AtomConstraintsSolver {
   var initialLIA: Formula = Conjunction.TRUE
-
+  var initialConstTerms: Seq[Term] = Seq()
 }
 
 class Result {
@@ -91,9 +111,9 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
       p setConstructProofs true
       val regsRelation = conj(constraints.map(_.getRegsRelation))
       val finalArith = conj(f, initialLIA, regsRelation)
-      p addConstantsRaw SymbolCollector.constants(
-        Internal2InputAbsy(finalArith)
-      )
+      p addConstantsRaw SymbolCollector.constants(finalArith)
+
+      p addConstantsRaw initialConstTerms
       p addAssertion finalArith
       p.??? match {
         case ProverStatus.Sat =>
@@ -126,6 +146,33 @@ class CatraBasedSolver extends AtomConstraintsSolver {
   lazy val automatas: Seq[Seq[CostEnrichedAutomatonTrait]] =
     constraints.map(_.getAutomata)
 
+
+  def runInstances(arguments: CommandLineOptions): Try[CatraResult] = {
+    // only run one file
+    val fileName = arguments.inputFiles(0)
+    val inputFileHandle = Source.fromFile(fileName)
+    val fileContents = inputFileHandle.mkString("")
+    inputFileHandle.close()
+    val parsed = measure("CatraBasedSolver::runInstances::parsed")(
+      InputFileParser.parse(fileContents)
+    )
+    val result = measure("CatraBasedSolver::runInstances::findModel") {
+      parsed match {
+        case Parsed.Success(instance, _) =>
+          instance.validate() match {
+            case Valid => runInstance(instance, arguments)
+            case Invalid(motivation) =>
+              Failure(new Exception(s"Invalid input: $motivation"))
+          }
+        case Parsed.Failure(expected, _, extra) =>
+          Console.err.println(s"E: parse error $expected")
+          Console.err.println(s"E: ${extra.trace().longMsg}")
+          Failure(new Exception(s"parse error: ${extra.trace().longMsg}"))
+      }
+    }
+    result
+  }
+
   def toCatraInput: String = {
     val sb = new StringBuilder
     sb.append(toCatraInputInteger)
@@ -137,7 +184,10 @@ class CatraBasedSolver extends AtomConstraintsSolver {
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
     sb.append("counter int ")
-    val allIntTerms = interestTerms ++ constraints.flatMap(_.interestTerms)
+    val lia = conj(initialLIA +: constraints.map(_.getRegsRelation))
+    val allIntTerms = (interestTerms ++ constraints.flatMap(
+      _.interestTerms
+    ) ++ initialConstTerms ++ SymbolCollector.constants(lia)).filterNot(_.isInstanceOf[LinearCombination]).toSet
     sb.append(allIntTerms.mkString(", "))
     sb.append(";\n")
     sb.toString()
@@ -162,7 +212,7 @@ class CatraBasedSolver extends AtomConstraintsSolver {
   ): String = {
     val sb = new StringBuilder
     val state2Int = aut.states.zipWithIndex.toMap
-    sb.append(s"automaton $name {\n")
+    sb.append(s"automaton aut_$name {\n")
     sb.append(s"\tinit s${state2Int(aut.initialState)};\n")
     for ((s, lbl, t, vec) <- aut.transitionsWithVec) {
       sb.append(
@@ -189,9 +239,9 @@ class CatraBasedSolver extends AtomConstraintsSolver {
   ) = {
     val sb = new StringBuilder
     sb.append("{")
-    val updateStringSeq = 
-    for ((v, i) <- update.zipWithIndex; if v > 0) yield 
-      s"${aut.getRegisters(i)} += $v"
+    val updateStringSeq =
+      for ((v, i) <- update.zipWithIndex; if v > 0)
+        yield s"${aut.getRegisters(i)} += $v"
     sb.append(updateStringSeq.mkString(", "))
     sb.append("}")
     sb.toString()
@@ -200,13 +250,81 @@ class CatraBasedSolver extends AtomConstraintsSolver {
   def toCatraInputLIA: String = {
     val sb = new StringBuilder
     sb.append("constraint ")
-    sb.append(initialLIA.toString.replaceAll("&", "&&"))
+    val lia = conj(initialLIA +: constraints.map(_.getRegsRelation))
+    sb.append(lia.toString.replaceAll("&", "&&"))
     sb.append(";\n")
     sb.toString()
   }
 
+  def decodeCatraResult(res: CatraResult): Result = {
+    val result = new Result
+    res match {
+      case Sat(assignments) => {
+        val strIntersted = constraints.flatMap(_.interestTerms)
+        val name2Term = (strIntersted ++ interestTerms)
+          .filter(_.isInstanceOf[ConstantTerm])
+          .map { case t: ConstantTerm =>
+            (t.name, t)
+          }
+          .toMap
+        val termModel =
+          for (
+            (k, v) <- assignments;
+            t <- name2Term.get(k.name)
+          ) yield (t, IdealInt(v))
+        // update string model
+        for (singleString <- constraints) {
+          singleString.setInterestTermModel(termModel)
+          val value = singleString.getModel
+          result.updateModel(singleString.strId, value)
+        }
+        for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
+          result.updateModel(t, IdealInt(v))
+        }
+        result.setStatus(ProverStatus.Sat)
+      }
+      case OutOfMemory => throw new Exception("Out of memory")
+      case Timeout(timeout_ms) =>
+        throw new Exception(s"Timeout with time limit ${timeout_ms / 1_000} s")
+      case Unsat => result.setStatus(ProverStatus.Unsat)
+    }
+    result
+  }
+
   def solve: Result = {
-    println(toCatraInput)
-    new Result
+    if (constraints.isEmpty) {
+      val result = new Result
+      result.setStatus(ProverStatus.Sat)
+      return result
+    }
+    val interFlie = "intermediate.par"
+    val writer = new CatraWriter(interFlie)
+    writer.write(toCatraInput)
+    writer.close()
+    val arguments = CommandLineOptions(
+      inputFiles = Seq(interFlie),
+      timeout_ms = Some(30_000),
+      trace = false,
+      printDecisions = false,
+      dumpSMTDir = None,
+      dumpGraphvizDir = None,
+      runMode = SolveSatisfy,
+      backend = ChooseLazy,
+      checkTermSat = true,
+      checkIntermediateSat = true,
+      eliminateQuantifiers = true,
+      dumpEquationDir = None,
+      nrUnknownToMaterialiseProduct = 2,
+      enableClauseLearning = true,
+      enableRestarts = true
+    )
+    val catraRes = runInstances(arguments)
+    var result = new Result
+    catraRes match {
+      case Success(_catraRes) =>
+        result = decodeCatraResult(_catraRes)
+      case Failure(e) => e.printStackTrace; throw e
+    }
+    result
   }
 }

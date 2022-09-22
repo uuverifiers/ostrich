@@ -12,6 +12,7 @@ import ap.terfor.OneTerm
 import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
+import ap.types.SortedConstantTerm
 
 object AtomConstraints {
   import AtomConstraint._
@@ -34,9 +35,12 @@ object AtomConstraints {
   }
 
   def evalTerm(t: Term, model: PartialModel): IdealInt = {
-    val value = evalTerm(t)(model)
-    if (!value.isDefined)
+    var value = evalTerm(t)(model)
+    if (!value.isDefined){
+      // TODO: NEED NEW FEATURE!
+      // Do not generate model of variables without constraints now
       throw new Exception("Term " + t + " is not defined in the model")
+    } 
     value.get
   }
 
@@ -86,6 +90,10 @@ trait AtomConstraints {
   def setInterestTermModel(partialModel: PartialModel): Unit = 
     for (term <- interestTerms) 
       interestTermsModel += (term -> evalTerm(term, partialModel))
+  
+  def setInterestTermModel(termModel: Map[ConstantTerm, IdealInt]): Unit = 
+    for (term <- interestTerms) 
+      interestTermsModel = interestTermsModel + (term -> termModel(term.asInstanceOf[ConstantTerm]))
 }
 
 class UnaryHeuristicACs(

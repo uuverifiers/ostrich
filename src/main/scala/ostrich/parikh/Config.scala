@@ -21,17 +21,20 @@ object Config {
   // default strategy is `RegisterBased`
   case class ParikhConf(
       strategy: ProductStrategy = BasicProduct(),
-      lengthAbsStrategy: LengthAbstractStrategy = Parikh()
+      lengthAbsStrategy: LengthAbstractStrategy = Parikh(),
+      measureTime: Boolean = true
   )
 
   lazy val config: ConfigReader.Result[ParikhConf] = ConfigSource.default.load[ParikhConf]
 
-  lazy val strategy = config.right.get.strategy
+  lazy val productStrategy = config.right.get.strategy
 
   lazy val lengthAbsStrategy = config.right.get.lengthAbsStrategy
 
-  strategy match {
-    case BasicProduct() => println("RegisterBased")
+  lazy val measureTime = config.right.get.measureTime
+
+  productStrategy match {
+    case BasicProduct() => println("Basic product")
     case SyncSubstr(minSyncLen, maxSyncLen, repeatTimes) =>
       println(s"SyncSubstr($minSyncLen, $maxSyncLen, $repeatTimes)")
   }

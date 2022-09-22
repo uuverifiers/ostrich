@@ -30,6 +30,9 @@
 
 package ostrich
 
+import ostrich.parikh.Config
+
+
 /** Wrapper around <code>ap.CmdlMain</code>, adding the option
   * <code>-stringSolver=ostrich.OstrichStringTheory</code>.
   */
@@ -45,6 +48,8 @@ object OstrichMain {
 
   def main(args: Array[String]): Unit = {
       ap.CmdlMain.main((options ++ args).toArray)
+      if(Config.measureTime)
+        println(ap.util.Timer.toString())
   }
 
 }
