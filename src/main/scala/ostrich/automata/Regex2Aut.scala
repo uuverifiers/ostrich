@@ -39,8 +39,8 @@ import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
-import ostrich.automata.afa2.concrete.{AFA2, AFA2Builder, EpsReducer, ExtAFA2, MutableAFA2, NFATranslator}
-import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2}
+import ostrich.automata.afa2.concrete.{AFA2, AFA2Builder, AFA2StateDuplicator, EpsReducer, ExtAFA2, MutableAFA2, NFATranslator}
+import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2, SymbToConcTranslator}
 import ostrich.automata.afa2.AFA2Utils
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack}
@@ -158,11 +158,17 @@ object Regex2Aut {
       re_case_insensitive
     }
 
+    val isWordChar = re_union(parser.decimal,
+                        re_union(parser.uppCaseChars,
+                          re_union(parser.lowCaseChars, parser.underscore)))
+
     def apply(t: ITerm) = {
       val diffElimin = new Regex2Aut.DiffEliminator(theory)
       val de = diffElimin(t);
-      println("After diff elimination:\n" + de)
-      transformNF(de)
+      println("After diff elimination:\n" + de + "\n")
+      val res = transformNF(de)
+      println("After transformation:\n" + res + "\n")
+      res
     }
 
     /*
@@ -187,20 +193,25 @@ object Regex2Aut {
 
       case IFunApp(parser.NegLookBehind, Seq(t)) => IFunApp(parser.NegLookBehind, Seq(transformNF(t, true)))
 
-      // I am subjectively interpreting the semantics
-      case IFunApp(parser.WordBoundary, _) => transformNF(
-        re_++(IFunApp(parser.LookBehind, Seq(re_allchar())),
-          IFunApp(parser.NegLookAhead, Seq(re_allchar()))),
-        reverse)
 
-      // I am subjectively interpreting the semantics
+      case IFunApp(parser.WordBoundary, _) => transformNF(
+
+        re_union(
+          re_++(IFunApp(parser.LookAhead, Seq(isWordChar)), IFunApp(parser.NegLookBehind, Seq(isWordChar))),
+          re_++(IFunApp(parser.NegLookAhead, Seq(isWordChar)), IFunApp(parser.LookBehind, Seq(isWordChar)))
+        )
+
+        ,reverse)
+
       case IFunApp(parser.NonWordBoundary, _) =>
         transformNF(
-          IFunApp(parser.NegLookAhead,
-            Seq(re_++(IFunApp(parser.LookBehind, Seq(re_allchar())),
-              IFunApp(parser.NegLookAhead, Seq(re_allchar()))
-            ))
-          ), reverse)
+
+          re_union(
+            re_++(IFunApp(parser.LookAhead, Seq(isWordChar)), IFunApp(parser.LookBehind, Seq(isWordChar))),
+            re_++(IFunApp(parser.NegLookAhead, Seq(isWordChar)), IFunApp(parser.NegLookBehind, Seq(isWordChar)))
+          )
+
+          ,reverse)
 
       case IFunApp(`re_begin_anchor`, Seq()) => transformNF(IFunApp(parser.NegLookBehind, Seq(re_all())), reverse)
 
@@ -497,12 +508,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val parser = new ECMARegexParser(theory)
       val s = parser.string2Term(str)
       //toBAutomaton(s, minimize)
-      println("Parser output:")
-      println(s)
+      println("Parser output:\n" + s + "\n")
       val st = new SyntacticTransformations(theory, parser)
-      println("After transformation:")
       val r = st(s)
-      println(r)
       println()
 
       // -----------Symbolic case---------------
@@ -513,7 +521,14 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val epsRed = new SymbEpsReducer(theory, aut)
       val reducedAut = epsRed.afa
 
-      throw new RuntimeException("Stop here.")
+      //throw new RuntimeException("Stop here.")
+      val transl = new SymbToConcTranslator(reducedAut)
+      val concAut = transl.forth()
+      val t1 = System.nanoTime
+      val res = NFATranslator(AFA2StateDuplicator(concAut), Some(transl.rangeMap.map(_.swap))).underlying
+      val duration = (System.nanoTime - t1) / 1e9d
+      println("Time for 2AFA -> NFA translation: " + duration)
+      res
 
 
       /* -----------Concrete case---------------

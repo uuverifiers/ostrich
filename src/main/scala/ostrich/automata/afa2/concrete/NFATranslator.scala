@@ -13,7 +13,10 @@ object NFATranslator {
   val StrictConditions = true
 
   def apply(afa : AFA2) : BricsAutomaton =
-    new LazyNFATranslator(afa).result
+    apply(afa, None)
+
+  def apply(afa: AFA2, charMap: Option[Map[Int, Range]]): BricsAutomaton =
+    new LazyNFATranslator(afa, charMap).result
 
 
   def apply(afa : ExtAFA2) : BricsAutomaton =
@@ -217,7 +220,7 @@ class NFATranslator(afa : AFA2) {
 }
 
 
-class LazyNFATranslator(afa : AFA2) {
+class LazyNFATranslator(afa : AFA2, charMap: Option[Map[Int, Range]]) {
 
   import afa._
   import ostrich.automata.afa2.{Left, Right, Step}
@@ -484,9 +487,16 @@ class LazyNFATranslator(afa : AFA2) {
               val candidate = lowerToBound ++ s
               if (consideredToStates add candidate) {
                 if (transitionExists(fromStates, label, candidate)) {
-                  builder.addTransition(bricsState,
-                                        (label.toChar, label.toChar),
-                                        getStateFor(candidate))
+
+                  charMap match {
+                    case Some(map) => val range = map.get(label).get
+                      builder.addTransition (bricsState,
+                        (range.start.toChar, (range.end-1).toChar),
+                        getStateFor (candidate) )
+                    case None => builder.addTransition(bricsState,
+                                  (label.toChar, label.toChar),
+                                  getStateFor(candidate))
+                  }
                   transitionCnt = transitionCnt + 1
                 }
               }

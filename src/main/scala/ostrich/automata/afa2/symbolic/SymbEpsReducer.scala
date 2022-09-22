@@ -57,7 +57,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
   AFA2Utils.printAutDotToFile(epsafa, "epsAFA2.dot")
 
   val mafa: SymbMAFA2 = epsAFA2ToSymbMAFA2(epsafa)
-  println("mafa2:\n" + mafa)
+  //println("mafa2:\n" + mafa)
 
   val epsafaReduced: EpsAFA2 = symbMAFA2ToEpsAFA2(mafa)
   AFA2Utils.printAutDotToFile(epsafaReduced, "epsAFA2-noExistEps.dot")
@@ -238,7 +238,7 @@ It transforms a MAFA2 with universal eps transitions back into a epsAFA2 which h
     val flatMafaTrans: Seq[(MState, SymbMTransition)] = for ((k, v) <- mafa.transitions.toSeq;
                                                          t <- v) yield (k, t)
 
-    println(flatMafaTrans)
+    //println(flatMafaTrans)
     val flatTrans = for ((st, t) <- flatMafaTrans) yield t match {
       case et: SymbMEpsTransition => (stMap.get(st).get, EpsTransition(et._targets.map(stMap).toSeq))
       case str: SymbMStepTransition => (stMap.get(st).get, SymbTransition(str.label, str.step, str.targets.map(stMap).toSeq))
