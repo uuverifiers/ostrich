@@ -529,7 +529,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
       val duration = (System.nanoTime - t1) / 1e9d
       println("Time for 2AFA -> NFA translation: " + duration)
-      println("BricsAutomaton:\n" + res)
+      //println("BricsAutomaton:\n" + res)
       res
 
 

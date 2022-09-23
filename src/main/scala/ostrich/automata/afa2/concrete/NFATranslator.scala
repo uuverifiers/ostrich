@@ -27,6 +27,7 @@ object NFATranslator {
 
 }
 
+/*
 class NFATranslator(afa : AFA2) {
 
   import NFATranslator._
@@ -221,6 +222,8 @@ class NFATranslator(afa : AFA2) {
              yield t).size)
 
 }
+
+ */
 
 
 class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map[Int, Range]]) {
@@ -526,9 +529,9 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
 
   AutomataUtils.buildEpsilons(builder, epsilons)
 
-  val result = builder.getAutomaton
+  val preResult = builder.getAutomaton
 
-  /*
+
   val result = {
     val builder =
       new BricsAutomatonBuilder
@@ -561,7 +564,7 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
 
     builder.getAutomaton
 
-  }*/
+  }
 
   println
   println("#states after minimization:      " + result.states.size)
@@ -573,8 +576,10 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
 
 
 
+
 /*
 class ExtNFATranslator(extafa : ExtAFA2) {
+
 
   val epsReducer = new EpsReducer(extafa)
   val simpleAFA = epsReducer.afa
@@ -619,9 +624,7 @@ class ExtNFATranslator(extafa : ExtAFA2) {
     builder.getAutomaton
   }
 
-}
-
- */
+} */
 
 /* OLD VERSION
 class ExtNFATranslator(afa : ExtAFA2) {
