@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "cd%'\t''\x0c'$DXKG?bk!0o1?T<4e"))
+(assert (str.in.re x (re.+ (re.union (str.to.re "*i`U=c{") (str.to.re "e")))))
+(check-sat)
+(get-model)

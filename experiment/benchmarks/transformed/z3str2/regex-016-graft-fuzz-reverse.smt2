@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "d~''\n''s")))
+(assert (= (str.len x) 18))
+(assert (not (= x "$pQ?1n`$&'' ''Fu/-31d=l[t-t$_23?J8a")))
+(assert (not (= x "1]PTV?Gdqac)k7K8h\\b]M?''\t''{l#")))
+(check-sat)
+(get-model)

@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "FF))"))))
+(assert (str.in.re x (re.+ (str.to.re "))ee"))))
+(assert (str.in.re x (re.+ (str.to.re "))--^^{{pp{{' '' ''\t''\t'"))))
+(check-sat)
+(get-model)

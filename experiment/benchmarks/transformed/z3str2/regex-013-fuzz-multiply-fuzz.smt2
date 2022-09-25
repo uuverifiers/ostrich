@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re y (re.* (re.+ (str.to.re "/h^blk+}hv+ik$?:G5*""]U'z-DK<s-00ky'\x0c'pEXyU3N'\x0b'VdkkDoJP7zK#V_txGZ'\t'A,'\x0b'dMX!v")))))
+(assert (= (str.to.int y) 4))
+(check-sat)
+(get-model)

@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re y (str.to.re "44Js)!$9&09:(^RaS%YB=6M>fc~8|#Hcd")))
+(assert (= 0 (str.len y)))
+(check-sat)
+(get-model)

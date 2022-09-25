@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.len x) 0))
+(assert (str.in.re x (re.+ (str.to.re "$"))))
+(assert (str.in.re x (re.* (str.to.re "8'\n'2\\c#_"))))
+(check-sat)
+(get-model)

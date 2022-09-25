@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "GUPP^PPUPP^PPPP/PPz"))
+(assert (str.in.re x (re.union (re.* (str.to.re "UPP^PPPP/PPz")) (re.* (str.to.re "GUPP^PP")))))
+(check-sat)
+(get-model)

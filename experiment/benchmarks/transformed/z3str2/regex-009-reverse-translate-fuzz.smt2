@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "DX\\u#]"))))
+(assert (str.in.re x (re.* (str.to.re "dR->kSF@IZdL2:""~yQN}u'\x0c'~3*X"))))
+(assert (> (str.to.int x) 6))
+(assert (< (str.len x) 42))
+(check-sat)
+(get-model)

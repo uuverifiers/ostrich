@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (str.to.re "Ri") (str.to.re "Yei2V*t*")))))
+(assert (= 16 (str.len x)))
+(assert (not (= x "1'""mqN''\r'':'zC71:'' ''X''\n''@2Q[^Om&5_#=A!q@t")))
+(check-sat)
+(get-model)

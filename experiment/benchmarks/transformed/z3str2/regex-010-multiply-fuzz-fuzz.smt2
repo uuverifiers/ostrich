@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "et4G~_n"))))
+(assert (str.in.re x (re.+ (str.to.re "00JH9Eyq(iRVbZMVbU~e3HT/ib"))))
+(assert (str.in.re x (re.+ (str.to.re "a/EQos%x6SRZ`[(<2oe]&6eGTr'\n'vC'\n'#&@<Q""^V7fKOaqc@d@)^|'\x0c'2v;8k6FN'\t'9}p' 'L' 'v=sbH,lC*Vb'\x0c''\r'x]yj]MHKPKu/['\n'B`5'\t'An'\n'l6jbo)NAng[lq#d'\x0c'5QAYJ*c{E}5O''\r'rsq=+1.{&P/{p^>ra'\r'!'u`VK""?j4jOW-co'\r'[pa4?#TE6R@sNoQ0atJV^'8k*~p$'\r'c`'\r'SN,wxX'\x0b'!{hw{#'\x0b'"))))
+(check-sat)
+(get-model)

@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "hUw,(g^';xH\\*92ZvD,0,JpxcQ9w[,lKKAbo<k*eRZqT0y)v#`\\&y/-.Ei_&'\r'3G{!Xs5gTe[xm;&`|M@5G90A_xOy|Qttpu7|l$r;CVv1f@i7NWlqe@oP4\\qJrZZKCW,g%wVUUt-z'\x0c'S$*d-`<~-$>vg}'\r'pnl0pT^MlHI?4D<'\r'A4^&\\~!v1<AWD_cK@\\);oNE-lu3+}xhGmQP\\(l'\x0c'ddiK%>WPi$qV`qD=i`[9V'&j\\x{+8{c[^C|rS}.7' '7Vn8'\x0c'=\\Rmv:l!u\\x5]}ZE;m""xRlQR)aIX_D5BAJ<%M1Qo'j|1>c'\r')0]'\n'w'\r'W*N}b;]'\r'H?V&Wu]d-j""K_{-p1Fbr%}'\x0c'Y\\^ypp-['\r'e}'\x0b'mk\\'\x0b'oczxxfC)k!My}+2IF!i?i{nvv|kr0|{LQw$6uF]''\t'r]' 'BtR""_2FNf'\x0c'#l'\n'KF-I5\\*U>' '?-P;S' 'XYz*xrU{.t_TS+cGYr'\t'/L\\'\x0c'}ih6:\\1t0/-FILruoSfi_Xf9z2E>x%G_}vdr4DZ' '#&8rWf0l},O0'gAQz'\t'^i!{x/{(' ''\x0c'zX[-pVP=N.y]_(\\'\t'CDU=2'\n':jNB'\n'HhPB'\x0c'5]$tj!pt:]<Ap[P+I?1];K`kR?g'\r'IE|'\r'}^3<TmIJ}EW'\r'8,@T\\{rg;?wT=cZ[^@t+)Tat6Lu\\$:5hHpi'\n',Gy^/^2!>3'\r'+6b8yLA$&H'\x0c'=veJB*_R+4|%J'\r'p'\t'Q?d7u.*mlc('\t'#&;+8b3`x__'\n'(?jgMyk<6&v' '' 'o1ur>m)jw:&A5?z'\t'e$A'Zx(f%0Tm:WMsVD'\r'S{>Da%l"))
+(assert (str.in.re x (re.* (re.+ (str.to.re "p")))))
+(check-sat)
+(get-model)

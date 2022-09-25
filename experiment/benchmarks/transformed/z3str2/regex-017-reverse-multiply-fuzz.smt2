@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.union (str.to.re "BB9\\") (re.++ (str.to.re "$cd>Xu<*T'\x0b'N(@8s}\\i;pb") (str.to.re "11"))))))
+(assert (= 12 (str.to.int x)))
+(check-sat)
+(get-model)

@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "xX),[Nd")))
+(assert (= (str.len x) 8))
+(assert (not (= x "abHVYblr%(6p.d12'\t'5Ac")))
+(assert (not (= x "C[E|w2a<bubc<>abUIHdi1")))
+(check-sat)
+(get-model)

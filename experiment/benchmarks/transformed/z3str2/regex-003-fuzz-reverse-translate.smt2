@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "Z{babW$DZO6*doWB:#zzyzz"))
+(assert (str.in.re x (re.* (re.union (str.to.re "zzqzz%""Lc)T") (str.to.re "@}Zf")))))
+(check-sat)
+(get-model)

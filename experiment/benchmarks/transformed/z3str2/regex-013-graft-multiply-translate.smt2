@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re y (str.to.re "%%##XXnn")))
+(assert (= 16 (str.len y)))
+(check-sat)
+(get-model)

@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "kkkkkkkkk"))
+(assert (str.in.re x (str.to.re "U=={==f")))
+(check-sat)
+(get-model)

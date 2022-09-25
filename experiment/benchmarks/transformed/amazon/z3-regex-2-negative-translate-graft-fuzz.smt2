@@ -1,0 +1,5 @@
+(declare-const S String)
+(assert (str.in.re S (re.++ (str.to.re "'i'\n'3m>'\n'L8juJ'\t'fS6^jf"")S?0Vwm*Y$'\x0b'6}U}/@''''\x0c'1ZkX:'g0Ewz'<Y!VVP%S`MdiCz)&z?[J3n-'\x0b'r&m_$$' '\\9u'Gf*") re.allchar)))
+(assert (not (str.in.re S (re.union (re.++ (str.to.re "/n%W+'\n'`fu'\r'_0'9q1i.|' 'MC'';&tG1Mq&UQ-e._V?'9/k6'\r'>#*4@RVW(r2Ly\\D'\t'|#;^H).MeC'") (str.to.re "UCv$$")) re.allchar))))
+(check-sat)
+(get-model)

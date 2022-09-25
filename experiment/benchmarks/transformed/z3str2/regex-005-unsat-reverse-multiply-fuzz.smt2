@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "UdJI?=gItO[1]sN{$si%bp5aa@BC<E6{na3aVY%;'\x0c')Fpk-'TeUo}(r"))
+(assert (str.in.re x (re.+ (re.+ (str.to.re "]4iId`?'\x0c'c")))))
+(check-sat)
+(get-model)

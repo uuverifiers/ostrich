@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "ff''"))))
+(assert (str.in.re x (re.* (str.to.re "ff''ff"))))
+(assert (str.in.re x (re.+ (str.to.re "PPgg))``yy'\x0c''\x0c''\x0c'A'\x0c''\x0c'A'\x0c''\x0c''\x0c'ff''"))))
+(assert (> (str.len x) 4))
+(check-sat)
+(get-model)

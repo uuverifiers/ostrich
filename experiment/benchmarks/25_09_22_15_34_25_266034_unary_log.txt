@@ -1,0 +1,93 @@
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-graft-translate-multiply.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "))))))//////\u{0}")
+)
+LinearAbstractionSolver::findStringModel	1	0.746588ms
+LinearAbstractionSolver::solve          	2	51.99224ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	9.09301ms
+Total: 5, 61.831838ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-rotate-fuzz-rotate.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "\u{0}")
+)
+LinearAbstractionSolver::findStringModel	1	0.744057ms
+LinearAbstractionSolver::solve          	2	52.5675ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	11.315519ms
+Total: 5, 64.627076ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-rotate-multiply-fuzz.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "aaHbbbb\u{0}")
+)
+LinearAbstractionSolver::findStringModel	1	0.77025ms
+LinearAbstractionSolver::solve          	2	43.816211ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	7.915112ms
+Total: 5, 52.501573ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-reverse-fuzz-fuzz.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "\u{0}H\u{5c}\u{5c}\u{0}~")
+)
+(:reason-unknown )
+LinearAbstractionSolver::findStringModel	1	0.733366ms
+LinearAbstractionSolver::solve          	2	40.838774ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	7.794821ms
+Total: 5, 49.366961ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-rotate-graft-reverse.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "aaa")
+)
+(:reason-unknown )
+LinearAbstractionSolver::findStringModel	1	0.836127ms
+LinearAbstractionSolver::solve          	2	45.307222ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	9.473897ms
+Total: 5, 55.617246ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-reverse-translate-fuzz.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "\u{0}")
+)
+LinearAbstractionSolver::findStringModel	1	0.964182ms
+LinearAbstractionSolver::solve          	2	50.469205ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	14.090739ms
+Total: 5, 65.524126ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-reverse-multiply-translate.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "\u{0}______\u{0}pppppp")
+)
+(:reason-unknown )
+LinearAbstractionSolver::findStringModel	1	0.820771ms
+LinearAbstractionSolver::solve          	2	38.986083ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	9.425977ms
+Total: 5, 49.232831ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-fuzz-graft-reverse.smt2]
+unary over-approximation------------------
+sat
+(model
+  (define-fun S () String "\u{0}")
+)
+(:reason-unknown )
+LinearAbstractionSolver::findStringModel	1	0.776913ms
+LinearAbstractionSolver::solve          	2	43.605406ms
+LinearAbstractionSolver::solveFixedFormula::findIntegerModel	2	8.830098ms
+Total: 5, 53.212417ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-graft-graft-multiply.smt2]

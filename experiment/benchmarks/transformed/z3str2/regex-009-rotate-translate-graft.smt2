@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "|''\x0c''iz")))
+(assert (str.in.re x (re.* (str.to.re "|''\x0c''iz|''\x0c''iz"))))
+(assert (> (str.len x) 20))
+(assert (< 25 (str.len x)))
+(check-sat)
+(get-model)

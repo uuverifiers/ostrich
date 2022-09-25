@@ -33,6 +33,10 @@ import uuverifiers.catra.Unsat
 import ap.terfor.ConstantTerm
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.ParikhUtil.measure
+import ap.parameters.Param
+import ap.parameters.GlobalSettings
+import ostrich.OstrichMain
+import ostrich.parikh.util.TimeoutException
 
 object AtomConstraintsSolver {
   var initialLIA: Formula = Conjunction.TRUE
@@ -60,6 +64,10 @@ import AtomConstraintsSolver._
 trait AtomConstraintsSolver {
 
   def solve: Result
+
+  def measureTimeSolve: Result = measure(s"${this.getClass.getSimpleName}::solve") {
+    solve
+  }
 
   protected var constraints: Seq[AtomConstraints] = Seq()
 
@@ -115,13 +123,16 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
 
       p addConstantsRaw initialConstTerms
       p addAssertion finalArith
-      p.??? match {
+      val status = measure(s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel") {
+        p.???
+      }
+      status match {
         case ProverStatus.Sat =>
           val partialModel = p.partialModel
           // update string model
           for (singleString <- constraints) {
             singleString.setInterestTermModel(partialModel)
-            val value = singleString.getModel
+            val value = measure(s"${this.getClass.getSimpleName}::findStringModel")(singleString.getModel)
             res.updateModel(singleString.strId, value)
           }
           // update integer model
@@ -153,10 +164,10 @@ class CatraBasedSolver extends AtomConstraintsSolver {
     val inputFileHandle = Source.fromFile(fileName)
     val fileContents = inputFileHandle.mkString("")
     inputFileHandle.close()
-    val parsed = measure("CatraBasedSolver::runInstances::parsed")(
+    val parsed = measure(s"${this.getClass().getSimpleName()}::parsed")(
       InputFileParser.parse(fileContents)
     )
-    val result = measure("CatraBasedSolver::runInstances::findModel") {
+    val result = measure(s"${this.getClass().getSimpleName()}::findRegistersModel") {
       parsed match {
         case Parsed.Success(instance, _) =>
           instance.validate() match {
@@ -275,7 +286,7 @@ class CatraBasedSolver extends AtomConstraintsSolver {
         // update string model
         for (singleString <- constraints) {
           singleString.setInterestTermModel(termModel)
-          val value = singleString.getModel
+          val value = measure(s"${this.getClass().getSimpleName()}::findStringModel")(singleString.getModel)
           result.updateModel(singleString.strId, value)
         }
         for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
@@ -285,7 +296,7 @@ class CatraBasedSolver extends AtomConstraintsSolver {
       }
       case OutOfMemory => throw new Exception("Out of memory")
       case Timeout(timeout_ms) =>
-        throw new Exception(s"Timeout with time limit ${timeout_ms / 1_000} s")
+        throw new TimeoutException(timeout_ms / 1_000)
       case Unsat => result.setStatus(ProverStatus.Unsat)
     }
     result
@@ -301,9 +312,10 @@ class CatraBasedSolver extends AtomConstraintsSolver {
     val writer = new CatraWriter(interFlie)
     writer.write(toCatraInput)
     writer.close()
+    val (setting, _) = GlobalSettings.fromArguments(OstrichMain.arguments)
     val arguments = CommandLineOptions(
       inputFiles = Seq(interFlie),
-      timeout_ms = Some(30_000),
+      timeout_ms = Some(Param.TIMEOUT(setting)),
       trace = false,
       printDecisions = false,
       dumpSMTDir = None,
@@ -318,7 +330,7 @@ class CatraBasedSolver extends AtomConstraintsSolver {
       enableClauseLearning = true,
       enableRestarts = true
     )
-    val catraRes = runInstances(arguments)
+    val catraRes = measure(s"${this.getClass().getSimpleName()}::findIntegerModel")(runInstances(arguments))
     var result = new Result
     catraRes match {
       case Success(_catraRes) =>

@@ -1,0 +1,5 @@
+(set-logic QF_S)
+(declare-fun var0 () String)
+(assert (RegexIn var0 (RegexConcat (RegexStar (RegexPlus (Str2Reg "0"))) (RegexConcat (RegexPlus (RegexStar (Str2Reg "1"))) (RegexConcat (RegexUnion (RegexPlus (Str2Reg "222")) (RegexPlus (Str2Reg "33"))) (RegexConcat (RegexPlus (RegexUnion (Str2Reg "4") (Str2Reg "55"))) (RegexConcat (RegexUnion (RegexStar (Str2Reg "6")) (RegexStar (Str2Reg "777"))) (RegexConcat (RegexPlus (RegexUnion (Str2Reg "888") (Str2Reg "99"))) (RegexConcat (RegexUnion (RegexStar (Str2Reg "aa")) (RegexStar (Str2Reg "b"))) (RegexConcat (RegexPlus (RegexStar (Str2Reg "cc"))) (RegexConcat (RegexUnion (RegexStar (Str2Reg "dd")) (RegexStar (Str2Reg "e"))) (RegexStar (RegexUnion (Str2Reg "ff") (Str2Reg "g"))))))))))))))
+(assert (<= 51 (Length var0)))
+(check-sat)

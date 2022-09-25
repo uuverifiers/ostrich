@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.union (str.to.re "2Vg({<M{-JSxe1.'\r'''") (str.to.re "BXc")))))
+(assert (= 12 (str.to.int x)))
+(assert (not (= x "_-DPLcKqSvqM)5[=S^9nP1'\r'h=uO[{2#%C/8'\x0c'''3uM#w.CtQ")))
+(check-sat)
+(get-model)

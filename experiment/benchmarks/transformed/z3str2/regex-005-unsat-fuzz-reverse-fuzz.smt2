@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "anoH/rO)%BD{$DG?a"))
+(assert (str.in.re x (re.* (re.* (str.to.re "dc")))))
+(check-sat)
+(get-model)

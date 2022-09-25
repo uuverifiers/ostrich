@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.len x) 9))
+(assert (str.in.re x (re.* (str.to.re "JTe""x9u"))))
+(assert (str.in.re x (re.+ (str.to.re "'9:'\x0b'lWon2,&CPl2i&l"))))
+(check-sat)
+(get-model)

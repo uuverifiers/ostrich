@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "K2"))))
+(assert (str.in.re y (re.+ (re.+ (str.to.re ":`z12")))))
+(assert (= (str.len x) 3))
+(assert (= (str.len y) 8))
+(check-sat)
+(get-model)

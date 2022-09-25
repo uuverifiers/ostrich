@@ -35,6 +35,7 @@ object ParikhUtil {
       aut.isAccept(state)
     }) && (integerModel.map(_._2).forall(_ == 0))
 
+  // TODO: Only support one automaton now. So the argument auts can only be length 1
   def findAcceptedWordByRegisters(
       auts: Seq[CostEnrichedAutomatonTrait],
       registersModel: MMap[Term, IdealInt]
@@ -79,9 +80,9 @@ object ParikhUtil {
                 intersectedLabels,
                 label
               ).toSeq;
-            // if !(vec.zipWithIndex.forall { case (v, i) =>
-            //   v == 0 || registersModel(registers(i)) < v
-            // });
+            if !(vec.zipWithIndex.forall { case (v, i) =>
+              v == 0 || registersModel(registers(i)) < v
+            });
             (tailNext, updatedModel, char) <- enumNext(
               otherAuts,
               otherStates,
@@ -395,8 +396,8 @@ object ParikhUtil {
         } yield Traversable(i) ++ j
     }
 
-  def measure[A](op : String)(comp : => A) : A =
-    if (Config.measureTime)
+  def measure[A](op : String)(comp : => A)(implicit manualFlag:Boolean = true) : A =
+    if (Config.measureTime && manualFlag)
       ap.util.Timer.measure(op)(comp)
     else
       comp

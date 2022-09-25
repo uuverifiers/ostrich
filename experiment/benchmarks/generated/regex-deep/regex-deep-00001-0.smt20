@@ -1,0 +1,5 @@
+(set-logic QF_S)
+(declare-fun var0 () String)
+(assert (RegexIn var0 (RegexConcat (RegexStar (Str2Reg "0")) (RegexUnion (Str2Reg "1") (Str2Reg "2")))))
+(assert (<= 15 (Length var0)))
+(check-sat)

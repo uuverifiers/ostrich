@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "T_(_PI""A""""t""'\n'"))))
+(assert (str.in.re y (re.* (str.to.re "'\r'"))))
+(assert (= (str.to.int x) 9))
+(check-sat)
+(get-model)

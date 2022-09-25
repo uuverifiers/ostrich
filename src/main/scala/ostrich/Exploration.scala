@@ -577,7 +577,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             if (Seqs.disjointSeq(newConstraints, conflict)) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
+// println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
@@ -848,7 +848,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
           if (!watchAutomata(inconsistentAutomata(autInd), autInd)) {
             // constraints have become inconsistent!
             watchedAutomata.put(aut, potentialConflicts)
-            println("Stored conflict applies!")
+            // println("Stored conflict applies!")
             return Some(for (a <- inconsistentAutomata(autInd).toList)
                         yield TermConstraint(t, a))
           }

@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "aaBB88ddddGG77bbqq"))))
+(assert (str.in.re x (re.+ (str.to.re "aaaabb"))))
+(assert (str.in.re x (re.+ (str.to.re "aaYY'''\n''\n'''\\\\kkVV@@||ooll**LL,,'''\r''\r'''@@qq##pphh||66UU::bbEE44vvmm]]==<<__'''\x0c''\x0c'''ee00'''\t''\t'''vv__ff00cc"))))
+(assert (> (str.to.int x) 2))
+(check-sat)
+(get-model)

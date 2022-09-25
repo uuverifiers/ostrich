@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "<<<<'''''''\t''\t''''''\t''\t'''''''QQQQBBBBgggg[[[[ZZZZnnnn****AAAAOOOO'''''''\r''\r''''''\r''\r'''''''"))))
+(assert (str.in.re y (re.* (str.to.re "aaaappppppppnnnnOOOOXXXX"))))
+(assert (= (str.to.int x) 12))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "KKKiKKiKKKuu++""""]]{{((qq66UU'\r''\r'$$VV]]//ZZ//&&'\r''\r'"))
+(assert (str.in.re x (re.* (re.union (str.to.re "HH))[[ff''kkKKK<KK<KKK") (str.to.re "**'\r''\r'%%``")))))
+(check-sat)
+(get-model)

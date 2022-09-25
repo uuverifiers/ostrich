@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "NN//!!nn__NN//NN//!!"))
+(assert (str.in.re x (re.* (re.union (str.to.re "nn__NN//") (str.to.re "NN//!!")))))
+(check-sat)
+(get-model)

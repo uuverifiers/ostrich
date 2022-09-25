@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.len x) 8))
+(assert (str.in.re x (re.* (str.to.re "*''\x0c''M"))))
+(assert (str.in.re x (re.* (str.to.re "[k*M"))))
+(check-sat)
+(get-model)

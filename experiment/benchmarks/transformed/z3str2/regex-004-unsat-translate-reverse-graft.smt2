@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "{h'''\r'''h'''\r''''''\x0b'''w"))
+(assert (str.in.re x (re.union (str.to.re "h'''\r''''''\x0b'''w") (re.* (str.to.re "{h'''\r'''")))))
+(check-sat)
+(get-model)

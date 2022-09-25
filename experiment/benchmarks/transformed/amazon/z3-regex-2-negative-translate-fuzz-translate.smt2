@@ -1,0 +1,5 @@
+(declare-const S String)
+(assert (str.in.re S (re.union (str.to.re "C#L-CfCs-COCLusdX-X' 'l2KK") re.allchar)))
+(assert (not (str.in.re S (re.union (re.union (re.union (str.to.re "7OuVCxCFCc/P'\x0b'kCjCPBaU%") re.allchar) (str.to.re "s4=KG6-")) re.allchar))))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "((((KKKK'\x0c''\x0c''\x0c''\x0c'YYYY[[[[((((KKKK((((KKKK'\x0c''\x0c''\x0c''\x0c'"))
+(assert (str.in.re x (re.* (re.union (str.to.re "YYYY[[[[((((KKKK") (str.to.re "((((KKKK'\x0c''\x0c''\x0c''\x0c'")))))
+(check-sat)
+(get-model)

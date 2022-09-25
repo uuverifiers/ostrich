@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "^Tym")))
+(assert (str.in.re x (re.+ (str.to.re ">\\igYO"))))
+(assert (str.in.re x (re.+ (str.to.re "'\n'--d"))))
+(check-sat)
+(get-model)

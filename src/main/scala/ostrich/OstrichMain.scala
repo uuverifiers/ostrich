@@ -32,11 +32,12 @@ package ostrich
 
 import ostrich.parikh.Config
 
-
 /** Wrapper around <code>ap.CmdlMain</code>, adding the option
   * <code>-stringSolver=ostrich.OstrichStringTheory</code>.
   */
-object OstrichMain {
+object OstrichMain extends App {
+
+  val arguments = super.args
 
   val version = "unstable build (Princess: " + ap.CmdlMain.version + ")"
 
@@ -46,10 +47,8 @@ object OstrichMain {
     */
   val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
 
-  def main(args: Array[String]): Unit = {
-      ap.CmdlMain.main((options ++ args).toArray)
-      if(Config.measureTime)
-        println(ap.util.Timer.toString())
-  }
+  ap.CmdlMain.main((options ++ args).toArray)
+  if (Config.measureTime)
+    println(ap.util.Timer.toString())
 
 }

@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.++ (str.to.re "aaaaccccHHHH") (str.to.re "iiii0000OOOO")))))
+(assert (= 32 (str.len x)))
+(assert (not (= x "aaaa####0000BBBBTTTTvvvv4444VVVVhhhhWWWW''''iiiiccccddddBBBB\\\\\\\\////aaaa@@@@IIII@@@@3333%%%%ffffPPPPnnnnkkkkddddNNNNwwww[[[[dddd")))
+(assert (not (= x "aaaabbbbbbbbccccddddoooo::::2222")))
+(check-sat)
+(get-model)

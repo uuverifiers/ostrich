@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "''' '''RSUA=Dt6Ld}>APZPcd"))
+(assert (str.in.re x (re.* (str.to.re "Wb,vIo'''\x0c'''"))))
+(check-sat)
+(get-model)

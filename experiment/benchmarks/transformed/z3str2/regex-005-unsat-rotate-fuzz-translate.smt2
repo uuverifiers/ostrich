@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "oios'\x0c'$hIsCttt(' 'kTFT8M'\x0c'X'\r'3n^U|:G"))
+(assert (str.in.re x (re.* (re.+ (str.to.re "w")))))
+(check-sat)
+(get-model)

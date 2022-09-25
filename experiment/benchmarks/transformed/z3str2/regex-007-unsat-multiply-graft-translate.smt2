@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= 16 (str.len x)))
+(assert (str.in.re x (str.to.re "AA^^SS")))
+(assert (str.in.re x (re.* (str.to.re "'\x0b''\x0b'__AASS"))))
+(check-sat)
+(get-model)

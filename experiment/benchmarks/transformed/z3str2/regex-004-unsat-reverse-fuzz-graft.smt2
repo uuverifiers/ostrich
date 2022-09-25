@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "TBY>dcd}W5M"))
+(assert (str.in.re x (re.++ (re.+ (re.* (str.to.re "ec"))) (str.to.re "lf''\r''"))))
+(check-sat)
+(get-model)

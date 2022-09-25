@@ -1,0 +1,5 @@
+(declare-const S String)
+(assert (str.in.re S (re.++ (str.to.re "))))))//////") re.allchar)))
+(assert (not (str.in.re S (str.to.re "//////"))))
+(check-sat)
+(get-model)

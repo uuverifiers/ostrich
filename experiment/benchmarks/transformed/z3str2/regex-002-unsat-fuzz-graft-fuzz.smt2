@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "a|a55$0}xJ=\\"))
+(assert (str.in.re x (str.to.re "-")))
+(check-sat)
+(get-model)

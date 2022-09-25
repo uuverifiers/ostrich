@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "B")))
+(assert (= (str.to.int x) 4))
+(assert (not (= x "1sq+%DV'7T8$ai]lb9b)zC:Eb'\n'[FyXh.#n`{1FA$yi?;g|BH""^xO@XL'\r'N' ''\x0c'`a6~f}c*6c")))
+(check-sat)
+(get-model)

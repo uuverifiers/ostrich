@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "' 'nMfm' 'n' 'nM"))
+(assert (str.in.re x (str.to.re "fm' 'n")))
+(check-sat)
+(get-model)

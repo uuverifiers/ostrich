@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "^P"))))
+(assert (str.in.re x (re.* (str.to.re "^P^P"))))
+(assert (str.in.re x (re.* (str.to.re "^P^P^'\x0c'"))))
+(check-sat)
+(get-model)

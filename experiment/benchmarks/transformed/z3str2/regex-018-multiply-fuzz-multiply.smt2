@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.++ (str.to.re "55ww11QQ]]") (str.to.re "44~~==223333")))))
+(assert (= 22 (str.len x)))
+(assert (not (= x "1122AAAABB,,RRyyrrPPaaQQQQ")))
+(check-sat)
+(get-model)

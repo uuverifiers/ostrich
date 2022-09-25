@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "aa"))))
+(assert (str.in.re x (re.* (str.to.re "~~ffDDww>>//"))))
+(assert (str.in.re x (re.+ (str.to.re "2299'''\x0b''\x0b'''__44ff'''\n''\n'''KK'''\x0c''\x0c'''ZZ||UU$$''''' '' '''aa"))))
+(assert (> (str.to.int x) 8))
+(check-sat)
+(get-model)

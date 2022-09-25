@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "q-Aq-A"))
+(assert (str.in.re x (re.* (re.* (str.to.re "q-A")))))
+(check-sat)
+(get-model)

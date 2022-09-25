@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "a''\x0c''1/e'' ''sRl}#''\x0c''yH[a|Lx''\x0b''F"))
+(assert (str.in.re x (re.* (str.to.re "e''\n''"))))
+(check-sat)
+(get-model)

@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.union (str.to.re "'''\r''\r'''88OOuukk9955zzoo''mmOOccLLww''") (str.to.re "112233")))))
+(assert (= 6 (str.to.int x)))
+(check-sat)
+(get-model)

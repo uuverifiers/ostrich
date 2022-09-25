@@ -1,0 +1,5 @@
+(declare-const S String)
+(assert (str.in.re S (re.++ (str.to.re "'\x0c''\x0c''\x0c''\x0c''\x0c''\x0c'LLLLLL") re.allchar)))
+(assert (not (str.in.re S (re.++ (re.++ (str.to.re "LLLLLL") (re.++ (str.to.re "'\x0c''\x0c''\x0c''\x0c''\x0c''\x0c'") re.allchar)) re.allchar))))
+(check-sat)
+(get-model)

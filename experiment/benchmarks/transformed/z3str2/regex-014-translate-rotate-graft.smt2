@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "^'''\n'''")))
+(assert (str.in.re y (re.* (re.* (str.to.re "^'''\n'''")))))
+(assert (= 4 2))
+(assert (= (str.len y) (str.len x)))
+(check-sat)
+(get-model)

@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "E#(y' 'YK,o'\n'f0=_}]{g/E$Oy'\t'''\n'gbBT-k'\t'xL9v-MAUn7cc]"))))
+(assert (str.in.re y (re.+ (str.to.re "f"))))
+(assert (= (str.to.int x) 9))
+(check-sat)
+(get-model)

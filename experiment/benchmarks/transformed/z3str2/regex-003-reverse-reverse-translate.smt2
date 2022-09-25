@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "|H*'\x0b'$|H|H*"))
+(assert (str.in.re x (re.* (re.union (str.to.re "'\x0b'$|H") (str.to.re "|H*")))))
+(check-sat)
+(get-model)

@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.len x) 8))
+(assert (str.in.re x (re.* (str.to.re "hZh&}"))))
+(assert (str.in.re x (re.* (str.to.re "hZh}e''\r''"))))
+(check-sat)
+(get-model)

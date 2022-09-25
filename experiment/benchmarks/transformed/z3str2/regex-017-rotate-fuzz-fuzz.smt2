@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.++ (str.to.re "|F$t57'\n'IQ'\\") (re.union (str.to.re "") (str.to.re "<Y"))))))
+(assert (= 4 (str.len x)))
+(check-sat)
+(get-model)

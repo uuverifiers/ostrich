@@ -1,0 +1,5 @@
+(declare-const S String)
+(assert (str.in.re S (re.++ re.allchar (str.to.re "===nnn"))))
+(assert (not (str.in.re S (re.++ re.allchar (re.++ (re.++ re.allchar (str.to.re "nnn")) (str.to.re "==="))))))
+(check-sat)
+(get-model)

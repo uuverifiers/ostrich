@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "'')#nL&351$&'\t''6'\x0c'<M\\A>t?!z/xvM' '2v'\x0b'_GZAeX['\r'BZ3DwTg'\x0b'>p{g'\x0b'Sm`|'\r'EDHjeZ3,""Es{'\r'oSpEIE0"))))
+(assert (str.in.re y (re.+ (str.to.re ";Fu$[p:qM+HpzGJRX"))))
+(assert (= (str.to.int x) 4))
+(check-sat)
+(get-model)

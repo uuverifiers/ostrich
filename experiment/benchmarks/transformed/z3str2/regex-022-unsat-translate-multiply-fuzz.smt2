@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (re.* (str.to.re ")a(")) (str.to.re "L+3~?{ad\\_^-x~,h[.>(K' '>;-_SE""4|x!'")))))
+(assert (= (str.len x) 2))
+(assert (not (= x "'*I}Ny!+'\x0c'e[7;`>w{:Dp`K\\N7.x|?Z:S+#h'''h'\x0b'\\l^4S}7B-'''_Cd&'\n''!")))
+(assert (not (= x "28pp_w:k[l?>.&@'2uPxB'\x0c'r~}b''\x0c'Y")))
+(check-sat)
+(get-model)

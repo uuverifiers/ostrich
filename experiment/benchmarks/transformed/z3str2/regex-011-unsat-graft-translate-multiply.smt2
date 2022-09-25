@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "]]NNCC;;")))
+(assert (str.in.re y (re.* (re.* (str.to.re "]]NNCC;;")))))
+(assert (= 12 (str.len x)))
+(check-sat)
+(get-model)

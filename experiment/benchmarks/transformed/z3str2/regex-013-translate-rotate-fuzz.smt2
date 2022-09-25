@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re y (re.* (re.* (str.to.re "cDA=X%'\x0c'3B'\x0b'--&x")))))
+(assert (= (str.to.int y) 9))
+(check-sat)
+(get-model)

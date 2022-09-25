@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "eKY[")))
+(assert (str.in.re x (str.to.re "eKY[eKY[")))
+(assert (> 25 (str.len x)))
+(assert (< 20 (str.len x)))
+(check-sat)
+(get-model)

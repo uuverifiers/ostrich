@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "#Ocb"))))
+(assert (str.in.re x (re.* (str.to.re "d'' '5;/QtZ~|'\t'%/'\t''\t'?pnMxb<~+{"))))
+(assert (> (str.len x) 20))
+(assert (< (str.len x) 9))
+(check-sat)
+(get-model)

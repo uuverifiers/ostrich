@@ -1,0 +1,7 @@
+(set-logic QF_S)
+(declare-fun var0 () String)
+(declare-fun var1 () String)
+(declare-fun var2 () String)
+(assert (= var0 (Concat "LIxgt" (Concat var1 ""))))
+(assert (= var0 (Concat "\\I)9R" (Concat var2 ""))))
+(check-sat)

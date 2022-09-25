@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "'\n''\n'' '' '<<pp"))))
+(assert (str.in.re x (re.* (str.to.re "'\n''\n'' '' '<<pp'\n''\n'' '' '<<pp"))))
+(assert (> (str.len x) 40))
+(assert (< (str.len x) 50))
+(check-sat)
+(get-model)

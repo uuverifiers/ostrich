@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (str.to.re "'\t''\t''\t''\t'uuuu") (str.to.re "111122223333")))))
+(assert (= 20 (str.len x)))
+(assert (not (= x "111122223333'\t''\t''\t''\t'uuuu")))
+(check-sat)
+(get-model)

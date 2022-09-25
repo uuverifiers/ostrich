@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x ";'ACA_<;';'ACA"))
+(assert (str.in.re x (re.* (re.union (str.to.re "_<;'") (str.to.re ";'ACA")))))
+(check-sat)
+(get-model)

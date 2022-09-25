@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "BZ"))))
+(assert (= (str.len x) 9))
+(assert (not (= x "+jF;2")))
+(check-sat)
+(get-model)

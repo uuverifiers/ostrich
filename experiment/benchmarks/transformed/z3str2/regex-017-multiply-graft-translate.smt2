@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (str.to.re "HH'\x0c''\x0c'") (str.to.re "vv%%AAaa")))))
+(assert (= (str.len x) 10))
+(check-sat)
+(get-model)

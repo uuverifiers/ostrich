@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "}$"))))
+(assert (str.in.re x (re.+ (str.to.re "bvC{8/_omalBr<Twbbaa"))))
+(assert (str.in.re x (re.+ (str.to.re "cc(TIbKGba=!6wtkOPc`/"))))
+(assert (> (str.len x) 3))
+(check-sat)
+(get-model)

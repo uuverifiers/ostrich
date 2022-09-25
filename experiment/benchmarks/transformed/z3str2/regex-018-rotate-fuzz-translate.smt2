@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.union (str.to.re ";") (str.to.re "QNQ2:'\n'")))))
+(assert (= 1 (str.len x)))
+(assert (not (= x "qik|")))
+(check-sat)
+(get-model)

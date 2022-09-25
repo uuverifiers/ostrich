@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "NST,w^AK8K:8yy^y""=.Xv"))
+(assert (str.in.re x (re.* (str.to.re "lp"))))
+(check-sat)
+(get-model)

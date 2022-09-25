@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.to.int x) 3))
+(assert (str.in.re x (re.* (str.to.re "^'\n'S"))))
+(assert (str.in.re x (re.* (str.to.re "#O'\r'?'\t'dS"))))
+(check-sat)
+(get-model)

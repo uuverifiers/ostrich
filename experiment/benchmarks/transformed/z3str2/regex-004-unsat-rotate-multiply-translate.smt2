@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "wwCC,,cc,,cc[["))
+(assert (str.in.re x (re.union (re.* (re.* (str.to.re ",,cc[["))) (str.to.re "wwCC,,cc"))))
+(check-sat)
+(get-model)

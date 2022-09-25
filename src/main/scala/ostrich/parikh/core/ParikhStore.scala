@@ -57,7 +57,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
       val potentialConflicts = inconsistentAutomata(potentialConflictsIdx)
       if (potentialConflicts.forall((constraints :+ aut).contains(_))) {
         // constraints have become inconsistent!
-        println("Stored conflict applies!")
+        // println("Stored conflict applies!")
         return Some(
           for (a <- potentialConflicts.toList)
             yield TermConstraint(t, a)

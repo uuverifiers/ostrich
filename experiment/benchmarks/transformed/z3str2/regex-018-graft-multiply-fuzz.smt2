@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "123/"))))
+(assert (= (str.len x) 11))
+(assert (not (= x "'\t''\n'123GB")))
+(check-sat)
+(get-model)

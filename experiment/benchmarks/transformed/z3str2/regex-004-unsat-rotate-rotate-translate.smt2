@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "/Eh*h*^"))
+(assert (str.in.re x (re.union (str.to.re "h*^") (re.* (re.* (str.to.re "/Eh*"))))))
+(check-sat)
+(get-model)

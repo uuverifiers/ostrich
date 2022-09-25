@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "II%:R,=%3q!%!f"))
+(assert (str.in.re x (re.* (re.* (str.to.re "df")))))
+(check-sat)
+(get-model)

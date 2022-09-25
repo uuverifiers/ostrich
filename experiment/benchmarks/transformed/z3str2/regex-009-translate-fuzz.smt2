@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "&OKB<y*#@Zj'\x0c'ms'`v,LdR' ''\r'nPW2YEq<'"))))
+(assert (str.in.re x (re.* (str.to.re "[L<37^MiP(hh)u+$Ju;`j&@~'\x0c''k^0[nnB?iRHFF^{H8'Ej5s8S|a(`ps'\r'[ps<zBk8%q]t`'\x0b'>%,d65Pv\\ud"))))
+(assert (> (str.len x) 16))
+(assert (< (str.len x) 1))
+(check-sat)
+(get-model)

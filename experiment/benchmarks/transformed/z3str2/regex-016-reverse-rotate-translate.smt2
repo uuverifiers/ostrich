@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (str.to.re "FU<'\x0b'") (str.to.re "321")))))
+(assert (= 11 (str.len x)))
+(assert (not (= x "FU<'\x0b'321FU<'\x0b'")))
+(assert (not (= x "321FU<'\x0b'FU<'\x0b'")))
+(check-sat)
+(get-model)

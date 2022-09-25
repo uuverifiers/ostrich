@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.++ (str.to.re "NN!!JJ") (str.to.re "**00LL")))))
+(assert (= 16 (str.len x)))
+(assert (not (= x "NNAA00tthhFF44WW&&IIBB**!!{{ttqq||NN[[yy[[33rr..<<EE=={{'\x0b''\x0b'::)){{")))
+(assert (not (= x "NN````!!{{??GG22")))
+(check-sat)
+(get-model)

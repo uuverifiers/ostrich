@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "kCNN!wS8w.&sL=vK``u39R[>M''!r60u]H|t(A_?Cg:ZjP''\x0c'8c5.+8:e{uPs)*(u|[{P+D:'\x0c'I]Xoy@CTi'\r'KxOX`k]pu'\x0c'""nxmWqg.0' '1lXD2QVDO},nFz""P3_6'\n'dj=I1xBG[*T<""vx'\x0b'+6#-zf''\t'c;EfhDDO!y^(5'\n'd|4zlaC"))
+(assert (str.in.re x (re.* (str.to.re "CyVWw'\r'd"))))
+(check-sat)
+(get-model)

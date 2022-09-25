@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (str.to.re "N' 'Fh") (str.to.re "123")))))
+(assert (= 11 (str.len x)))
+(assert (not (= x "N' 'Fh123N' 'Fh")))
+(assert (not (= x "N' 'FhN' 'Fh123")))
+(check-sat)
+(get-model)

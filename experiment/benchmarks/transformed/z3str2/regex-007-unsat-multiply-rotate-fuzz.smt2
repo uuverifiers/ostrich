@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.len x) 31))
+(assert (str.in.re x (re.* (str.to.re "NT^:^9'\n'zc98'\r'c6"))))
+(assert (str.in.re x (re.+ (str.to.re "ac<tT[Y8Zd"))))
+(check-sat)
+(get-model)

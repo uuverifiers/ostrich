@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "k\\##9*>aciixFH.fa"))
+(assert (str.in.re x (str.to.re "c")))
+(check-sat)
+(get-model)

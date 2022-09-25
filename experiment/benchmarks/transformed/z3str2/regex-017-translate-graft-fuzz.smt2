@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.++ (re.union (str.to.re ".ym-' 'o4~") (str.to.re "12")) (str.to.re "")))))
+(assert (= (str.len x) 6))
+(check-sat)
+(get-model)

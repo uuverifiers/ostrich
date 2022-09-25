@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.++ (str.to.re "(|v=ACq'\x0c'8HrfO^5S/") (re.++ (str.to.re "7xwn-v$Nj!ayh<cwfC-v(!uT{.vwY,.O%'\n'%5=xz3F_g<\\,wIw?#'{dYSmY}$z<{I") (str.to.re "l8*"))))))
+(assert (= 16 (str.to.int x)))
+(check-sat)
+(get-model)

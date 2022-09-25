@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "''\n''")))
+(assert (= (str.len x) 5))
+(assert (not (= x "''\n''''\n''''\n''''\n''''\n''")))
+(check-sat)
+(get-model)

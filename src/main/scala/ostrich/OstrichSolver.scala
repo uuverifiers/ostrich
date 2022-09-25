@@ -53,6 +53,7 @@ import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.CostEnrichedConvenience
 import ostrich.parikh.core.AtomConstraints
 import ostrich.parikh.core.AtomConstraintsSolver
+import ostrich.parikh.Config
 
 object OstrichSolver {
 
@@ -106,7 +107,6 @@ class OstrichSolver(theory : OstrichStringTheory,
     TermGeneratorOrder.init(order)
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
-    val useCostEnriched = flags.useCostEnriched
 
     val useLength = flags.useLength match {
 
@@ -176,7 +176,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`)
-          if flags.useCostEnriched => {
+          if Config.useCostEnriched => {
           funApps += ((LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
       }
       case FunPred(`str_len`) => {
@@ -320,24 +320,11 @@ class OstrichSolver(theory : OstrichStringTheory,
           implicit val o = lengthProver.order
 
           Some(lengthProver)
-        } else if(useCostEnriched){
-          lengthProver setConstructProofs true
-          lengthProver.addConstantsRaw(order sort order.orderedConstants)
-
-          lengthProver addAssertion goal.facts.arithConj
-          // consistent to super class `Exploration`, no use
-          for (t <- interestingTerms)
-            lengthVars.getOrElseUpdate(
-              t,
-              lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
-            )
-          
-          Some(lengthProver)
         } else
           None
 
       val exploration =
-        if(useCostEnriched)
+        if(Config.useCostEnriched)
           Exploration.parikhExp(
             funApps.toSeq,
             regexes.toSeq,

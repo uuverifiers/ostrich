@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "ww''''\x0b''''\x0b''''''''\r''''\r''''hh''''\r''''\r''''hh{{"))
+(assert (str.in.re x (re.union (re.* (re.* (str.to.re "''''\r''''\r''''hh{{"))) (str.to.re "ww''''\x0b''''\x0b''''''''\r''''\r''''hh"))))
+(check-sat)
+(get-model)

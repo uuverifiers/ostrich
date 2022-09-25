@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "amg.u(F>$O/gf~\\'\r'ANO)Z'\r'V'\x0c''\n'M+w#;da:f`S*Y!-bx)<IQ\\Sm:e*?aktoNTr1'\x0c'' 'Ccw7;NrOaa'\t''\r'4Bs'\r'~[zR3'}3JJ|(3&.)8LGVe@^+8Bm/r5_`'\t'&2zr0&&enk|$a"))
+(assert (str.in.re x (re.+ (re.+ (str.to.re "Z|M^c&]o,6g;d")))))
+(check-sat)
+(get-model)

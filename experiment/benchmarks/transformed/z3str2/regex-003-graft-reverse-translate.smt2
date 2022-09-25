@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "]aLaL!'\r']aL"))
+(assert (str.in.re x (str.to.re "]aL")))
+(check-sat)
+(get-model)

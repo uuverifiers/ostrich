@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "i3)s' '3h-Y'\r'G'' ''0"))))
+(assert (str.in.re x (re.+ (str.to.re "n}8K1p6C17h8*k""s.vpK?NBrL'\x0b'g8T5FS1xaeQ$*Vta'\n'+a' '(d6h[Nu9x,u]1'Yb"))))
+(assert (> (str.len x) 15))
+(assert (< (str.to.int x) 36))
+(check-sat)
+(get-model)

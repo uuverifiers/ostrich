@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "aE"))))
+(assert (str.in.re x (re.* (str.to.re "{a/U\\.b_5>aAV>{v6"))))
+(assert (str.in.re x (re.* (str.to.re "~p4%('\r'Ugrp-""u[Y]bac"))))
+(check-sat)
+(get-model)

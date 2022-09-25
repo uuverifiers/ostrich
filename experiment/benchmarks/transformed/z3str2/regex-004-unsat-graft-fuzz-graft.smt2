@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "l6bLHhcdVdP''\t''#''\t''''\r''"))
+(assert (str.in.re x (re.++ (str.to.re "c") (str.to.re "''\x0c''<4"))))
+(check-sat)
+(get-model)

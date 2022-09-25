@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "oo'\t''\t'"))))
+(assert (str.in.re x (re.* (str.to.re "oo'\t''\t'oo'\t''\t'"))))
+(assert (str.in.re x (re.* (str.to.re "}}'\t''\t'oo'\t''\t'oo'\t''\t'"))))
+(assert (> (str.len x) 2))
+(check-sat)
+(get-model)

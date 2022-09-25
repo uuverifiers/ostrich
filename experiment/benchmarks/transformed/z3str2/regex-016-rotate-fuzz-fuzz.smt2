@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.union (str.to.re "ECumblFP") (str.to.re "OQ")))))
+(assert (= 7 (str.to.int x)))
+(assert (not (= x "a0LIFY'\x0b'hS&&b/;~tY~""|dl3tY?3*yP'\x0b'\\Cx+9j/j""J?cRkl:W*]jTW$.8CoKwlCd6l{wi[p}q?#g'\r'k7Iu1'\x0b'&'\t'>s#EPK1HtUD'\r''BvUI6:&;4M"">'\n'|F""L$l!7'\t'PdV6lAn'\x0b'4L=h]*YXeNd]yxev6Q&Yh*RSS^25}1~=ob%*tdbGV-""Qe%]Xd6n?ybFjlR,|NZV'\n'(Ku%H!+6""KdjS{X#f' 'cY6sV@J#kgrFo{I%80+V%='jF2'\r'R")))
+(assert (not (= x "bf~[T;@CbTQS-'\x0c':m3")))
+(check-sat)
+(get-model)

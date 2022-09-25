@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "a"))))
+(assert (str.in.re x (re.* (str.to.re "/>wDf~"))))
+(assert (str.in.re x (re.+ (str.to.re "a'' '''$U|Z''\x0c''K''\n''f4_''\x0b''92"))))
+(assert (> (str.to.int x) 4))
+(check-sat)
+(get-model)

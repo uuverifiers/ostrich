@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (re.union (re.+ (str.to.re "t")) (str.to.re "''\x0b''")))))
+(assert (= (str.len x) 4))
+(assert (not (= x "N\\,H")))
+(assert (not (= x "t")))
+(check-sat)
+(get-model)

@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "dd"))))
+(assert (= 8 (str.len x)))
+(assert (not (= x "]]11..||\\\\")))
+(check-sat)
+(get-model)

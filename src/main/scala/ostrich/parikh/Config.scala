@@ -3,6 +3,7 @@ import pureconfig._
 import pureconfig.generic.auto._
 
 object Config {
+
   sealed trait ProductStrategy
   case class BasicProduct() extends ProductStrategy
 
@@ -22,20 +23,23 @@ object Config {
   case class ParikhConf(
       strategy: ProductStrategy = BasicProduct(),
       lengthAbsStrategy: LengthAbstractStrategy = Parikh(),
-      measureTime: Boolean = true
+      measureTime: Boolean = true,
+      useCostEnriched: Boolean = false
   )
 
   lazy val config: ConfigReader.Result[ParikhConf] = ConfigSource.default.load[ParikhConf]
 
   lazy val productStrategy = config.right.get.strategy
 
-  lazy val lengthAbsStrategy = config.right.get.lengthAbsStrategy
+  var lengthAbsStrategy = config.right.get.lengthAbsStrategy
 
   lazy val measureTime = config.right.get.measureTime
 
+  var useCostEnriched = config.right.get.useCostEnriched
+
   productStrategy match {
-    case BasicProduct() => println("Basic product")
+    case BasicProduct() => Console.err.println("Basic product")
     case SyncSubstr(minSyncLen, maxSyncLen, repeatTimes) =>
-      println(s"SyncSubstr($minSyncLen, $maxSyncLen, $repeatTimes)")
+      Console.err.println(s"SyncSubstr($minSyncLen, $maxSyncLen, $repeatTimes)")
   }
 }

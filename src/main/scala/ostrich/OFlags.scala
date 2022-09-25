@@ -53,7 +53,6 @@ case class OFlags(
                               OFlags.LengthOptions.Auto,
   useParikhConstraints    : Boolean = true,
   forwardApprox           : Boolean = false,
-  minimizeAutomata        : Boolean = false,
-  useCostEnriched         : Boolean = false  
+  minimizeAutomata        : Boolean = false
 
 )

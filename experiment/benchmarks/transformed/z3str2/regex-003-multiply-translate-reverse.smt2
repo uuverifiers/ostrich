@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "UU}}MM}}MMiiZZUU}}MM"))
+(assert (str.in.re x (re.* (re.union (str.to.re "}}MMiiZZ") (str.to.re "UU}}MM")))))
+(check-sat)
+(get-model)

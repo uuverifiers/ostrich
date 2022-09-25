@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "Tk"))))
+(assert (str.in.re x (re.* (str.to.re "TkTk"))))
+(assert (str.in.re x (re.* (str.to.re "GkTkTk"))))
+(check-sat)
+(get-model)

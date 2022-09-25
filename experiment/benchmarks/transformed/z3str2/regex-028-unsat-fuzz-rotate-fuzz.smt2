@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "o/)r"))))
+(assert (str.in.re x (re.+ (str.to.re "b*"))))
+(assert (str.in.re x (re.+ (str.to.re ",pfH''\x0c'xJEMpFFj$}':b<J~IW&~'{[6/K432>7="))))
+(assert (> (str.to.int x) 4))
+(check-sat)
+(get-model)

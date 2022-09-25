@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "uIdS{~pqAK1$>0'\n'.Dt'\x0b'''\n'"))
+(assert (str.in.re x (re.union (re.+ (str.to.re "(T?)A")) (re.* (str.to.re "D#+W.'")))))
+(check-sat)
+(get-model)

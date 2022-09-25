@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "MM'5M'Gkscx2\\"))))
+(assert (str.in.re x (re.+ (str.to.re "r''\t''0@v)}lp]}xf+aw+J''\x0c'':?BR`''\x0b''J'=;QHvk5Z)tE%5!FSq`V~`3PHyYiy""x);^hI4x;v7MiA7-"":Hl3HXrI96<K/|!IxX=PEP?0z''\x0b'')(f@b2_},[>PP&GOU<'uo5'bxmoo''\x0c''4*vvAaH''\x0b''ve''\t''mZ(w+[VV"))))
+(assert (> (str.to.int x) 11))
+(assert (< (str.len x) 9))
+(check-sat)
+(get-model)

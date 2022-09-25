@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.++ (str.to.re "cc..ff") (str.to.re "2233xx")))))
+(assert (= 14 (str.to.int x)))
+(assert (not (= x "``99{{,,PP))22ggwwdd]]00KK\\\\cchhww''77}}>>ccbbtt}}~~@@77")))
+(assert (not (= x "2211ddccbbMM//""""rr[[{{RRqq))TTbb")))
+(check-sat)
+(get-model)

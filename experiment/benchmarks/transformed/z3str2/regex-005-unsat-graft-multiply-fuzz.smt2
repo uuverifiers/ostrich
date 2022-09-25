@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "' 'aa'\t'$!,!>TMc$c\\&BMpaaaDNvV7fD+3&#|g6lX,'\n'h76'\n'Kh-'\r'"))
+(assert (str.in.re x (str.to.re "ccc0l},(vFvw'\x0b'G;;.")))
+(check-sat)
+(get-model)

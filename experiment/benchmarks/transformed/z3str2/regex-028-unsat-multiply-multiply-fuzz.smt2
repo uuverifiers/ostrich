@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "{'\r'+ZH<x#py'\r'1dGQ%2[&pR*%K5j}vb);6"))))
+(assert (str.in.re x (re.+ (str.to.re "aaz-2]u7>/l'\t'wCgbJxB'\n'eebaAf'\r'p1GXQToJ5,1'\n'E^bb3"))))
+(assert (str.in.re x (re.* (str.to.re "Nab]|Y~azw:L'\r'9@Z$Y&p&ab,d'\n'acc"))))
+(assert (> (str.to.int x) 2))
+(check-sat)
+(get-model)

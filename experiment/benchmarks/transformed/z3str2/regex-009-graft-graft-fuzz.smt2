@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "ac\\")))
+(assert (str.in.re x (str.to.re "acW(44aLcd")))
+(assert (> 39 (str.len x)))
+(assert (< 48 (str.len x)))
+(check-sat)
+(get-model)

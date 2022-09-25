@@ -1,0 +1,7 @@
+(declare-const key String)
+(declare-const val String)
+(assert (str.in.re key (re.+ (re.range "a" "b"))))
+(assert (<= (str.len key) 12))
+(assert (>= 9 (str.to.int key)))
+(check-sat)
+(get-model)

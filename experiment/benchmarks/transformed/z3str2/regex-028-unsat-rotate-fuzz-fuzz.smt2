@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "b"))))
+(assert (str.in.re x (re.+ (str.to.re "{a"))))
+(assert (str.in.re x (re.+ (str.to.re "FO$c#|BqA]taHGr!L5Ha"))))
+(assert (> (str.to.int x) 0))
+(check-sat)
+(get-model)

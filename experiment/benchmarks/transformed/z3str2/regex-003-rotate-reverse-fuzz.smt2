@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "edcd5F^~Q&E=Fz!dc"))
+(assert (str.in.re x (re.+ (re.union (str.to.re "df(%As|") (str.to.re "c")))))
+(check-sat)
+(get-model)

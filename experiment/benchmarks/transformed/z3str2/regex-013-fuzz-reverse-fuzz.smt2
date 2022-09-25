@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re y (re.+ (re.+ (str.to.re "IQw,KSH^BXgr4<0")))))
+(assert (= (str.len y) 3))
+(check-sat)
+(get-model)

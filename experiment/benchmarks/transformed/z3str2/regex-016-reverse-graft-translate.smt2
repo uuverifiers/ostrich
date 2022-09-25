@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "321")))
+(assert (= (str.len x) 11))
+(assert (not (= x "@mxf321@mxf")))
+(assert (not (= x "321@mxf@mxf")))
+(check-sat)
+(get-model)

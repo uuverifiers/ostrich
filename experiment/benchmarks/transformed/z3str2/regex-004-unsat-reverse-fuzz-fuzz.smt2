@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "BY1L+dW(WM"))
+(assert (str.in.re x (re.++ (re.+ (str.to.re "lff:")) (re.* (str.to.re ";E")))))
+(check-sat)
+(get-model)

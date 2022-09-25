@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "a5M7HOk-F{%-A1wmbq"))))
+(assert (str.in.re x (re.+ (str.to.re "aab"))))
+(assert (str.in.re x (re.* (str.to.re "a*w' 'Yqr'\x0b',!/'\n'RdZn`nS1ri''C'\t'jQr';!bws`' 'CUHVBkbf2(0BVOM'\x0b''a5_v/b4j5U<'\n''\\k'\r'>B|lq{'\r'nl+^=0ioqL}'\x0b'Y5'\r'UxN_m}By%rAJ'\n'+)TnZf#,''\r'w)'\n'""C;SYR*%<ON#94'\r'k'\x0b'q,9afPQe%'\x0c''\x0c'E{*h'\r'dNld' '2O56W=d8C/W[WH['\x0c'ZSssMLC:A' 'f(+'\x0c'6Q_'""C{iHd;)^e' ';)c%|P'\x0b'Xq4v=_v\\R*~$o'\t'MKoY'J*q=6OdI%v6mLu.p'\x0c'VWYuZ'\t''\x0c'pV''\t''e7J+'\n'' '*qgB&'\x0b'E<>t|a+?I.|,I<9@zHp""s)NdD6fvv=XC~o""g5%Tus'\r'Hc"))))
+(assert (> (str.to.int x) 2))
+(check-sat)
+(get-model)

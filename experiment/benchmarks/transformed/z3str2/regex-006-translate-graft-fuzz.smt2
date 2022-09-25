@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "oFHS8#T~.0"))
+(assert (str.in.re x (str.to.re "~B6[")))
+(check-sat)
+(get-model)

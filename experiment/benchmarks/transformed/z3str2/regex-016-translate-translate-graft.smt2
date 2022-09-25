@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "a+;N"))))
+(assert (= (str.len x) 11))
+(assert (not (= x "a+;N123a+;N")))
+(assert (not (= x "a+;Na+;N123")))
+(check-sat)
+(get-model)

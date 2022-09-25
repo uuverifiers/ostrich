@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (re.++ (str.to.re ">p2/D'\r'P6{('\r'@QSb'\x0c'($tUG}<i'\r'd") (str.to.re "1OzD?3")))))
+(assert (= 18 (str.len x)))
+(assert (not (= x "aTbc' '%1{V,B{e=/d1dKw3P+&dc(J^1FZ~9!v~493^_r{M'\n');+SSbQma.'\r'-bb$q\\e8z""JBR[`eK!Xd")))
+(assert (not (= x "X'\n'k!UE3YZgra'\n''\r'eIL' 'tl.xbbccddZk=$j.S'\t'\\6vi5k' '@'\r'+'\n'raL.0GQS:=Och8`*lNf6hncd11/'_I'\r'~Z_KIn$s.")))
+(check-sat)
+(get-model)

@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(declare-const m String)
+(declare-const n String)
+(assert (not (str.in.re x (re.+ (str.to.re "y.2mk)b]p&='\n'_")))))
+(assert (= x "yJwS_'\x0c'"))
+(check-sat)
+(get-model)

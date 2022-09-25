@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "I'\r'9cu'\r',["))
+(assert (str.in.re x (re.union (re.* (str.to.re "' '$14%Ds")) (re.* (str.to.re ",:h@8")))))
+(check-sat)
+(get-model)

@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re """bcd")))
+(assert (str.in.re y (re.+ (str.to.re "a''\r''|E"))))
+(assert (= 3 (str.len x)))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "?Ku6/Mu;DW0a[j=h($uN/"))
+(assert (str.in.re x (str.to.re "RCs)")))
+(check-sat)
+(get-model)

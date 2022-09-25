@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "AA/-RF#IZA8KAAPfp(~A"))
+(assert (str.in.re x (str.to.re "m|")))
+(check-sat)
+(get-model)

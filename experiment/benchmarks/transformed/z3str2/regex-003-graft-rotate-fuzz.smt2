@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "cG6FAF=S9;Ai'\x0c'*nad"))
+(assert (str.in.re x (str.to.re "c8l")))
+(check-sat)
+(get-model)

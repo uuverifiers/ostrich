@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "pp%%##ccccbb"))
+(assert (str.in.re x (re.++ (re.+ (str.to.re "??77>>cc")) (re.+ (str.to.re "ddccbb,,))")))))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "N$(nlN$N$("))
+(assert (str.in.re x (re.* (re.union (str.to.re "nlN$") (str.to.re "N$(")))))
+(check-sat)
+(get-model)

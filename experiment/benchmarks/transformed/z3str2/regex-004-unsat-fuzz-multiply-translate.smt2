@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "<<WWWWbbPPcc"))
+(assert (str.in.re x (re.++ (re.+ (str.to.re ",,HH<<WW##")) (re.+ (str.to.re "WWhh77' '' '")))))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "vGTn<~<dP5M"))
+(assert (str.in.re x (re.++ (re.+ (str.to.re "Aeh+h")) (re.* (str.to.re "_~")))))
+(check-sat)
+(get-model)

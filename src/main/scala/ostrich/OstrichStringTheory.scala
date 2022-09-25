@@ -53,6 +53,7 @@ import ap.util.Seqs
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
 import ostrich.parikh.OstrichCostEnrichEncoder
+import ostrich.parikh.Config
 
 object OstrichStringTheory {
 
@@ -103,8 +104,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val CSo = CharSort
   private val SSo = StringSort
   private val RSo = RegexSort
-
-  def getFlags = flags
 
   def int2Char(t : ITerm) : ITerm =
     ModuloArithmetic.cast2Interval(IdealInt.ZERO, upperBound, t)
@@ -459,7 +458,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       Incompleteness.set
 
     val preprocessor = new OstrichInternalPreprocessor(this, flags)
-    if(flags.useCostEnriched) return f 
+    if(Config.useCostEnriched) return f 
     preprocessor.preprocess(f, order)
   }
 

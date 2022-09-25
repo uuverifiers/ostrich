@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "J^ADAD''\n''"))
+(assert (str.in.re x (re.union (re.* (re.* (str.to.re "AD''\n''"))) (str.to.re "J^AD"))))
+(check-sat)
+(get-model)

@@ -29,6 +29,8 @@ import ostrich.parikh.Config.Catra
 import ostrich.parikh.Config.Parikh
 import ostrich.parikh.Config.Unary
 import ostrich.parikh.core.AtomConstraintsSolver
+import ostrich.parikh.util.UnknownException
+import ostrich.parikh.util.TimeoutException
 
 object ParikhExploration {
   def isStringResult(op: PreOp): Boolean = op match {
@@ -68,10 +70,10 @@ object ParikhExploration {
           case Left(value)  => _oldValue = Seq(value.intValueSafe)
           case Right(value) => _oldValue = value
         }
-        if (_oldValue != resValue)
-          throw new Exception(
-            "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
-          )
+        // if (_oldValue != resValue)
+        //   throw new Exception(
+        //     "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
+        //   )
       }
 
       if (isStringResult(op))
@@ -154,6 +156,14 @@ class ParikhExploration(
       None
     } catch {
       case FoundModel(model) => Some(model)
+      case UnknownException(info) =>
+        println("--Unknown: " + info)
+        System.exit(0)
+        None
+      case TimeoutException(time) =>
+        println(s"--Timeout: $time s")
+        System.exit(0)
+        None
     }
   }
 
@@ -183,7 +193,7 @@ class ParikhExploration(
           backendSolver.addConstraint(t, constraintStores(t).getContents)
         }
 
-        val res = backendSolver.solve
+        val res = backendSolver.measureTimeSolve
 
         res.getStatus match {
           case ProverStatus.Sat => {

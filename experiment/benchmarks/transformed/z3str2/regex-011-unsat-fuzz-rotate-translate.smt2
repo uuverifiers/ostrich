@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "L{{z{{^n""@cdKAU{{`{{"))))
+(assert (str.in.re y (re.* (str.to.re "]JJdUh"))))
+(assert (= (str.to.int x) 3))
+(check-sat)
+(get-model)

@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x ""))
+(assert (str.in.re x (str.to.re "]h|")))
+(check-sat)
+(get-model)

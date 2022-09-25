@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "i"))))
+(assert (= 4 (str.to.int x)))
+(assert (not (= x "4''\r''i|''\t''''\t''1=D-9")))
+(check-sat)
+(get-model)

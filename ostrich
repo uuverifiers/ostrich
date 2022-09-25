@@ -8,8 +8,8 @@ else
     pathCmd="realpath"
 fi
 
-BASEDIR=`dirname $($pathCmd $0)`
-TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
+BASEDIR=$(dirname $($pathCmd $0))
+TARGET=$(echo $BASEDIR/target/scala-*/ostrich-assembly*.jar)
 LIBDIR=$BASEDIR/lib
 SCALA=scala
 JAVA=java
@@ -20,19 +20,19 @@ ostrichParams=""
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | [+-]costenriched | [+-]help)
-            if [ x"$ostrichParams" = x"" ]; then
-                ostrichParams=$p
-            else
-                ostrichParams=$ostrichParams,$p
-            fi
-            ;;
-        *)
-            princessParams+=("$p")
-            ;;
+    [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | [+-]costenriched | [+-]help | -backend=*)
+        if [ x"$ostrichParams" = x"" ]; then
+            ostrichParams=$p
+        else
+            ostrichParams=$ostrichParams,$p
+        fi
+        ;;
+    *)
+        princessParams+=("$p")
+        ;;
     esac
 done
 
 exec $JAVA $JAVA_OPTS -cp $TARGET \
-     ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
-     "${princessParams[@]}"
+    ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+    "${princessParams[@]}"

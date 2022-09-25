@@ -1,0 +1,88 @@
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-graft-translate-multiply.smt2]
+sat
+(model
+  (define-fun S () String "))))))//////\u{0}")
+)
+CatraBasedSolver::findIntegerModel      	1	5.77748ms
+CatraBasedSolver::findRegistersModel    	1	182.924365ms
+CatraBasedSolver::findStringModel       	1	0.8416ms
+CatraBasedSolver::parsed                	1	84.849356ms
+CatraBasedSolver::solve                 	2	15.428473ms
+Total: 6, 289.821274ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-rotate-fuzz-rotate.smt2]
+sat
+(model
+  (define-fun S () String "\u{0}")
+)
+CatraBasedSolver::findIntegerModel      	1	5.713245ms
+CatraBasedSolver::findRegistersModel    	1	289.106154ms
+CatraBasedSolver::findStringModel       	1	0.870927ms
+CatraBasedSolver::parsed                	1	79.612079ms
+CatraBasedSolver::solve                 	2	14.258064ms
+Total: 6, 389.560469ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-rotate-multiply-fuzz.smt2]
+sat
+(model
+  (define-fun S () String "aaHbbbb\u{0}")
+)
+CatraBasedSolver::findIntegerModel      	1	6.551737ms
+CatraBasedSolver::findRegistersModel    	1	175.459102ms
+CatraBasedSolver::findStringModel       	1	0.799607ms
+CatraBasedSolver::parsed                	1	83.257911ms
+CatraBasedSolver::solve                 	2	16.405683ms
+Total: 6, 282.47404ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-reverse-fuzz-fuzz.smt2]
+sat
+(model
+  (define-fun S () String "\u{0}H\u{5c}\u{5c}\u{0}~")
+)
+(:reason-unknown )
+CatraBasedSolver::findIntegerModel      	1	5.975847ms
+CatraBasedSolver::findRegistersModel    	1	144.872649ms
+CatraBasedSolver::findStringModel       	1	0.945071ms
+CatraBasedSolver::parsed                	1	71.309749ms
+CatraBasedSolver::solve                 	2	17.749068ms
+Total: 6, 240.852384ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-rotate-graft-reverse.smt2]
+sat
+(model
+  (define-fun S () String "aaa")
+)
+(:reason-unknown )
+CatraBasedSolver::findIntegerModel      	1	6.839097ms
+CatraBasedSolver::findRegistersModel    	1	186.138995ms
+CatraBasedSolver::findStringModel       	1	0.96486ms
+CatraBasedSolver::parsed                	1	66.180316ms
+CatraBasedSolver::solve                 	2	14.119731ms
+Total: 6, 274.242999ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-2-negative-reverse-translate-fuzz.smt2]
+sat
+(model
+  (define-fun S () String "\u{0}")
+)
+CatraBasedSolver::findIntegerModel      	1	8.505943ms
+CatraBasedSolver::findRegistersModel    	1	303.18258ms
+CatraBasedSolver::findStringModel       	1	1.123168ms
+CatraBasedSolver::parsed                	1	86.246753ms
+CatraBasedSolver::solve                 	2	18.721577ms
+Total: 6, 417.780021ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-reverse-multiply-translate.smt2]
+sat
+(model
+  (define-fun S () String "\u{0}______\u{0}pppppp")
+)
+(:reason-unknown )
+CatraBasedSolver::findIntegerModel      	1	5.917675ms
+CatraBasedSolver::findRegistersModel    	1	174.247501ms
+CatraBasedSolver::findStringModel       	1	1.184122ms
+CatraBasedSolver::parsed                	1	79.764525ms
+CatraBasedSolver::solve                 	2	15.721456ms
+Total: 6, 276.835279ms
+----splitter----
+Runing [/home/hudh/github/ostrich/experiment/benchmarks/transformed/amazon/z3-regex-1-fuzz-graft-reverse.smt2]

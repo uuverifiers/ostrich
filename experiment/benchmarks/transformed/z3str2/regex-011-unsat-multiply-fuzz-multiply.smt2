@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "aa++99kkWWttiiWWggccccdddd"))))
+(assert (str.in.re y (re.+ (str.to.re "66uu[[))11VVAAWWYYIIvvqq{{::]]dd"))))
+(assert (= (str.len x) 10))
+(check-sat)
+(get-model)

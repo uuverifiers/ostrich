@@ -1,0 +1,6 @@
+(set-logic QF_S)
+(declare-fun var0 () String)
+(declare-fun var1 () String)
+(declare-fun var2 () String)
+(assert (= (str.++ "uBa" (str.++ var0 (str.++ var1 var2))) (str.++ (str.++ var0 (str.++ var1 var2)) "^q0")))
+(check-sat)

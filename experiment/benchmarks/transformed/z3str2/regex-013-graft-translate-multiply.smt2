@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re y (re.* (str.to.re "MM||''' '' '''GG"))))
+(assert (= 16 (str.len y)))
+(check-sat)
+(get-model)

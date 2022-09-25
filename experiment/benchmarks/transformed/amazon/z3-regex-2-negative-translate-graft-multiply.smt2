@@ -1,0 +1,5 @@
+(declare-const S String)
+(assert (str.in.re S (re.++ (str.to.re "'''''\r''\r''''''''''\r''\r''''''''''\r''\r'''''$$$$$$") re.allchar)))
+(assert (not (str.in.re S (re.++ (re.++ (str.to.re "'''''\r''\r''''''''''\r''\r''''''''''\r''\r'''''") (str.to.re "$$$$$$")) re.allchar))))
+(check-sat)
+(get-model)

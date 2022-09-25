@@ -132,6 +132,6 @@ class CatraACs(
 
   def getModel: Seq[Int] = {
     val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(atoms.map(_.aut), registersModel).get
+    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel).get
   }
 }

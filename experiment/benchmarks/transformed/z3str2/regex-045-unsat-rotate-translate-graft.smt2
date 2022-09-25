@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(declare-const m String)
+(declare-const n String)
+(assert (not (str.in.re x (str.to.re "x*J"))))
+(assert (= x "x*J"))
+(check-sat)
+(get-model)

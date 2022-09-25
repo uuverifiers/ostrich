@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "//]]::((@@77==((WW'''\n''\n'''UUii,,??ee//$$((@@^^99nn88&&qqUU<<ZZeeII"))
+(assert (str.in.re x (re.* (str.to.re "bbSS$$||"))))
+(check-sat)
+(get-model)

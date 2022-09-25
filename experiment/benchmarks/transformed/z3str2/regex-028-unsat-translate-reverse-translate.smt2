@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "H{"))))
+(assert (str.in.re x (re.* (str.to.re "H{H{"))))
+(assert (str.in.re x (re.* (str.to.re "' '{H{H{"))))
+(assert (> (str.len x) 1))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "33))ii3300zzyyuuVV''' '' '''MM>>OO33((RR88\\\\**RR##hh%%SSOOkk??NN]]AAPP33&&bbCC??99{{==22jj<<))ll226622yyKK||@@))~~66UUgg@@22bb((II``))FFqqggBB[[QQaaww44ZZ%%mmzziiUUvvPPZZ""""::bbccdd"))
+(assert (str.in.re x (re.* (re.union (str.to.re "__&&CC||__PP\\\\UUpp##AAWWee''..ffIIww::") (str.to.re "'''\t''\t'''ddaa'''\n''\n'''ii")))))
+(check-sat)
+(get-model)

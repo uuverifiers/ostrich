@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "a&"))))
+(assert (str.in.re x (re.* (str.to.re "MFT$?"))))
+(assert (str.in.re x (re.* (str.to.re "o(C=PH' ''\n''\t'3s!U^Do("))))
+(check-sat)
+(get-model)

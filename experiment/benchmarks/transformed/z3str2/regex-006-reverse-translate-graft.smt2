@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "SqLSqL"))
+(assert (str.in.re x (re.* (str.to.re "SqL"))))
+(check-sat)
+(get-model)

@@ -1,0 +1,7 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.+ (str.to.re "p*"))))
+(assert (str.in.re y (str.to.re "'\t'p=%r")))
+(assert (= 10 (str.len x)))
+(check-sat)
+(get-model)

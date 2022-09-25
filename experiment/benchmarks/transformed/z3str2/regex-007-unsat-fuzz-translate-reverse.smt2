@@ -1,0 +1,6 @@
+(declare-const x String)
+(assert (= (str.to.int x) 8))
+(assert (str.in.re x (re.+ (str.to.re "(FN."))))
+(assert (str.in.re x (re.* (str.to.re "$;''\x0b''-'-P"))))
+(check-sat)
+(get-model)

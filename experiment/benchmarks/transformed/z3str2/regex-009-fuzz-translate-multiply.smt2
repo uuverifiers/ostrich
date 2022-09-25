@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (re.* (str.to.re "XX9933@@"))))
+(assert (str.in.re x (re.+ (str.to.re "RRCC((zzJJ::ssbb||ll##II<<II[[==mm##"))))
+(assert (> (str.len x) 44))
+(assert (< (str.len x) 76))
+(check-sat)
+(get-model)

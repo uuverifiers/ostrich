@@ -1,0 +1,6 @@
+(declare-const x String)
+(declare-const y String)
+(assert (= x "a/pNfH'\x0c'-^bs+V]Q3A^Q&Zx|/+r!.>Q'\n'-SSg'\x0c'QBl&' '{vCOirrh.' '"))
+(assert (str.in.re x (re.+ (str.to.re "Go"))))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(set-logic QF_S)
+(declare-fun var0 () String)
+(declare-fun var1 () String)
+(assert (= (str.++ ",?8" (str.++ var0 var1)) (str.++ (str.++ var0 var1) "ZZ3")))
+(check-sat)

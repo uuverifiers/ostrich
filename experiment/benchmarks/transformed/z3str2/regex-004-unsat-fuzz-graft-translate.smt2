@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "Y'\x0b''\x0b'\\[{"))
+(assert (str.in.re x (re.++ (re.+ (str.to.re "j}Y'\x0b'#")) (str.to.re "'\x0b'W7R"))))
+(check-sat)
+(get-model)

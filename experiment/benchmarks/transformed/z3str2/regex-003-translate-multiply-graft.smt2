@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "''''\n''''\n''''``JJ__II''''\n''''\n''''``''''\n''''\n''''``JJ"))
+(assert (str.in.re x (re.* (str.to.re "__II''''\n''''\n''''``"))))
+(check-sat)
+(get-model)

@@ -1,0 +1,8 @@
+(declare-const x String)
+(declare-const y String)
+(assert (str.in.re x (str.to.re "}''\r''fR")))
+(assert (= (str.len x) 11))
+(assert (not (= x "}''\r''fR321}''\r''fR")))
+(assert (not (= x "321}''\r''fR}''\r''fR")))
+(check-sat)
+(get-model)

@@ -1,0 +1,5 @@
+(declare-const x String)
+(assert (= x "z,IbIbJ&J"))
+(assert (str.in.re x (re.union (re.* (str.to.re "z,Ib")) (re.* (str.to.re "IbJ&J")))))
+(check-sat)
+(get-model)
