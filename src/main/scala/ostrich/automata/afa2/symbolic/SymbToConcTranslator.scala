@@ -41,7 +41,7 @@ object SymbToConcTranslator {
   be mapped to single symbolic values.
   The algo works also for AFA2 with epsilon transition, but SymbAFA2 has only Symbolic transitions.
   */
-  private def toSymbDisjointTrans(safa: SymbAFA2): Map[Int, Seq[Transition]] = {
+  def toSymbDisjointTrans(trans: Map[Int, Seq[Transition]]): Map[Int, Seq[Transition]] = {
 
     // Accumulator, holds the new set of disjoint transitions for the SymbolicDisjointAFA2.
     val newTrans = mutable.Set[(Int, Transition)]()
@@ -50,7 +50,7 @@ object SymbToConcTranslator {
     val eventQueue = mutable.PriorityQueue[SweepingEvent]()(SweepingEventOrdering.reverse);
 
     var i = 0;
-    for ((s, trSeq) <- safa.transitions;
+    for ((s, trSeq) <- trans;
          tr <- trSeq) {
       tr match {
         // if it is a symb transition...
@@ -141,7 +141,7 @@ object SymbToConcTranslator {
 
   // It returns a new SymbAFA2 where all transitions are disjoint. (It does not side effects the original automaton.)
   private def toSymbDisjointAFA2(safa: SymbAFA2): SymbAFA2 = {
-    SymbAFA2(safa.initialStates, safa.finalStates, toSymbDisjointTrans(safa).asInstanceOf[Map[Int, Seq[SymbTransition]]])
+    SymbAFA2(safa.initialStates, safa.finalStates, toSymbDisjointTrans(safa.transitions).asInstanceOf[Map[Int, Seq[SymbTransition]]])
   }
 
 }
