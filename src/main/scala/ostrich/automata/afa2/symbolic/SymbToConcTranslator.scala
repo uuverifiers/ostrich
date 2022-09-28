@@ -3,9 +3,11 @@ package ostrich.automata.afa2.symbolic
 import ostrich.automata.BricsTLabelEnumerator
 import ostrich.automata.afa2.concrete.AFA2
 import ostrich.automata.afa2.symbolic.SymbToConcTranslator.toSymbDisjointAFA2
-import ostrich.automata.afa2.{AFA2Utils, EpsTransition, StepTransition, SymbTransition, Transition}
+import ostrich.automata.afa2.{AFA2Utils, EpsTransition, Step, StepTransition, SymbTransition, Transition}
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting
 
 
 // ------------- Some structures we need for the sweeping algorithm
@@ -35,6 +37,56 @@ object SweepingEventOrdering extends Ordering[SweepingEvent] {
 // ------------------
 
 object SymbToConcTranslator {
+
+  def toSymbDisjointTransBis(trans: Map[Int, Seq[SymbTransition]]): Map[Int, Seq[SymbTransition]] = {
+
+    def isContained(r1: Range, r2: Range): Boolean = {
+      r1.start>=r2.start && r1.end<=r2.end
+    }
+
+    val flatTrans = for((st, ts) <- trans.toSeq;
+                        t <- ts) yield (st, t)
+
+    //println("Flat trans:\n"+flatTrans)
+
+    val points = (for ((st, ts) <- trans.toSeq;
+                      t <- ts) yield {
+                        Seq(
+                          (t.symbLabel.start, true),
+                          (t.symbLabel.end, false)
+                        )
+                      }).flatten.toSet.toArray
+
+    Sorting.quickSort[(Int, Boolean)](points)(Ordering[(Int, Boolean)].on(x => (x._1, x._2)))
+
+    //val it = points.iterator
+    //println("Points:")
+    //while(it.hasNext) println(it.next())
+
+    val ranges = ArrayBuffer[Range]()
+    var lastStart = (-1, false)
+
+    for ((index, b) <- points) {
+      if (b==true) {
+        if (lastStart._1 != -1 && lastStart._2==true) ranges += Range(lastStart._1, index)
+      lastStart=(index, b)
+      } else {
+        ranges+= (Range(lastStart._1, index))
+        lastStart=(index, b)
+      }
+    }
+
+    val newTransFlat =
+      for ((st, t) <- flatTrans;
+         rg <- ranges;
+         if (isContained(rg, t.symbLabel))) yield (st, SymbTransition(rg, t.step, t.targets))
+
+    //println("New flat trans:\n"+newTransFlat)
+
+    newTransFlat.groupBy(_._1).mapValues(l => l map (_._2))
+  }
+
+
 
   /*
   It returns a new set of transitions where the ranges are all disjoint, therefore ready to
@@ -141,11 +193,10 @@ object SymbToConcTranslator {
 
   // It returns a new SymbAFA2 where all transitions are disjoint. (It does not side effects the original automaton.)
   private def toSymbDisjointAFA2(safa: SymbAFA2): SymbAFA2 = {
-    SymbAFA2(safa.initialStates, safa.finalStates, toSymbDisjointTrans(safa.transitions).asInstanceOf[Map[Int, Seq[SymbTransition]]])
+    SymbAFA2(safa.initialStates, safa.finalStates, toSymbDisjointTransBis(safa.transitions).asInstanceOf[Map[Int, Seq[SymbTransition]]])
   }
 
 }
-
 
 
 class SymbToConcTranslator(_safa: SymbAFA2) {
