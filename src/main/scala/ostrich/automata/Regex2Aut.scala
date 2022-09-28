@@ -193,7 +193,11 @@ object Regex2Aut {
 
       case IFunApp(parser.NegLookBehind, Seq(t)) => IFunApp(parser.NegLookBehind, Seq(transformNF(t, true)))
 
+      // Ad hoc, optimised translations
+      case IFunApp(parser.WordBoundary, x) => IFunApp(parser.WordBoundary, x)
+      case IFunApp(parser.NonWordBoundary, x) => IFunApp(parser.NonWordBoundary, x)
 
+      /*
       case IFunApp(parser.WordBoundary, _) => transformNF(
 
         re_union(
@@ -212,6 +216,8 @@ object Regex2Aut {
           )
 
           ,reverse)
+
+       */
 
       case IFunApp(`re_begin_anchor`, Seq()) => transformNF(IFunApp(parser.NegLookBehind, Seq(re_all())), reverse)
 
@@ -279,6 +285,10 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
       case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
 
       case IFunApp(`re_all`, _) => builder.allAtomic2AFA(dir)
+
+      case IFunApp(parser.WordBoundary, _) => builder.wordBoundary2AFA(dir)
+
+      case IFunApp(parser.NonWordBoundary, _) => builder.nonWordBoundary2AFA(dir)
 
       case IFunApp(`re_++`, Seq(l, r)) =>
         builder.concat2AFA(dir, toSymbMutableAFA2(dir, l), toSymbMutableAFA2(dir, r))
@@ -514,20 +524,30 @@ class Regex2Aut(theory : OstrichStringTheory) {
       println()
 
       // -----------Symbolic case---------------
+      var t1 = System.currentTimeMillis()
       val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
       val aut = ecmaAFA.toSymbExt2AFA(r)
       AFA2Utils.printAutDotToFile(aut, "extSymbAFA2.dot")
 
+      var t2 = System.currentTimeMillis()
       val epsRed = new SymbEpsReducer(theory, aut)
       val reducedAut = epsRed.afa
+      var duration2 = (System.currentTimeMillis() - t2) / 1000d
+      println("Time for eps-reduction: " + duration2)
 
       //throw new RuntimeException("Stop here.")
+      t2 = System.currentTimeMillis()
       val transl = new SymbToConcTranslator(reducedAut)
       val concAut = transl.forth()
-      AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
-      val t1 = System.nanoTime
+      duration2 = (System.currentTimeMillis() - t2) // / 1000d
+      println("Time for symbolic to concrete: " + duration2)
+      //AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
+      var duration = (System.currentTimeMillis() - t1) // / 1000d
+      println("Total time for regex -> 2AFA translation: " + duration)
+
+      t1 = System.currentTimeMillis()
       val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
-      val duration = (System.nanoTime - t1) / 1e9d
+      duration = (System.currentTimeMillis() - t1) // / 1000d
       println("Time for 2AFA -> NFA translation: " + duration)
       //println("BricsAutomaton:\n" + res)
       res

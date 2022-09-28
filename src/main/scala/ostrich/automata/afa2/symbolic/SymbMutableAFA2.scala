@@ -26,6 +26,13 @@ class SymbAFA2Builder(theory: OstrichStringTheory) {
   val max_char = theory.upperBound
   val min_char = 0
 
+  // From the parser!!!
+  val decimal = Range(48, 58)
+  val uppCaseChars = Range(65, 91)
+  val lowCaseChars = Range(97, 123)
+  val underscore = Range(95, 96)
+
+
 
   def charrangeAtomic2AFA(dir: Step, range: Range): SymbMutableAFA2 = {
     val iniState = new BState(dir)
@@ -161,6 +168,106 @@ class SymbAFA2Builder(theory: OstrichStringTheory) {
     laut.transitions ++= raut.transitions
 
     return laut
+  }
+
+  def wordBoundary2AFA(dir: Step): SymbMutableAFA2 = {
+    val init = new BState(dir)
+    val trans = ArrayBuffer[(BState, SymbBTransition)]()
+    var nonWordChar: Set[Range] = AFA2Utils.rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
+    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, uppCaseChars)
+    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, lowCaseChars)
+    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, underscore)
+
+    // First part: checking if a new word is starting
+    val s1 = new BState(Right)
+    trans += ((init, SymbBEpsTransition(Seq(s1))))
+
+    val s2 = new BState(Left)
+    trans += ((s1, SymbBStepTransition(decimal, Right, Seq(s2))))
+    trans += ((s1, SymbBStepTransition(uppCaseChars, Right, Seq(s2))))
+    trans += ((s1, SymbBStepTransition(lowCaseChars, Right, Seq(s2))))
+    trans += ((s1, SymbBStepTransition(underscore, Right, Seq(s2))))
+
+    val mainFinal = new BState(dir)
+    val s3 = new BState(Left)
+    trans += ((s2, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s3))))
+
+    val f1 = new BState(dir)
+    trans ++= (for (rg <- nonWordChar) yield (s3, SymbBStepTransition(rg, Left, Seq(f1))))
+
+    trans += ((f1, SymbBStepTransition(Range(min_char, alphabet_size), dir, Seq(f1))))
+
+
+    // Second part: checking if a word is ending
+    val s4 = new BState(Right)
+    trans += ((init, SymbBEpsTransition(Seq(s4))))
+
+    val s5 = new BState(Left)
+    trans ++= (for (rg <- nonWordChar) yield (s4, SymbBStepTransition(rg, Right, Seq(s5))))
+
+    val s6 = new BState(Left)
+    trans += ((s5, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s6))))
+
+    val f2 = new BState(dir)
+    trans += ((s6, SymbBStepTransition(decimal, Left, Seq(f2))))
+    trans += ((s6, SymbBStepTransition(uppCaseChars, Left, Seq(f2))))
+    trans += ((s6, SymbBStepTransition(lowCaseChars, Left, Seq(f2))))
+    trans += ((s6, SymbBStepTransition(underscore, Left, Seq(f2))))
+
+    trans += ((f2, SymbBStepTransition(Range(min_char, alphabet_size), dir, Seq(f2))))
+
+    SymbMutableAFA2(this, init, mainFinal, mutable.Set(f1, f2), trans)
+  }
+
+
+  def nonWordBoundary2AFA(dir: Step): SymbMutableAFA2 = {
+    val init = new BState(dir)
+    val trans = ArrayBuffer[(BState, SymbBTransition)]()
+    var nonWordChar: Set[Range] = AFA2Utils.rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
+    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, uppCaseChars)
+    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, lowCaseChars)
+    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, underscore)
+
+    // First part: checking if a new word is starting
+    val s1 = new BState(Right)
+    trans += ((init, SymbBEpsTransition(Seq(s1))))
+
+    val s2 = new BState(Left)
+    trans += ((s1, SymbBStepTransition(decimal, Right, Seq(s2))))
+    trans += ((s1, SymbBStepTransition(uppCaseChars, Right, Seq(s2))))
+    trans += ((s1, SymbBStepTransition(lowCaseChars, Right, Seq(s2))))
+    trans += ((s1, SymbBStepTransition(underscore, Right, Seq(s2))))
+
+    val mainFinal = new BState(dir)
+    val s3 = new BState(Left)
+    trans += ((s2, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s3))))
+
+    val f1 = new BState(dir)
+    trans += ((s3, SymbBStepTransition(decimal, Left, Seq(f1))))
+    trans += ((s3, SymbBStepTransition(uppCaseChars, Left, Seq(f1))))
+    trans += ((s3, SymbBStepTransition(lowCaseChars, Left, Seq(f1))))
+    trans += ((s3, SymbBStepTransition(underscore, Left, Seq(f1))))
+
+    trans += ((f1, SymbBStepTransition(Range(min_char, alphabet_size), dir, Seq(f1))))
+
+
+    // Second part: checking if a word is ending
+    val s4 = new BState(Right)
+    trans += ((init, SymbBEpsTransition(Seq(s4))))
+
+    val s5 = new BState(Left)
+    trans ++= (for (rg <- nonWordChar) yield (s4, SymbBStepTransition(rg, Right, Seq(s5))))
+
+    val s6 = new BState(Left)
+    trans += ((s5, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s6))))
+
+    val f2 = new BState(dir)
+    trans ++= (for (rg <- nonWordChar) yield (s6, SymbBStepTransition(rg, Left, Seq(f2))))
+
+    trans += ((f2, SymbBStepTransition(Range(min_char, alphabet_size), dir, Seq(f2))))
+
+    SymbMutableAFA2(this, init, mainFinal, mutable.Set(f1, f2), trans)
+
   }
 
 

@@ -14,7 +14,7 @@ abstract class SymbMTransition(val targets: Set[MState])
 
 // Those MEpsTransitions should be universal only!
 case class SymbMEpsTransition(_targets: Set[MState]) extends SymbMTransition(_targets) {
-  assert(_targets.size!=1)
+  //assert(_targets.size!=1)
 }
 
 case class SymbMStepTransition(label: Range,
@@ -66,11 +66,11 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
 
 
   //Getting rid of universal eps transitions
-  val mafa2: SymbMAFA2 = universalEpsAFA2ToSymbMAFA2(epsafaReduced)
-  val epsafaReduced2: EpsAFA2 = symbMAFA2ToEpsAFA2(mafa2)
-  AFA2Utils.printAutDotToFile(epsafaReduced2, "epsAFA2-noUniOrExistEps.dot")
+  //val mafa2: SymbMAFA2 = universalEpsAFA2ToSymbMAFA2(epsafaReduced)
+  //val epsafaReduced2: EpsAFA2 = symbMAFA2ToEpsAFA2(mafa2)
+  //AFA2Utils.printAutDotToFile(epsafaReduced2, "epsAFA2-noUniOrExistEps.dot")
 
-  val afa: SymbAFA2 = epsAFA2ToSymbAFA2(epsafaReduced2)
+  val afa: SymbAFA2 = epsAFA2ToSymbAFA2(epsafaReduced)
   AFA2Utils.printAutDotToFile(afa, "AFA2.dot")
 
 
@@ -199,11 +199,11 @@ MacrostateAFA2, which has still universal epsilon transitions.
       }))
 
       // We do not need the starting states of those transitions anymore (as they are all in mst)
-      var outTrans = outms.values.flatten
-      var outTransEps: Seq[EpsTransition] = outTrans.filter(_.isInstanceOf[EpsTransition]).asInstanceOf[Seq[EpsTransition]]
+      val outTrans = outms.values.flatten
+      val outTransEps: Seq[EpsTransition] = outTrans.filter(_.isInstanceOf[EpsTransition]).asInstanceOf[Seq[EpsTransition]]
       // Epsilon transitions should be universal
       assert(outTransEps.forall(_.targets.size != 1))
-      var outTransStep: Seq[SymbTransition] = outTrans.filter(_.isInstanceOf[SymbTransition]).asInstanceOf[Seq[SymbTransition]]
+      val outTransStep: Seq[SymbTransition] = outTrans.filter(_.isInstanceOf[SymbTransition]).asInstanceOf[Seq[SymbTransition]]
 
       // Add macro uni eps transitions
       val epsTargets: Seq[Seq[MState]] = for (t <- outTransEps) yield {
@@ -214,6 +214,26 @@ MacrostateAFA2, which has still universal epsilon transitions.
         macroTrans += ((mst, SymbMEpsTransition(seqms.toSet)))
       }
 
+      // Add macro step transition functional
+      macroTrans ++= (
+        for (t <- outTransStep) yield
+          (mst, SymbMStepTransition(t.symbLabel, t.step,
+            (for (s <- t.targets) yield {
+              val mtgt = MState(partialEpsClosure(Set(s)))
+              if (!toAnalyse.contains(mtgt) && !analysed.contains(mtgt))
+                toAnalyse += mtgt
+              mtgt
+            }).toSet)) )
+
+      // Add macro step declarative
+      /*for (t <- outTransStep) {
+        val macroTargets = ArrayBuffer[MState]()
+        for (s <- t.targets)
+          macroTargets += MState(partialEpsClosure(Set(s)))
+        macroTrans += ((mst, SymbMStepTransition(t.symbLabel, t.step, macroTargets.toSet)))
+      }*/
+
+      /* THIS IS WRONG
       // Add macro step transitions. WARNING: those should be only existential step transitions!
       val groupOutTransStep = outTransStep.groupBy(x => (x.symbLabel, x.step))
       assert(groupOutTransStep.values.forall(_.forall(_.targets.size == 1)))
@@ -225,7 +245,8 @@ MacrostateAFA2, which has still universal epsilon transitions.
         if (!toAnalyse.contains(trgt) && !analysed.contains(trgt))
           toAnalyse += trgt
         macroTrans += ((mst, SymbMStepTransition(k._1, k._2, Set(trgt))))
-      }
+      } */
+
     } // end while loop
 
     val finMStates = analysed.filter(x => x.states.intersect(epsafa.finalStates.toSet) != Set.empty)
@@ -266,6 +287,7 @@ The result is therefore a MacrostateAFA2, which has still some universal epsilon
 
     ///////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////
+    /* ************** OLD *********************
     def partialUniversalEpsClosure(states: Set[Int]): Set[Int] = {
 
       def universalEpsStepfunc(states: Set[Int]): Set[Int] = {
@@ -280,6 +302,51 @@ The result is therefore a MacrostateAFA2, which has still some universal epsilon
       }
 
       def iterate(oldSet: Set[Int]): Set[Int] = {
+        val newSet = universalEpsStepfunc(oldSet)
+        if (newSet == oldSet) newSet
+        else iterate(newSet)
+      }
+
+      iterate(states)
+    }
+    *************************************************/
+
+
+    def partialUniversalEpsClosure(states: Seq[Set[Int]]): Seq[Set[Int]] = {
+
+      def universalEpsStepfunc(setStates: Seq[Set[Int]]): Seq[Set[Int]] = {
+        val outRes = mutable.Set[Set[Int]]()
+
+        for (set <- setStates) {
+          val cartProdList = ArrayBuffer[List[Set[Int]]]()
+          for (s <- set) {
+            val sClosure = ArrayBuffer[Set[Int]]()
+
+            for (ts <- epsafa.transitions.get(s);
+                 t <- ts) t match {
+              case et: EpsTransition => if (!et.isExistential()) sClosure += et.targets.toSet
+              case _ =>
+            }
+            cartProdList += sClosure.toList
+          }
+
+          // Do the cartesian product of sets in cartProdList
+          val aux = cartesianProduct(cartProdList.toList)
+          val cp = ArrayBuffer[Set[Int]]()
+          for (outmost <- aux) {
+            val acc = mutable.Set[Int]()
+            for (inner <- outmost) {
+              for (s <- inner) acc += s
+            }
+            cp += acc.toSet
+          }
+          // Add all cartesian products to outRes
+          outRes ++= cp
+        }
+        outRes.toList
+      }
+
+      def iterate(oldSet: Seq[Set[Int]]): Seq[Set[Int]] = {
         val newSet = universalEpsStepfunc(oldSet)
         if (newSet == oldSet) newSet
         else iterate(newSet)
@@ -365,7 +432,11 @@ The result is therefore a MacrostateAFA2, which has still some universal epsilon
     val macroTrans = ArrayBuffer[(MState, SymbMTransition)]()
     val toAnalyse = mutable.Queue[MState]()
 
+
+
     /*
+
+      /*
     **************** Handling initial state ******************************
      */
     val initClosure = partialUniversalEpsClosure(Set(epsafa.initialState))
@@ -430,6 +501,13 @@ The result is therefore a MacrostateAFA2, which has still some universal epsilon
     /*
     **********************************************************************
     */
+
+     */
+
+    // TODO: temporary!!!
+    val newInit = MState(Set(epsafa.initialState))
+    toAnalyse+=newInit
+
 
     while (!toAnalyse.isEmpty) {
       val mst: MState = toAnalyse.dequeue()
@@ -503,10 +581,23 @@ The result is therefore a MacrostateAFA2, which has still some universal epsilon
       states. For the previous example, from macrostate mst which contains s1 and s2
       we have for label "a": mst -> {s5, s7}, mst -> {s6, s7}
        */
-      for (((rg, st), sts) <- targetsMap;
-           targets <- cartesianProduct(sts)) {
+      // TODO: debug!
+      for( ((rg, st), sts) <- targetsMap ) {
+        val cptargets = cartesianProduct(sts)
+        println("CartesianProduct:\n" + cptargets)
+        for (targets <- cptargets) {
+          println("Targets:\n"+targets)
+          val clos = partialUniversalEpsClosure(Seq(targets.toSet))
+          println("UnivClosure\n:"+clos)
+        }
+      }
 
-        val tgClosure: Seq[MState] = categoriseStates(partialUniversalEpsClosure(targets.toSet))
+
+      for (((rg, st), sts) <- targetsMap;
+           targets <- cartesianProduct(sts);
+           closureTrgts <- partialUniversalEpsClosure(Seq(targets.toSet))) {
+
+        val tgClosure: Seq[MState] = categoriseStates(closureTrgts)
         println("tgClosure:\n"+tgClosure)
 
         macroTrans += ((mst, SymbMStepTransition(rg, st, tgClosure.toSet)))

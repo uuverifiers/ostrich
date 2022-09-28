@@ -2,9 +2,15 @@ package ostrich.automata.afa2
 
 object Main extends App {
 
+  val input = ???
+
+
+
+  /*
   val range1 = new Range(1, 10, 1)
   val range2 = new Range(2, 30, 1)
   val seq = Seq(range1, range2)
+  */
 
   //val boh = (for(rgs <- seq) yield rgs.flatten).toSet.toIndexedSeq.sorted
 
