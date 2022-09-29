@@ -523,9 +523,9 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
     addLabelReachableStates(state, bricsState)
   }
 
-  println
+  /*println
   println("#states initially:               " + setStates.size)
-  println("#transitions initially:          " + transitionCnt)
+  println("#transitions initially:          " + transitionCnt)*/
 
   AutomataUtils.buildEpsilons(builder, epsilons)
 
@@ -566,12 +566,12 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
 
   }
 
-  println
+  /*println
   println("#states after minimization:      " + result.states.size)
   println("#transitions after minimization: " +
             (for (s <- result.states.toList;
                   t <- result.outgoingTransitions(s).toList)
-             yield t).size)
+             yield t).size)*/
 }
 
 

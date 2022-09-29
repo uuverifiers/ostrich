@@ -165,9 +165,9 @@ object Regex2Aut {
     def apply(t: ITerm) = {
       val diffElimin = new Regex2Aut.DiffEliminator(theory)
       val de = diffElimin(t);
-      println("After diff elimination:\n" + de + "\n")
+      //println("After diff elimination:\n" + de + "\n")
       val res = transformNF(de)
-      println("After transformation:\n" + res + "\n")
+      //println("After transformation:\n" + res + "\n")
       res
     }
 
@@ -518,10 +518,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val parser = new ECMARegexParser(theory)
       val s = parser.string2Term(str)
       //toBAutomaton(s, minimize)
-      println("Parser output:\n" + s + "\n")
+      //println("Parser output:\n" + s + "\n")
       val st = new SyntacticTransformations(theory, parser)
       val r = st(s)
-      println()
+      //println()
 
       // -----------Symbolic case---------------
       var t1 = System.currentTimeMillis()
@@ -533,22 +533,22 @@ class Regex2Aut(theory : OstrichStringTheory) {
       val epsRed = new SymbEpsReducer(theory, aut)
       val reducedAut = epsRed.afa
       var duration2 = (System.currentTimeMillis() - t2) / 1000d
-      println("Time for eps-reduction: " + duration2)
+      //println("Time for eps-reduction: " + duration2)
 
       //throw new RuntimeException("Stop here.")
       t2 = System.currentTimeMillis()
       val transl = new SymbToConcTranslator(reducedAut)
       val concAut = transl.forth()
       duration2 = (System.currentTimeMillis() - t2) // / 1000d
-      println("Time for symbolic to concrete: " + duration2)
+      //println("Time for symbolic to concrete: " + duration2)
       //AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
       var duration = (System.currentTimeMillis() - t1) // / 1000d
-      println("Total time for regex -> 2AFA translation: " + duration)
+      //println("Total time for regex -> 2AFA translation: " + duration)
 
       t1 = System.currentTimeMillis()
       val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
       duration = (System.currentTimeMillis() - t1) // / 1000d
-      println("Time for 2AFA -> NFA translation: " + duration)
+      //println("Time for 2AFA -> NFA translation: " + duration)
       //println("BricsAutomaton:\n" + res)
       res
 
