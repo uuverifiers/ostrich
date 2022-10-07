@@ -32,7 +32,7 @@
 
 package ostrich.automata
 
-import ostrich.{ECMARegexParser, OstrichStringTheory}
+import ostrich.{ECMARegexParser, OFlags, OstrichStringTheory}
 import ap.basetypes.IdealInt
 import ap.parser.IExpression.Const
 import ap.parser._
@@ -491,6 +491,53 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.strDatabase.EncodedString
 
+  private def to2AFA(t : ITerm, parser: ECMARegexParser) : BAutomaton = {
+    // -----------Symbolic case---------------
+    var t1 = System.currentTimeMillis()
+    val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
+    val aut = ecmaAFA.toSymbExt2AFA(t)
+    AFA2Utils.printAutDotToFile(aut, "extSymbAFA2.dot")
+
+    var t2 = System.currentTimeMillis()
+    val epsRed = new SymbEpsReducer(theory, aut)
+    val reducedAut = epsRed.afa
+    var duration2 = (System.currentTimeMillis() - t2) / 1000d
+    println("Time for eps-reduction: " + duration2)
+
+    //throw new RuntimeException("Stop here.")
+    t2 = System.currentTimeMillis()
+    val transl = new SymbToConcTranslator(reducedAut)
+    val concAut = transl.forth()
+    duration2 = (System.currentTimeMillis() - t2) // / 1000d
+    println("Time for symbolic to concrete: " + duration2)
+    AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
+    var duration = (System.currentTimeMillis() - t1) // / 1000d
+    println("Total time for regex -> 2AFA translation: " + duration)
+    println("2AFA #states: " + concAut.states.size + " #transitions: " + concAut.transitions.values.size)
+
+    t1 = System.currentTimeMillis()
+    val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
+    duration = (System.currentTimeMillis() - t1) // / 1000d
+    println("Time for 2AFA -> NFA translation: " + duration)
+    //println("BricsAutomaton:\n" + res)
+    res
+    /* -----------Concrete case---------------
+          val ecma2Aut = new ECMAToAFA2(theory, parser)
+          val aut = ecma2Aut.toExt2AFA(r)
+          AFA2Utils.printAutDotToFile(aut, "extAFA2.dot")
+
+          //val epsRed = new EpsReducer(aut)
+          //val reducedAut = epsRed.afa
+
+          //throw new RuntimeException("Stop here.")
+          val t1 = System.nanoTime
+          val res = NFATranslator(aut).underlying
+          val duration = (System.nanoTime - t1) / 1e9d
+          println("Time for 2AFA -> NFA translation: " + duration)
+          res
+    -------------------------------------------- */
+  }
+
   private def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
@@ -514,67 +561,74 @@ class Regex2Aut(theory : OstrichStringTheory) {
       new RegExp(bricsPattern).toAutomaton(minimize)
     }
 
-    case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
+    case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) =>
       val parser = new ECMARegexParser(theory)
-      val s = parser.string2Term(str)
-      //toBAutomaton(s, minimize)
-      //println("Parser output:\n" + s + "\n")
-      val st = new SyntacticTransformations(theory, parser)
-      val r = st(s)
-      //println()
+      theory.theoryFlags.regexTranslator match {
 
-      // -----------Symbolic case---------------
-      var t1 = System.currentTimeMillis()
-      val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
-      val aut = ecmaAFA.toSymbExt2AFA(r)
-      AFA2Utils.printAutDotToFile(aut, "extSymbAFA2.dot")
+        case OFlags.RegexTranslator.Hybrid =>
+          val s = parser.string2Term(str)
+          if (parser.APPROX) {
+            println("Using partial method.")
+            toBAutomaton(s, minimize)
+          }
+          else {
+            println("Using complete method.")
+            val st = new SyntacticTransformations(theory, parser)
+            val r = st(s)
+            to2AFA(r, parser)
+          }
 
-      var t2 = System.currentTimeMillis()
-      val epsRed = new SymbEpsReducer(theory, aut)
-      val reducedAut = epsRed.afa
-      var duration2 = (System.currentTimeMillis() - t2) / 1000d
-      //println("Time for eps-reduction: " + duration2)
+        case OFlags.RegexTranslator.Approx =>
+          println("Using partial method.")
+          val s = parser.string2Term(str)
+          toBAutomaton(s, minimize)
 
-      //throw new RuntimeException("Stop here.")
-      t2 = System.currentTimeMillis()
-      val transl = new SymbToConcTranslator(reducedAut)
-      val concAut = transl.forth()
-      duration2 = (System.currentTimeMillis() - t2) // / 1000d
-      //println("Time for symbolic to concrete: " + duration2)
-      //AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
-      var duration = (System.currentTimeMillis() - t1) // / 1000d
-      //println("Total time for regex -> 2AFA translation: " + duration)
+        case OFlags.RegexTranslator.Complete =>
+          println("Using complete method.")
+          val s = parser.string2Term(str)
+          val st = new SyntacticTransformations(theory, parser)
+          val r = st(s)
+          to2AFA(r, parser)
+      }
 
-      t1 = System.currentTimeMillis()
-      val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
-      duration = (System.currentTimeMillis() - t1) // / 1000d
-      //println("Time for 2AFA -> NFA translation: " + duration)
-      //println("BricsAutomaton:\n" + res)
-      res
-
-
-      /* -----------Concrete case---------------
-      val ecma2Aut = new ECMAToAFA2(theory, parser)
-      val aut = ecma2Aut.toExt2AFA(r)
-      AFA2Utils.printAutDotToFile(aut, "extAFA2.dot")
-
-      //val epsRed = new EpsReducer(aut)
-      //val reducedAut = epsRed.afa
-
-      //throw new RuntimeException("Stop here.")
-      val t1 = System.nanoTime
-      val res = NFATranslator(aut).underlying
-      val duration = (System.nanoTime - t1) / 1e9d
-      println("Time for 2AFA -> NFA translation: " + duration)
-      res
-       */
-    }
 
     case IFunApp(`re_from_ecma2020_flags`,
                  Seq(EncodedString(str), EncodedString(flags))) => {
       val parser = new ECMARegexParser(theory, flags)
+      theory.theoryFlags.regexTranslator match {
+
+        case OFlags.RegexTranslator.Hybrid =>
+          val s = parser.string2Term(str)
+          if (parser.APPROX) {
+            println("Using partial method.")
+            toBAutomaton(s, minimize)
+          }
+          else {
+            println("Using complete method.")
+            val st = new SyntacticTransformations(theory, parser)
+            val r = st(s)
+            to2AFA(r, parser)
+          }
+
+        case OFlags.RegexTranslator.Approx =>
+          println("Using partial method.")
+          val s = parser.string2Term(str)
+          toBAutomaton(s, minimize)
+
+        case OFlags.RegexTranslator.Complete =>
+          println("Using complete method.")
+          val s = parser.string2Term(str)
+          val st = new SyntacticTransformations(theory, parser)
+          val r = st(s)
+          to2AFA(r, parser)
+      }
+
+      /*
+       ***** OLD re_from_ecma2020_flags *************
       val s = parser.string2Term(str)
       toBAutomaton(s, minimize)
+      ***********************************************
+      */
     }
 
     case IFunApp(`re_case_insensitive`, Seq(a)) => {

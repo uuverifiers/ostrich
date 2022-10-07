@@ -75,9 +75,37 @@ class SymbAFA2Builder(theory: OstrichStringTheory) {
   }
 
   // Matches whatever n  in {min to max} iterations of aut. Obtained as alternation of each n
-  def loop3Aut2AFA(dir: Step, min: Int, max: Int, aut: SymbMutableAFA2): SymbMutableAFA2 = {
+  /*def loop3Aut2AFA(dir: Step, min: Int, max: Int, aut: SymbMutableAFA2): SymbMutableAFA2 = {
     val autArray: Seq[SymbMutableAFA2] = for (i <- min to max) yield loop1Aut2AFA(dir, i, aut)
     autArray.reduce((l, r) => alternation2AFA(dir, l, r))
+  }*/
+
+  def loop3Aut2AFA(dir: Step, min: Int, max: Int, aut: SymbMutableAFA2): SymbMutableAFA2 = {
+
+    // First build min number of concatenation of aut
+    val acc = loop1Aut2AFA(dir, min, aut)
+    var oldFinal = acc.mainFinState
+
+    // Build unique final state
+    val uniqueFinal = new BState(dir)
+    acc.transitions += ((acc.mainFinState, SymbBEpsTransition(Seq(uniqueFinal))))
+    acc.mainFinState = uniqueFinal
+
+    for (i <- 1 to max-min) {
+      // New automaton to be attached to accumulator
+      val raut = aut.clone()
+
+      // Attach the two automata
+      acc.transitions += ((oldFinal, SymbBEpsTransition(Seq(raut.initialState))))
+      acc.finStates ++= raut.finStates
+      acc.transitions ++= raut.transitions
+
+      acc.transitions += ((raut.mainFinState, SymbBEpsTransition(Seq(uniqueFinal))))
+
+      oldFinal = raut.mainFinState
+    }
+
+    return acc
   }
 
 
@@ -533,24 +561,6 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
       (oldNew.get(st).get, SymbBStepTransition(tr.label, tr.step, tr.targets.map(oldNew)))
     newTransitions ++= newTransBufNotEps
 
-    /*
-    //Swap step transition
-    newTransitions ++=
-    for ( ((s, char), lls) <- transMapStep ) yield {
-      /*
-      CHECK:
-        for each state s, either multiple existential outgoing transitions or a single universal outgoing transition
-    */
-      assert(lls.size == 1 || lls.forall(_.size == 1))
-
-      lls.size == 1 match {
-        // it is a universal transition
-        case true => for (st <- lls.flatten) yield (oldNew.get(s).asInstanceOf[BState], BStepTransition(char, s.dir, Seq(oldNew.get(st).asInstanceOf[BState])))
-        // it is an existential transition
-        case false => Seq((oldNew.get(s).asInstanceOf[BState], BStepTransition(char, s.dir, lls.flatten.map(oldNew))))
-      }
-    }
-     */
 
     assert(transitions.forall(x => !x._2.targets.isEmpty))
     assert(newTransitions.forall(x => !x._2.targets.isEmpty))
