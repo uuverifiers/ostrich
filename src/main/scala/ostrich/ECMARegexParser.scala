@@ -63,13 +63,33 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   val printer = new PrettyPrinterNonStatic
 
-  def string2Term(inputString : String) : ITerm = {
+  def string2Term(inputString : String) : ITerm =
+    string2TermWithReduction(inputString)._1
+
+  def string2TermExact(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
-    val res = TranslationVisitor(pat)
+    val res = applyTranslationVisitorExact(pat)
     if (flags contains "i")
       theory.re_case_insensitive(res)
     else
       res
+  }
+
+  /**
+   * Translate the given regex to a standard SMT-LIB regex term. This
+   * will try to replace look-arounds and anchors with intersection. The
+   * returned Boolean flag tells whether this reduction was precise, or
+   * had to ignore some parts of the regex.
+   */
+  def string2TermWithReduction(inputString : String) : (ITerm, Boolean) = {
+    val pat = parseRegex(inputString)
+    val (res, incomplete) = applyTranslationVisitorRed(pat)
+    val res2 =
+      if (flags contains "i")
+        theory.re_case_insensitive(res)
+      else
+        res
+    (res2, incomplete)
   }
 
   def parseRegex(inputString : String) : Pattern = {
@@ -104,38 +124,63 @@ class ECMARegexParser(theory : OstrichStringTheory,
   val WordBoundary    = new IFunction("WordBoundary", 0, false, false)
   val NonWordBoundary = new IFunction("NonWordBoundary", 0, false, false)
 
-  var APPROX = false
+  private def applyTranslationVisitorExact(pat : Pattern) = {
+    val visitor = new TranslationVisitor(false)
+    visitor.visit (pat, true)
+  }
+
+  private def applyTranslationVisitorRed(pat : Pattern) : (ITerm, Boolean) = {
+    val visitor = new TranslationVisitor(true)
+    val rawRes = visitor.visit (pat, true)
+    val res = dropAssertions (rawRes)
+    (res, res != rawRes)
+  }
+
+  private def dropAssertions(t : ITerm,
+                             negative : Boolean = false) : ITerm = t match {
+
+    case IFunApp(`re_begin_anchor`, _) => {
+      Console.err.println("Warning: ignoring anchor ^")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(`re_end_anchor`, _) => {
+      Console.err.println("Warning: ignoring anchor $")
+      if (negative) NONE else EPS
+    }
+
+    case IFunApp(LookAhead, _) => {
+      Console.err.println("Warning: ignoring look-ahead")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(LookBehind, _) => {
+      Console.err.println("Warning: ignoring look-behind")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(WordBoundary, _) => {
+      Console.err.println("Warning: ignoring anchor \\b")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(NonWordBoundary, _) => {
+      Console.err.println("Warning: ignoring anchor \\B")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(`re_comp`, Seq(arg)) =>
+      re_comp(dropAssertions(arg, !negative))
+    case IFunApp(f, args) =>
+      f((for (arg <- args) yield dropAssertions(arg, negative)) : _*)
+    case t =>
+      t
+  }
+
 
   /**
    * Visitor to translate a regex AST to a term.
    */
-  object TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
+  class TranslationVisitor(APPROX : Boolean) extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
 
     private var captGroupNum = 1
-
-    def apply(pat : Pattern) = {
-      theory.theoryFlags.regexTranslator match {
-
-        case OFlags.RegexTranslator.Approx =>
-          APPROX = true
-          dropAssertions (this.visit (pat, true) )
-
-        case OFlags.RegexTranslator.Complete =>
-          APPROX = false
-          this.visit (pat, true)
-
-        case OFlags.RegexTranslator.Hybrid =>
-          APPROX = false
-          val term = this.visit(pat, true)
-          if (checkAssertions(term)) term
-          else {
-            APPROX = true
-            this.visit(pat, true)
-          }
-      }
-    }
 
     def leaf(arg : VisitorArg) : ITerm = EPS
     def combine(x : ITerm, y : ITerm, arg : VisitorArg) : ITerm = reCat(x, y)
@@ -240,63 +285,6 @@ class ECMARegexParser(theory : OstrichStringTheory,
       assert(a.size == 1)
       val alt = a.head.asInstanceOf[ecma2020regex.Absyn.Alternative]
       alt.listtermc_.toList
-    }
-
-    private def checkAssertions(t: ITerm): Boolean = t match {
-
-      case IFunApp(`re_begin_anchor`, _) => true
-
-      case IFunApp(`re_end_anchor`, _) => true
-
-      case IFunApp(LookAhead, _) => true
-
-      case IFunApp(LookBehind, _) => true
-
-      case IFunApp(WordBoundary, _) => true
-
-      case IFunApp(NonWordBoundary, _) => true
-
-      case IFunApp(`re_comp`, Seq(arg)) => checkAssertions(arg)
-
-      case IFunApp(f, args) => args.foldLeft(false)( (acc, arg) => acc || checkAssertions(arg) )
-
-      case t => false
-    }
-
-    private def dropAssertions(t : ITerm,
-                               negative : Boolean = false) : ITerm = t match {
-
-      case IFunApp(`re_begin_anchor`, _) => {
-        Console.err.println("Warning: ignoring anchor ^")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(`re_end_anchor`, _) => {
-        Console.err.println("Warning: ignoring anchor $")
-        if (negative) NONE else EPS
-      }
-
-      case IFunApp(LookAhead, _) => {
-        Console.err.println("Warning: ignoring look-ahead")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(LookBehind, _) => {
-        Console.err.println("Warning: ignoring look-behind")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(WordBoundary, _) => {
-        Console.err.println("Warning: ignoring anchor \\b")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(NonWordBoundary, _) => {
-        Console.err.println("Warning: ignoring anchor \\B")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(`re_comp`, Seq(arg)) =>
-        re_comp(dropAssertions(arg, !negative))
-      case IFunApp(f, args) =>
-        f((for (arg <- args) yield dropAssertions(arg, negative)) : _*)
-      case t =>
-        t
     }
 
     private def translateLookAhead(t : ITerm) : ITerm = {

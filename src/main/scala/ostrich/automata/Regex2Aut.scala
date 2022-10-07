@@ -538,6 +538,41 @@ class Regex2Aut(theory : OstrichStringTheory) {
     -------------------------------------------- */
   }
 
+  private def regex2Automaton(parser   : ECMARegexParser,
+                              str      : String,
+                              minimize : Boolean) = {
+      theory.theoryFlags.regexTranslator match {
+
+        case OFlags.RegexTranslator.Hybrid => {
+          val (s, incomplete) = parser.string2TermWithReduction(str)
+          if (incomplete) {
+            println("Using complete method.")
+            val s2 = parser.string2TermExact(str)
+            val st = new SyntacticTransformations(theory, parser)
+            val r = st(s2)
+            to2AFA(r, parser)
+          } else {
+            println("Partial method is exact, using it.")
+            toBAutomaton(s, minimize)
+          }
+        }
+
+        case OFlags.RegexTranslator.Approx => {
+          println("Using partial method.")
+          val (s, _) = parser.string2TermWithReduction(str)
+          toBAutomaton(s, minimize)
+        }
+
+        case OFlags.RegexTranslator.Complete => {
+          println("Using complete method.")
+          val s = parser.string2TermExact(str)
+          val st = new SyntacticTransformations(theory, parser)
+          val r = st(s)
+          to2AFA(r, parser)
+        }
+      }
+  }
+
   private def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
@@ -561,74 +596,15 @@ class Regex2Aut(theory : OstrichStringTheory) {
       new RegExp(bricsPattern).toAutomaton(minimize)
     }
 
-    case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) =>
+    case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
       val parser = new ECMARegexParser(theory)
-      theory.theoryFlags.regexTranslator match {
-
-        case OFlags.RegexTranslator.Hybrid =>
-          val s = parser.string2Term(str)
-          if (parser.APPROX) {
-            println("Using partial method.")
-            toBAutomaton(s, minimize)
-          }
-          else {
-            println("Using complete method.")
-            val st = new SyntacticTransformations(theory, parser)
-            val r = st(s)
-            to2AFA(r, parser)
-          }
-
-        case OFlags.RegexTranslator.Approx =>
-          println("Using partial method.")
-          val s = parser.string2Term(str)
-          toBAutomaton(s, minimize)
-
-        case OFlags.RegexTranslator.Complete =>
-          println("Using complete method.")
-          val s = parser.string2Term(str)
-          val st = new SyntacticTransformations(theory, parser)
-          val r = st(s)
-          to2AFA(r, parser)
-      }
-
+      regex2Automaton(parser, str, minimize)
+    }
 
     case IFunApp(`re_from_ecma2020_flags`,
                  Seq(EncodedString(str), EncodedString(flags))) => {
       val parser = new ECMARegexParser(theory, flags)
-      theory.theoryFlags.regexTranslator match {
-
-        case OFlags.RegexTranslator.Hybrid =>
-          val s = parser.string2Term(str)
-          if (parser.APPROX) {
-            println("Using partial method.")
-            toBAutomaton(s, minimize)
-          }
-          else {
-            println("Using complete method.")
-            val st = new SyntacticTransformations(theory, parser)
-            val r = st(s)
-            to2AFA(r, parser)
-          }
-
-        case OFlags.RegexTranslator.Approx =>
-          println("Using partial method.")
-          val s = parser.string2Term(str)
-          toBAutomaton(s, minimize)
-
-        case OFlags.RegexTranslator.Complete =>
-          println("Using complete method.")
-          val s = parser.string2Term(str)
-          val st = new SyntacticTransformations(theory, parser)
-          val r = st(s)
-          to2AFA(r, parser)
-      }
-
-      /*
-       ***** OLD re_from_ecma2020_flags *************
-      val s = parser.string2Term(str)
-      toBAutomaton(s, minimize)
-      ***********************************************
-      */
+      regex2Automaton(parser, str, minimize)
     }
 
     case IFunApp(`re_case_insensitive`, Seq(a)) => {
