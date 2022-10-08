@@ -52,15 +52,15 @@ object OFlags {
 
 case class OFlags(
 
-                   // Pre-image specific options
-                   eagerAutomataOperations : Boolean = false,
-                   measureTimes            : Boolean = false,
-                   useLength               : OFlags.LengthOptions.Value =
+  // Pre-image specific options
+  eagerAutomataOperations : Boolean = false,
+  measureTimes            : Boolean = false,
+  useLength               : OFlags.LengthOptions.Value =
                               OFlags.LengthOptions.Auto,
-                   useParikhConstraints    : Boolean = true,
-                   forwardApprox           : Boolean = false,
-                   minimizeAutomata        : Boolean = false,
-                   regexTranslator            : OFlags.RegexTranslator.Value =
+  useParikhConstraints    : Boolean = true,
+  forwardApprox           : Boolean = false,
+  minimizeAutomata        : Boolean = false,
+  regexTranslator         : OFlags.RegexTranslator.Value =
                               OFlags.RegexTranslator.Hybrid
 
 )
