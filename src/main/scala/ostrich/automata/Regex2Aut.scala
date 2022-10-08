@@ -514,11 +514,14 @@ class Regex2Aut(theory : OstrichStringTheory) {
     println("Time for symbolic to concrete: " + duration2)
     AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
     var duration = (System.currentTimeMillis() - t1) // / 1000d
+    println("Eliminating redundant states in progress...")
+    val redConcAut = concAut.minimizeStates()
     println("Total time for regex -> 2AFA translation: " + duration)
-    println("2AFA #states: " + concAut.states.size + " #transitions: " + concAut.transitions.values.size)
+    AFA2Utils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
+    println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
 
     t1 = System.currentTimeMillis()
-    val res = NFATranslator(AFA2StateDuplicator(concAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
+    val res = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
     duration = (System.currentTimeMillis() - t1) // / 1000d
     println("Time for 2AFA -> NFA translation: " + duration)
     //println("BricsAutomaton:\n" + res)

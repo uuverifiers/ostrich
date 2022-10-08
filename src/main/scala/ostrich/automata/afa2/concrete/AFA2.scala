@@ -3,7 +3,7 @@ package ostrich.automata.afa2.concrete
 import ostrich.automata.afa2.{Left, Right, StepTransition, Transition}
 
 import scala.collection.mutable
-import scala.collection.mutable.{HashSet => MHashSet}
+import scala.collection.mutable.{ArrayBuffer, HashSet => MHashSet}
 
 //object AFA2 {
 
@@ -89,6 +89,207 @@ case class AFA2(initialStates : Seq[Int],
 
   lazy val reachableStates =
     fwdReachable & bwdReachable
+
+
+  def minimizeStates() : AFA2 = {
+
+    def minimizeStatesStep(aut: AFA2): AFA2 = {
+
+      val flatTrans = for ((st, ts) <- aut.transitions.toSeq) yield (ts.toSet, st)
+
+      // Map keeping track of eliminatedState => stateKept
+      val stateMap = mutable.HashMap[Int, Int]()
+
+      val transStateMap = flatTrans.groupBy(_._1).mapValues(l => l map (_._2))
+      println("transStateMap:\n" + transStateMap)
+      /*
+    The above map is still rough, as in the values can contain states that are final, nonfinal, noninitial, initial
+    We have to split them in group of states:
+    - plain : neither final nor initial
+    - fi : final and initial
+    - f : final
+    - i : initial
+     */
+      var plainTSM = transStateMap.mapValues(_.filter(x => !aut.initialStates.contains(x) && !aut.finalStates.contains(x)))
+      var fiTSM = transStateMap.mapValues(_.filter(x => aut.initialStates.contains(x) && aut.finalStates.contains(x)))
+      var fTSM = transStateMap.mapValues(_.filter(x => !aut.initialStates.contains(x) && aut.finalStates.contains(x)))
+      var iTSM = transStateMap.mapValues(_.filter(x => aut.initialStates.contains(x) && !aut.finalStates.contains(x)))
+
+      plainTSM = plainTSM.filter(_._2.nonEmpty)
+      fiTSM = fiTSM.filter(_._2.nonEmpty)
+      fTSM = fTSM.filter(_._2.nonEmpty)
+      iTSM = iTSM.filter(_._2.nonEmpty)
+
+      println("plainTSM:\n" + plainTSM)
+      println("fiTSM:\n" + fiTSM)
+      println("fTSM:\n" + fTSM)
+      println("iTSM:\n" + iTSM)
+
+
+      for ((_, sts) <- plainTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      for ((_, sts) <- fiTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      for ((_, sts) <- fTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      for ((_, sts) <- iTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      /* Now in the keyset of StateMap contains all and only states that has to be removed.
+    The removal strategy is the following:
+    (1) filter the transitions map with states to be removed;
+    (2) scan such reduced transitions and map the arrival states with stateMap
+     */
+      val toBeRemoved = stateMap.keySet.toSet
+      println("Removed map:\n" + stateMap)
+      println("To be removed:\n" + toBeRemoved)
+      // All other states have to be mapped to themsleves!
+      for (s <- aut.states.toSet -- toBeRemoved) stateMap += ((s, s))
+      val reducedTrans = aut.transitions.filterNot(x => toBeRemoved.contains(x._1))
+      println("Reduced trans:\n" + reducedTrans)
+      val newTrans = reducedTrans.mapValues(_.map(x => StepTransition(x.label, x.step, x.targets.map(stateMap))))
+
+      val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans)
+
+      newAut.restrictToReachableStates
+    }
+
+    def minimizeStatesStepOptimised(aut: AFA2) : AFA2 = {
+
+      //val flatTrans = for ((st, ts) <- aut.transitions.toSeq) yield (ts.toSet, st)
+      /*
+      Problem: self-transitions do not allow to easily recognise states that have the same outgoing transitions.
+      Therefore, is we have a self transition (7, StepTrans(->, [5], Seq(7))) we substitute it with
+      (7, StepTrans(->, [5], Seq(SELF))) so they can be recognised.
+       */
+      val SELF = -5
+      val aux = for ((st, ts) <- aut.transitions.toSeq) yield (ts.toSet, st)
+
+      val flatTrans = aux.map{case (transSet, state) =>
+        val selfMap: Map[Int, Int] = (for (s <- aut.states) yield (if (s==state) (s, SELF) else (s, s))).toMap
+        val newTransSet = transSet.map(x => StepTransition(x.label, x.step, x.targets.map(selfMap)))
+        (newTransSet, state)
+      }
+
+      // Map keeping track of eliminatedState => stateKept
+      val stateMap = mutable.HashMap[Int, Int]()
+
+      val transStateMap = flatTrans.groupBy(_._1).mapValues(l => l map (_._2))
+      println("transStateMap:\n" + transStateMap)
+      /*
+    The above map is still rough, as in the values can contain states that are final, nonfinal, noninitial, initial
+    We have to split them in group of states:
+    - plain : neither final nor initial
+    - fi : final and initial
+    - f : final
+    - i : initial
+     */
+      var plainTSM = transStateMap.mapValues(_.filter(x => !aut.initialStates.contains(x) && !aut.finalStates.contains(x)))
+      var fiTSM = transStateMap.mapValues(_.filter(x => aut.initialStates.contains(x) && aut.finalStates.contains(x)))
+      var fTSM = transStateMap.mapValues(_.filter(x => !aut.initialStates.contains(x) && aut.finalStates.contains(x)))
+      var iTSM = transStateMap.mapValues(_.filter(x => aut.initialStates.contains(x) && !aut.finalStates.contains(x)))
+
+      plainTSM = plainTSM.filter(_._2.nonEmpty)
+      fiTSM = fiTSM.filter(_._2.nonEmpty)
+      fTSM = fTSM.filter(_._2.nonEmpty)
+      iTSM = iTSM.filter(_._2.nonEmpty)
+
+      println("plainTSM:\n" + plainTSM)
+      println("fiTSM:\n" + fiTSM)
+      println("fTSM:\n" + fTSM)
+      println("iTSM:\n" + iTSM)
+
+
+      for ((_, sts) <- plainTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      for ((_, sts) <- fiTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      for ((_, sts) <- fTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      for ((_, sts) <- iTSM) {
+        val statesIt = sts.iterator
+        // This is the only states that is kept, there is at least one
+        val uniqueSt = statesIt.next()
+        // Build the map of states that has to be eliminated as key and the replacement as value
+        while (statesIt.hasNext) stateMap += ((statesIt.next(), uniqueSt))
+      }
+
+      /* Now in the keyset of StateMap contains all and only states that has to be removed.
+    The removal strategy is the following:
+    (1) filter the transitions map with states to be removed;
+    (2) scan such reduced transitions and map the arrival states with stateMap
+     */
+      val toBeRemoved = stateMap.keySet.toSet
+      println("Removed map:\n" + stateMap)
+      println("To be removed:\n" + toBeRemoved)
+      // All other states have to be mapped to themsleves!
+      for (s <- aut.states.toSet--toBeRemoved) stateMap += ((s, s))
+      val reducedTrans = aut.transitions.filterNot(x => toBeRemoved.contains(x._1))
+      println("Reduced trans:\n" + reducedTrans)
+      val newTrans = reducedTrans.mapValues(_.map(x => StepTransition(x.label, x.step, x.targets.map(stateMap))))
+
+      val newTransConverted = newTrans.map{ case (st, ts) =>
+        val newTS = ts.map(x => StepTransition(x.label, x.step, x.targets.map(x => {if (x==SELF) st else x}) ))
+        (st, newTS)
+      }
+
+      val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans)
+
+      newAut.restrictToReachableStates
+    }
+
+
+    var oldAut = this
+    var newAut = minimizeStatesStep(oldAut)
+    while (newAut.states.size != oldAut.states.size) {
+      oldAut = newAut
+      newAut = minimizeStatesStep(oldAut)
+    }
+    newAut
+
+  }
+
 
   def restrictToReachableStates : AFA2 =
     if (reachableStates.size == states.size) {
