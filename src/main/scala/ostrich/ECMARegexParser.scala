@@ -156,6 +156,14 @@ class ECMARegexParser(theory : OstrichStringTheory,
       Console.err.println("Warning: ignoring look-behind")
       if (negative) NONE else EPS
     }
+    case IFunApp(NegLookAhead, _) => {
+      Console.err.println("Warning: ignoring look-ahead")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(NegLookBehind, _) => {
+      Console.err.println("Warning: ignoring look-behind")
+      if (negative) NONE else EPS
+    }
     case IFunApp(WordBoundary, _) => {
       Console.err.println("Warning: ignoring anchor \\b")
       if (negative) NONE else EPS
@@ -199,7 +207,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
         val lookAheads = midTerms takeWhile {
           case IFunApp(`re_begin_anchor` | `re_end_anchor` |
-                         LookAhead | WordBoundary | NonWordBoundary, _)
+                         LookAhead | NegLookAhead | WordBoundary | NonWordBoundary, _)
               => true
           case _
               => false
@@ -209,7 +217,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
         val newEnd = midTerms lastIndexWhere {
           case IFunApp(`re_begin_anchor` | `re_end_anchor` |
-                         LookBehind | WordBoundary | NonWordBoundary, _)
+                         LookBehind | NegLookBehind | WordBoundary | NonWordBoundary, _)
               => false
           case _
               => true
@@ -226,6 +234,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
                            EPS
                          case IFunApp(LookAhead, Seq(t)) =>
                            t
+                         case IFunApp(NegLookAhead, Seq(t)) =>
+                           t
                          case IFunApp(WordBoundary, _) =>
                            re_++(word, ALL)
                          case IFunApp(NonWordBoundary, _) =>
@@ -237,6 +247,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
                          case IFunApp(`re_end_anchor`, _) =>
                            ALL
                          case IFunApp(LookBehind, Seq(t)) =>
+                           t
+                         case IFunApp(NegLookBehind, Seq(t)) =>
                            t
                          case IFunApp(WordBoundary, _) =>
                            re_++(ALL, word)
