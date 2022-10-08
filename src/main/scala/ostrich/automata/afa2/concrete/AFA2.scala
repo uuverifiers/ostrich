@@ -101,7 +101,7 @@ case class AFA2(initialStates : Seq[Int],
       val stateMap = mutable.HashMap[Int, Int]()
 
       val transStateMap = flatTrans.groupBy(_._1).mapValues(l => l map (_._2))
-      println("transStateMap:\n" + transStateMap)
+      //println("transStateMap:\n" + transStateMap)
       /*
     The above map is still rough, as in the values can contain states that are final, nonfinal, noninitial, initial
     We have to split them in group of states:
@@ -120,10 +120,10 @@ case class AFA2(initialStates : Seq[Int],
       fTSM = fTSM.filter(_._2.nonEmpty)
       iTSM = iTSM.filter(_._2.nonEmpty)
 
-      println("plainTSM:\n" + plainTSM)
-      println("fiTSM:\n" + fiTSM)
-      println("fTSM:\n" + fTSM)
-      println("iTSM:\n" + iTSM)
+      //println("plainTSM:\n" + plainTSM)
+      //println("fiTSM:\n" + fiTSM)
+      //println("fTSM:\n" + fTSM)
+      //println("iTSM:\n" + iTSM)
 
 
       for ((_, sts) <- plainTSM) {
@@ -164,12 +164,12 @@ case class AFA2(initialStates : Seq[Int],
     (2) scan such reduced transitions and map the arrival states with stateMap
      */
       val toBeRemoved = stateMap.keySet.toSet
-      println("Removed map:\n" + stateMap)
-      println("To be removed:\n" + toBeRemoved)
+      //println("Removed map:\n" + stateMap)
+      //println("To be removed:\n" + toBeRemoved)
       // All other states have to be mapped to themsleves!
       for (s <- aut.states.toSet -- toBeRemoved) stateMap += ((s, s))
       val reducedTrans = aut.transitions.filterNot(x => toBeRemoved.contains(x._1))
-      println("Reduced trans:\n" + reducedTrans)
+      //println("Reduced trans:\n" + reducedTrans)
       val newTrans = reducedTrans.mapValues(_.map(x => StepTransition(x.label, x.step, x.targets.map(stateMap))))
 
       val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans)
