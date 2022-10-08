@@ -219,6 +219,8 @@ object Regex2Aut {
 
        */
 
+      case IFunApp(`re_opt`, Seq(t)) => IFunApp(`re_union`, Seq(IFunApp(`re_eps`, Seq()), transformNF(t)))
+
       case IFunApp(`re_begin_anchor`, Seq()) => transformNF(IFunApp(parser.NegLookBehind, Seq(re_all())), reverse)
 
       case IFunApp(`re_end_anchor`, _) => transformNF(IFunApp(parser.NegLookAhead, Seq(re_all())), reverse)
@@ -315,7 +317,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
       case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
         builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toSymbMutableAFA2(dir, t))
 
-      case _ => throw new RuntimeException("This shouldn't happen!")
+      case t => throw new RuntimeException("This shouldn't happen!\n" + t)
     }
   }
 
