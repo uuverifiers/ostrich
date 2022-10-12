@@ -504,26 +504,26 @@ class Regex2Aut(theory : OstrichStringTheory) {
     val epsRed = new SymbEpsReducer(theory, aut)
     val reducedAut = epsRed.afa
     var duration2 = (System.currentTimeMillis() - t2) / 1000d
-    println("Time for eps-reduction: " + duration2)
+    //println("Time for eps-reduction: " + duration2)
 
     //throw new RuntimeException("Stop here.")
     t2 = System.currentTimeMillis()
     val transl = new SymbToConcTranslator(reducedAut)
     val concAut = transl.forth()
     duration2 = (System.currentTimeMillis() - t2) // / 1000d
-    println("Time for symbolic to concrete: " + duration2)
+    //println("Time for symbolic to concrete: " + duration2)
     AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
     var duration = (System.currentTimeMillis() - t1) // / 1000d
-    println("Eliminating redundant states in progress...")
+    //println("Eliminating redundant states in progress...")
     val redConcAut = concAut.minimizeStates()
-    println("Total time for regex -> 2AFA translation: " + duration)
+    //println("Total time for regex -> 2AFA translation: " + duration)
     AFA2Utils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
-    println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
+    //println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
 
     t1 = System.currentTimeMillis()
     val res = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
     duration = (System.currentTimeMillis() - t1) // / 1000d
-    println("Time for 2AFA -> NFA translation: " + duration)
+    //println("Time for 2AFA -> NFA translation: " + duration)
     //println("BricsAutomaton:\n" + res)
     res
     /* -----------Concrete case---------------
@@ -549,27 +549,30 @@ class Regex2Aut(theory : OstrichStringTheory) {
       theory.theoryFlags.regexTranslator match {
 
         case OFlags.RegexTranslator.Hybrid => {
-          val (s, incomplete) = parser.string2TermWithReduction(str)
+          val (s, incomplete) =
+            Console.withErr(ap.CmdlMain.NullStream) {
+              parser.string2TermWithReduction(str)
+            }
           if (incomplete) {
-            println("Using complete method.")
+            //println("Using complete method.")
             val s2 = parser.string2TermExact(str)
             val st = new SyntacticTransformations(theory, parser)
             val r = st(s2)
             to2AFA(r, parser)
           } else {
-            println("Partial method is exact, using it.")
+            //println("Partial method is exact, using it.")
             toBAutomaton(s, minimize)
           }
         }
 
         case OFlags.RegexTranslator.Approx => {
-          println("Using partial method.")
+          //println("Using partial method.")
           val (s, _) = parser.string2TermWithReduction(str)
           toBAutomaton(s, minimize)
         }
 
         case OFlags.RegexTranslator.Complete => {
-          println("Using complete method.")
+          //println("Using complete method.")
           val s = parser.string2TermExact(str)
           val st = new SyntacticTransformations(theory, parser)
           val r = st(s)
