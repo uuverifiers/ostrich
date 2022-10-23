@@ -46,9 +46,11 @@ trait AtomConstraint {
 
   def product(that: AtomConstraint): AtomConstraint
 
+  def getUnderApprox: Formula
+
   def getOverApprox: Formula
 
-  def getLinearAbs: Formula
+  def getCompleteLIA: Formula
 
   def getRegsRelation: Formula
 
@@ -61,8 +63,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     new UnaryHeuristicAC(that.aut & aut)
   }
 
-  def getOverApprox: Formula = {
-    println("unary over-approximation------------------")
+  def getUnderApprox: Formula = {
     val n = aut.states.size
     val concreteLenBound = if (n > 10) 100 else n * n + 10;
     val s = computeS(concreteLenBound)
@@ -79,9 +80,9 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     )
   }
 
+  def getOverApprox: Formula = Conjunction.TRUE
   def getRegsRelation: Formula = aut.getRegsRelation
-  def getLinearAbs: Formula = {
-    println("unary ---------------------------------------------")
+  def getCompleteLIA: Formula = {
     val n = states.size
     val rLen = registers.size
     val concreteLen = 2 * n * n + n
@@ -219,15 +220,16 @@ class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
   def product(that: AtomConstraint): AtomConstraint = {
     new ParikhAC(aut & that.aut)
   }
-  def getOverApprox: Formula = Conjunction.FALSE
+  def getUnderApprox: Formula = Conjunction.FALSE
 
+  def getOverApprox: Formula = Conjunction.TRUE
+  
   def getRegsRelation: Formula = aut.getRegsRelation
 
   /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
     * Encode the formula of registers meanwhile.
     */
-  def getLinearAbs: Formula = {
-    println("parikh ---------------------------------")
+  def getCompleteLIA: Formula = {
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       aut.outgoingTransitions(from).foreach { case (to, lbl) =>

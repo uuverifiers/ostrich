@@ -54,6 +54,7 @@ import ostrich.parikh.CostEnrichedConvenience
 import ostrich.parikh.core.AtomConstraints
 import ostrich.parikh.core.AtomConstraintsSolver
 import ostrich.parikh.Config
+import ostrich.parikh.ParikhExploration.Approx
 
 object OstrichSolver {
 
@@ -324,17 +325,6 @@ class OstrichSolver(theory : OstrichStringTheory,
           None
 
       val exploration =
-        if(Config.useCostEnriched)
-          Exploration.parikhExp(
-            funApps.toSeq,
-            regexes.toSeq,
-            strDatabase,
-            lProver,
-            lengthVars.toMap,
-            useLength,
-            flags
-          )
-        else 
         if (eagerMode)
           Exploration.eagerExp(
             funApps.toSeq,
@@ -349,7 +339,26 @@ class OstrichSolver(theory : OstrichStringTheory,
           Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
-      val result = exploration.findModel
+      // val result = exploration.findModel
+      val result = if(Config.useCostEnriched){
+        // first use under-approximation to find a model
+        // then if under unsat, use over-approximation to check unsat
+        // if over sat and under unsat, then use completeExp(slowest)
+        val underApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("under"))
+        val overApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("over"))
+        val completeExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("no"))
+        val underRes = underApproxExp.findModel
+        if(underRes.isDefined){
+          underRes
+        } else {
+          val overRes = overApproxExp.findModel
+          if(overRes.isDefined){
+            overRes
+          } else {
+            completeExp.findModel
+          }
+        }
+      } else exploration.findModel
 
       ////////////////////////////////////////////////////////////////////////////
       // Verify that the result satisfies all constraints that could

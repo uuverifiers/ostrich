@@ -81,24 +81,28 @@ object ParikhExploration {
     }
     model
   }
+
+  case class Approx(val approx: String){
+    override def toString = approx
+    def isOverApprox = approx == "over"
+    def isUnderApprox = approx == "under"
+    def isNoApprox = approx == "no"
+  }
 }
 
 class ParikhExploration(
     _funApps: Seq[(PreOp, Seq[Term], Term)],
     _initialConstraints: Seq[(Term, Automaton)],
     _strDatabase: StrDatabase,
-    _lengthProver: Option[SimpleAPI],
-    _lengthVars: Map[Term, Term],
-    _strictLengths: Boolean,
-    _flags: OFlags
+    _approx: ParikhExploration.Approx
 ) extends Exploration(
       _funApps,
       _initialConstraints,
       _strDatabase,
-      _lengthProver,
-      _lengthVars,
-      _strictLengths,
-      _flags
+      None, // lengthProver
+      Map(), // lengthVars 
+      true, // strictLengths
+      OFlags(), // flags
     ) {
 
   import Exploration._
@@ -164,6 +168,11 @@ class ParikhExploration(
         println(s"--Timeout: $time s")
         System.exit(0)
         None
+      case e: Exception =>
+        println("--Exception: " + e)
+        e.printStackTrace()
+        System.exit(0)
+        None
     }
   }
 
@@ -185,7 +194,7 @@ class ParikhExploration(
           Config.lengthAbsStrategy match {
             case Catra()  => new CatraBasedSolver
             case Parikh() => new LinearAbstractionSolver
-            case Unary()  => new LinearAbstractionSolver
+            case Unary()  => new LinearAbstractionSolver(_approx)
           }
 
         backendSolver.setInterestTerm(integerTerm)

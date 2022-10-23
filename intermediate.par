@@ -1,22 +1,77 @@
-counter int S;
+counter int all_2_1, o4, all_2_6, all_2_8, R4, o3, all_2_4, o2, R1, all_2_5, R2, IPAddr, o1, all_2_7, all_2_2, all_2_0, R3, all_2_3;
 synchronised {
-automaton aut_S0 {
+automaton aut_o30 {
 	init s0;
-	s0 -> s1 [0, 65535] {};
-	s1 -> s2 [95, 95] {};
-	s2 -> s3 [95, 95] {};
-	s3 -> s4 [95, 95] {};
-	s4 -> s5 [95, 95] {};
-	s5 -> s6 [95, 95] {};
-	s6 -> s7 [95, 95] {};
-	s7 -> s8 [0, 65535] {};
-	s8 -> s9 [112, 112] {};
-	s9 -> s10 [112, 112] {};
-	s10 -> s11 [112, 112] {};
-	s11 -> s12 [112, 112] {};
-	s12 -> s13 [112, 112] {};
-	s13 -> s14 [112, 112] {};
-	accepting s14;
+	s0 -> s0 [0, 65535] {R2 += 1};
+	accepting s0;
+};
+automaton aut_o31 {
+	init s1;
+	s0 -> s0 [48, 50] {};
+	s1 -> s0 [48, 57] {};
+	accepting s0;
 };
 };
-constraint true;
+synchronised {
+automaton aut_o40 {
+	init s0;
+	s0 -> s0 [0, 65535] {R1 += 1};
+	accepting s0;
+};
+automaton aut_o41 {
+	init s0;
+	s0 -> s0 [48, 50] {};
+	accepting s0;
+};
+};
+synchronised {
+automaton aut_o10 {
+	init s0;
+	s0 -> s0 [0, 65535] {R4 += 1};
+	accepting s0;
+};
+automaton aut_o11 {
+	init s12;
+	s0 -> s16 [48, 57] {};
+	s1 -> s3 [48, 57] {};
+	s2 -> s6 [48, 57] {};
+	s3 -> s3 [46, 46] {};
+	s3 -> s3 [48, 57] {};
+	s4 -> s10 [46, 46] {};
+	s4 -> s7 [48, 50] {};
+	s4 -> s4 [51, 57] {};
+	s5 -> s15 [51, 57] {};
+	s5 -> s2 [48, 50] {};
+	s6 -> s10 [46, 46] {};
+	s6 -> s3 [48, 57] {};
+	s7 -> s10 [46, 46] {};
+	s7 -> s6 [48, 57] {};
+	s8 -> s14 [48, 50] {};
+	s8 -> s5 [51, 57] {};
+	s9 -> s8 [48, 57] {};
+	s10 -> s9 [48, 57] {};
+	s11 -> s0 [48, 57] {};
+	s12 -> s12 [48, 50] {};
+	s12 -> s11 [46, 46] {};
+	s13 -> s10 [46, 46] {};
+	s13 -> s13 [48, 57] {};
+	s14 -> s1 [48, 57] {};
+	s15 -> s7 [48, 50] {};
+	s15 -> s4 [51, 57] {};
+	s16 -> s13 [48, 57] {};
+	accepting s3;
+};
+};
+synchronised {
+automaton aut_o20 {
+	init s0;
+	s0 -> s0 [0, 65535] {R3 += 1};
+	accepting s0;
+};
+automaton aut_o21 {
+	init s0;
+	s0 -> s0 [48, 50] {};
+	accepting s0;
+};
+};
+constraint (R4 + -1*all_2_3 = 0 && R3 + -1*all_2_2 = 0 && R2 + -1*all_2_1 = 0 && R1 + -1 = 0 && all_2_1 + -1 >= 0 && -1*all_2_2 + 3 >= 0 && all_2_2 + -1 >= 0 && -1*all_2_3 + 3 >= 0 && all_2_3 + -1 >= 0);

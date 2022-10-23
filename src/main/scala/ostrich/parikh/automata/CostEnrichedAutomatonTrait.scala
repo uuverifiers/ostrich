@@ -158,8 +158,6 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   ): Iterator[(State, TLabel, Seq[Int], Term)] = for (
     (t, lbl) <- outgoingTransitions(s)
   ) yield {
-  if(!etaMap.contains((s, lbl, t)))
-    println("hhh")
   (t, lbl, etaMap((s, lbl, t)), transTermMap((s, lbl, t)))
   }
 
@@ -177,8 +175,6 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     */
   def transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
     transitions.map { case (s, lbl, t) =>
-      if (!transTermMap.contains(s, lbl, t))
-        println("hhh")
       (s, lbl, t, transTermMap((s, lbl, t)))
     }
 

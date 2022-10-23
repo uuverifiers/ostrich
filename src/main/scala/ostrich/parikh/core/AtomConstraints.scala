@@ -81,9 +81,11 @@ trait AtomConstraints {
 
   def getAutomata = atoms.map(_.aut)
 
+  def getUnderApprox: Formula = productAtom.getUnderApprox
+
   def getOverApprox: Formula = productAtom.getOverApprox
 
-  def getLinearAbs: Formula = productAtom.getLinearAbs
+  def getCompleteLIA: Formula = productAtom.getCompleteLIA
 
   def getRegsRelation: Formula = conj(atoms.map(_.getRegsRelation))
 

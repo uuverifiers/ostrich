@@ -37,6 +37,8 @@ import ap.parameters.Param
 import ap.parameters.GlobalSettings
 import ostrich.OstrichMain
 import ostrich.parikh.util.TimeoutException
+import ostrich.OFlags
+import ostrich.parikh.ParikhExploration.Approx
 
 object AtomConstraintsSolver {
   var initialLIA: Formula = Conjunction.TRUE
@@ -65,9 +67,10 @@ trait AtomConstraintsSolver {
 
   def solve: Result
 
-  def measureTimeSolve: Result = measure(s"${this.getClass.getSimpleName}::solve") {
-    solve
-  }
+  def measureTimeSolve: Result =
+    measure(s"${this.getClass.getSimpleName}::solve") {
+      solve
+    }
 
   protected var constraints: Seq[AtomConstraints] = Seq()
 
@@ -91,29 +94,28 @@ trait AtomConstraintsSolver {
 
 }
 
-class LinearAbstractionSolver extends AtomConstraintsSolver {
+class LinearAbstractionSolver(val approx: Approx = Approx("no")) extends AtomConstraintsSolver {
 
-  def solve: Result = {
-    // Sometimes computation of linear abstraction is very expensive
-    // So we thy to find a model with less constraints(over-approximation) first
-    // Improve me !! (maybe currently compute approximation and linear abstraction)
-    val approxRes = solveOverApprox
-    approxRes.getStatus match {
-      case ProverStatus.Sat => approxRes
-      case _                => solveLinearAbs
-    }
-  }
+  def solve: Result = 
+    if (approx.isUnderApprox) solveUnderApprox
+    else if (approx.isOverApprox) solveOverApprox
+    else solveCompleteLIA
 
-  def solveOverApprox: Result = solveFixedFormula(
+  def solveUnderApprox: Result = solveFormula(
+    conj(constraints.map(_.getUnderApprox))
+  )
+
+  def solveOverApprox: Result = solveFormula(
     conj(constraints.map(_.getOverApprox))
   )
 
-  def solveLinearAbs: Result = solveFixedFormula(
-    conj(constraints.map(_.getLinearAbs))
+  def solveCompleteLIA: Result = solveFormula(
+    conj(constraints.map(_.getCompleteLIA))
   )
 
-  def solveFixedFormula(f: Formula): Result = {
+  def solveFormula(f: Formula): Result = {
     import AtomConstraints.evalTerm
+    val (setting, _) = GlobalSettings.fromArguments(OstrichMain.arguments)
     val res = new Result
     SimpleAPI.withProver { p =>
       p setConstructProofs true
@@ -123,7 +125,9 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
 
       p addConstantsRaw initialConstTerms
       p addAssertion finalArith
-      val status = measure(s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel") {
+      val status = measure(
+        s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
+      ) {
         p.???
       }
       status match {
@@ -132,7 +136,9 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
           // update string model
           for (singleString <- constraints) {
             singleString.setInterestTermModel(partialModel)
-            val value = measure(s"${this.getClass.getSimpleName}::findStringModel")(singleString.getModel)
+            val value = measure(
+              s"${this.getClass.getSimpleName}::findStringModel"
+            )(singleString.getModel)
             res.updateModel(singleString.strId, value)
           }
           // update integer model
@@ -152,11 +158,11 @@ class LinearAbstractionSolver extends AtomConstraintsSolver {
 
 // TODO: Encode the final atom constraints to catra input format,
 // and then call catra to solve the constraints
-class CatraBasedSolver extends AtomConstraintsSolver {
+class CatraBasedSolver(val approx: Approx = Approx("no"))
+    extends AtomConstraintsSolver {
 
   lazy val automatas: Seq[Seq[CostEnrichedAutomatonTrait]] =
     constraints.map(_.getAutomata)
-
 
   def runInstances(arguments: CommandLineOptions): Try[CatraResult] = {
     // only run one file
@@ -167,20 +173,21 @@ class CatraBasedSolver extends AtomConstraintsSolver {
     val parsed = measure(s"${this.getClass().getSimpleName()}::parsed")(
       InputFileParser.parse(fileContents)
     )
-    val result = measure(s"${this.getClass().getSimpleName()}::findRegistersModel") {
-      parsed match {
-        case Parsed.Success(instance, _) =>
-          instance.validate() match {
-            case Valid => runInstance(instance, arguments)
-            case Invalid(motivation) =>
-              Failure(new Exception(s"Invalid input: $motivation"))
-          }
-        case Parsed.Failure(expected, _, extra) =>
-          Console.err.println(s"E: parse error $expected")
-          Console.err.println(s"E: ${extra.trace().longMsg}")
-          Failure(new Exception(s"parse error: ${extra.trace().longMsg}"))
+    val result =
+      measure(s"${this.getClass().getSimpleName()}::findRegistersModel") {
+        parsed match {
+          case Parsed.Success(instance, _) =>
+            instance.validate() match {
+              case Valid => runInstance(instance, arguments)
+              case Invalid(motivation) =>
+                Failure(new Exception(s"Invalid input: $motivation"))
+            }
+          case Parsed.Failure(expected, _, extra) =>
+            Console.err.println(s"E: parse error $expected")
+            Console.err.println(s"E: ${extra.trace().longMsg}")
+            Failure(new Exception(s"parse error: ${extra.trace().longMsg}"))
+        }
       }
-    }
     result
   }
 
@@ -198,7 +205,9 @@ class CatraBasedSolver extends AtomConstraintsSolver {
     val lia = conj(initialLIA +: constraints.map(_.getRegsRelation))
     val allIntTerms = (interestTerms ++ constraints.flatMap(
       _.interestTerms
-    ) ++ initialConstTerms ++ SymbolCollector.constants(lia)).filterNot(_.isInstanceOf[LinearCombination]).toSet
+    ) ++ initialConstTerms ++ SymbolCollector.constants(lia))
+      .filterNot(_.isInstanceOf[LinearCombination])
+      .toSet
     sb.append(allIntTerms.mkString(", "))
     sb.append(";\n")
     sb.toString()
@@ -286,7 +295,9 @@ class CatraBasedSolver extends AtomConstraintsSolver {
         // update string model
         for (singleString <- constraints) {
           singleString.setInterestTermModel(termModel)
-          val value = measure(s"${this.getClass().getSimpleName()}::findStringModel")(singleString.getModel)
+          val value = measure(
+            s"${this.getClass().getSimpleName()}::findStringModel"
+          )(singleString.getModel)
           result.updateModel(singleString.strId, value)
         }
         for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
@@ -312,10 +323,9 @@ class CatraBasedSolver extends AtomConstraintsSolver {
     val writer = new CatraWriter(interFlie)
     writer.write(toCatraInput)
     writer.close()
-    val (setting, _) = GlobalSettings.fromArguments(OstrichMain.arguments)
     val arguments = CommandLineOptions(
       inputFiles = Seq(interFlie),
-      timeout_ms = Some(Param.TIMEOUT(setting)),
+      timeout_ms = Some(OFlags.timeout),
       trace = false,
       printDecisions = false,
       dumpSMTDir = None,
@@ -330,7 +340,9 @@ class CatraBasedSolver extends AtomConstraintsSolver {
       enableClauseLearning = true,
       enableRestarts = true
     )
-    val catraRes = measure(s"${this.getClass().getSimpleName()}::findIntegerModel")(runInstances(arguments))
+    val catraRes = measure(
+      s"${this.getClass().getSimpleName()}::findIntegerModel"
+    )(runInstances(arguments))
     var result = new Result
     catraRes match {
       case Success(_catraRes) =>

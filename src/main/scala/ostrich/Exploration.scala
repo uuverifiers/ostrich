@@ -51,6 +51,7 @@ import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
 import ostrich.parikh.ParikhExploration
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
+import ParikhExploration.Approx
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)
@@ -125,12 +126,9 @@ object Exploration {
   def parikhExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
                strDatabase : StrDatabase,
-               lengthProver : Option[SimpleAPI],
-               lengthVars : Map[Term, Term],
-               strictLengths : Boolean,
-               flags : OFlags) : Exploration =
-    new ParikhExploration(funApps, initialConstraints, strDatabase,
-                         lengthProver, lengthVars, strictLengths, flags)
+               approx : Approx,
+               ) : Exploration =
+    new ParikhExploration(funApps, initialConstraints, strDatabase, approx)
 
   case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
           extends Exception
@@ -826,49 +824,45 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       }
     }
 
-    def assertConstraint(aut : Automaton) : Option[ConflictSet] =
-      if (constraintSet contains aut) {
-        println("contain")
-        None
-      } else {
-        var potentialConflicts =
-          (watchedAutomata get aut) match {
-            case Some(incAuts) => {
-              // need to find new watched automata for the found conflicts
-              watchedAutomata -= aut
-              incAuts
-            }
-            case None =>
-              List()
+    def assertConstraint(aut : Automaton) : Option[ConflictSet] = {
+      var potentialConflicts =
+        (watchedAutomata get aut) match {
+          case Some(incAuts) => {
+            // need to find new watched automata for the found conflicts
+            watchedAutomata -= aut
+            incAuts
           }
-
-        while (!potentialConflicts.isEmpty) {
-          val autInd = potentialConflicts.head
-
-          if (!watchAutomata(inconsistentAutomata(autInd), autInd)) {
-            // constraints have become inconsistent!
-            watchedAutomata.put(aut, potentialConflicts)
-            // println("Stored conflict applies!")
-            return Some(for (a <- inconsistentAutomata(autInd).toList)
-                        yield TermConstraint(t, a))
-          }
-
-          potentialConflicts = potentialConflicts.tail
+          case None =>
+            List()
         }
 
-        measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints.toSeq, aut) } match {
-          case Some(core) => {
-            addIncAutomata(core)
-            Some(for (a <- core.toList) yield TermConstraint(t, a))
-          }
-          case None => {
-            constraints += aut
-            constraintSet += aut
-            val c = TermConstraint(t, aut)
-            addLengthConstraint(c, List(c))
-            None
-          }
+      while (!potentialConflicts.isEmpty) {
+        val autInd = potentialConflicts.head
+
+        if (!watchAutomata(inconsistentAutomata(autInd), autInd)) {
+          // constraints have become inconsistent!
+          watchedAutomata.put(aut, potentialConflicts)
+          // println("Stored conflict applies!")
+          return Some(for (a <- inconsistentAutomata(autInd).toList)
+                      yield TermConstraint(t, a))
         }
+
+        potentialConflicts = potentialConflicts.tail
+      }
+
+      measure("AutomataUtils.findUnsatCore") { AutomataUtils.findUnsatCore(constraints.toSeq, aut) } match {
+        case Some(core) => {
+          addIncAutomata(core)
+          Some(for (a <- core.toList) yield TermConstraint(t, a))
+        }
+        case None => {
+          constraints += aut
+          constraintSet += aut
+          val c = TermConstraint(t, aut)
+          addLengthConstraint(c, List(c))
+          None
+        }
+      }
       }
 
     def getContents : List[Automaton] =

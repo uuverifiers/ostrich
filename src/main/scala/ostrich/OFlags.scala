@@ -32,6 +32,9 @@
 
 package ostrich
 
+import ap.parameters.GlobalSettings
+import ap.parameters.Param
+
 object OFlags {
 
   object LengthOptions extends Enumeration {
@@ -42,6 +45,10 @@ object OFlags {
     * throughout the theory.
     */
   protected[ostrich] val debug = false
+
+  val (setting, _) = GlobalSettings.fromArguments(OstrichMain.arguments)
+
+  val timeout = Param.TIMEOUT(setting)
 }
 
 case class OFlags(
