@@ -26,3 +26,6 @@ ecma2020/target
 
 # logs
 *.log
+
+#experiment
+experiment
