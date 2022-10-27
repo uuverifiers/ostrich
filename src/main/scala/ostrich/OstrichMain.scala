@@ -37,17 +37,16 @@ import ostrich.parikh.Config
   */
 object OstrichMain extends App {
 
-  val arguments = super.args
-
   val version = "unstable build (Princess: " + ap.CmdlMain.version + ")"
 
   /** The options forwarded to Princess. They will be overwritten by options
     * specified on the command line, so it is possible to provide more specific
     * string solver options on the command line.
     */
-  val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
+  val options = List()
 
   ap.CmdlMain.main((options ++ args).toArray)
+  ap.CmdlMain.stackTraces = true
   if (Config.measureTime)
     println(ap.util.Timer.toString())
 

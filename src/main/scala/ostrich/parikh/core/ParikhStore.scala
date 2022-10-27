@@ -7,7 +7,6 @@ import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.Config.{productStrategy, SyncSubstr, BasicProduct}
 import ap.terfor.Formula
 import ostrich.automata.AtomicStateAutomatonAdapter
 import Exploration._

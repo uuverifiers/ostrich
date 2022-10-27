@@ -38,7 +38,7 @@ class LengthCEPreOp(length: Term) extends CEPreOp {
     val registers = Seq(RegisterTerm())
     builder.prependRegisters(registers)
     // intFormula : r0 === `length`
-    builder.addNewIntFormula(registers(0) === length)
+    builder.addRegsRelation(registers(0) === length)
     (Iterator(Seq(builder.getAutomaton)), Seq())
   }
 

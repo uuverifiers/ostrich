@@ -46,9 +46,7 @@ object OFlags {
     */
   protected[ostrich] val debug = false
 
-  val (setting, _) = GlobalSettings.fromArguments(OstrichMain.arguments)
-
-  val timeout = Param.TIMEOUT(setting)
+  val timeout = 60000
 }
 
 case class OFlags(

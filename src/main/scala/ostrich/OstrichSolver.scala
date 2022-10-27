@@ -51,8 +51,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.CostEnrichedConvenience
-import ostrich.parikh.core.AtomConstraints
-import ostrich.parikh.core.AtomConstraintsSolver
+import ostrich.parikh.core.FinalConstraints
+import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.Config
 import ostrich.parikh.ParikhExploration.Approx
 
@@ -300,8 +300,8 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
-    AtomConstraintsSolver.initialLIA = goal.facts.arithConj
-    AtomConstraintsSolver.initialConstTerms = order sort order.orderedConstants
+    FinalConstraintsSolver.initialLIA = goal.facts.arithConj
+    FinalConstraintsSolver.initialConstTerms = order sort order.orderedConstants
     
     SimpleAPI.withProver { lengthProver =>
       val lProver =
@@ -324,7 +324,29 @@ class OstrichSolver(theory : OstrichStringTheory,
         } else
           None
 
-      val exploration =
+      
+
+      // val result = exploration.findModel
+      val result = if(Config.useCostEnriched){
+        // first use under-approximation to find a model
+        // then if under unsat, use over-approximation to check unsat
+        // if over sat and under unsat, then use completeExp(slowest)
+        val underApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("under"))
+        val underRes = underApproxExp.findModel
+        if(underRes.isDefined){
+          underRes
+        } else {
+          val overApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("over"))
+          val overRes = overApproxExp.findModel
+          if(!overRes.isDefined){
+            overRes
+          } else {
+            val completeExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("no"))
+            completeExp.findModel
+          }
+        }
+      } else {
+        val exploration =
         if (eagerMode)
           Exploration.eagerExp(
             funApps.toSeq,
@@ -338,27 +360,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         else
           Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
-
-      // val result = exploration.findModel
-      val result = if(Config.useCostEnriched){
-        // first use under-approximation to find a model
-        // then if under unsat, use over-approximation to check unsat
-        // if over sat and under unsat, then use completeExp(slowest)
-        val underApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("under"))
-        val overApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("over"))
-        val completeExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("no"))
-        val underRes = underApproxExp.findModel
-        if(underRes.isDefined){
-          underRes
-        } else {
-          val overRes = overApproxExp.findModel
-          if(overRes.isDefined){
-            overRes
-          } else {
-            completeExp.findModel
-          }
-        }
-      } else exploration.findModel
+        exploration.findModel
+      }
 
       ////////////////////////////////////////////////////////////////////////////
       // Verify that the result satisfies all constraints that could

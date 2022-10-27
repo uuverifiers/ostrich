@@ -26,6 +26,9 @@ import scala.collection.mutable.ArrayBuffer
 import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.ArrayStack
 import ostrich.parikh._
+import ap.terfor.TerForConvenience._
+import TermGeneratorOrder._
+
 object CostEnrichedAutomaton {
 
   type State = CostEnrichedAutomaton#State
@@ -136,6 +139,20 @@ class CostEnrichedAutomaton(
 
   def removeDeadTransitions(): Unit = 
     underlying.removeDeadTransitions()
+
+  def removeDuplicatedReg(): Unit = {
+    val vectorsT = etaMap.map(_._2).transpose.zipWithIndex
+    val vectorsPatition = vectorsT.groupBy(_._1)
+    val deplicatedRegs = vectorsPatition.filter(_._2.size > 1).map{case (v, v2i) => v2i.map(_._2)}
+    deplicatedRegs.foreach{regidxs =>
+      val baseidx = regidxs.head
+      regidxs.tail.foreach{idx =>
+        regsRelation = conj(regsRelation, (registers(baseidx) === registers(idx)))
+        registers = registers.take(idx) ++ registers.drop(idx+1)  // delete element at idx
+        etaMap = etaMap.map{case (t, v) => (t, v.take(idx) ++ v.drop(idx+1))} // delete corresponding update
+      }
+    }
+  }
   
   override def toString: String = {
     val state2Int = states.zipWithIndex.toMap

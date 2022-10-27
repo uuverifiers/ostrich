@@ -18,12 +18,12 @@ object ConcatCEPreOp extends CEPreOp {
     val leftRegs = concatLeft.getRegisters
     val rightRegs = concatRight.getRegisters
     val resultRegs = result.getRegisters
-    val regsRelation = conj(leftRegs.zipWithIndex.map { case (reg, i) =>
+    val derivedRegsRelation = conj(leftRegs.zipWithIndex.map { case (reg, i) =>
       (reg + rightRegs(i)) === resultRegs(i)
     })
-    val oldIntFormula = concatLeft.getRegsRelation
-    val resIntFormula = result.getRegsRelation
-    concatLeft.setRegsRelation(conj(oldIntFormula, regsRelation, resIntFormula))
+    val letfRegsRelation = concatLeft.getRegsRelation
+    val resRegsRelation = result.getRegsRelation
+    concatLeft.setRegsRelation(conj(letfRegsRelation, derivedRegsRelation, resRegsRelation))
   }
 
   def apply(

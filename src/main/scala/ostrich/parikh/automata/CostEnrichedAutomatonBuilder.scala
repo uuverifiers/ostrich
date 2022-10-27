@@ -35,11 +35,11 @@ class CostEnrichedAutomatonBuilder
   private val registers: ArrayBuffer[Term] = new ArrayBuffer()
   private val transTermMap: MHashMap[(State, TLabel, State), Term] =
     new MHashMap
-  private var intFormula: Formula = Conjunction.TRUE
+  private var regsRelation: Formula = Conjunction.TRUE
 
   // add interger arithmatic to this aut
-  def addNewIntFormula(f: Formula): Unit = {
-    intFormula = conj(intFormula, f)
+  def addRegsRelation(f: Formula): Unit = {
+    regsRelation = conj(regsRelation, f)
   }
 
   // prepends a regsiter
@@ -134,8 +134,9 @@ class CostEnrichedAutomatonBuilder
     res.setRegisters(registers.toSeq)
     res.setEtaMap(etaMap.toMap)
     res.setTransTermMap(transTermMap.toMap)
-    res.setRegsRelation(intFormula)
+    res.setRegsRelation(regsRelation)
     res.removeDeadTransitions()
+    res.removeDuplicatedReg()
     res
   }
 }

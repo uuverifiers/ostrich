@@ -62,11 +62,13 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   private val usage =
     s"""
-    Usage: <options> <files or directories>
+    Usage:./ostrich <options> <files or directories>
 
     Available options :
        [+-]costenriched     -- use cost enriched automata               (default: -)
        [+-]minimizeAutomata -- minimize the initial regular constraints (default: -)
+       -backend=val         -- backend to use for solving               (default: unary)
+       -heuristic=val       -- heuristic strategy to use for solving    (default: all)
     """
 
   def setAlphabetSize(w: Int): Unit = ()
@@ -92,11 +94,11 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.Opt("costenriched", value) =>
       Config.useCostEnriched = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
-      Config.lengthAbsStrategy = Config.Parikh()
+      Config.backend = Config.Baseline()
     case CmdlParser.ValueOpt("backend", "unary") =>
-      Config.lengthAbsStrategy = Config.Unary()
+      Config.backend = Config.Unary()
     case CmdlParser.ValueOpt("backend", "catra") =>
-      Config.lengthAbsStrategy = Config.Catra()
+      Config.backend = Config.Catra()
     // ignore")
     case CmdlParser.Opt("help", _) =>
       println(usage)

@@ -21,14 +21,15 @@ import SimpleAPI.ProverStatus
 import scala.collection.mutable.LinkedHashSet
 import ap.util.Seqs
 import ostrich.parikh.preop.SubStringCEPreOp
-import ostrich.parikh.core.LinearAbstractionSolver
+import ostrich.parikh.core.UnaryBasedSolver
 import ostrich.parikh.core.Model.{IntValue, StringValue}
 import ostrich.parikh.preop.IndexOfCEPreOp
 import ostrich.parikh.core.CatraBasedSolver
+import ostrich.parikh.core.BaselineSolver
 import ostrich.parikh.Config.Catra
-import ostrich.parikh.Config.Parikh
+import ostrich.parikh.Config.Baseline
 import ostrich.parikh.Config.Unary
-import ostrich.parikh.core.AtomConstraintsSolver
+import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
 
@@ -70,10 +71,10 @@ object ParikhExploration {
           case Left(value)  => _oldValue = Seq(value.intValueSafe)
           case Right(value) => _oldValue = value
         }
-        // if (_oldValue != resValue)
-        //   throw new Exception(
-        //     "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
-        //   )
+        if (_oldValue != resValue)
+          throw new Exception(
+            "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
+          )
       }
 
       if (isStringResult(op))
@@ -82,7 +83,7 @@ object ParikhExploration {
     model
   }
 
-  case class Approx(val approx: String){
+  case class Approx(val approx: String) {
     override def toString = approx
     def isOverApprox = approx == "over"
     def isUnderApprox = approx == "under"
@@ -100,9 +101,9 @@ class ParikhExploration(
       _initialConstraints,
       _strDatabase,
       None, // lengthProver
-      Map(), // lengthVars 
+      Map(), // lengthVars
       true, // strictLengths
-      OFlags(), // flags
+      OFlags() // flags
     ) {
 
   import Exploration._
@@ -190,11 +191,11 @@ class ParikhExploration(
         // check linear arith consistency of final automata
 
         // val solver = new CatraBasedSolver
-        val backendSolver: AtomConstraintsSolver =
-          Config.lengthAbsStrategy match {
+        val backendSolver: FinalConstraintsSolver =
+          Config.backend match {
             case Catra()  => new CatraBasedSolver
-            case Parikh() => new LinearAbstractionSolver
-            case Unary()  => new LinearAbstractionSolver(_approx)
+            case Baseline() => new BaselineSolver
+            case Unary()  => new UnaryBasedSolver(_approx)
           }
 
         backendSolver.setInterestTerm(integerTerm)
@@ -222,8 +223,9 @@ class ParikhExploration(
                 (op, args) <- ops.iterator
               )
                 yield (op, args, res)) ++
-                ignoredApps.iterator // TODO: reverseIterator?
+                ignoredApps.iterator
             model ++= generateResultModel(allFunApps, model)
+
             throw FoundModel(model.toMap)
           }
           case _ => return trivalConflict

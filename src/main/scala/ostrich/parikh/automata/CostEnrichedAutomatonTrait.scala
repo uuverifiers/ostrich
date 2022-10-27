@@ -123,8 +123,8 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
         }
       }
     }
-    autBuilder.addNewIntFormula(aut1.regsRelation)
-    autBuilder.addNewIntFormula(aut2.regsRelation)
+    autBuilder.addRegsRelation(aut1.regsRelation)
+    autBuilder.addRegsRelation(aut2.regsRelation)
     autBuilder.prependRegisters(aut1.registers ++ aut2.registers)
     val res = autBuilder.getAutomaton
     res

@@ -88,7 +88,7 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     // registers : (r0, r1)
     val registers = Seq.fill(2)(RegisterTerm())
     builder.prependRegisters(registers ++ res.getRegisters)
-    builder.addNewIntFormula(
+    builder.addRegsRelation(
       (registers(0) === beginIdx) & (registers(1) === length)
     )
 

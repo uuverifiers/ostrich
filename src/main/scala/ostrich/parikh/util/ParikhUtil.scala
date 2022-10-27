@@ -308,7 +308,7 @@ object ParikhUtil {
         }
       }
     }
-    builder addNewIntFormula (aut.getRegsRelation)
+    builder addRegsRelation (aut.getRegsRelation)
     builder prependRegisters (aut.getRegisters)
     (builder.getAutomaton, newState2Prefix)
   }
