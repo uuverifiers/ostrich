@@ -43,7 +43,7 @@ object OstrichMain extends App {
     * specified on the command line, so it is possible to provide more specific
     * string solver options on the command line.
     */
-  val options = List()
+  val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
 
   ap.CmdlMain.main((options ++ args).toArray)
   ap.CmdlMain.stackTraces = true
