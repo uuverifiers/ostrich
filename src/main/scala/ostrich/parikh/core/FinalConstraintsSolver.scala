@@ -41,7 +41,7 @@ import ostrich.parikh.ParikhExploration.Approx
 
 object FinalConstraintsSolver {
   var initialLIA: Formula = Conjunction.TRUE
-  var initialConstTerms: Seq[Term] = Seq()
+  var initialConstTerms: Seq[ConstantTerm] = Seq()
 }
 
 class Result {
@@ -80,9 +80,9 @@ trait FinalConstraintsSolver {
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
 
     val constraint = backend match {
-      case Unary()  => unaryHeuristicACs(t, auts)
+      case Unary()    => unaryHeuristicACs(t, auts)
       case Baseline() => baselineACs(t, auts)
-      case Catra()  => catraACs(t, auts)
+      case Catra()    => catraACs(t, auts)
     }
 
     addConstraint(constraint)
@@ -93,11 +93,10 @@ trait FinalConstraintsSolver {
 
 }
 
+class UnaryBasedSolver(val approx: Approx = Approx("no"))
+    extends FinalConstraintsSolver {
 
-
-class UnaryBasedSolver(val approx: Approx = Approx("no")) extends FinalConstraintsSolver {
-
-  def solve: Result = 
+  def solve: Result =
     if (approx.isUnderApprox) solveUnderApprox
     else if (approx.isOverApprox) solveOverApprox
     else solveCompleteLIA
@@ -121,9 +120,12 @@ class UnaryBasedSolver(val approx: Approx = Approx("no")) extends FinalConstrain
       p setConstructProofs true
       val regsRelation = conj(constraints.map(_.getRegsRelation))
       val finalArith = conj(f, initialLIA, regsRelation)
-      p addConstantsRaw SymbolCollector.constants(finalArith)
+      val constants: scala.collection.Set[ConstantTerm] =
+        SymbolCollector.constants(finalArith) ++ initialConstTerms
 
-      p addConstantsRaw initialConstTerms
+      p addConstantsRaw constants
+
+      // p addConstantsRaw initialConstTerms
       p addAssertion finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
@@ -158,8 +160,7 @@ class UnaryBasedSolver(val approx: Approx = Approx("no")) extends FinalConstrain
 
 // Encode the final atom constraints to catra input format,
 // and then call catra to solve the constraints
-class CatraBasedSolver
-    extends FinalConstraintsSolver {
+class CatraBasedSolver extends FinalConstraintsSolver {
 
   lazy val automatas: Seq[Seq[CostEnrichedAutomatonTrait]] =
     constraints.map(_.getAutomata)

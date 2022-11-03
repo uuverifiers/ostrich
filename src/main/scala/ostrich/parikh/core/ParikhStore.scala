@@ -133,7 +133,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
           None
         }
       }
-    } else println("contain")
+    } else Console.err.println("contain")
     None
   }
 

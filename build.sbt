@@ -51,7 +51,7 @@ lazy val commonSettings = Seq(
 //
   scalaVersion          := "2.13.7",
 //  scalacOptions         += "-deprecation",
-  fork in run           := true,
+  run / fork           := true,
   cancelable in Global  := true,
 //
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )

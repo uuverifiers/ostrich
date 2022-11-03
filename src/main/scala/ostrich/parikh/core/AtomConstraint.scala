@@ -16,6 +16,7 @@ import ostrich.parikh.ZTerm
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.CostEnrichedConvenience._
 import ap.terfor.preds.Atom
+import ostrich.parikh.util.UnknownException
 
 object AtomConstraint {
   def unaryHeuristicAC(aut: CostEnrichedAutomatonTrait) =
@@ -197,7 +198,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
   def getUnderApprox: Formula = {
     val n = aut.states.size
-    val concreteLenBound = if (n > 10) 100 else n * n + 10;
+    val concreteLenBound = if (n > 10) 10 * n else 100;
     val s = computeS(concreteLenBound)
     val registers = aut.getRegisters
     disjFor(
@@ -221,32 +222,36 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
     val s = computeS(concreteLen)
     val t = computeT
-    val r1Formula = disjFor(
-      for (
-        j <- 0 until concreteLen;
-        if !s(j).isEmpty;
-        (s, regVal) <- s(j);
-        if (aut.isAccept(s))
-      ) yield {
-        conj(for (i <- 0 until rLen) yield registers(i) === regVal(i))
-      }
-    )
 
-    val r2Formula = disjFor(
-      for (
-        d <- 1 until n + 1;
-        c <- 2 * n * n - d until 2 * n * n;
-        (from, regVal) <- s(n);
-        (period, loopVec) <- periods(from);
-        (to, tailVec) <- t(c - n);
-        if (period == d && from == to)
-      ) yield {
-        val k = KTerm()
-        kSet += k
-        conj(
-          for (i <- 0 until rLen)
-            yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
-        )
+    val overapprox = conj(
+      for (i <- 0 until rLen) yield {
+        disj {
+          val r1Formula = disjFor(
+            for (
+              j <- 0 until concreteLen;
+              if !s(j).isEmpty;
+              (s, regVal) <- s(j);
+              if (aut.isAccept(s))
+            ) yield {
+              registers(i) === regVal(i)
+            }
+          )
+          val r2Formula = disjFor(
+            for (
+              d <- 1 until n + 1;
+              c <- 2 * n * n - d until 2 * n * n;
+              (from, regVal) <- s(n);
+              (period, loopVec) <- periods(from);
+              (to, tailVec) <- t(c - n);
+              if (period == d && from == to)
+            ) yield {
+              val k = KTerm()
+              kSet += k
+              registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
+            }
+          )
+          Seq(r1Formula, r2Formula)
+        }
       }
     )
 
@@ -255,9 +260,49 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
         k >= 1
       }
     )
+    conj(overapprox, kFormula)
+    // val r1Formula = disjFor(
+    //   for (
+    //     j <- 0 until concreteLen;
+    //     if !s(j).isEmpty;
+    //     (s, regVal) <- s(j);
+    //     if (aut.isAccept(s))
+    //   ) yield {
+    //     conj(for (i <- 0 until rLen) yield registers(i) === regVal(i))
+    //   }
+    // )
 
-    disj(r1Formula, conj(r2Formula, kFormula))
+    // val r2Formula = disjFor(
+    //   for (
+    //     d <- 1 until n + 1;
+    //     c <- 2 * n * n - d until 2 * n * n;
+    //     (from, regVal) <- s(n);
+    //     (period, loopVec) <- periods(from);
+    //     (to, tailVec) <- t(c - n);
+    //     if (period == d && from == to)
+    //   ) yield {
+    //     val k = KTerm()
+    //     kSet += k
+    //     conj(
+    //       for (i <- 0 until rLen)
+    //         yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
+    //     )
+    //   }
+    // )
 
+    // val kFormula = conj(
+    //   for (k <- kSet) yield {
+    //     k >= 1
+    //   }
+    // )
+
+    // disj(r1Formula, conj(r2Formula, kFormula))
+
+  }
+
+  override def getCompleteLIA: Formula = {
+    // Throw unkonwn exception to see how many instance can not be checked by approximation
+    throw UnknownException("UnaryHeuristicAC.getCompleteLIA: over- and under-approximation fail")
   }
 
   def getRegsRelation: Formula = aut.getRegsRelation

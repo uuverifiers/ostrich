@@ -28,4 +28,10 @@ ecma2020/target
 *.log
 
 #experiment
-experiment
+experiment/benchmarks/
+experiment/extracted/
+experiment/smallbench/
+experiment/*.zip
+
+# .par
+*.par

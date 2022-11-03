@@ -163,16 +163,16 @@ class ParikhExploration(
       case FoundModel(model) => Some(model)
       case UnknownException(info) =>
         println("--Unknown: " + info)
-        System.exit(0)
+        // System.exit(0)
         None
       case TimeoutException(time) =>
         println(s"--Timeout: $time s")
-        System.exit(0)
+        // System.exit(0)
         None
       case e: Exception =>
         println("--Exception: " + e)
         e.printStackTrace()
-        System.exit(0)
+        // System.exit(0)
         None
     }
   }
