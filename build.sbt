@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "1.2",
+  version               := "1.2.1",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
@@ -44,7 +44,7 @@ lazy val commonSettings = Seq(
                           ),
 //
   scalaVersion          := "2.11.12",
-  crossScalaVersions    := Seq("2.11.12", "2.12.16"),
+  crossScalaVersions    := Seq("2.11.12", "2.12.17"),
   scalacOptions         += "-deprecation",
   fork in run           := true,
   cancelable in Global  := true,
@@ -79,7 +79,7 @@ lazy val root = (project in file(".")).
     resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
 //
 //    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2022-07-01",
-    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies   += "uuverifiers" %% "princess" % "2022-11-03",
 //    libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
