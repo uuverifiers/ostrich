@@ -125,10 +125,9 @@ object Exploration {
 
   def parikhExp(funApps : Seq[(PreOp, Seq[Term], Term)],
                initialConstraints : Seq[(Term, Automaton)],
-               strDatabase : StrDatabase,
-               approx : Approx,
+               strDatabase : StrDatabase
                ) : Exploration =
-    new ParikhExploration(funApps, initialConstraints, strDatabase, approx)
+    new ParikhExploration(funApps, initialConstraints, strDatabase)
 
   case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
           extends Exception

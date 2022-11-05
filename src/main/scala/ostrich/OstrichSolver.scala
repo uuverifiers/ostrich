@@ -331,20 +331,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         // first use under-approximation to find a model
         // then if under unsat, use over-approximation to check unsat
         // if over sat and under unsat, then use completeExp(slowest)
-        val underApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("under"))
-        val underRes = underApproxExp.findModel
-        if(underRes.isDefined){
-          underRes
-        } else {
-          val overApproxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("over"))
-          val overRes = overApproxExp.findModel
-          if(!overRes.isDefined){
-            overRes
-          } else {
-            val completeExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase, Approx("no"))
-            completeExp.findModel
-          }
-        }
+        val approxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase)
+        approxExp.findModel
       } else {
         val exploration =
         if (eagerMode)

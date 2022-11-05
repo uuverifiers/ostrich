@@ -197,11 +197,36 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   }
 
   def getUnderApprox: Formula = {
+    // We return True when this automaton do not have registers
+    // (which means there is only regex membership)
+    if (aut.getRegisters.isEmpty)
+      return Conjunction.TRUE
     val n = aut.states.size
-    val concreteLenBound = if (n > 10) 10 * n else 100;
+    val rLen = aut.getRegisters.size
+    val kSet = new MHashSet[Term]
+    val concreteLenBound = if (n < 10) 10 * n else 100;
     val s = computeS(concreteLenBound)
+    val t = computeT(n)
     val registers = aut.getRegisters
-    disjFor(
+
+    // val r2Formula = disjFor(
+    //   for (
+    //     d <- 1 until n + 1;
+    //     i <- d until n + 1;
+    //     (from, regVal) <- s(i);
+    //     (period, loopVec) <- periods(from);
+    //     (to, tailVec) <- t(n - i);
+    //     if (period == d && from == to)
+    //   ) yield {
+    //     val k = KTerm()
+    //     kSet += k
+    //     conj(
+    //       for (i <- 0 until rLen)
+    //         yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
+    //     )
+    //   }
+    // )
+    val r1Formula = disjFor(
       for (
         j <- 0 until concreteLenBound;
         if !s(j).isEmpty;
@@ -211,6 +236,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
         conj(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
       }
     )
+    r1Formula
   }
 
   def getOverApprox: Formula = {
@@ -221,7 +247,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     val kSet = new MHashSet[Term]
 
     val s = computeS(concreteLen)
-    val t = computeT
+    val t = computeT(2 * n * n - n)
 
     val overapprox = conj(
       for (i <- 0 until rLen) yield {
@@ -302,7 +328,9 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
   override def getCompleteLIA: Formula = {
     // Throw unkonwn exception to see how many instance can not be checked by approximation
-    throw UnknownException("UnaryHeuristicAC.getCompleteLIA: over- and under-approximation fail")
+    throw UnknownException(
+      "UnaryHeuristicAC.getCompleteLIA: over- and under-approximation fail"
+    )
   }
 
   def getRegsRelation: Formula = aut.getRegsRelation
@@ -331,18 +359,17 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     S
   }
 
-  /** computing T_(2n^2-n-1), ..., T_0. Terminate if T_(2n^2-n-1) is computed or
-    * pre(S_i) is empty
+  /** computing T_len, T_{len-1}, ..., T_0. Terminate if T_(2n^2-n-1) is
+    * computed or pre(S_i) is empty
     */
-  def computeT: ArrayBuffer[Set[(State, Seq[Int])]] = {
+  def computeT(len: Int): ArrayBuffer[Set[(State, Seq[Int])]] = {
     val n = aut.states.size
     val acceptingStates = aut.acceptingStates
     val rLen = aut.getRegisters.size
-    val Tlen = 2 * n * n - n
-    val T = ArrayBuffer.fill(Tlen)(Set[(State, Seq[Int])]())
+    val T = ArrayBuffer.fill(len)(Set[(State, Seq[Int])]())
     T(0) = acceptingStates.map((_, Seq.fill(rLen)(0)))
     var idx = 0
-    while (idx < Tlen - 1 && !T(idx).isEmpty) {
+    while (idx < len - 1 && !T(idx).isEmpty) {
       idx += 1
       T(idx) =
         for (

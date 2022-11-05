@@ -73,7 +73,7 @@ trait FinalConstraints {
 
   val interestTerms: Seq[Term]
 
-  def getModel: Seq[Int]
+  def getModel: Option[Seq[Int]]
 
   protected var interestTermsModel: Map[Term, IdealInt] = Map()
 
@@ -105,9 +105,9 @@ class UnaryFinalConstraints(
 
   val interestTerms: Seq[Term] = productAtom.registers
 
-  def getModel: Seq[Int] = {
+  def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel).get
+    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
   }
 
 }
@@ -119,9 +119,9 @@ class BaselineFinalConstraints(
 
   val interestTerms: Seq[Term] = productAtom.transTermMap.map(_._2).toSeq
 
-  def getModel: Seq[Int] = {
+  def getModel: Option[Seq[Int]] = {
     val transtionModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByTranstions(Seq(productAtom.aut), transtionModel).get
+    ParikhUtil.findAcceptedWordByTranstions(Seq(productAtom.aut), transtionModel)
   }
 }
 
@@ -132,8 +132,8 @@ class CatraFinalConstraints(
 
   val interestTerms: Seq[Term] = atoms.map(_.aut).flatMap(_.getRegisters)
 
-  def getModel: Seq[Int] = {
+  def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel).get
+    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
   }
 }

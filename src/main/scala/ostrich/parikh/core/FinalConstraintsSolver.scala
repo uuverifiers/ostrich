@@ -38,6 +38,7 @@ import ostrich.OstrichMain
 import ostrich.parikh.util.TimeoutException
 import ostrich.OFlags
 import ostrich.parikh.ParikhExploration.Approx
+import ostrich.parikh.util.UnknownException
 
 object FinalConstraintsSolver {
   var initialLIA: Formula = Conjunction.TRUE
@@ -48,6 +49,10 @@ class Result {
   protected var status = ProverStatus.Unknown
 
   private val model = new OstrichModel
+
+  def isSat = status == ProverStatus.Sat
+
+  def isUnsat = status == ProverStatus.Unsat
 
   def setStatus(s: ProverStatus.Value): Unit = status = s
 
@@ -93,13 +98,15 @@ trait FinalConstraintsSolver {
 
 }
 
-class UnaryBasedSolver(val approx: Approx = Approx("no"))
+class UnaryBasedSolver
     extends FinalConstraintsSolver {
 
-  def solve: Result =
-    if (approx.isUnderApprox) solveUnderApprox
-    else if (approx.isOverApprox) solveOverApprox
-    else solveCompleteLIA
+  def solve: Result = {
+    var res = solveUnderApprox
+    if (!res.isUnsat) 
+      res = solveOverApprox
+    res
+  }
 
   def solveUnderApprox: Result = solveFormula(
     conj(constraints.map(_.getUnderApprox))
@@ -141,7 +148,11 @@ class UnaryBasedSolver(val approx: Approx = Approx("no"))
             val value = measure(
               s"${this.getClass.getSimpleName}::findStringModel"
             )(singleString.getModel)
-            res.updateModel(singleString.strId, value)
+            value match {
+              case Some(v) => res.updateModel(singleString.strId, v)
+              case None => throw UnknownException("Cannot find string model")
+            }
+            
           }
           // update integer model
           for (term <- interestTerms) {
@@ -187,6 +198,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
             Console.err.println(s"E: parse error $expected")
             Console.err.println(s"E: ${extra.trace().longMsg}")
             Failure(new Exception(s"parse error: ${extra.trace().longMsg}"))
+          case _ => Failure(new Exception("Unknown error when parse"))
         }
       }
     result
@@ -299,7 +311,10 @@ class CatraBasedSolver extends FinalConstraintsSolver {
           val value = measure(
             s"${this.getClass().getSimpleName()}::findStringModel"
           )(singleString.getModel)
-          result.updateModel(singleString.strId, value)
+            value match {
+              case Some(v) => result.updateModel(singleString.strId, v)
+              case None => throw UnknownException("Cannot find string model")
+            }
         }
         for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
           result.updateModel(t, IdealInt(v))
@@ -310,6 +325,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
       case Timeout(timeout_ms) =>
         throw new TimeoutException(timeout_ms / 1_000)
       case Unsat => result.setStatus(ProverStatus.Unsat)
+      case _ => throw new Exception("Unknown result of catra")
     }
     result
   }
@@ -348,10 +364,10 @@ class CatraBasedSolver extends FinalConstraintsSolver {
     catraRes match {
       case Success(_catraRes) =>
         result = decodeCatraResult(_catraRes)
-      case Failure(e) => e.printStackTrace; throw e
+      case Failure(e) => throw e
     }
     result
   }
 }
 
-class BaselineSolver extends UnaryBasedSolver(Approx("no"))
+class BaselineSolver extends UnaryBasedSolver

@@ -95,7 +95,6 @@ class ParikhExploration(
     _funApps: Seq[(PreOp, Seq[Term], Term)],
     _initialConstraints: Seq[(Term, Automaton)],
     _strDatabase: StrDatabase,
-    _approx: ParikhExploration.Approx
 ) extends Exploration(
       _funApps,
       _initialConstraints,
@@ -171,7 +170,6 @@ class ParikhExploration(
         None
       case e: Exception =>
         println("--Exception: " + e)
-        e.printStackTrace()
         // System.exit(0)
         None
     }
@@ -195,7 +193,7 @@ class ParikhExploration(
           Config.backend match {
             case Catra()  => new CatraBasedSolver
             case Baseline() => new BaselineSolver
-            case Unary()  => new UnaryBasedSolver(_approx)
+            case Unary()  => new UnaryBasedSolver
           }
 
         backendSolver.setInterestTerm(integerTerm)

@@ -41,7 +41,7 @@ class ArgParser:
             type=int,
         )
         
-        self.parser.add_argument("benchmarks")
+        self.parser.add_argument("bench")
             
         
     def parse_args(self):
