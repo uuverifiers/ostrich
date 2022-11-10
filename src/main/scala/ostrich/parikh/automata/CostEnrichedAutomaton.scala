@@ -84,6 +84,14 @@ class CostEnrichedAutomaton(
 
   CostEnrichedAutomaton.initMap(this)
 
+  def unary_! = {
+    CEBasicOperations.complement(this)
+  }
+
+  def |(that: Automaton): Automaton = {
+    CEBasicOperations.union(Seq(this, that.asInstanceOf[CostEnrichedAutomaton]))
+  }
+
   def isEmpty: Boolean = underlying.isEmpty
 
   def apply(word: Seq[Int]): Boolean =
@@ -137,23 +145,35 @@ class CostEnrichedAutomaton(
 
   def toDetailedString: String = underlying.toString()
 
-  def removeDeadTransitions(): Unit = 
+  def removeDeadTransitions(): Unit =
     underlying.removeDeadTransitions()
 
   def removeDuplicatedReg(): Unit = {
+    def removeIdxsValueOfSeq[A](s: Seq[A], idxs: Seq[Int]): Seq[A] = {
+      val res = ArrayBuffer[A]()
+      for (i <- 0 until s.size) {
+        if (!idxs.contains(i)) {
+          res += s(i)
+        }
+      }
+      res.toSeq
+    }
     val vectorsT = etaMap.map(_._2).transpose.zipWithIndex
-    val vectorsPatition = vectorsT.groupBy(_._1)
-    val deplicatedRegs = vectorsPatition.filter(_._2.size > 1).map{case (v, v2i) => v2i.map(_._2)}
-    deplicatedRegs.foreach{regidxs =>
+    val vectorsPatition = vectorsT.groupBy(_._1).map(_._2.map(_._2))
+    val deplicatedRegs = vectorsPatition.filter(_.size > 1)
+    deplicatedRegs.foreach { regidxs =>
       val baseidx = regidxs.head
-      regidxs.tail.foreach{idx =>
-        regsRelation = conj(regsRelation, (registers(baseidx) === registers(idx)))
-        registers = registers.take(idx) ++ registers.drop(idx+1)  // delete element at idx
-        etaMap = etaMap.map{case (t, v) => (t, v.take(idx) ++ v.drop(idx+1))} // delete corresponding update
+      regidxs.tail.foreach { idx =>
+        regsRelation =
+          conj(regsRelation, (registers(baseidx) === registers(idx)))
+      }
+      registers = removeIdxsValueOfSeq(registers, regidxs.tail.toSeq)
+      etaMap = etaMap.map { case (t, v) =>
+        (t, removeIdxsValueOfSeq(v, regidxs.tail.toSeq))
       }
     }
   }
-  
+
   override def toString: String = {
     val state2Int = states.zipWithIndex.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
@@ -169,10 +189,18 @@ class CostEnrichedAutomaton(
     s"""
     automaton a${states.size} {
       init s${state2Int(initialState)};
-      ${transitionsWithVec.toSeq.sortBy(_._1).map(transition2Str).mkString("\n  ")}
+      ${transitionsWithVec.toSeq
+        .sortBy(_._1)
+        .map(transition2Str)
+        .mkString("\n  ")}
       accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
     };
     """
+  }
+
+  def toDot = {
+    
+    println()
   }
 
 }

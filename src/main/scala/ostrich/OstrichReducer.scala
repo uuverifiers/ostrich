@@ -190,7 +190,8 @@ class OstrichReducer protected[ostrich]
         case `_str_++` if hasValue(a(1), List()) =>
           a(0) === a(2)
 
-        // (assert (= Int (str.len x)))
+        // (assert (str.in_re x regex)) will be translate to
+        // str_in_re_id x id; where id is the id of the regex
         case `str_in_re_id` => {
           val autId = regexAtomToId(a)
           if (isConcrete(a(0))) {

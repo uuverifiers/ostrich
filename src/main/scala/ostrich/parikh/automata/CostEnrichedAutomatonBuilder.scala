@@ -49,6 +49,9 @@ class CostEnrichedAutomatonBuilder
   // prepends regsters
   def prependRegisters(_registers: Seq[Term]): ArrayBuffer[Term] =
     _registers ++=: registers
+  
+  def appendRegisters(_registers: Seq[Term]): ArrayBuffer[Term] =
+    registers ++= _registers
 
   // add (transition -> vector) map to etaMap
   def addEtaMap(
@@ -122,10 +125,23 @@ class CostEnrichedAutomatonBuilder
     for (t <- asScalaIterator(q.getTransitions.iterator))
       yield (t.getDest, (t.getMin, t.getMax))
 
+  def outgoingTransitionsWithVec(
+    q: State
+  ): Iterator[(State, TLabel, Seq[Int])] = 
+    for ((t, l) <- outgoingTransitions(q))
+      yield (t, l, etaMap((q, l, t)))
+
   def setAccept(q: State, isAccepting: Boolean): Unit =
     q.setAccept(isAccepting)
 
   def isAccept(q: State): Boolean = q.isAccept
+
+  def addEpsilon(q: State, q2: State): Unit = {
+    if (isAccept(q2)) setAccept(q, true)
+    for ((t, l, v) <- outgoingTransitionsWithVec(q2)){
+      addTransition(q, l, t, v)
+    }
+  }
 
   /** Returns built automaton.
     */

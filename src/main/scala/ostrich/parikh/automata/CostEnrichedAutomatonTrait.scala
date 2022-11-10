@@ -67,10 +67,11 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   val labelEnumerator: TLabelEnumerator[TLabel] =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
-  def &(that: Automaton): Automaton = this & that
+  // def &(that: Automaton): Automaton = this & that
 
-  def &(aut2: CostEnrichedAutomatonTrait): CostEnrichedAutomaton = {
+  def &(that: Automaton): Automaton = {
     val aut1 = this
+    val aut2 = that.asInstanceOf[CostEnrichedAutomatonTrait]
     val autBuilder = new CostEnrichedAutomatonBuilder
 
     // begin intersection
@@ -134,14 +135,18 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     new CostEnrichedAutomatonBuilder
   }
 
-
   /** Given a state, iterate over all outgoing transitons with vector
     */
   def outgoingTransitionsWithVec(
       s: State
-  ): Iterator[(State, TLabel, Seq[Int])] = for (
-    (t, lbl) <- outgoingTransitions(s)
-  ) yield (t, lbl, etaMap((s, lbl, t)))
+  ): Iterator[(State, TLabel, Seq[Int])] = {
+    val tWithV = for ((t, lbl) <- outgoingTransitions(s)) yield (t, lbl, etaMap((s, lbl, t)))
+    // Sort by the number of 0 in the vector.
+    // e.g (1,1) < (1,0) = (0,1) < (0,0)
+    // So the iterator.head will be the transition with vector of
+    // the least number of 0. This will benefit the search of find model
+    tWithV.toSeq.sortBy(_._3.filter(_ == 0).size).iterator
+  }
 
   /** Given a state, iterate over all outgoing transitons with their terms, try
     * to be deterministic
@@ -158,7 +163,7 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   ): Iterator[(State, TLabel, Seq[Int], Term)] = for (
     (t, lbl) <- outgoingTransitions(s)
   ) yield {
-  (t, lbl, etaMap((s, lbl, t)), transTermMap((s, lbl, t)))
+    (t, lbl, etaMap((s, lbl, t)), transTermMap((s, lbl, t)))
   }
 
   /** Unique lengths of accepted words
@@ -205,13 +210,6 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
 
   def setRegsRelation(f: Formula) = regsRelation = f
 
-  /** @deprecated
-    *   not implemented
-    */
-  def |(that: Automaton): Automaton =
-    new CostEnrichedAutomaton(new BAutomaton)
-  def unary_! : Automaton =
-    new CostEnrichedAutomaton(new BAutomaton)
   def getTransducerBuilder: TransducerBuilder[State, TLabel] =
     BricsTransducer.getBuilder
 

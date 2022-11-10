@@ -469,7 +469,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     // Added by Riccardo
     val visitor3 = new OstrichStringEncoder(this)
 
-    (visitor3(visitor2(visitor1(f))), signature)
+    val preprocessedF = visitor3(visitor2(visitor1(f)))
+    (preprocessedF, signature)
   }
 
   override val reducerPlugin = new OstrichReducerFactory(this)

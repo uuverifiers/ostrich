@@ -239,7 +239,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.strDatabase.EncodedString
 
-  private def toBAutomaton(t : ITerm,
+  protected def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
                  Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
@@ -359,7 +359,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     }
   }
 
-  private def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {
+  protected def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {
     if (minimize && !BricsAutomaton.neverMinimize(aut))
       aut.minimize
     aut

@@ -91,5 +91,6 @@ lazy val root = (project in file("."))
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
     libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.17.1",
+    libraryDependencies += "com.lihaoyi" %% "os-lib" % "0.8.1",
     libraryDependencies += "uuverifiers" % "catra_2.13" % "0.1.0-SNAPSHOT"
   )

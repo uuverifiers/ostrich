@@ -65,8 +65,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     Usage:./ostrich <options> <files or directories>
 
     Available options :
-       [+-]costenriched     -- use cost enriched automata               (default: -)
-       [+-]minimizeAutomata -- minimize the initial regular constraints (default: -)
+       [+-]costenriched     -- use cost enriched automata               (default: not use cost enriched automata)
+       [+-]minimizeAutomata -- minimize the initial regular constraints (default: not minimize)
        -backend=val         -- backend to use for solving               (default: unary)
        -heuristic=val       -- heuristic strategy to use for solving    (default: all)
     """

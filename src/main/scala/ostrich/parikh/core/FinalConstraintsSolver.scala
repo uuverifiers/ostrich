@@ -103,7 +103,7 @@ class UnaryBasedSolver
 
   def solve: Result = {
     var res = solveUnderApprox
-    if (!res.isUnsat) 
+    if (!res.isSat) 
       res = solveOverApprox
     res
   }
@@ -336,12 +336,12 @@ class CatraBasedSolver extends FinalConstraintsSolver {
       result.setStatus(ProverStatus.Sat)
       return result
     }
-    val interFlie = "intermediate.par"
-    val writer = new CatraWriter(interFlie)
+    val interFlie = os.temp(dir = os.pwd, suffix = "hhh")
+    val writer = new CatraWriter(interFlie.toString())
     writer.write(toCatraInput)
     writer.close()
     val arguments = CommandLineOptions(
-      inputFiles = Seq(interFlie),
+      inputFiles = Seq(interFlie.toString()),
       timeout_ms = Some(OFlags.timeout),
       trace = false,
       printDecisions = false,

@@ -139,6 +139,18 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
   lazy val acceptingStates: Set[State] =
     _acceptingStates & states
 
+
+  // TODO: implement
+  def unary_! = {
+    CostEnrichedAutomaton.makeAnyString
+  }
+
+  // TODO: implement
+  def |(that: Automaton): Automaton = {
+    CostEnrichedAutomaton.makeAnyString
+
+  }
+
   def apply(word: Seq[Int]): Boolean = {
     var state = initialState
     var finalIdx = 0
@@ -182,22 +194,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
   }
 
   def isEmpty: Boolean = {
-    val worklist = new ArrayStack[State]
-    worklist.push(initialState)
-    val visited = new MHashSet[State]
-    visited.add(initialState)
-
-    while (!worklist.isEmpty) {
-      val s = worklist.pop
-      for ((to, _) <- outgoingTransitions(s)) {
-        if (!visited.contains(to)) {
-          visited.add(to)
-          worklist.push(to)
-        }
-        if (isAccept(to)) return false
-      }
-    }
-    true
+    return !isAccept(initialState) && outgoingTransitions(initialState).isEmpty
   }
 
   override def outgoingTransitions(q: State): Iterator[(State, TLabel)] = {
