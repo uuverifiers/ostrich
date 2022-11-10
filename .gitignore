@@ -33,5 +33,5 @@ experiment/extracted/
 experiment/smallbench/
 experiment/*.zip
 
-# .par
-*.par
+# dot files
+dot/

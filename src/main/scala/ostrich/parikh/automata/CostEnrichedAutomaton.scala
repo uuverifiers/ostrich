@@ -28,6 +28,9 @@ import scala.collection.mutable.ArrayStack
 import ostrich.parikh._
 import ap.terfor.TerForConvenience._
 import TermGeneratorOrder._
+import java.time.LocalDate
+import ostrich.parikh.writer.DotWriter
+import os.write
 
 object CostEnrichedAutomaton {
 
@@ -173,34 +176,4 @@ class CostEnrichedAutomaton(
       }
     }
   }
-
-  override def toString: String = {
-    val state2Int = states.zipWithIndex.toMap
-    def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
-      val (s, (left, right), t, vec) = transition
-      val registerUpdate =
-        s"{${vec.zipWithIndex
-            .map { case (veci, i) => s"${registers(i)} += $veci" }
-            .mkString(", ")}};"
-
-      s"s${state2Int(s)} -> s${state2Int(t)} [${left.toInt}, ${right.toInt}] $registerUpdate"
-    }
-
-    s"""
-    automaton a${states.size} {
-      init s${state2Int(initialState)};
-      ${transitionsWithVec.toSeq
-        .sortBy(_._1)
-        .map(transition2Str)
-        .mkString("\n  ")}
-      accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
-    };
-    """
-  }
-
-  def toDot = {
-    
-    println()
-  }
-
 }

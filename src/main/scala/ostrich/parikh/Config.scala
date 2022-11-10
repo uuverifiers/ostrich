@@ -30,7 +30,7 @@ object Config {
 
   var useCostEnriched = config.right.get.useCostEnriched
 
-  val outputdot = false
+  val outputdot = true
 
   productStrategy match {
     case Basic() => Console.err.println("Eager product")

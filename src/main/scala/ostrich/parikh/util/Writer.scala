@@ -15,6 +15,11 @@ trait Writer {
 
   def write(s: String) = writer.write(s)
 
+  def closeAfterWrite(s: String) = {
+    write(s)
+    close()
+  }
+
   def newline() = writer.newLine()
 
   def close() = writer.close()
@@ -28,3 +33,5 @@ class Logger(override val filename: String) extends Writer {
 }
 
 class CatraWriter(override val filename: String) extends Writer 
+
+class DotWriter(override val filename: String) extends Writer 

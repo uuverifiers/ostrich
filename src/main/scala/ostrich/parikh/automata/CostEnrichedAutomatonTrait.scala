@@ -14,6 +14,8 @@ import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
+import java.time.LocalDate
+import ostrich.parikh.writer.DotWriter
 
 trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   type State = BState
@@ -212,5 +214,56 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
 
   def getTransducerBuilder: TransducerBuilder[State, TLabel] =
     BricsTransducer.getBuilder
+  
+  override def toString: String = {
+    val state2Int = states.zipWithIndex.toMap
+    def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
+      val (s, (left, right), t, vec) = transition
+      val registerUpdate =
+        s"{${vec.zipWithIndex
+            .map { case (veci, i) => s"${registers(i)} += $veci" }
+            .mkString(", ")}};"
+
+      s"s${state2Int(s)} -> s${state2Int(t)} [${left.toInt}, ${right.toInt}] $registerUpdate"
+    }
+
+    s"""
+    automaton a${states.size} {
+      init s${state2Int(initialState)};
+      ${transitionsWithVec.toSeq
+        .sortBy(_._1)
+        .map(transition2Str)
+        .mkString("\n  ")}
+      accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
+    };
+    """
+  }
+
+  def toDot(suffix: String) = {
+    val state2Int = states.zipWithIndex.toMap
+    val outdir = os.pwd / "dot" / LocalDate.now().toString
+    os.makeDir.all(outdir)
+    val dotfile = outdir / s"${suffix}${hashCode()}.dot"
+    val writer = new DotWriter(dotfile.toString)
+    def toDotStr = {
+      s"""
+      digraph G {
+        rankdir=LR;
+        node [shape = circle];
+        ${states.map(s => s"s${state2Int(s)}").mkString(" ")}
+        node [shape = doublecircle];
+        ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(" ")}
+        node [shape = circle];
+        ${transitionsWithVec.toSeq
+          .sortBy(_._1)
+          .map { case (s, (left, right), t, vec) =>
+            s"s${state2Int(s)} -> s${state2Int(t)} [label = \"${left.toInt}, ${right.toInt} ${vec.mkString(", ")}\"]"
+          }
+          .mkString("; ")}
+      }
+      """
+    }
+    writer.closeAfterWrite(toDotStr)
+  }
 
 }

@@ -13,6 +13,7 @@ import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
 import ap.types.SortedConstantTerm
+import ostrich.parikh.Config
 
 object FinalConstraints {
   import AtomConstraint._
@@ -109,6 +110,8 @@ class UnaryFinalConstraints(
     val registersModel = MHashMap() ++ interestTermsModel
     ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
   }
+
+  if(Config.outputdot)  productAtom.aut.toDot(strId.toString)
 
 }
 
