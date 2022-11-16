@@ -3,15 +3,15 @@ package ostrich.parikh.writer
 import uuverifiers.common.Tracing
 import uuverifiers.catra.SolveRegisterAutomata
 import java.io.{File, BufferedWriter, FileWriter}
-
+import ostrich.parikh.Config
 
 trait Writer {
 
   val filename: String
 
-  val file = new File(filename)
+  val file : File
 
-  val writer = new BufferedWriter(new FileWriter(file))
+  val writer : BufferedWriter 
 
   def write(s: String) = writer.write(s)
 
@@ -23,15 +23,33 @@ trait Writer {
   def newline() = writer.newLine()
 
   def close() = writer.close()
+
+  def flush() = writer.flush()
 }
 
-class Logger(override val filename: String) extends Writer {
+class Logger extends Writer {
+  val filename: String = (os.pwd / "log.txt").toString()
+
+  val file  = new File(filename)
+
+  val writer = new BufferedWriter(new FileWriter(file))
+
   def log(s: String) = {
-    write(s)
-    newline()
+    if (Config.log) {
+      write(s)
+      newline()
+      writer.flush()
+    }
+  }
+
+  override def close(): Unit = {
+    if (Config.log)
+      writer.close()
   }
 }
 
-class CatraWriter(override val filename: String) extends Writer 
+class CatraWriter(override val filename: String) extends Logger
 
-class DotWriter(override val filename: String) extends Writer 
+class DotWriter(override val filename: String) extends Logger
+
+class TempWriter(override val filename: String) extends Logger

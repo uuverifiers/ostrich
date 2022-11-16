@@ -100,11 +100,18 @@ class CostEnrichedAutomatonBuilder
       label: TLabel,
       q2: State,
       vector: Seq[Int]
-  ): Unit = addTransition(q1, label, q2, vector, TransitionTerm())
+  ): Unit = {
+    // if (LabelOps.isNonEmptyLabel(label)) {
+    //   val (min, max) = label
+    //   q1.addTransition(new Transition(min, max, q2))
+    //   etaMap += ((q1, (min, max), q2) -> vector)
+    // }
+    addTransition(q1, label, q2, vector, TransitionTerm())
+  }
 
   /** Add a new transition q1 --label,vector--> q2, set its term to t
     */
-  override def addTransition(
+  def addTransition(
       q1: State,
       label: TLabel,
       q2: State,
@@ -148,10 +155,9 @@ class CostEnrichedAutomatonBuilder
   def getAutomaton: CostEnrichedAutomaton = {
     val res = new CostEnrichedAutomaton(baut)
     res.setRegisters(registers.toSeq)
-    res.setEtaMap(etaMap.toMap)
-    res.setTransTermMap(transTermMap.toMap)
+    res.addEtaMap(etaMap.toMap)
+    res.addTransTermMap(transTermMap.toMap)
     res.setRegsRelation(regsRelation)
-    res.removeDeadTransitions()
     res.removeDuplicatedReg()
     res
   }

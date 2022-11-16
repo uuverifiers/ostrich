@@ -32,6 +32,7 @@ import ostrich.parikh.Config.Unary
 import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
+import ostrich.parikh.core.FinalConstraints
 
 object ParikhExploration {
   def isStringResult(op: PreOp): Boolean = op match {
@@ -170,6 +171,7 @@ class ParikhExploration(
         None
       case e: Exception =>
         println("--Exception: " + e)
+        e.printStackTrace()
         // System.exit(0)
         None
     }
@@ -189,14 +191,14 @@ class ParikhExploration(
         // check linear arith consistency of final automata
 
         // val solver = new CatraBasedSolver
-        val backendSolver: FinalConstraintsSolver =
+        val backendSolver =
           Config.backend match {
             case Catra()  => new CatraBasedSolver
             case Baseline() => new BaselineSolver
             case Unary()  => new UnaryBasedSolver
           }
 
-        backendSolver.setInterestTerm(integerTerm)
+        backendSolver.setIntegerTerm(integerTerm)
         for (t <- leafTerms) {
           backendSolver.addConstraint(t, constraintStores(t).getContents)
         }

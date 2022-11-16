@@ -13,9 +13,6 @@ object TermGeneratorOrder {
   def extend(t: Seq[ConstantTerm]): Unit = {
     order = order.extend(t)
   }
-  def init(o: TermOrder): Unit = {
-    order = o
-  }
 }
 
 object RegisterTerm {

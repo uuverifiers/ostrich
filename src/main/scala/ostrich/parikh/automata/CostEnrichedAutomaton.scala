@@ -27,10 +27,11 @@ import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.ArrayStack
 import ostrich.parikh._
 import ap.terfor.TerForConvenience._
-import TermGeneratorOrder._
+import TermGeneratorOrder.order
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 import os.write
+import ostrich.parikh.core.FinalConstraints
 
 object CostEnrichedAutomaton {
 
@@ -69,9 +70,11 @@ object CostEnrichedAutomaton {
     transitions.foreach { transition =>
       val initEtaMap = (transition -> Seq.fill(registers.size)(0))
       aut.etaMap += initEtaMap
+    }
+    transitions.foreach(transition => {
       val initTransTermMap = (transition -> TransitionTerm())
       aut.transTermMap += initTransTermMap
-    }
+    })
   }
 
   private val MINIMIZE_LIMIT = 100000
@@ -93,6 +96,14 @@ class CostEnrichedAutomaton(
 
   def |(that: Automaton): Automaton = {
     CEBasicOperations.union(Seq(this, that.asInstanceOf[CostEnrichedAutomaton]))
+  }
+
+  def &(that: Automaton): Automaton =
+    this.asInstanceOf[CostEnrichedAutomaton] & that
+      .asInstanceOf[CostEnrichedAutomaton]
+
+  def &(that: CostEnrichedAutomaton): CostEnrichedAutomaton = {
+    CEBasicOperations.intersection(this, that)
   }
 
   def isEmpty: Boolean = underlying.isEmpty
@@ -148,9 +159,6 @@ class CostEnrichedAutomaton(
 
   def toDetailedString: String = underlying.toString()
 
-  def removeDeadTransitions(): Unit =
-    underlying.removeDeadTransitions()
-
   def removeDuplicatedReg(): Unit = {
     def removeIdxsValueOfSeq[A](s: Seq[A], idxs: Seq[Int]): Seq[A] = {
       val res = ArrayBuffer[A]()
@@ -167,8 +175,7 @@ class CostEnrichedAutomaton(
     deplicatedRegs.foreach { regidxs =>
       val baseidx = regidxs.head
       regidxs.tail.foreach { idx =>
-        regsRelation =
-          conj(regsRelation, (registers(baseidx) === registers(idx)))
+        FinalConstraints.conjFormula(registers(baseidx) === registers(idx))
       }
       registers = removeIdxsValueOfSeq(registers, regidxs.tail.toSeq)
       etaMap = etaMap.map { case (t, v) =>

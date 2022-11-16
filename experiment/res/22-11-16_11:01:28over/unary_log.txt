@@ -1,0 +1,82 @@
+Running [../extracted/22-11-09_18:05:32/unknown/instance2758.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance2758.smt2
+sat
+UnaryBasedSolver::findStringModel       	1	8.542348ms
+UnaryBasedSolver::solve                 	1	362.965718ms
+UnaryBasedSolver::solveFixedFormula::findIntegerModel	1	28.655846ms
+Total: 3, 400.163912ms
+
+Time: 1552.84130859375 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance3325.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance3325.smt2
+sat
+UnaryBasedSolver::findStringModel       	1	9.156241ms
+UnaryBasedSolver::solve                 	1	525.808137ms
+UnaryBasedSolver::solveFixedFormula::findIntegerModel	1	80.876082ms
+Total: 3, 615.84046ms
+
+Time: 1783.75244140625 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance2060.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance2060.smt2
+unsat
+
+Total: 0, 0.0ms
+
+Time: 1069.885498046875 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance8294.smt2]
+Timeout 
+Time: 60080.7431640625 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance3986.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance3986.smt2
+--Exception: java.util.NoSuchElementException: key not found: R1
+unsat
+UnaryBasedSolver::solve                 	1	32.915964ms
+Total: 1, 32.915964ms
+
+Time: 1286.39111328125 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance7463.smt2]
+Timeout 
+Time: 60080.682373046875 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance7727.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance7727.smt2
+--Exception: java.util.NoSuchElementException: key not found: R2
+unsat
+UnaryBasedSolver::solve                 	1	253.303591ms
+Total: 1, 253.303591ms
+
+Time: 1454.93798828125 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance5034.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance5034.smt2
+unsat
+
+Total: 0, 0.0ms
+
+Time: 1121.84716796875 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance7088.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance7088.smt2
+unsat
+
+Total: 0, 0.0ms
+
+Time: 1089.07763671875 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance9696.smt2]
+Timeout 
+Time: 60081.441650390625 ms
+----splitter----
+Running [../extracted/22-11-09_18:05:32/unknown/instance9116.smt2]
+java -Xss20000k -Xmx2000m -cp /home/hudh/github/ostrich/target/scala-2.13/ostrich-assembly-1.1.jar ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:+costenriched,+minimizeAutomata,-backend=unary +incremental -inputFormat=smtlib ../extracted/22-11-09_18:05:32/unknown/instance9116.smt2
+unsat
+
+Total: 0, 0.0ms
+
+Time: 1047.8544921875 ms
+----splitter----

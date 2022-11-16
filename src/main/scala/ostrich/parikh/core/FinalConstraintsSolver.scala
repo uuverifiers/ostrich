@@ -7,7 +7,7 @@ import ap.parser.SymbolCollector
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomaton
 import FinalConstraints._
 import ap.terfor.Term
 import ap.terfor.Formula
@@ -40,11 +40,6 @@ import ostrich.OFlags
 import ostrich.parikh.ParikhExploration.Approx
 import ostrich.parikh.util.UnknownException
 
-object FinalConstraintsSolver {
-  var initialLIA: Formula = Conjunction.TRUE
-  var initialConstTerms: Seq[ConstantTerm] = Seq()
-}
-
 class Result {
   protected var status = ProverStatus.Unknown
 
@@ -65,9 +60,8 @@ class Result {
   def getModel = model.getModel
 }
 
-import FinalConstraintsSolver._
 
-trait FinalConstraintsSolver {
+trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def solve: Result
 
@@ -76,41 +70,46 @@ trait FinalConstraintsSolver {
       solve
     }
 
-  protected var constraints: Seq[FinalConstraints] = Seq()
+  protected var constraints: Seq[A] = Seq()
 
-  protected var interestTerms: Set[Term] = Set()
+  protected var integerTerms: Set[Term] = Set()
 
-  def setInterestTerm(terms: Set[Term]): Unit = interestTerms = terms
+  def setIntegerTerm(terms: Set[Term]): Unit = integerTerms = terms
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit
 
-    val constraint = backend match {
-      case Unary()    => unaryHeuristicACs(t, auts)
-      case Baseline() => baselineACs(t, auts)
-      case Catra()    => catraACs(t, auts)
-    }
-
-    addConstraint(constraint)
-  }
-
-  def addConstraint(constraint: FinalConstraints): Unit =
-    constraints ++= Seq(constraint)
+  def addConstraint(c: A) = constraints = constraints :+ c
 
 }
 
-class UnaryBasedSolver
-    extends FinalConstraintsSolver {
+class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
-  def solve: Result = {
-    var res = solveUnderApprox
-    if (!res.isSat) 
-      res = solveOverApprox
-    res
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit = {
+    addConstraint(unaryHeuristicACs(t, auts))
   }
 
-  def solveUnderApprox: Result = solveFormula(
-    conj(constraints.map(_.getUnderApprox))
-  )
+  def solve: Result = {
+    // var res = solveUnderApprox
+    // if (!res.isSat)
+    //   res = solveOverApprox
+    // res
+    solveOverApprox
+  }
+
+  def solveUnderApprox: Result = {
+    // add bound iterately
+    val maxBound = 30
+    val step = 5
+    var nowBound = 5
+    var result = new Result
+    while (nowBound < maxBound && !result.isSat) {
+      result = solveFormula(
+        conj(constraints.map(_.getUnderApprox(nowBound)))
+      )
+      nowBound += step
+    }
+    result
+  }
 
   def solveOverApprox: Result = solveFormula(
     conj(constraints.map(_.getOverApprox))
@@ -126,11 +125,11 @@ class UnaryBasedSolver
     SimpleAPI.withProver { p =>
       p setConstructProofs true
       val regsRelation = conj(constraints.map(_.getRegsRelation))
-      val finalArith = conj(f, initialLIA, regsRelation)
-      val constants: scala.collection.Set[ConstantTerm] =
-        SymbolCollector.constants(finalArith) ++ initialConstTerms
+      val finalArith = conj(f, regsRelation, FinalConstraints())
+      val constants =
+        SymbolCollector.constants(finalArith) ++ integerTerms
 
-      p addConstantsRaw constants
+      p addConstants constants
 
       // p addConstantsRaw initialConstTerms
       p addAssertion finalArith
@@ -150,12 +149,12 @@ class UnaryBasedSolver
             )(singleString.getModel)
             value match {
               case Some(v) => res.updateModel(singleString.strId, v)
-              case None => throw UnknownException("Cannot find string model")
+              case None    => throw UnknownException("Cannot find string model")
             }
-            
+
           }
           // update integer model
-          for (term <- interestTerms) {
+          for (term <- integerTerms) {
             val value = evalTerm(term, partialModel)
             res.updateModel(term, value)
           }
@@ -171,10 +170,11 @@ class UnaryBasedSolver
 
 // Encode the final atom constraints to catra input format,
 // and then call catra to solve the constraints
-class CatraBasedSolver extends FinalConstraintsSolver {
+class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
 
-  lazy val automatas: Seq[Seq[CostEnrichedAutomatonTrait]] =
-    constraints.map(_.getAutomata)
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit = {
+    addConstraint(catraACs(t, auts))
+  }
 
   def runInstances(arguments: CommandLineOptions): Try[CatraResult] = {
     // only run one file
@@ -215,10 +215,10 @@ class CatraBasedSolver extends FinalConstraintsSolver {
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
     sb.append("counter int ")
-    val lia = conj(initialLIA +: constraints.map(_.getRegsRelation))
-    val allIntTerms = (interestTerms ++ constraints.flatMap(
+    val lia = conj(FinalConstraints() +: constraints.map(_.getRegsRelation))
+    val allIntTerms = (integerTerms ++ constraints.flatMap(
       _.interestTerms
-    ) ++ initialConstTerms ++ SymbolCollector.constants(lia))
+    ) ++ integerTerms ++ SymbolCollector.constants(lia))
       .filterNot(_.isInstanceOf[LinearCombination])
       .toSet
     sb.append(allIntTerms.mkString(", "))
@@ -240,7 +240,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
   }
 
   def toCatraInputAutomaton(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomaton,
       name: String
   ): String = {
     val sb = new StringBuilder
@@ -267,7 +267,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
   }
 
   def toCatraInputRegisterUpdate(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomaton,
       update: Seq[Int]
   ) = {
     val sb = new StringBuilder
@@ -283,7 +283,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
   def toCatraInputLIA: String = {
     val sb = new StringBuilder
     sb.append("constraint ")
-    val lia = conj(initialLIA +: constraints.map(_.getRegsRelation))
+    val lia = conj(FinalConstraints() +: constraints.map(_.getRegsRelation))
     sb.append(lia.toString.replaceAll("&", "&&"))
     sb.append(";\n")
     sb.toString()
@@ -294,7 +294,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
     res match {
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
-        val name2Term = (strIntersted ++ interestTerms)
+        val name2Term = (strIntersted ++ integerTerms)
           .filter(_.isInstanceOf[ConstantTerm])
           .map { case t: ConstantTerm =>
             (t.name, t)
@@ -311,10 +311,10 @@ class CatraBasedSolver extends FinalConstraintsSolver {
           val value = measure(
             s"${this.getClass().getSimpleName()}::findStringModel"
           )(singleString.getModel)
-            value match {
-              case Some(v) => result.updateModel(singleString.strId, v)
-              case None => throw UnknownException("Cannot find string model")
-            }
+          value match {
+            case Some(v) => result.updateModel(singleString.strId, v)
+            case None    => throw UnknownException("Cannot find string model")
+          }
         }
         for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
           result.updateModel(t, IdealInt(v))
@@ -325,7 +325,7 @@ class CatraBasedSolver extends FinalConstraintsSolver {
       case Timeout(timeout_ms) =>
         throw new TimeoutException(timeout_ms / 1_000)
       case Unsat => result.setStatus(ProverStatus.Unsat)
-      case _ => throw new Exception("Unknown result of catra")
+      case _     => throw new Exception("Unknown result of catra")
     }
     result
   }
@@ -370,4 +370,56 @@ class CatraBasedSolver extends FinalConstraintsSolver {
   }
 }
 
-class BaselineSolver extends UnaryBasedSolver
+class BaselineSolver extends FinalConstraintsSolver[BaselineFinalConstraints] {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit = {
+    addConstraint(baselineACs(t, auts))
+  }
+
+  def solve: Result = {
+    val f = conj(constraints.map(_.getCompleteLIA))
+    import FinalConstraints.evalTerm
+    val res = new Result
+    SimpleAPI.withProver { p =>
+      p setConstructProofs true
+      val regsRelation = conj(constraints.map(_.getRegsRelation))
+      val finalArith = conj(f, regsRelation, FinalConstraints())
+      val constants =
+        SymbolCollector.constants(finalArith) ++ integerTerms
+
+      p addConstants constants
+
+      // p addConstantsRaw initialConstTerms
+      p addAssertion finalArith
+      val status = measure(
+        s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
+      ) {
+        p.???
+      }
+      status match {
+        case ProverStatus.Sat =>
+          val partialModel = p.partialModel
+          // update string model
+          for (singleString <- constraints) {
+            singleString.setInterestTermModel(partialModel)
+            val value = measure(
+              s"${this.getClass.getSimpleName}::findStringModel"
+            )(singleString.getModel)
+            value match {
+              case Some(v) => res.updateModel(singleString.strId, v)
+              case None    => throw UnknownException("Cannot find string model")
+            }
+
+          }
+          // update integer model
+          for (term <- integerTerms) {
+            val value = evalTerm(term, partialModel)
+            res.updateModel(term, value)
+          }
+
+          res.setStatus(ProverStatus.Sat)
+        case _ => res.setStatus(_)
+      }
+    }
+    res
+  }
+}

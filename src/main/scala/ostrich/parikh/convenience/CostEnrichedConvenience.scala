@@ -10,6 +10,7 @@ import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonAdapter
 object CostEnrichedConvenience {
 
   def brics2CostEnriched(aut: Automaton): Automaton = {
@@ -46,19 +47,22 @@ object CostEnrichedConvenience {
     }
   }
 
-  implicit def automaton2CostEnriched(
-      auts: Seq[Automaton]
-  ): Seq[CostEnrichedAutomatonTrait] =
-    auts.map(automaton2CostEnriched(_))
+  // implicit def automaton2CostEnriched(
+  //     auts: Seq[Automaton]
+  // ): Seq[CostEnrichedAutomaton] =
+  //   auts.map(automaton2CostEnriched(_))
 
-  implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonTrait = {
-   if (aut.isInstanceOf[CostEnrichedAutomatonTrait]) {
-      aut.asInstanceOf[CostEnrichedAutomatonTrait]
-    } else {
-      val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
-      e.printStackTrace()
-      throw e
-    }
-  }
+  // implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomaton = {
+  //   if (
+  //     aut.isInstanceOf[CostEnrichedAutomaton] ||
+  //     aut.isInstanceOf[CostEnrichedAutomatonAdapter]
+  //   ) {
+  //     aut
+  //   } else {
+  //     val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
+  //     e.printStackTrace()
+  //     throw e
+  //   }
+  // }
 
 }

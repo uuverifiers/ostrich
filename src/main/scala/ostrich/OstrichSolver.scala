@@ -105,7 +105,7 @@ class OstrichSolver(theory : OstrichStringTheory,
   ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
     val order = goal.order
-    TermGeneratorOrder.init(order)
+    TermGeneratorOrder.extend(order.orderedConstants.toSeq)
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
 
@@ -300,8 +300,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
-    FinalConstraintsSolver.initialLIA = goal.facts.arithConj
-    FinalConstraintsSolver.initialConstTerms = order sort order.orderedConstants
+    FinalConstraints.conjFormula(goal.facts.arithConj)
     
     SimpleAPI.withProver { lengthProver =>
       val lProver =

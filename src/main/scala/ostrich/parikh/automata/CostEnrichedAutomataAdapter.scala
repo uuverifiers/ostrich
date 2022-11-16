@@ -65,27 +65,27 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
     bwdReachable.toSet
   }
 
-  // override lazy val internalise: CostEnrichedAutomaton = {
-  //   val smap = new MHashMap[underlying.State, underlying.State]
+  lazy val internalise: CostEnrichedAutomaton = {
+    val smap = new MHashMap[underlying.State, underlying.State]
 
-  //   val builder =
-  //     underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
+    val builder =
+      underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
 
-  //   for (s <- states)
-  //     smap.put(s, builder.getNewState)
+    for (s <- states)
+      smap.put(s, builder.getNewState)
 
-  //   for (s <- states) {
-  //     val t = smap(s)
-  //     for ((to, label, update) <- outgoingTransitionsWithVec(s))
-  //       builder.addTransition(t, label, smap(to), update)
-  //     builder.setAccept(t, isAccept(s))
-  //   }
+    for (s <- states) {
+      val t = smap(s)
+      for ((to, label, update) <- outgoingTransitionsWithVec(s))
+        builder.addTransition(t, label, smap(to), update)
+      builder.setAccept(t, isAccept(s))
+    }
 
-  //   builder.addNewIntFormula(this.regsRelation)
-  //   builder.prependRegisters(this.registers)
-  //   builder.setInitialState(smap(initialState))
-  //   builder.getAutomaton
-  // }
+    builder.addRegsRelation(this.regsRelation)
+    builder.appendRegisters(this.registers)
+    builder.setInitialState(smap(initialState))
+    builder.getAutomaton
+  }
 
 }
 
@@ -140,15 +140,16 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     _acceptingStates & states
 
 
-  // TODO: implement
   def unary_! = {
-    CostEnrichedAutomaton.makeAnyString
+    internalise.unary_!
   }
 
-  // TODO: implement
   def |(that: Automaton): Automaton = {
-    CostEnrichedAutomaton.makeAnyString
+    internalise | that
+  }
 
+  def &(that: Automaton): Automaton = {
+    internalise & that
   }
 
   def apply(word: Seq[Int]): Boolean = {
@@ -206,6 +207,15 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
       yield p
   }
 
+  override def incomingTransitions(t: State): Iterator[(State, (Char, Char))] = {
+    val _states = states
+    for (
+      p @ (s, _) <- underlying.incomingTransitions(t);
+      if _states contains s
+    )
+      yield p
+  }
+
   override def toString: String = {
     val state2Int = states.zipWithIndex.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
@@ -229,15 +239,4 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     };
     """
   }
-
-  // override def outgoingTransitionsWithInfo(
-  //     s: State
-  // ): Iterator[(State, (Char, Char), Seq[Int], Term)] =
-  //   internalise.outgoingTransitionsWithInfo(s)
-
-  // override def outgoingTransitionsWithTerm(
-  //     s: State
-  // ): Iterator[(State, (Char, Char), Term)] =
-  //   internalise.outgoingTransitionsWithTerm(s)
-
 }

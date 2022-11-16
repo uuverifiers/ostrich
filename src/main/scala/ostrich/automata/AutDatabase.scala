@@ -66,7 +66,11 @@ class AutDatabase(theory : OstrichStringTheory,
 
   import AutDatabase._
 
-  private val regex2Aut  = if (Config.useCostEnriched) new Regex2CEAut(theory) else new Regex2Aut(theory)
+  private val regex2Aut  = 
+    if (Config.useCostEnriched && Config.regex2ce) 
+      new Regex2CEAut(theory) 
+    else
+       new Regex2Aut(theory)
   // private val regex2Aut  = new Regex2Aut(theory)
 
   private var nextId     = 0

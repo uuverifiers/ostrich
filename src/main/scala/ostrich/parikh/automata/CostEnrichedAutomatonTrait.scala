@@ -17,7 +17,7 @@ import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 
-trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
+trait CostEnrichedAutomatonTrait {
   type State = BState
 
   type TLabel = (Char, Char)
@@ -40,7 +40,7 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
 
   /** Map state to its incoming transitions
     */
-  lazy val incomingTransitions: Map[State, Set[(State, TLabel)]] = {
+  lazy val incomingTransitionsMap: Map[State, Set[(State, TLabel)]] = {
     val map = new MHashMap[State, Set[(State, TLabel)]]
     val worklist = new MStack[State]
     val seenstates = new MLinkedHashSet[State]
@@ -69,73 +69,17 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
   val labelEnumerator: TLabelEnumerator[TLabel] =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
-  // def &(that: Automaton): Automaton = this & that
-
-  def &(that: Automaton): Automaton = {
-    val aut1 = this
-    val aut2 = that.asInstanceOf[CostEnrichedAutomatonTrait]
-    val autBuilder = new CostEnrichedAutomatonBuilder
-
-    // begin intersection
-    val initialState1 = aut1.initialState
-    val initialState2 = aut2.initialState
-    val initialState = autBuilder.getNewState
-    autBuilder.setInitialState(initialState)
-    autBuilder.setAccept(
-      initialState,
-      aut1.isAccept(initialState1) && aut2.isAccept(initialState2)
-    )
-
-    // from old states pair to new state
-    val pair2state = new MHashMap[(State, State), State]
-    val worklist = new ArrayStack[(State, State)]
-
-    pair2state.put((initialState1, initialState2), initialState)
-    worklist.push((initialState1, initialState2))
-
-    while (!worklist.isEmpty) {
-      val (from1, from2) = worklist.pop()
-      val from = pair2state(from1, from2)
-      for (
-        (to1, label1, vec1, term1) <- aut1.outgoingTransitionsWithInfo(from1);
-        (to2, label2, vec2, term2) <- aut2.outgoingTransitionsWithInfo(from2)
-      ) {
-        // intersect transition
-        LabelOps.intersectLabels(label1, label2) match {
-          case Some(label) => {
-            val to = pair2state.getOrElseUpdate(
-              (to1, to2), {
-                val newState = autBuilder.getNewState
-                worklist.push((to1, to2))
-                newState
-              }
-            )
-            val vector = vec1 ++ vec2
-            autBuilder.addTransition(
-              from,
-              label,
-              to,
-              vector
-            )
-            autBuilder.setAccept(
-              to,
-              aut1.isAccept(to1) && aut2.isAccept(to2)
-            )
-          }
-          case _ => // do nothing
-        }
-      }
-    }
-    autBuilder.addRegsRelation(aut1.regsRelation)
-    autBuilder.addRegsRelation(aut2.regsRelation)
-    autBuilder.prependRegisters(aut1.registers ++ aut2.registers)
-    val res = autBuilder.getAutomaton
-    res
-  }
-
-  def getBuilder: AtomicStateAutomatonBuilder[State, TLabel] = {
+  def getBuilder: CostEnrichedAutomatonBuilder= {
     new CostEnrichedAutomatonBuilder
   }
+
+  def incomingTransitions(t: State): Iterator[(State, TLabel)] = {
+    incomingTransitionsMap(t).iterator
+  }
+
+  def incomingTransitionsWithVec(t: State) : Iterator[(State, TLabel, Seq[Int])] = 
+    for ((s, l) <- incomingTransitions(t)) yield (s, l, etaMap(s, l, t))
+
 
   /** Given a state, iterate over all outgoing transitons with vector
     */
@@ -204,11 +148,11 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
 
   def setRegisters(_registers: Seq[Term]) = registers = _registers
 
-  def setEtaMap(_etaMap: Map[(State, TLabel, State), Seq[Int]]) =
-    etaMap = _etaMap
+  def addEtaMap(_etaMap: Map[(State, TLabel, State), Seq[Int]]) =
+    etaMap ++= _etaMap
 
-  def setTransTermMap(_transTermMap: Map[(State, TLabel, State), Term]) =
-    transTermMap = _transTermMap
+  def addTransTermMap(_transTermMap: Map[(State, TLabel, State), Term]) =
+    transTermMap ++= _transTermMap
 
   def setRegsRelation(f: Formula) = regsRelation = f
 
@@ -243,23 +187,23 @@ trait CostEnrichedAutomatonTrait extends AtomicStateAutomaton {
     val state2Int = states.zipWithIndex.toMap
     val outdir = os.pwd / "dot" / LocalDate.now().toString
     os.makeDir.all(outdir)
-    val dotfile = outdir / s"${suffix}${hashCode()}.dot"
+    val dotfile = outdir / s"${suffix}.dot"
     val writer = new DotWriter(dotfile.toString)
     def toDotStr = {
       s"""
       digraph G {
         rankdir=LR;
-        node [shape = circle];
-        ${states.map(s => s"s${state2Int(s)}").mkString(" ")}
+        init [shape=point];
         node [shape = doublecircle];
         ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(" ")}
         node [shape = circle];
+        init -> s${state2Int(initialState)};
         ${transitionsWithVec.toSeq
           .sortBy(_._1)
           .map { case (s, (left, right), t, vec) =>
-            s"s${state2Int(s)} -> s${state2Int(t)} [label = \"${left.toInt}, ${right.toInt} ${vec.mkString(", ")}\"]"
+            s"s${state2Int(s)} -> s${state2Int(t)} [label = \"${left.toInt}, ${right.toInt}:(${vec.mkString(",")})\"]"
           }
-          .mkString("; ")}
+          .mkString(";\n")}
       }
       """
     }

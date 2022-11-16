@@ -1,13 +1,14 @@
 package ostrich.parikh.core
 
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomaton
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ap.terfor.Formula
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
-  HashSet => MHashSet
+  HashSet => MHashSet,
+  Stack => MStack
 }
 import ap.terfor.Term
 import ostrich.parikh.KTerm
@@ -17,39 +18,18 @@ import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.CostEnrichedConvenience._
 import ap.terfor.preds.Atom
 import ostrich.parikh.util.UnknownException
-
-object AtomConstraint {
-  def unaryHeuristicAC(aut: CostEnrichedAutomatonTrait) =
-    new UnaryHeuristicAC(aut)
-
-  def parikhAC(aut: CostEnrichedAutomatonTrait) =
-    new ParikhAC(aut)
-
-  def catraAC(aut: CostEnrichedAutomatonTrait) =
-    new CatraAC(aut)
-}
+import ostrich.parikh.writer.TempWriter
+import ostrich.parikh.Config
+import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.automata.CEBasicOperations
 
 trait AtomConstraint {
 
-  type State = CostEnrichedAutomatonTrait#State
+  type State = CostEnrichedAutomaton#State
 
-  type TLabel = CostEnrichedAutomatonTrait#TLabel
+  type TLabel = CostEnrichedAutomaton#TLabel
 
-  val aut: CostEnrichedAutomatonTrait
-
-  val states = aut.states
-
-  val registers: Seq[Term] = aut.getRegisters
-
-  val etaMap: Map[(State, TLabel, State), Seq[Int]] = aut.getEtaMap
-
-  val transTermMap: Map[(State, TLabel, State), Term] = aut.getTransTermMap
-
-  def product(that: AtomConstraint): AtomConstraint
-
-  def getUnderApprox: Formula
-
-  def getOverApprox: Formula
+  val aut: CostEnrichedAutomaton
 
   /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
     * Encode the formula of registers meanwhile.
@@ -58,7 +38,7 @@ trait AtomConstraint {
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       aut.outgoingTransitions(from).foreach { case (to, lbl) =>
-        outFlowTerms += transTermMap(from, lbl, to)
+        outFlowTerms += aut.getTransTermMap(from, lbl, to)
       }
       outFlowTerms.toSeq
     }
@@ -66,12 +46,12 @@ trait AtomConstraint {
     def inFlowTerms(to: State): Seq[Term] = {
       val inFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       aut.incomingTransitions(to).foreach { case (from, lbl) =>
-        inFlowTerms += transTermMap(from, lbl, to)
+        inFlowTerms += aut.getTransTermMap(from, lbl, to)
       }
       inFlowTerms.toSeq
     }
 
-    val zTerm = states.map((_, ZTerm())).toMap
+    val zTerm = aut.states.map((_, ZTerm())).toMap
 
     val preStatesWithTTerm = new MHashMap[State, MHashSet[(State, Term)]]
     for ((s, _, t, tTerm) <- aut.transitionsWithTerm) {
@@ -83,7 +63,7 @@ trait AtomConstraint {
       for (acceptState <- aut.acceptingStates)
         yield {
           val consistentFormulas =
-            for (s <- states)
+            for (s <- aut.states)
               yield {
                 val inFlow =
                   if (s == aut.initialState)
@@ -100,7 +80,7 @@ trait AtomConstraint {
     )
 
     // every transtion term should greater than 0
-    val transtionTerms = transTermMap.map(_._2).toSeq
+    val transtionTerms = aut.getTransTermMap.map(_._2).toSeq
     transtionTerms.foreach { term =>
       consistentFlowFormula = conj(consistentFlowFormula, term >= 0)
     }
@@ -115,7 +95,7 @@ trait AtomConstraint {
           (tTerm === 0) | (zTerm(from) > 0)
     }
 
-    val connectFormulas = states.map {
+    val connectFormulas = aut.states.map {
       case s if s != aut.initialState =>
         (zTerm(s) === 0) | disj(
           preStatesWithTTerm(s).map { case (from, tTerm) =>
@@ -141,7 +121,7 @@ trait AtomConstraint {
       val registerUpdateMap = new MHashMap[Term, ArrayBuffer[LinearCombination]]
       val transitionsWithVector: Iterator[(State, TLabel, State, Seq[Int])] =
         for (
-          s <- states.iterator;
+          s <- aut.states.iterator;
           (to, label, vec) <- aut.outgoingTransitionsWithVec(s)
         )
           yield (
@@ -153,10 +133,10 @@ trait AtomConstraint {
             )
           )
       transitionsWithVector.foreach { case (from, lbl, to, vec) =>
-        val trasitionTerm = transTermMap(from, lbl, to)
+        val trasitionTerm = aut.getTransTermMap(from, lbl, to)
         vec.zipWithIndex.foreach {
           case (veci, i) => {
-            val registerTerm = registers(i)
+            val registerTerm = aut.getRegisters(i)
             val update =
               registerUpdateMap.getOrElseUpdate(
                 registerTerm,
@@ -171,7 +151,7 @@ trait AtomConstraint {
 
     val registerUpdateFormula =
       if (registerUpdateMap.size == 0)
-        conj(for (r <- registers) yield r === 0)
+        conj(for (r <- aut.getRegisters) yield r === 0)
       else
         conj(
           for ((r, update) <- registerUpdateMap)
@@ -185,52 +165,32 @@ trait AtomConstraint {
     conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
   }
 
-  def getRegsRelation: Formula
-
 }
 
-class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
+class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
     extends AtomConstraint {
 
-  def product(that: AtomConstraint): AtomConstraint = {
-    new UnaryHeuristicAC(that.aut & aut)
-  }
+  private val upperBoundMax = 100
 
-  def getUnderApprox: Formula = {
+  private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
+
+  def getUnderApprox(ubound: Int): Formula = {
     // We return True when this automaton do not have registers
     // (which means there is only regex membership)
     if (aut.getRegisters.isEmpty)
       return Conjunction.TRUE
     val n = aut.states.size
     val rLen = aut.getRegisters.size
-    val kSet = new MHashSet[Term]
-    val concreteLenBound = if (n < 10) 10 * n else 100;
-    val s = computeS(concreteLenBound)
-    val t = computeT(n)
+    val lowerBound = globalS.size
+    val upperBound = if (ubound < upperBoundMax) ubound else upperBoundMax
+    computeGlobalSWithRegsValue(upperBound)
     val registers = aut.getRegisters
 
-    // val r2Formula = disjFor(
-    //   for (
-    //     d <- 1 until n + 1;
-    //     i <- d until n + 1;
-    //     (from, regVal) <- s(i);
-    //     (period, loopVec) <- periods(from);
-    //     (to, tailVec) <- t(n - i);
-    //     if (period == d && from == to)
-    //   ) yield {
-    //     val k = KTerm()
-    //     kSet += k
-    //     conj(
-    //       for (i <- 0 until rLen)
-    //         yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
-    //     )
-    //   }
-    // )
     val r1Formula = disjFor(
       for (
-        j <- 0 until concreteLenBound;
-        if !s(j).isEmpty;
-        (s, regVal) <- s(j);
+        j <- lowerBound until upperBound;
+        if !globalS(j).isEmpty;
+        (s, regVal) <- globalS(j);
         if (aut.isAccept(s))
       ) yield {
         conj(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
@@ -239,91 +199,80 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     r1Formula
   }
 
-  def getOverApprox: Formula = {
-    // MORE TEST: maybe bug
-    val n = states.size
-    val rLen = registers.size
-    val concreteLen = 2 * n * n + n
+  private def getLIAFromOneRegAut(aut: CostEnrichedAutomaton): Formula = {
+    assert(aut.getRegisters.size == 1)
+
+    val n = aut.states.size
     val kSet = new MHashSet[Term]
+    val reg = aut.getRegisters(0)
+    val S = computeS(aut, 2 * n * n + n)
+    val t = computeT(aut, 2 * n * n - n)
 
-    val s = computeS(concreteLen)
-    val t = computeT(2 * n * n - n)
-
-    val overapprox = conj(
-      for (i <- 0 until rLen) yield {
-        disj {
-          val r1Formula = disjFor(
-            for (
-              j <- 0 until concreteLen;
-              if !s(j).isEmpty;
-              (s, regVal) <- s(j);
-              if (aut.isAccept(s))
-            ) yield {
-              registers(i) === regVal(i)
-            }
-          )
-          val r2Formula = disjFor(
-            for (
-              d <- 1 until n + 1;
-              c <- 2 * n * n - d until 2 * n * n;
-              (from, regVal) <- s(n);
-              (period, loopVec) <- periods(from);
-              (to, tailVec) <- t(c - n);
-              if (period == d && from == to)
-            ) yield {
-              val k = KTerm()
-              kSet += k
-              registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
-            }
-          )
-          Seq(r1Formula, r2Formula)
+    val regsValuesLIA = disj {
+      val r1Formula = disjFor(
+        for (
+          j <- 0 until S.size;
+          s <- S(j);
+          if (aut.isAccept(s))
+        ) yield {
+          aut.getRegisters(0) === j
         }
-      }
-    )
+      )
+      val r2Formula = disjFor(
+        if (n < S.size) {
+          for (
+            from <- S(n);
+            period <- periods(aut, from);
+            c <- 2 * n * n - period until 2 * n * n;
+            if (c - n) < t.size;
+            to <- t(c - n);
+            if (from == to)
+          ) yield {
+            val k = KTerm()
+            kSet += k
+            aut.getRegisters(0) === c + k * period
+          }
+        } else Seq()
+      )
+      Seq(r1Formula, r2Formula)
+    }
 
     val kFormula = conj(
       for (k <- kSet) yield {
         k >= 1
       }
     )
-    conj(overapprox, kFormula)
-    // val r1Formula = disjFor(
-    //   for (
-    //     j <- 0 until concreteLen;
-    //     if !s(j).isEmpty;
-    //     (s, regVal) <- s(j);
-    //     if (aut.isAccept(s))
-    //   ) yield {
-    //     conj(for (i <- 0 until rLen) yield registers(i) === regVal(i))
-    //   }
-    // )
 
-    // val r2Formula = disjFor(
-    //   for (
-    //     d <- 1 until n + 1;
-    //     c <- 2 * n * n - d until 2 * n * n;
-    //     (from, regVal) <- s(n);
-    //     (period, loopVec) <- periods(from);
-    //     (to, tailVec) <- t(c - n);
-    //     if (period == d && from == to)
-    //   ) yield {
-    //     val k = KTerm()
-    //     kSet += k
-    //     conj(
-    //       for (i <- 0 until rLen)
-    //         yield registers(i) === regVal(i) + k * loopVec(i) + tailVec(i)
-    //     )
-    //   }
-    // )
+    conj(regsValuesLIA, kFormula)
 
-    // val kFormula = conj(
-    //   for (k <- kSet) yield {
-    //     k >= 1
-    //   }
-    // )
+  }
 
-    // disj(r1Formula, conj(r2Formula, kFormula))
-
+  def getOverApprox: Formula = {
+    val reg2Aut = for (i <- 0 until aut.getRegisters.size) yield {
+      val reg = aut.getRegisters(i)
+      val builder = CostEnrichedAutomaton.getBuilder
+      val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
+      builder.setInitialState(old2new(aut.initialState))
+      for ((s, l, t, v) <- aut.transitionsWithVec) {
+        builder.addTransition(old2new(s), l, old2new(t), Seq(v(i)))
+      }
+      for (s <- aut.acceptingStates) {
+        builder.setAccept(old2new(s), true)
+      }
+      builder.appendRegisters(Seq(reg))
+      builder.getAutomaton
+    }
+    val regsFormula = conj(
+      for (aut <- reg2Aut)
+        yield getLIAFromOneRegAut(
+          CEBasicOperations.determinateByVec(
+            CEBasicOperations.epsilonClosureByVec(
+              CEBasicOperations.simplify(aut)
+            )
+          )
+        )
+    )
+    regsFormula
   }
 
   override def getCompleteLIA: Formula = {
@@ -335,82 +284,107 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
   def getRegsRelation: Formula = aut.getRegsRelation
 
-  /** computing S_(2n^2+n-1), ..., S_0. Terminate if S_(2n^2+n-1) is computed or
-    * succ(S_i) is empty
-    * @return
-    *   S
-    */
-  def computeS(
+  def computeGlobalSWithRegsValue(
       sLen: Int
-  ): ArrayBuffer[Set[(State, Seq[Int])]] = {
-    val S = ArrayBuffer.fill(sLen)(Set[(State, Seq[Int])]())
-    S(0) = Set((aut.initialState, Seq.fill(registers.size)(0)))
-    var idx = 0
-    while (idx < sLen - 1 && !S(idx).isEmpty) {
+  ): Unit = {
+    var idx = globalS.size
+    val s2i = aut.states.zipWithIndex.toMap
+    if (idx == 0) {
+      globalS += Set((aut.initialState, Seq.fill(aut.getRegisters.size)(0)))
       idx += 1
-      S(idx) =
-        for (
-          (s, regVal) <- S(idx - 1);
-          (t, vec) <- succWithVec(s)
-        ) yield {
-          (t, addTwoSeq(regVal, vec))
-        }
     }
-    S
+    while (idx < sLen && !globalS(idx - 1).isEmpty) {
+      globalS += (for (
+        (s, regVal) <- globalS(idx - 1);
+        (t, vec) <- succWithVec(aut, s)
+      ) yield {
+        (t, addTwoSeq(regVal, vec))
+      })
+      idx += 1
+    }
+  }
+
+  def computeS(
+      aut: CostEnrichedAutomaton,
+      sLen: Int
+  ): ArrayBuffer[Set[State]] = {
+    var idx = 1
+    val s2i = aut.states.zipWithIndex.toMap
+
+    val tmpS = ArrayBuffer(
+      Set(aut.initialState)
+    )
+
+    while (idx < sLen && !tmpS(idx - 1).isEmpty) {
+      tmpS += (for (
+        s <- tmpS(idx - 1);
+        (t, vec) <- succWithVec(aut, s)
+      ) yield t)
+      idx += 1
+    }
+    tmpS
   }
 
   /** computing T_len, T_{len-1}, ..., T_0. Terminate if T_(2n^2-n-1) is
     * computed or pre(S_i) is empty
     */
-  def computeT(len: Int): ArrayBuffer[Set[(State, Seq[Int])]] = {
+  def computeT(
+      aut: CostEnrichedAutomaton,
+      len: Int
+  ): ArrayBuffer[Set[State]] = {
     val n = aut.states.size
     val acceptingStates = aut.acceptingStates
-    val rLen = aut.getRegisters.size
-    val T = ArrayBuffer.fill(len)(Set[(State, Seq[Int])]())
-    T(0) = acceptingStates.map((_, Seq.fill(rLen)(0)))
-    var idx = 0
-    while (idx < len - 1 && !T(idx).isEmpty) {
+    val T = ArrayBuffer[Set[State]]()
+    T += acceptingStates
+    var idx = 1
+    while (idx < len && !T(idx - 1).isEmpty) {
+      T +=
+        (for (
+          t <- T(idx - 1);
+          (s, vec) <- preWithVec(aut, t)
+        ) yield s)
       idx += 1
-      T(idx) =
-        for (
-          (t, regVal) <- T(idx - 1);
-          (s, vec) <- preWithVec(t)
-        ) yield {
-          (s, addTwoSeq(regVal, vec))
-        }
     }
     T
   }
 
-  def periods(s: State): Set[(Int, Seq[Int])] = {
-    val periods = new ArrayBuffer[(Int, Seq[Int])]
+  def periods(
+      aut: CostEnrichedAutomaton,
+      s: State
+  ): Set[Int] = {
     var period = 0
     val n = aut.states.size
     val rLen = aut.getRegisters.size
-
-    var periodVec = Seq.fill(rLen)(0)
-    val nextStates2Vec = succWithVec(s).toMap
-    val nextStates = nextStates2Vec.map(_._1).toSet
-    while (period < n && !nextStates.isEmpty) {
+    val periods = new MHashSet[Int]
+    val workstack = MStack(Seq(s))
+    while (period < n && workstack.nonEmpty) {
+      val seqstates = workstack.pop()
+      val nextStates =
+        for (
+          s <- seqstates;
+          (t, l) <- aut.outgoingTransitions(s)
+        ) yield t
+      workstack.push(nextStates)
       period += 1
       if (nextStates.contains(s)) {
-        periodVec = addTwoSeq(periodVec, nextStates2Vec(s))
-        periods.append((period, periodVec))
+        periods += period
       }
     }
     periods.toSet
   }
 
   def succWithVec(
+      aut: CostEnrichedAutomaton,
       s: State
   ): Iterator[(State, Seq[Int])] =
     for ((t, lbl, vec) <- aut.outgoingTransitionsWithVec(s)) yield (t, vec)
 
   def preWithVec(
+      aut: CostEnrichedAutomaton,
       t: State
   ): Iterator[(State, Seq[Int])] =
     for ((s, lbl) <- aut.incomingTransitions(t).iterator)
-      yield (s, etaMap((s, lbl, t)))
+      yield (s, aut.getEtaMap((s, lbl, t)))
 
   // e.g (1,1) + (1,0) = (2,1)
   def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]): Seq[Int] = {
@@ -421,18 +395,9 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
 // TODO: BUG!! Bug occurs when running benchmark `bigSubStrIdx.smt2`
 
-class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
-
-  def product(that: AtomConstraint): AtomConstraint = {
-    new ParikhAC(aut & that.aut)
-  }
-  def getUnderApprox: Formula = Conjunction.FALSE
-
-  def getOverApprox: Formula = Conjunction.TRUE
-
+class ParikhAC(val aut: CostEnrichedAutomaton) extends AtomConstraint {
   def getRegsRelation: Formula = aut.getRegsRelation
-
 }
 
-class CatraAC(override val aut: CostEnrichedAutomatonTrait)
+class CatraAC(override val aut: CostEnrichedAutomaton)
     extends ParikhAC(aut)

@@ -515,8 +515,6 @@ trait AtomicStateAutomatonBuilder[State, TLabel] {
    */
   def addTransition(s1 : State, label : TLabel, s2 : State) : Unit
 
-  def addTransition(s1 : State, label : TLabel, s2 : State, update : Seq[Int], t: Term) : Unit = AnyRef
-
   /**
    * Iterate over outgoing transitions from state
    */

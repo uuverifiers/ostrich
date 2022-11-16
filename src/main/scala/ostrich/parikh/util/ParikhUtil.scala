@@ -18,6 +18,7 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 
 import ostrich.automata.BricsTLabelEnumerator
 import ap.basetypes.IdealInt
+import ostrich.parikh.automata.CostEnrichedAutomaton
 
 object ParikhUtil {
 
@@ -37,7 +38,7 @@ object ParikhUtil {
 
   // TODO: Only support one automaton now. So the argument auts can only be length 1
   def findAcceptedWordByRegisters(
-      auts: Seq[CostEnrichedAutomatonTrait],
+      auts: Seq[CostEnrichedAutomaton],
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
 
@@ -72,96 +73,6 @@ object ParikhUtil {
 
     None
 
-    // if(registersModel.isEmpty) {
-    //   // no registers
-    //   return productAut.getAcceptedWord
-    // }
-
-    // val registersValue = registersModel.map { case (t, r) =>
-    //   (t, r.intValue)
-    // }
-
-    // val fisrtAut = auts(0)
-
-    // /** One step of intersection
-    //   */
-    // def enumNext(
-    //     auts: Seq[CostEnrichedAutomatonTrait],
-    //     states: Seq[State],
-    //     registersModel: MMap[Term, Int],
-    //     intersectedLabels: TLabel
-    // ): Iterator[(Seq[State], MMap[Term, Int], Int)] =
-    //   auts match {
-    //     case Seq() =>
-    //       Iterator(
-    //         (
-    //           Seq(),
-    //           registersModel.clone(),
-    //           fisrtAut.LabelOps.enumLetters(intersectedLabels).next
-    //         )
-    //       )
-    //     case aut +: otherAuts => {
-    //       val state +: otherStates = states
-    //       val registers = aut.getRegisters
-    //       for (
-    //         (to, label, vec) <- aut.outgoingTransitionsWithVec(
-    //           state
-    //         );
-    //         newILabel <- aut.LabelOps
-    //           .intersectLabels(
-    //             intersectedLabels,
-    //             label
-    //           ).toSeq;
-    //         if !(vec.zipWithIndex.forall { case (v, i) =>
-    //           registersModel(registers(i)) < v
-    //         });
-    //         (tailNext, updatedModel, char) <- enumNext(
-    //           otherAuts,
-    //           otherStates,
-    //           registersModel ++ (for ((v, i) <- vec.zipWithIndex; if v > 0)
-    //             yield (
-    //               registers(i),
-    //               registersModel(registers(i)) - v
-    //             )).toMap, // update lengthModel
-    //           newILabel
-    //         )
-    //       )
-    //         yield (to +: tailNext, updatedModel, char)
-    //     }
-    //   }
-
-    // val initial = (auts map (_.initialState))
-
-    // if (isAccepting(auts, initial, registersValue))
-    //   return Some(Seq())
-
-    // val visitedStates = new MHashSet[(Seq[State], MMap[Term, Int])]
-    // val todo = new ArrayStack[(Seq[State], MMap[Term, Int], Seq[Int])]
-
-    // visitedStates += ((initial, registersValue))
-    // todo push ((initial, registersValue, Seq()))
-
-    // while (!todo.isEmpty) {
-    //   val (next, lengthModel, w) = todo.pop
-    //   for (
-    //     (reached, updatedModel, char) <-
-    //       enumNext(
-    //         auts,
-    //         next,
-    //         lengthModel,
-    //         auts(0).LabelOps.sigmaLabel
-    //       )
-    //   ) {
-
-    //     if (visitedStates.add((reached, updatedModel))) {
-    //       val newW = w :+ char
-    //       if (isAccepting(auts, reached, updatedModel))
-    //         return Some(newW)
-    //       todo push ((reached, updatedModel, newW))
-    //     }
-    //   }
-    // }
-    // None
   }
 
   /** Given transtion repeat times, check whether there is some word accepted by
