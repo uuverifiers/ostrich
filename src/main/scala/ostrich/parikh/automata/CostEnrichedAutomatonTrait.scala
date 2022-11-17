@@ -17,8 +17,10 @@ import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
+import ostrich.parikh.TransitionTerm
 
 trait CostEnrichedAutomatonTrait extends Automaton {
+
   type State = BState
 
   type TLabel = (Char, Char)
@@ -39,20 +41,28 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     */
   protected var registers: Seq[Term] = Seq()
 
-   /**
-   * The unique initial state
-   */
-  val initialState : State
+  /** The unique initial state
+    */
+  val initialState: State
 
-  /**
-   * The set of accepting states
-   */
-  val acceptingStates : Set[State]
+  /** The set of accepting states
+    */
+  val acceptingStates: Set[State]
 
-  /**
-   * Iterate over automaton states
-   */
-  def states : Iterable[State]
+  /** Iterate over automaton states
+    */
+  def states: Iterable[State]
+
+  def initMap: Unit = {
+
+    transitions.foreach { transition =>
+      etaMap += transition -> Seq.fill(registers.size)(0)
+    }
+    // if (Config.backend == Config.Baseline())
+    transitions.foreach(transition => {
+      transTermMap += transition -> TransitionTerm()
+    })
+  }
 
   def &(that: Automaton): Automaton =
     this.asInstanceOf[CostEnrichedAutomatonTrait] product that
@@ -93,11 +103,10 @@ trait CostEnrichedAutomatonTrait extends Automaton {
   val labelEnumerator: TLabelEnumerator[TLabel] =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
-  /**
-   * Compute states that can only be reached through words with some
-   * unique length
-   */
-  lazy val uniqueLengthStates : Map[State, Int] = {
+  /** Compute states that can only be reached through words with some unique
+    * length
+    */
+  lazy val uniqueLengthStates: Map[State, Int] = {
     val uniqueLengthStates = new MHashMap[State, Int]
     val nonUniqueLengthStates = new MHashSet[State]
     val todo = new ArrayStack[State]
@@ -128,7 +137,7 @@ trait CostEnrichedAutomatonTrait extends Automaton {
                 uniqueLengthStates.put(to, sLen + 1)
                 todo push to
               }
-        }
+          }
       }
     }
 
@@ -149,22 +158,19 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     new CostEnrichedAutomatonBuilder
   }
 
-  def getLengthAbstraction: Formula = Conjunction.TRUE  // not use
+  def getLengthAbstraction: Formula = Conjunction.TRUE // not use
 
-  /**
-   * Ask if state is accepting
-   */
-  def isAccept(q : State) : Boolean
+  /** Ask if state is accepting
+    */
+  def isAccept(q: State): Boolean
 
-  /**
-   * Given a state, iterate over all outgoing transitions
-   */
-  def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
+  /** Given a state, iterate over all outgoing transitions
+    */
+  def outgoingTransitions(from: State): Iterator[(State, TLabel)]
 
-  /**
-   * Iterate over all transitions
-   */
-  def transitions : Iterator[(State, TLabel, State)] =
+  /** Iterate over all transitions
+    */
+  def transitions: Iterator[(State, TLabel, State)] =
     for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
       yield (s1, lbl, s2)
 
@@ -172,16 +178,19 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     incomingTransitionsMap(t).iterator
   }
 
-  def incomingTransitionsWithVec(t: State) : Iterator[(State, TLabel, Seq[Int])] = 
+  def incomingTransitionsWithVec(
+      t: State
+  ): Iterator[(State, TLabel, Seq[Int])] =
     for ((s, l) <- incomingTransitions(t)) yield (s, l, etaMap(s, l, t))
-
 
   /** Given a state, iterate over all outgoing transitons with vector
     */
   def outgoingTransitionsWithVec(
       s: State
   ): Iterator[(State, TLabel, Seq[Int])] = {
-    val tWithV = for ((t, lbl) <- outgoingTransitions(s)) yield (t, lbl, etaMap((s, lbl, t)))
+    val tWithV =
+      for ((t, lbl) <- outgoingTransitions(s))
+        yield (t, lbl, etaMap((s, lbl, t)))
     // Sort by the number of 0 in the vector.
     // e.g (1,1) < (1,0) = (0,1) < (0,0)
     // So the iterator.head will be the transition with vector of
@@ -243,7 +252,7 @@ trait CostEnrichedAutomatonTrait extends Automaton {
 
   def getTransducerBuilder: TransducerBuilder[State, TLabel] =
     BricsTransducer.getBuilder
-  
+
   override def toString: String = {
     val state2Int = states.zipWithIndex.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
@@ -294,5 +303,7 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     }
     writer.closeAfterWrite(toDotStr)
   }
+
+  initMap
 
 }

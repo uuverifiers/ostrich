@@ -29,8 +29,8 @@ class CostEnrichedAutomatonBuilder{
 
   private val etaMap: MHashMap[(State, TLabel, State), Seq[Int]] = new MHashMap
   private val registers: ArrayBuffer[Term] = new ArrayBuffer()
-  private val transTermMap: MHashMap[(State, TLabel, State), Term] =
-    new MHashMap
+  // private val transTermMap: MHashMap[(State, TLabel, State), Term] =
+  //   new MHashMap
   private var regsRelation: Formula = Conjunction.TRUE
 
   // add interger arithmatic to this aut
@@ -57,11 +57,11 @@ class CostEnrichedAutomatonBuilder{
   }
 
   // add (transition -> term) map to transTermMap
-  def addTermMap(
-      map: MHashMap[(State, TLabel, State), Term]
-  ): MHashMap[(State, TLabel, State), Term] = {
-    this.transTermMap ++= map
-  }
+  // def addTermMap(
+  //     map: MHashMap[(State, TLabel, State), Term]
+  // ): MHashMap[(State, TLabel, State), Term] = {
+  //   this.transTermMap ++= map
+  // }
 
   /** The initial state of the automaton being built
     */
@@ -81,13 +81,6 @@ class CostEnrichedAutomatonBuilder{
   def setInitialState(q: State): Unit =
     baut.setInitialState(q)
 
-  /** Add a new transition q1 --label,Seq[Int]--> q2
-    */
-  def addTransition(
-      q1: State,
-      label: TLabel,
-      q2: State
-  ): Unit = addTransition(q1, label, q2, Seq())
 
   /** Add a new transition q1 --label,vector--> q2
     */
@@ -97,30 +90,29 @@ class CostEnrichedAutomatonBuilder{
       q2: State,
       vector: Seq[Int]
   ): Unit = {
-    // if (LabelOps.isNonEmptyLabel(label)) {
-    //   val (min, max) = label
-    //   q1.addTransition(new Transition(min, max, q2))
-    //   etaMap += ((q1, (min, max), q2) -> vector)
-    // }
-    addTransition(q1, label, q2, vector, TransitionTerm())
-  }
-
-  /** Add a new transition q1 --label,vector--> q2, set its term to t
-    */
-  def addTransition(
-      q1: State,
-      label: TLabel,
-      q2: State,
-      vector: Seq[Int],
-      t: Term
-  ): Unit = {
     if (LabelOps.isNonEmptyLabel(label)) {
       val (min, max) = label
       q1.addTransition(new Transition(min, max, q2))
       etaMap += ((q1, (min, max), q2) -> vector)
-      transTermMap += ((q1, (min, max), q2) -> t)
     }
   }
+
+  /** Add a new transition q1 --label,vector--> q2, set its term to t
+    */
+  // def addTransition(
+  //     q1: State,
+  //     label: TLabel,
+  //     q2: State,
+  //     vector: Seq[Int],
+  //     t: Term
+  // ): Unit = {
+  //   if (LabelOps.isNonEmptyLabel(label)) {
+  //     val (min, max) = label
+  //     q1.addTransition(new Transition(min, max, q2))
+  //     etaMap += ((q1, (min, max), q2) -> vector)
+  //     transTermMap += ((q1, (min, max), q2) -> t)
+  //   }
+  // }
 
   def outgoingTransitions(
       q: State
@@ -152,7 +144,7 @@ class CostEnrichedAutomatonBuilder{
     val res = new CostEnrichedAutomaton(baut)
     res.setRegisters(registers.toSeq)
     res.addEtaMap(etaMap.toMap)
-    res.addTransTermMap(transTermMap.toMap)
+    // res.addTransTermMap(transTermMap.toMap)
     res.setRegsRelation(regsRelation)
     res.removeDuplicatedReg()
     res

@@ -51,7 +51,6 @@ import scala.collection.mutable.{HashMap => MHashMap, ArrayBuffer, ArrayStack,
 import ostrich.parikh.ParikhExploration
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
-import ParikhExploration.Approx
 
 object Exploration {
   case class TermConstraint(t : Term, aut : Automaton)

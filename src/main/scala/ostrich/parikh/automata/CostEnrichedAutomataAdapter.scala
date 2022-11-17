@@ -22,9 +22,11 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
 ) extends CostEnrichedAutomatonTrait {
 
   registers = Seq.fill(underlying.getRegisters.size)(RegisterTerm())
+
   transitions.foreach { case (s, lbl, t) =>
     transTermMap += ((s, lbl, t) -> TransitionTerm())
   }
+  
   etaMap = underlying.getEtaMap
 
   def computeReachableStates(

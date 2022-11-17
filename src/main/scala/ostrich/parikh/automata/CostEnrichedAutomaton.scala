@@ -62,21 +62,6 @@ object CostEnrichedAutomaton {
   def getBuilder: CostEnrichedAutomatonBuilder = {
     new CostEnrichedAutomatonBuilder
   }
-
-  def initMap(aut: CostEnrichedAutomaton): Unit = {
-    val transitions = aut.transitions
-    val registers = aut.registers
-
-    transitions.foreach { transition =>
-      val initEtaMap = (transition -> Seq.fill(registers.size)(0))
-      aut.etaMap += initEtaMap
-    }
-    transitions.foreach(transition => {
-      val initTransTermMap = (transition -> TransitionTerm())
-      aut.transTermMap += initTransTermMap
-    })
-  }
-
   private val MINIMIZE_LIMIT = 100000
 }
 
@@ -87,8 +72,6 @@ object CostEnrichedAutomaton {
 class CostEnrichedAutomaton(
     val underlying: BAutomaton
 ) extends CostEnrichedAutomatonTrait {
-
-  CostEnrichedAutomaton.initMap(this)
 
   def unary_! = {
     CEBasicOperations.complement(this)
