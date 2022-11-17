@@ -26,9 +26,9 @@ import ostrich.parikh.core.Model.{IntValue, StringValue}
 import ostrich.parikh.preop.IndexOfCEPreOp
 import ostrich.parikh.core.CatraBasedSolver
 import ostrich.parikh.core.BaselineSolver
-import ostrich.parikh.Config.Catra
-import ostrich.parikh.Config.Baseline
-import ostrich.parikh.Config.Unary
+import ostrich.parikh.OstrichConfig.Catra
+import ostrich.parikh.OstrichConfig.Baseline
+import ostrich.parikh.OstrichConfig.Unary
 import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
@@ -192,7 +192,7 @@ class ParikhExploration(
 
         // val solver = new CatraBasedSolver
         val backendSolver =
-          Config.backend match {
+          OstrichConfig.backend match {
             case Catra()  => new CatraBasedSolver
             case Baseline() => new BaselineSolver
             case Unary()  => new UnaryBasedSolver

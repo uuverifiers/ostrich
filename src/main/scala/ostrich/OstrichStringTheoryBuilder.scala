@@ -37,7 +37,7 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
-import ostrich.parikh.Config
+import ostrich.parikh.OstrichConfig
 
 /** The entry class of the Ostrich string solver.
   */
@@ -92,13 +92,13 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
     case CmdlParser.Opt("costenriched", value) =>
-      Config.useCostEnriched = value
+      OstrichConfig.useCostEnriched = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
-      Config.backend = Config.Baseline()
+      OstrichConfig.backend = OstrichConfig.Baseline()
     case CmdlParser.ValueOpt("backend", "unary") =>
-      Config.backend = Config.Unary()
+      OstrichConfig.backend = OstrichConfig.Unary()
     case CmdlParser.ValueOpt("backend", "catra") =>
-      Config.backend = Config.Catra()
+      OstrichConfig.backend = OstrichConfig.Catra()
     // ignore")
     case CmdlParser.Opt("help", _) =>
       println(usage)

@@ -11,7 +11,7 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import FinalConstraints._
 import ap.terfor.Term
 import ap.terfor.Formula
-import ostrich.parikh.Config._
+import ostrich.parikh.OstrichConfig._
 import ap.basetypes.IdealInt
 import ostrich.parikh.writer.CatraWriter
 import uuverifiers.catra.CommandLineOptions
@@ -42,7 +42,6 @@ import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 
 class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
-
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
     addConstraint(unaryHeuristicACs(t, auts))
   }
@@ -85,12 +84,18 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
       p setConstructProofs true
       val regsRelation = conj(constraints.map(_.getRegsRelation))
       val finalArith = conj(f, regsRelation, FinalConstraints())
+
       val constants =
         SymbolCollector.constants(finalArith) ++ integerTerms
 
-      p addConstants constants
+      p addConstants order.orderedConstants
 
-      // p addConstantsRaw initialConstTerms
+      // We must treat TermGenerator.order carefully. 
+      // Note that finalArith.order == TermGenerator.order 
+      // because TermGenerator.order is the implicit order
+      // The call addAssertion will fail some asserttion 
+      // if the TermGenerator is extended with too many constants. 
+      // (run ostrich with +assert option)
       p addAssertion finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

@@ -11,7 +11,7 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import FinalConstraints._
 import ap.terfor.Term
 import ap.terfor.Formula
-import ostrich.parikh.Config._
+import ostrich.parikh.OstrichConfig._
 import ap.basetypes.IdealInt
 import ostrich.parikh.writer.CatraWriter
 import uuverifiers.catra.CommandLineOptions

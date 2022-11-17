@@ -13,7 +13,7 @@ import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
 import ap.types.SortedConstantTerm
-import ostrich.parikh.Config
+import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CEBasicOperations
 import ap.terfor.conjunctions.Conjunction
 import shapeless.Fin

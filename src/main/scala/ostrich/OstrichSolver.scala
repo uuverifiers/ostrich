@@ -53,7 +53,7 @@ import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.CostEnrichedConvenience
 import ostrich.parikh.core.FinalConstraints
 import ostrich.parikh.core.FinalConstraintsSolver
-import ostrich.parikh.Config
+import ostrich.parikh.OstrichConfig
 import ostrich.parikh.ParikhExploration.Approx
 
 object OstrichSolver {
@@ -103,9 +103,12 @@ class OstrichSolver(theory : OstrichStringTheory,
   def findStringModel(
       goal: Goal
   ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+
     val atoms = goal.facts.predConj
     val order = goal.order
-    TermGeneratorOrder.extend(order.orderedConstants.toSeq)
+
+    // TermGeneratorOrder.extend(order.orderedConstants.toSeq)
+
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
 
@@ -177,7 +180,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`)
-          if Config.useCostEnriched => {
+          if OstrichConfig.useCostEnriched => {
           funApps += ((LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
       }
       case FunPred(`str_len`) => {
@@ -326,7 +329,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       
 
       // val result = exploration.findModel
-      val result = if(Config.useCostEnriched){
+      val result = if(OstrichConfig.useCostEnriched){
         // first use under-approximation to find a model
         // then if under unsat, use over-approximation to check unsat
         // if over sat and under unsat, then use completeExp(slowest)

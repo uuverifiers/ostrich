@@ -44,7 +44,7 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
 import ostrich.parikh.preop.ConcatCEPreOp
 import ostrich.parikh.preop.SubStringCEPreOp
-import ostrich.parikh.Config
+import ostrich.parikh.OstrichConfig
 
 /**
  * Class for mapping string constraints to string functions.
@@ -77,9 +77,9 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_++`) if Config.useCostEnriched =>
+    case FunPred(`str_++`) if OstrichConfig.useCostEnriched =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
-    case FunPred(`str_substr`) if Config.useCostEnriched =>
+    case FunPred(`str_substr`) if OstrichConfig.useCostEnriched =>
       Some((() => SubStringCEPreOp(a(1), a(2)), Seq(a(0), a(1), a(2)), a(3)))
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))

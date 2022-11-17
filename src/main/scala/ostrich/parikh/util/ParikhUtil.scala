@@ -342,7 +342,7 @@ object ParikhUtil {
   def measure[A](
       op: String
   )(comp: => A)(implicit manualFlag: Boolean = true): A =
-    if (Config.measureTime && manualFlag)
+    if (OstrichConfig.measureTime && manualFlag)
       ap.util.Timer.measure(op)(comp)
     else
       comp

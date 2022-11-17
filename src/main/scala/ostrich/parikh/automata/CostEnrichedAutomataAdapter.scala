@@ -13,6 +13,7 @@ import scala.collection.mutable.{
   LinkedHashSet => MLinkedHashSet,
   Set => MSet
 }
+import ostrich.parikh.OstrichConfig
 
 // TODO: BUG occur because this class mixs underlying and internalise!!
 // Rewrite this class to only extends CostEnrichedAutomatonTrait
@@ -23,10 +24,11 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
 
   registers = Seq.fill(underlying.getRegisters.size)(RegisterTerm())
 
-  transitions.foreach { case (s, lbl, t) =>
-    transTermMap += ((s, lbl, t) -> TransitionTerm())
-  }
-  
+  if (OstrichConfig.backend == OstrichConfig.Baseline())
+    transitions.foreach { case (s, lbl, t) =>
+      transTermMap += ((s, lbl, t) -> TransitionTerm())
+    }
+
   etaMap = underlying.getEtaMap
 
   def computeReachableStates(
@@ -141,7 +143,6 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
   lazy val acceptingStates: Set[State] =
     _acceptingStates & states
 
-
   def unary_! = {
     internalise.unary_!
   }
@@ -203,7 +204,9 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
       yield p
   }
 
-  override def incomingTransitions(t: State): Iterator[(State, (Char, Char))] = {
+  override def incomingTransitions(
+      t: State
+  ): Iterator[(State, (Char, Char))] = {
     val _states = states
     for (
       p @ (s, _) <- underlying.incomingTransitions(t);

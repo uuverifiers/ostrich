@@ -13,7 +13,7 @@ import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
 import ap.types.SortedConstantTerm
-import ostrich.parikh.Config
+import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CEBasicOperations
 import ap.terfor.conjunctions.Conjunction
 import shapeless.Fin
@@ -58,6 +58,6 @@ class UnaryFinalConstraints(
     ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
   }
 
-  if (Config.outputdot) mostlySimplifiedAut.toDot(strId.toString)
+  if (OstrichConfig.outputdot) mostlySimplifiedAut.toDot(strId.toString)
 
 }

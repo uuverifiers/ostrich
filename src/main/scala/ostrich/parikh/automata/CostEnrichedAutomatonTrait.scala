@@ -18,6 +18,7 @@ import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 import ostrich.parikh.TransitionTerm
+import ostrich.parikh.OstrichConfig
 
 trait CostEnrichedAutomatonTrait extends Automaton {
 
@@ -58,10 +59,10 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     transitions.foreach { transition =>
       etaMap += transition -> Seq.fill(registers.size)(0)
     }
-    // if (Config.backend == Config.Baseline())
-    transitions.foreach(transition => {
-      transTermMap += transition -> TransitionTerm()
-    })
+    if (OstrichConfig.backend == OstrichConfig.Baseline())
+      transitions.foreach(transition => {
+        transTermMap += transition -> TransitionTerm()
+      })
   }
 
   def &(that: Automaton): Automaton =

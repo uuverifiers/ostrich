@@ -19,7 +19,7 @@ import ap.terfor.preds.Atom
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.writer.TempWriter
 import ostrich.parikh.writer.Logger
-import ostrich.parikh.Config
+import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.CostEnrichedAutomaton
