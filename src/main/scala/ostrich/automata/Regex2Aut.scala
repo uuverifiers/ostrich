@@ -556,7 +556,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     toBAutomaton(t, true)
 
   def buildAut(t : ITerm,
-               minimize : Boolean = true) : AtomicStateAutomaton =
+               minimize : Boolean = true) : Automaton =
     new BricsAutomaton(toBAutomaton(t, minimize))
 
   private def numToUnicode(num : Int) : String =

@@ -38,11 +38,11 @@ object ParikhUtil {
 
   // TODO: Only support one automaton now. So the argument auts can only be length 1
   def findAcceptedWordByRegisters(
-      auts: Seq[CostEnrichedAutomaton],
+      auts: Seq[CostEnrichedAutomatonTrait],
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
 
-    val productAut = auts.reduceLeft(_ & _)
+    val productAut = auts.reduceLeft(_ product _)
 
     val registersValue = productAut.getRegisters.map(registersModel(_).intValue)
     val todoList = new ArrayStack[(State, Seq[Int], Seq[Char])]

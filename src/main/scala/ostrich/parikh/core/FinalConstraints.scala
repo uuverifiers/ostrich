@@ -17,6 +17,7 @@ import ostrich.parikh.Config
 import ostrich.parikh.automata.CEBasicOperations
 import ap.terfor.conjunctions.Conjunction
 import shapeless.Fin
+import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 
 object FinalConstraints {
 
@@ -28,7 +29,7 @@ object FinalConstraints {
 
   def unaryHeuristicACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomaton]
+      auts: Seq[CostEnrichedAutomatonTrait]
   ): UnaryFinalConstraints = {
     val atomConstraints = auts.map(new UnaryHeuristicAC(_))
     new UnaryFinalConstraints(t, atomConstraints)
@@ -36,7 +37,7 @@ object FinalConstraints {
 
   def baselineACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomaton]
+      auts: Seq[CostEnrichedAutomatonTrait]
   ): BaselineFinalConstraints = {
     val atomConstraints = auts.map(new ParikhAC(_))
     new BaselineFinalConstraints(t, atomConstraints)
@@ -44,7 +45,7 @@ object FinalConstraints {
 
   def catraACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomaton]
+      auts: Seq[CostEnrichedAutomatonTrait]
   ): CatraFinalConstraints = {
     val atomConstraints = auts.map(new CatraAC(_))
     new CatraFinalConstraints(t, atomConstraints)
@@ -115,16 +116,17 @@ class UnaryFinalConstraints(
 
   // eagerly product, which means compute lia after producting
   lazy val productAtom: AtomConstraint = {
-    val productAut = getAutomata.reduce(_ & _)
+    val productAut = getAutomata.reduce(_ product _)
     val simplifyAut = CEBasicOperations.simplify(productAut)
     new UnaryHeuristicAC(simplifyAut)
   }
 
-  lazy val mostlySimplifiedAut = CEBasicOperations.determinateByVec(
-    CEBasicOperations.epsilonClosureByVec(
-      productAtom.aut
+  lazy val mostlySimplifiedAut =
+    CEBasicOperations.determinateByVec(
+      CEBasicOperations.epsilonClosureByVec(
+        productAtom.aut
+      )
     )
-  )
 
   def getUnderApprox(bound: Int): Formula =
     new UnaryHeuristicAC(mostlySimplifiedAut).getUnderApprox(bound)
@@ -145,7 +147,7 @@ class UnaryFinalConstraints(
     ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
   }
 
-  if (Config.outputdot) productAtom.aut.toDot(strId.toString)
+  if (Config.outputdot) mostlySimplifiedAut.toDot(strId.toString)
 
 }
 
@@ -155,7 +157,7 @@ class BaselineFinalConstraints(
 ) extends FinalConstraints {
 
   // eagerly product, which means compute lia after producting
-  lazy val productAtom = new ParikhAC(getAutomata.reduceLeft(_ & _))
+  lazy val productAtom = new ParikhAC(getAutomata.reduceLeft(_ product _))
 
   def getCompleteLIA: Formula = productAtom.getCompleteLIA
 
@@ -178,7 +180,7 @@ class CatraFinalConstraints(
 ) extends FinalConstraints {
 
   // eagerly product, which means compute lia after producting
-  lazy val productAtom = new ParikhAC(getAutomata.reduceLeft(_ & _))
+  lazy val productAtom = new ParikhAC(getAutomata.reduceLeft(_ product _))
 
   def getRegsRelation: Formula = productAtom.getRegsRelation
 

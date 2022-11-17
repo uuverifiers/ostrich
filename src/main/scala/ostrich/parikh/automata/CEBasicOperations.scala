@@ -126,11 +126,11 @@ object CEBasicOperations {
     union(Seq(aut1, aut2))
   }
 
-  def intersection(
-      aut1: CostEnrichedAutomaton,
-      aut2: CostEnrichedAutomaton
+  def intersection[A<:CostEnrichedAutomatonTrait](
+      aut1: A,
+      aut2: A
   ): CostEnrichedAutomaton = {
-    val autBuilder = CostEnrichedAutomaton.getBuilder
+    val autBuilder = aut1.getBuilder
 
     // begin intersection
     val initialState1 = aut1.initialState
@@ -254,7 +254,13 @@ object CEBasicOperations {
   }
 
   def repeat(aut: CostEnrichedAutomaton, min: Int): CostEnrichedAutomaton = {
-    if (min <= 0) return repeat(aut)
+     // we unfold the aut to avoid too many registers when the states of the 
+    // unfold automaton are less than 1000 (aut.states.size * min <= 1000)
+    val unfoldMaxState = 1000   
+    if(aut.states.size * min <= unfoldMaxState) 
+      return new CostEnrichedAutomaton(
+        BasicOperations.repeat(aut.underlying, min)
+      )
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
@@ -293,6 +299,13 @@ object CEBasicOperations {
       min: Int,
       max: Int
   ): CostEnrichedAutomaton = {
+    // we unfold the aut to avoid too many registers when the states of the 
+    // unfold automaton are less than 1000 (aut.states.size * max <= 1000)
+    val unfoldMaxState = 1000   
+    if(aut.states.size * max <= unfoldMaxState) 
+      return new CostEnrichedAutomaton(
+        BasicOperations.repeat(aut.underlying, min, max)
+      )
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
@@ -345,15 +358,13 @@ object CEBasicOperations {
 
   // We want to simplify the final automaton before generating lia by three steps:
   // remove all transitions with same state and update function
-  def simplify(aut: CostEnrichedAutomaton): CostEnrichedAutomaton = {
-    // determinateByVec(epsilonClosureByVec(
+  def simplify(aut: CostEnrichedAutomatonTrait): CostEnrichedAutomatonTrait = {
     removeUselessTrans(aut)
-    // ))
   }
 
   def removeUselessTrans(
-      aut: CostEnrichedAutomaton
-  ): CostEnrichedAutomaton = {
+      aut: CostEnrichedAutomatonTrait
+  ): CostEnrichedAutomatonTrait = {
     if (aut.getRegisters.isEmpty) return aut
     val builder = CostEnrichedAutomaton.getBuilder
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
@@ -373,10 +384,10 @@ object CEBasicOperations {
   }
 
   def epsilonClosureByVec(
-      aut: CostEnrichedAutomaton
-  ): CostEnrichedAutomaton = {
+      aut: CostEnrichedAutomatonTrait
+  ): CostEnrichedAutomatonTrait = {
     if (aut.getRegisters.isEmpty) return aut
-    // TODO: Some bug exist, think about how to compute the epsilon closure
+    // TODO: Some bug exist
     val builder = CostEnrichedAutomaton.getBuilder
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
     for (s <- aut.states) {
@@ -392,6 +403,8 @@ object CEBasicOperations {
           if (v.forall(_ == 0) && !seen(t)) {
             workstack.push(t)
             epsClosureSet.add(t)
+            if(aut.isAccept(t))
+              builder.setAccept(old2new(s), true)
             seen.add(t)
           }
         }
@@ -413,8 +426,8 @@ object CEBasicOperations {
   // we want to determinze the final automaton before generating lia by vec
   // see (0,...,0) as epsilon
   def determinateByVec(
-      aut: CostEnrichedAutomaton
-  ): CostEnrichedAutomaton = {
+      aut: CostEnrichedAutomatonTrait
+  ): CostEnrichedAutomatonTrait = {
     if (aut.getRegisters.isEmpty) return aut
     val builder = CostEnrichedAutomaton.getBuilder
     val seq2new = new MHashMap[Set[State], State]
@@ -440,7 +453,6 @@ object CEBasicOperations {
         if (!seq2new.contains(seq)) {
           seq2new += (seq -> builder.getNewState)
           workstack.push(seq)
-          // println(seq.map(s => s"s${s2i(s)}").mkString(","))
         }
         builder.addTransition(
           curState,
@@ -480,10 +492,10 @@ object CEBasicOperations {
     while (workstack.nonEmpty) {
       val cur = workstack.pop()
       for ((s, l, v) <- aut.incomingTransitionsWithVec(cur)) {
+        builder.addTransition(old2new(s), l, old2new(cur), v)
         if (!seen(s)) {
           workstack.push(s)
           seen.add(s)
-          builder.addTransition(old2new(s), l, old2new(cur), v)
         }
       }
     }

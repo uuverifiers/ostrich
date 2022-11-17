@@ -98,14 +98,6 @@ class CostEnrichedAutomaton(
     CEBasicOperations.union(Seq(this, that.asInstanceOf[CostEnrichedAutomaton]))
   }
 
-  def &(that: Automaton): Automaton =
-    this.asInstanceOf[CostEnrichedAutomaton] & that
-      .asInstanceOf[CostEnrichedAutomaton]
-
-  def &(that: CostEnrichedAutomaton): CostEnrichedAutomaton = {
-    CEBasicOperations.intersection(this, that)
-  }
-
   def isEmpty: Boolean = underlying.isEmpty
 
   def apply(word: Seq[Int]): Boolean =

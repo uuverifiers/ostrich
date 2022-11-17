@@ -17,6 +17,7 @@ import CEBasicOperations._
 import scala.collection.mutable.ArrayStack
 import scala.collection.immutable.VectorBuilder
 import ostrich.automata.AtomicStateAutomaton
+import ostrich.automata.Automaton
 
 class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   import theory.{
@@ -130,7 +131,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       case _ => new CostEnrichedAutomaton(toBAutomaton(t, minimize))
     }
 
-    override def buildAut(t: ITerm, minimize: Boolean): CostEnrichedAutomaton = {
+    override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
       try{
         toCEAutomaton(t, minimize)
       } catch {
@@ -138,7 +139,6 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
           println("Error in building automaton for " + t)
           e.printStackTrace()
           throw e
-
         }
       }
     }

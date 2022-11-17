@@ -1,6 +1,5 @@
 package ostrich.parikh.core
 
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ap.terfor.Formula
@@ -19,17 +18,19 @@ import ostrich.parikh.CostEnrichedConvenience._
 import ap.terfor.preds.Atom
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.writer.TempWriter
+import ostrich.parikh.writer.Logger
 import ostrich.parikh.Config
-import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.automata.CEBasicOperations
+import ostrich.parikh.automata.CostEnrichedAutomaton
 
 trait AtomConstraint {
 
-  type State = CostEnrichedAutomaton#State
+  type State = CostEnrichedAutomatonTrait#State
 
-  type TLabel = CostEnrichedAutomaton#TLabel
+  type TLabel = CostEnrichedAutomatonTrait#TLabel
 
-  val aut: CostEnrichedAutomaton
+  val aut: CostEnrichedAutomatonTrait
 
   /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
     * Encode the formula of registers meanwhile.
@@ -167,7 +168,7 @@ trait AtomConstraint {
 
 }
 
-class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
+class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     extends AtomConstraint {
 
   private val upperBoundMax = 100
@@ -184,11 +185,15 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
     val lowerBound = globalS.size
     val upperBound = if (ubound < upperBoundMax) ubound else upperBoundMax
     computeGlobalSWithRegsValue(upperBound)
+    if(lowerBound == globalS.size){
+      // the globalS does not change
+      return Conjunction.FALSE
+    }
     val registers = aut.getRegisters
 
     val r1Formula = disjFor(
       for (
-        j <- lowerBound until upperBound;
+        j <- lowerBound until globalS.size;
         if !globalS(j).isEmpty;
         (s, regVal) <- globalS(j);
         if (aut.isAccept(s))
@@ -199,7 +204,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
     r1Formula
   }
 
-  private def getLIAFromOneRegAut(aut: CostEnrichedAutomaton): Formula = {
+  private def getLIAFromOneRegAut(aut: CostEnrichedAutomatonTrait): Formula = {
     assert(aut.getRegisters.size == 1)
 
     val n = aut.states.size
@@ -305,7 +310,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
   }
 
   def computeS(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       sLen: Int
   ): ArrayBuffer[Set[State]] = {
     var idx = 1
@@ -329,7 +334,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
     * computed or pre(S_i) is empty
     */
   def computeT(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       len: Int
   ): ArrayBuffer[Set[State]] = {
     val n = aut.states.size
@@ -349,7 +354,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
   }
 
   def periods(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       s: State
   ): Set[Int] = {
     var period = 0
@@ -374,13 +379,13 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
   }
 
   def succWithVec(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       s: State
   ): Iterator[(State, Seq[Int])] =
     for ((t, lbl, vec) <- aut.outgoingTransitionsWithVec(s)) yield (t, vec)
 
   def preWithVec(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       t: State
   ): Iterator[(State, Seq[Int])] =
     for ((s, lbl) <- aut.incomingTransitions(t).iterator)
@@ -395,9 +400,9 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomaton)
 
 // TODO: BUG!! Bug occurs when running benchmark `bigSubStrIdx.smt2`
 
-class ParikhAC(val aut: CostEnrichedAutomaton) extends AtomConstraint {
+class ParikhAC(val aut: CostEnrichedAutomatonTrait) extends AtomConstraint {
   def getRegsRelation: Formula = aut.getRegsRelation
 }
 
-class CatraAC(override val aut: CostEnrichedAutomaton)
+class CatraAC(override val aut: CostEnrichedAutomatonTrait)
     extends ParikhAC(aut)

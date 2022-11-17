@@ -13,11 +13,7 @@ import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
 import ostrich.parikh.TransitionTerm
 
-class CostEnrichedAutomatonBuilder
-    extends AtomicStateAutomatonBuilder[
-      CostEnrichedAutomaton#State,
-      CostEnrichedAutomaton#TLabel
-    ] {
+class CostEnrichedAutomatonBuilder{
   type State = CostEnrichedAutomaton#State
   type TLabel = CostEnrichedAutomaton#TLabel
 

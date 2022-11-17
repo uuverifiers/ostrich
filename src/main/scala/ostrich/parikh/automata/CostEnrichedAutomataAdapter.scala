@@ -148,10 +148,6 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
     internalise | that
   }
 
-  def &(that: Automaton): Automaton = {
-    internalise & that
-  }
-
   def apply(word: Seq[Int]): Boolean = {
     var state = initialState
     var finalIdx = 0
@@ -167,8 +163,6 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
   }
 
   def isAccept(s: State): Boolean = acceptingStates.contains(s)
-
-  def toDetailedString: String = underlying.toDetailedString
 
   def getAcceptedWord: Option[Seq[Int]] = {
 

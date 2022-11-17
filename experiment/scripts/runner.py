@@ -29,10 +29,12 @@ class Runner:
         with open(os.path.join(self.outdir, f"{self.backend}_log.txt"), "w") as f:
             for result in results:
                 f.write(f"{result}{os.linesep}")
+                f.flush()
 
     def run_single_instance(self, benchmark: str):
         str_result = []
         str_result.append(f"Running [{benchmark}]")
+        pbar.set_description(f"Running [{benchmark}]")
         now_time = last_time = time() * 1000
         try:
             res = subprocess.run(

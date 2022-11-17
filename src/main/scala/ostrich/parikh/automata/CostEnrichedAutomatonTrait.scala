@@ -7,7 +7,8 @@ import scala.collection.immutable.Map
 import scala.collection.mutable.{
   HashMap => MHashMap,
   Stack => MStack,
-  LinkedHashSet => MLinkedHashSet
+  LinkedHashSet => MLinkedHashSet,
+  HashSet => MHashSet
 }
 import ap.terfor.Term
 import ap.terfor.Formula
@@ -17,7 +18,7 @@ import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 
-trait CostEnrichedAutomatonTrait {
+trait CostEnrichedAutomatonTrait extends Automaton {
   type State = BState
 
   type TLabel = (Char, Char)
@@ -37,6 +38,29 @@ trait CostEnrichedAutomatonTrait {
   /** Registers storing count value for accepting state.
     */
   protected var registers: Seq[Term] = Seq()
+
+   /**
+   * The unique initial state
+   */
+  val initialState : State
+
+  /**
+   * The set of accepting states
+   */
+  val acceptingStates : Set[State]
+
+  /**
+   * Iterate over automaton states
+   */
+  def states : Iterable[State]
+
+  def &(that: Automaton): Automaton =
+    this.asInstanceOf[CostEnrichedAutomatonTrait] product that
+      .asInstanceOf[CostEnrichedAutomatonTrait]
+
+  def product(that: CostEnrichedAutomatonTrait): CostEnrichedAutomatonTrait = {
+    CEBasicOperations.intersection(this, that)
+  }
 
   /** Map state to its incoming transitions
     */
@@ -69,9 +93,80 @@ trait CostEnrichedAutomatonTrait {
   val labelEnumerator: TLabelEnumerator[TLabel] =
     new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
-  def getBuilder: CostEnrichedAutomatonBuilder= {
+  /**
+   * Compute states that can only be reached through words with some
+   * unique length
+   */
+  lazy val uniqueLengthStates : Map[State, Int] = {
+    val uniqueLengthStates = new MHashMap[State, Int]
+    val nonUniqueLengthStates = new MHashSet[State]
+    val todo = new ArrayStack[State]
+
+    uniqueLengthStates.put(initialState, 0)
+    todo push initialState
+
+    while (!todo.isEmpty) {
+      val s = todo.pop
+      if (nonUniqueLengthStates contains s) {
+        for ((to, _) <- outgoingTransitions(s)) {
+          uniqueLengthStates -= to
+          if (nonUniqueLengthStates add to)
+            todo push to
+        }
+      } else {
+        val sLen = uniqueLengthStates(s)
+        for ((to, _) <- outgoingTransitions(s))
+          (uniqueLengthStates get to) match {
+            case Some(oldLen) =>
+              if (oldLen != sLen + 1) {
+                uniqueLengthStates -= to
+                nonUniqueLengthStates += to
+                todo push to
+              }
+            case None =>
+              if (!(nonUniqueLengthStates contains to)) {
+                uniqueLengthStates.put(to, sLen + 1)
+                todo push to
+              }
+        }
+      }
+    }
+
+    uniqueLengthStates.toMap
+  }
+
+  /** Unique lengths of accepted words
+    */
+  lazy val uniqueAcceptedWordLengths: Option[Seq[Int]] = {
+    val lengths = for (s <- acceptingStates) yield (uniqueLengthStates get s)
+    if (lengths.size > 0 && !(lengths contains None))
+      Some(lengths.filter(_ != None).map(_.get).toSeq)
+    else
+      None
+  }
+
+  def getBuilder: CostEnrichedAutomatonBuilder = {
     new CostEnrichedAutomatonBuilder
   }
+
+  def getLengthAbstraction: Formula = Conjunction.TRUE  // not use
+
+  /**
+   * Ask if state is accepting
+   */
+  def isAccept(q : State) : Boolean
+
+  /**
+   * Given a state, iterate over all outgoing transitions
+   */
+  def outgoingTransitions(from : State) : Iterator[(State, TLabel)]
+
+  /**
+   * Iterate over all transitions
+   */
+  def transitions : Iterator[(State, TLabel, State)] =
+    for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
+      yield (s1, lbl, s2)
 
   def incomingTransitions(t: State): Iterator[(State, TLabel)] = {
     incomingTransitionsMap(t).iterator
@@ -110,16 +205,6 @@ trait CostEnrichedAutomatonTrait {
     (t, lbl) <- outgoingTransitions(s)
   ) yield {
     (t, lbl, etaMap((s, lbl, t)), transTermMap((s, lbl, t)))
-  }
-
-  /** Unique lengths of accepted words
-    */
-  lazy val uniqueAcceptedWordLengths: Option[Seq[Int]] = {
-    val lengths = for (s <- acceptingStates) yield (uniqueLengthStates get s)
-    if (lengths.size > 0 && !(lengths contains None))
-      Some(lengths.filter(_ != None).map(_.get).toSeq)
-    else
-      None
   }
 
   /** Transitions with their terms

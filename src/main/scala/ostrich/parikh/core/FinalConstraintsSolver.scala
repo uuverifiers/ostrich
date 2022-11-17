@@ -39,6 +39,7 @@ import ostrich.parikh.util.TimeoutException
 import ostrich.OFlags
 import ostrich.parikh.ParikhExploration.Approx
 import ostrich.parikh.util.UnknownException
+import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 
 class Result {
   protected var status = ProverStatus.Unknown
@@ -76,7 +77,7 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def setIntegerTerm(terms: Set[Term]): Unit = integerTerms = terms
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit
 
   def addConstraint(c: A) = constraints = constraints :+ c
 
@@ -84,21 +85,21 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
 class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
     addConstraint(unaryHeuristicACs(t, auts))
   }
 
   def solve: Result = {
-    // var res = solveUnderApprox
-    // if (!res.isSat)
-    //   res = solveOverApprox
-    // res
-    solveOverApprox
+    var res = solveUnderApprox
+    if (!res.isSat)
+      res = solveOverApprox
+    res
+    // solveOverApprox
   }
 
   def solveUnderApprox: Result = {
     // add bound iterately
-    val maxBound = 30
+    val maxBound = 20
     val step = 5
     var nowBound = 5
     var result = new Result
@@ -172,7 +173,7 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 // and then call catra to solve the constraints
 class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
     addConstraint(catraACs(t, auts))
   }
 
@@ -240,7 +241,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
   }
 
   def toCatraInputAutomaton(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       name: String
   ): String = {
     val sb = new StringBuilder
@@ -267,7 +268,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
   }
 
   def toCatraInputRegisterUpdate(
-      aut: CostEnrichedAutomaton,
+      aut: CostEnrichedAutomatonTrait,
       update: Seq[Int]
   ) = {
     val sb = new StringBuilder
@@ -371,7 +372,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
 }
 
 class BaselineSolver extends FinalConstraintsSolver[BaselineFinalConstraints] {
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomaton]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
     addConstraint(baselineACs(t, auts))
   }
 
