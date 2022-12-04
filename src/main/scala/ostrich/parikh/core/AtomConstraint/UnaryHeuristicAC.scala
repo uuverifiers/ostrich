@@ -29,19 +29,29 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
   private val upperBoundMax = 100
 
+  // the globalS is used to store the state we have explored before
+  // to avoid repeated exploration
   private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
 
+
+  /** Simplely explore the automaton by `ubound` step to get the
+    * under-approximation
+    * @param ubound
+    *   the upper bound of the exploration step
+    * @return
+    *   the formula of the underapproximation
+    */
   def getUnderApprox(ubound: Int): Formula = {
-    // We return True when this automaton do not have registers
-    // (which means there is only regex membership)
     if (aut.getRegisters.isEmpty)
+      // We return True when this automaton do not have registers
+      // (which means there is only regex membership)
       return Conjunction.TRUE
     val n = aut.states.size
     val rLen = aut.getRegisters.size
     val lowerBound = globalS.size
     val upperBound = if (ubound < upperBoundMax) ubound else upperBoundMax
     computeGlobalSWithRegsValue(upperBound)
-    if(lowerBound == globalS.size){
+    if (lowerBound == globalS.size) {
       // the globalS does not change
       return Conjunction.FALSE
     }
@@ -60,6 +70,8 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     r1Formula
   }
 
+  /** Get LIA formula of this automaton. The algorithm is complete.
+    */
   private def getLIAFromOneRegAut(aut: CostEnrichedAutomatonTrait): Formula = {
     assert(aut.getRegisters.size == 1)
 
@@ -108,6 +120,12 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
   }
 
+  /** Split the long registers to single register (the relation between
+    * registers has lost, that is why it is overapproximation) And then use the
+    * `getLIAFromOneRegAut` for each single register automaton to get final
+    * formula.
+    * @return
+    */
   def getOverApprox: Formula = {
     val reg2Aut = for (i <- 0 until aut.getRegisters.size) yield {
       val reg = aut.getRegisters(i)
@@ -136,12 +154,6 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     regsFormula
   }
 
-  override def getCompleteLIA: Formula = {
-    // Throw unkonwn exception to see how many instance can not be checked by approximation
-    throw UnknownException(
-      "UnaryHeuristicAC.getCompleteLIA: over- and under-approximation fail"
-    )
-  }
 
   def getRegsRelation: Formula = aut.getRegsRelation
 

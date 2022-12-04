@@ -46,6 +46,7 @@ object OstrichMain extends App {
   val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
 
   ap.CmdlMain.stackTraces = true
+  
   ap.CmdlMain.main((options ++ args).toArray)
   
   if (OstrichConfig.measureTime)

@@ -3,10 +3,16 @@ package ostrich.parikh
 import ap.parser._
 import IExpression._
 import ostrich.OstrichStringTheory
+import ap.parser.ITerm
+import ostrich.parikh.core.FinalConstraints
 
 class OstrichCostEnrichEncoder(theory: OstrichStringTheory)
     extends ContextAwareVisitor[Unit, IExpression] {
-  import theory._
+  import theory.{str_to_int, str_in_re_len, str_len, str_in_re,
+    re_charrange, re_loop, re_*, re_comp
+  }
+
+  private lazy val decimal = re_charrange(48, 57)
 
   def apply(f: IFormula): IFormula =
     this.visit(f, Context(())).asInstanceOf[IFormula]
@@ -16,16 +22,7 @@ class OstrichCostEnrichEncoder(theory: OstrichStringTheory)
       ctxt: Context[Unit],
       subres: Seq[IExpression]
   ): IExpression = (t, subres) match {
-    case (
-          IFunApp(`str_substr`, _),
-          Seq(
-            bigStr: ITerm,
-            Const(begin),
-            Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(end))
-          )
-        ) if bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
-      str_trim(bigStr, begin, end - begin)
-    case _ =>
+    case (t, _) =>
       t update subres
   }
 }

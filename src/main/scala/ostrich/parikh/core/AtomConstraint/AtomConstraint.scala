@@ -23,6 +23,7 @@ import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.TransitionTerm
 
 trait AtomConstraint {
 
@@ -36,10 +37,12 @@ trait AtomConstraint {
     * Encode the formula of registers meanwhile.
     */
   def getCompleteLIA: Formula = {
+    Console.err.println("Note: use parikh image")
+    val transtion2Term = aut.transitions.map(t => (t, TransitionTerm())).toMap
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       aut.outgoingTransitions(from).foreach { case (to, lbl) =>
-        outFlowTerms += aut.getTransTermMap(from, lbl, to)
+        outFlowTerms += transtion2Term(from, lbl, to)
       }
       outFlowTerms.toSeq
     }
@@ -47,7 +50,7 @@ trait AtomConstraint {
     def inFlowTerms(to: State): Seq[Term] = {
       val inFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       aut.incomingTransitions(to).foreach { case (from, lbl) =>
-        inFlowTerms += aut.getTransTermMap(from, lbl, to)
+        inFlowTerms += transtion2Term(from, lbl, to)
       }
       inFlowTerms.toSeq
     }
@@ -55,8 +58,9 @@ trait AtomConstraint {
     val zTerm = aut.states.map((_, ZTerm())).toMap
 
     val preStatesWithTTerm = new MHashMap[State, MHashSet[(State, Term)]]
-    for ((s, _, t, tTerm) <- aut.transitionsWithTerm) {
+    for ((s, l, t) <- aut.transitions) {
       val set = preStatesWithTTerm.getOrElseUpdate(t, new MHashSet)
+      val tTerm = transtion2Term(s, l, t)
       set += ((s, tTerm))
     }
     // consistent flow ///////////////////////////////////////////////////////////////
@@ -81,19 +85,21 @@ trait AtomConstraint {
     )
 
     // every transtion term should greater than 0
-    val transtionTerms = aut.getTransTermMap.map(_._2).toSeq
+    val transtionTerms = transtion2Term.map(_._2).toSeq
     transtionTerms.foreach { term =>
       consistentFlowFormula = conj(consistentFlowFormula, term >= 0)
     }
     /////////////////////////////////////////////////////////////////////////////////
 
     // connection //////////////////////////////////////////////////////////////////
-    val zVarInitFormulas = aut.transitionsWithTerm.map {
-      case (from, _, _, tTerm) =>
+    val zVarInitFormulas = aut.transitions.map {
+      case (from, lbl, to) => {
+        val tTerm = transtion2Term(from, lbl, to)
         if (from == aut.initialState)
           (zTerm(from) === 0)
         else
           (tTerm === 0) | (zTerm(from) > 0)
+      }
     }
 
     val connectFormulas = aut.states.map {
@@ -134,7 +140,7 @@ trait AtomConstraint {
             )
           )
       transitionsWithVector.foreach { case (from, lbl, to, vec) =>
-        val trasitionTerm = aut.getTransTermMap(from, lbl, to)
+        val trasitionTerm = transtion2Term(from, lbl, to)
         vec.zipWithIndex.foreach {
           case (veci, i) => {
             val registerTerm = aut.getRegisters(i)

@@ -97,23 +97,6 @@ class CostEnrichedAutomatonBuilder{
     }
   }
 
-  /** Add a new transition q1 --label,vector--> q2, set its term to t
-    */
-  // def addTransition(
-  //     q1: State,
-  //     label: TLabel,
-  //     q2: State,
-  //     vector: Seq[Int],
-  //     t: Term
-  // ): Unit = {
-  //   if (LabelOps.isNonEmptyLabel(label)) {
-  //     val (min, max) = label
-  //     q1.addTransition(new Transition(min, max, q2))
-  //     etaMap += ((q1, (min, max), q2) -> vector)
-  //     transTermMap += ((q1, (min, max), q2) -> t)
-  //   }
-  // }
-
   def outgoingTransitions(
       q: State
   ): Iterator[(State, TLabel)] =

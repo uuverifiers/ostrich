@@ -25,7 +25,7 @@ class UnaryFinalConstraints(
     override val atoms: Seq[AtomConstraint]
 ) extends FinalConstraints {
 
-  // eagerly product, which means compute lia after producting
+  // eagerly product
   lazy val productAtom: AtomConstraint = {
     val productAut = getAutomata.reduce(_ product _)
     val simplifyAut = CEBasicOperations.simplify(productAut)

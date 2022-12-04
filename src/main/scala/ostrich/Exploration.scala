@@ -122,12 +122,6 @@ object Exploration {
     new LazyExploration(funApps, initialConstraints, strDatabase,
                         lengthProver, lengthVars, strictLengths, flags)
 
-  def parikhExp(funApps : Seq[(PreOp, Seq[Term], Term)],
-               initialConstraints : Seq[(Term, Automaton)],
-               strDatabase : StrDatabase
-               ) : Exploration =
-    new ParikhExploration(funApps, initialConstraints, strDatabase)
-
   case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
           extends Exception
 

@@ -55,6 +55,9 @@ import ostrich.parikh.core.FinalConstraints
 import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.OstrichConfig
 import ostrich.parikh.ParikhExploration.Approx
+import ostrich.parikh.ParikhExploration
+import ostrich.parikh.automata.CEBasicOperations
+import ostrich.parikh.automata.CostEnrichedAutomaton
 
 object OstrichSolver {
 
@@ -88,7 +91,8 @@ class OstrichSolver(theory : OstrichStringTheory,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
                  re_comp, re_loop, re_loop_?, re_eps, re_capture, re_reference,
-                 re_begin_anchor, re_end_anchor, FunPred, strDatabase}
+                 re_begin_anchor, re_end_anchor, FunPred, strDatabase,
+                }
 
   val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
@@ -107,7 +111,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     val atoms = goal.facts.predConj
     val order = goal.order
 
-    // TermGeneratorOrder.extend(order.orderedConstants.toSeq)
+    TermGeneratorOrder.extend(order.orderedConstants.toSeq)
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
@@ -254,13 +258,17 @@ class OstrichSolver(theory : OstrichStringTheory,
         case Seq((IdealInt.ONE, c: ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
           val str = strDatabase id2Str 0
-          regexes += ((l(c), !(BricsAutomaton fromString str)))
+          val negAut = if (OstrichConfig.useCostEnriched) !(CostEnrichedAutomaton fromString str)
+              else !(BricsAutomaton fromString str)
+          regexes += ((l(c), negAut))
         }
         case Seq((IdealInt.ONE, c: ConstantTerm), (IdealInt(coeff), OneTerm))
             if (stringConstants contains c) &&
               (strDatabase containsId -coeff) => {
           val str = strDatabase id2Str -coeff
-          regexes += ((l(c), !(BricsAutomaton fromString str)))
+          val negAut = if (OstrichConfig.useCostEnriched) !(CostEnrichedAutomaton fromString str)
+              else !(BricsAutomaton fromString str)
+          regexes += ((l(c), negAut))
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>
           // nothing
@@ -284,11 +292,13 @@ class OstrichSolver(theory : OstrichStringTheory,
         for ((t, _) <- regexes)
           regexCoveredTerms += t
 
+        val anyString = if (OstrichConfig.useCostEnriched) CostEnrichedAutomaton.makeAnyString()
+            else BricsAutomaton.makeAnyString()
         for ((c, d) <- negEqs) {
           if (regexCoveredTerms add c)
-            regexes += ((l(c), BricsAutomaton.makeAnyString()))
+            regexes += ((l(c), anyString))
           if (regexCoveredTerms add d)
-            regexes += ((l(d), BricsAutomaton.makeAnyString()))
+            regexes += ((l(d), anyString))
         }
       }
     }
@@ -333,7 +343,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         // first use under-approximation to find a model
         // then if under unsat, use over-approximation to check unsat
         // if over sat and under unsat, then use completeExp(slowest)
-        val approxExp = Exploration.parikhExp(funApps.toSeq, regexes.toSeq, strDatabase)
+        val approxExp = new ParikhExploration(funApps.toSeq, regexes.toSeq, strDatabase)
         approxExp.findModel
       } else {
         val exploration =

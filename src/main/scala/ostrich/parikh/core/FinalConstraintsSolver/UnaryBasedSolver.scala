@@ -48,10 +48,13 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
   def solve: Result = {
     var res = solveUnderApprox
-    if (!res.isSat)
-      res = solveOverApprox
+    if (!res.isSat){
+      try res = solveOverApprox 
+      catch {
+        case e: UnknownException => res = solveCompleteLIA
+      }
+    }
     res
-    // solveOverApprox
   }
 
   def solveUnderApprox: Result = {
@@ -96,7 +99,7 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
       // The call addAssertion will fail some asserttion 
       // if the TermGenerator is extended with too many constants. 
       // (run ostrich with +assert option)
-      p addAssertion finalArith
+      p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
       ) {

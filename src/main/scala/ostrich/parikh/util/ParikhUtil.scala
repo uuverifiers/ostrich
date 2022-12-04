@@ -79,93 +79,93 @@ object ParikhUtil {
     * all of the given automata. Note that this function heuristicly finds a
     * word. It is sound, but not complete.
     */
-  def findAcceptedWordByTranstions(
-      auts: Seq[CostEnrichedAutomatonTrait],
-      transtionsModel: MMap[Term, IdealInt]
-  ): Option[Seq[Int]] = {
+  // def findAcceptedWordByTranstions(
+  //     auts: Seq[CostEnrichedAutomatonTrait],
+  //     transtionsModel: MMap[Term, IdealInt]
+  // ): Option[Seq[Int]] = {
 
-    val transitionRepeatTimes = transtionsModel.map { case (t, i) =>
-      (t, i.intValue)
-    }
-    val fisrtAut = auts(0)
+  //   val transitionRepeatTimes = transtionsModel.map { case (t, i) =>
+  //     (t, i.intValue)
+  //   }
+  //   val fisrtAut = auts(0)
 
-    /** One step of intersection
-      */
-    def enumNext(
-        auts: Seq[CostEnrichedAutomatonTrait],
-        states: Seq[State],
-        transitionModel: MMap[Term, Int],
-        intersectedLabels: TLabel
-    ): Iterator[(Seq[State], MMap[Term, Int], Int)] =
-      auts match {
-        case Seq() =>
-          Iterator(
-            (
-              Seq(),
-              transitionModel.clone(),
-              fisrtAut.LabelOps.enumLetters(intersectedLabels).next
-            )
-          )
-        case aut +: otherAuts => {
-          val state +: otherStates = states
-          for (
-            (to, label, term) <- aut.outgoingTransitionsWithTerm(
-              state
-            );
-            newILabel <- aut.LabelOps
-              .intersectLabels(
-                intersectedLabels,
-                label
-              )
-              .toSeq;
-            if (transitionModel(term) > 0);
-            (tailNext, updatedModel, char) <- enumNext(
-              otherAuts,
-              otherStates,
-              transitionModel + ((
-                term,
-                transitionModel(term) - 1
-              )), // update lengthModel
-              newILabel
-            )
-          )
-            yield (to +: tailNext, updatedModel, char)
-        }
-      }
+  //   /** One step of intersection
+  //     */
+  //   def enumNext(
+  //       auts: Seq[CostEnrichedAutomatonTrait],
+  //       states: Seq[State],
+  //       transitionModel: MMap[Term, Int],
+  //       intersectedLabels: TLabel
+  //   ): Iterator[(Seq[State], MMap[Term, Int], Int)] =
+  //     auts match {
+  //       case Seq() =>
+  //         Iterator(
+  //           (
+  //             Seq(),
+  //             transitionModel.clone(),
+  //             fisrtAut.LabelOps.enumLetters(intersectedLabels).next
+  //           )
+  //         )
+  //       case aut +: otherAuts => {
+  //         val state +: otherStates = states
+  //         for (
+  //           (to, label, term) <- aut.outgoingTransitionsWithTerm(
+  //             state
+  //           );
+  //           newILabel <- aut.LabelOps
+  //             .intersectLabels(
+  //               intersectedLabels,
+  //               label
+  //             )
+  //             .toSeq;
+  //           if (transitionModel(term) > 0);
+  //           (tailNext, updatedModel, char) <- enumNext(
+  //             otherAuts,
+  //             otherStates,
+  //             transitionModel + ((
+  //               term,
+  //               transitionModel(term) - 1
+  //             )), // update lengthModel
+  //             newILabel
+  //           )
+  //         )
+  //           yield (to +: tailNext, updatedModel, char)
+  //       }
+  //     }
 
-    val initial = (auts map (_.initialState))
+  //   val initial = (auts map (_.initialState))
 
-    if (isAccepting(auts, initial, transitionRepeatTimes))
-      return Some(Seq())
+  //   if (isAccepting(auts, initial, transitionRepeatTimes))
+  //     return Some(Seq())
 
-    val visitedStates = new MHashSet[(Seq[State], MMap[Term, Int])]
-    val todo = new ArrayStack[(Seq[State], MMap[Term, Int], Seq[Int])]
+  //   val visitedStates = new MHashSet[(Seq[State], MMap[Term, Int])]
+  //   val todo = new ArrayStack[(Seq[State], MMap[Term, Int], Seq[Int])]
 
-    visitedStates += ((initial, transitionRepeatTimes))
-    todo push ((initial, transitionRepeatTimes, Seq()))
+  //   visitedStates += ((initial, transitionRepeatTimes))
+  //   todo push ((initial, transitionRepeatTimes, Seq()))
 
-    while (!todo.isEmpty) {
-      val (next, lengthModel, w) = todo.pop
-      for (
-        (reached, updatedModel, char) <-
-          enumNext(
-            auts,
-            next,
-            lengthModel,
-            auts(0).LabelOps.sigmaLabel
-          )
-      ) {
+  //   while (!todo.isEmpty) {
+  //     val (next, lengthModel, w) = todo.pop
+  //     for (
+  //       (reached, updatedModel, char) <-
+  //         enumNext(
+  //           auts,
+  //           next,
+  //           lengthModel,
+  //           auts(0).LabelOps.sigmaLabel
+  //         )
+  //     ) {
 
-        if (visitedStates.add((reached, updatedModel))) {
-          val newW = w :+ char
-          if (isAccepting(auts, reached, updatedModel))
-            return Some(newW)
-          todo push ((reached, updatedModel, newW))
-        }
-      }
-    }
-    None
-  }
+  //       if (visitedStates.add((reached, updatedModel))) {
+  //         val newW = w :+ char
+  //         if (isAccepting(auts, reached, updatedModel))
+  //           return Some(newW)
+  //         todo push ((reached, updatedModel, newW))
+  //       }
+  //     }
+  //   }
+  //   None
+  // }
 
   /** Given a sequence of automata and synchronized length, return a sequence of
     * automata that is equivalent to the given sequence of automata. And return
@@ -286,41 +286,41 @@ object ParikhUtil {
     * @param synclen
     *   the max length need to synchronize
     */
-  def sync(
-      auts: Seq[CostEnrichedAutomatonTrait],
-      states2Prefix: MMap[State, Seq[TLabel]],
-      labels: MTreeSet[TLabel],
-      synclen: Int
-  ): Formula = {
-    if (synclen == 0) return Conjunction.TRUE
-    var finalFormula = Conjunction.TRUE
-    var strings: Seq[Traversable[TLabel]] = Seq()
-    for (i <- 0 until synclen + 1)
-      strings = strings ++: crossJoin(Seq.fill(i)(labels)).toSeq
+  // def sync(
+  //     auts: Seq[CostEnrichedAutomatonTrait],
+  //     states2Prefix: MMap[State, Seq[TLabel]],
+  //     labels: MTreeSet[TLabel],
+  //     synclen: Int
+  // ): Formula = {
+  //   if (synclen == 0) return Conjunction.TRUE
+  //   var finalFormula = Conjunction.TRUE
+  //   var strings: Seq[Traversable[TLabel]] = Seq()
+  //   for (i <- 0 until synclen + 1)
+  //     strings = strings ++: crossJoin(Seq.fill(i)(labels)).toSeq
 
-    val commonStr2LTerm = strings.map { case str => (str, LabelTerm()) }.toMap
-    for (aut <- auts) {
-      val lTerm2Terms = new MHashMap[Term, MHashSet[Term]]
-      for ((from, label, to, tTerm) <- aut.transitionsWithTerm) {
-        val prefix = states2Prefix(from)
-        val str = prefix :+ label
-        val lTerm = commonStr2LTerm(str)
-        // partition transition terms by transition label
-        lTerm2Terms.getOrElseUpdate(lTerm, new MHashSet[Term]).add(tTerm)
-      }
-      // if the label does not appear in any transtion, the label count is 0
-      commonStr2LTerm.values.filterNot(lTerm2Terms.contains).foreach { lTerm =>
-        finalFormula = finalFormula & (lTerm === 0)
-      }
-      // label count is the sum of transition terms
-      lTerm2Terms.foreach { case (lTerm, terms) =>
-        finalFormula = finalFormula & (lTerm === terms
-          .reduceOption(_ + _)
-          .getOrElse(l(0))) & (lTerm >= 0)
-      }
-    }
-    finalFormula
-  }
+  //   val commonStr2LTerm = strings.map { case str => (str, LabelTerm()) }.toMap
+  //   for (aut <- auts) {
+  //     val lTerm2Terms = new MHashMap[Term, MHashSet[Term]]
+  //     for ((from, label, to, tTerm) <- aut.transitionsWithTerm) {
+  //       val prefix = states2Prefix(from)
+  //       val str = prefix :+ label
+  //       val lTerm = commonStr2LTerm(str)
+  //       // partition transition terms by transition label
+  //       lTerm2Terms.getOrElseUpdate(lTerm, new MHashSet[Term]).add(tTerm)
+  //     }
+  //     // if the label does not appear in any transtion, the label count is 0
+  //     commonStr2LTerm.values.filterNot(lTerm2Terms.contains).foreach { lTerm =>
+  //       finalFormula = finalFormula & (lTerm === 0)
+  //     }
+  //     // label count is the sum of transition terms
+  //     lTerm2Terms.foreach { case (lTerm, terms) =>
+  //       finalFormula = finalFormula & (lTerm === terms
+  //         .reduceOption(_ + _)
+  //         .getOrElse(l(0))) & (lTerm >= 0)
+  //     }
+  //   }
+  //   finalFormula
+  // }
 
   /** Compute cross join of a sequence of lists
     * @param list

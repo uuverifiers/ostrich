@@ -60,7 +60,7 @@ class BaselineSolver extends FinalConstraintsSolver[BaselineFinalConstraints] {
       p addConstants constants
 
       // p addConstantsRaw initialConstTerms
-      p addAssertion finalArith
+      p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
       ) {

@@ -25,4 +25,4 @@ import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.CostEnrichedAutomaton
 
 class CatraAC(override val aut: CostEnrichedAutomatonTrait)
-    extends ParikhAC(aut)
+    extends BaselineAC(aut)

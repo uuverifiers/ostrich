@@ -44,7 +44,7 @@ import ostrich.parikh.OstrichConfig
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
-  val version = "1.2"
+  val version = "1.2.1"
 
   Console.withOut(Console.err) {
     println

@@ -64,3 +64,13 @@ object KTerm {
     kTerm
   }
 }
+
+object LTerm {
+  var count = 0
+  def apply(): Term = {
+    count += 1
+    val lTerm = new ConstantTerm(s"L$count")
+    TermGeneratorOrder.extend(lTerm)
+    lTerm
+  }
+}

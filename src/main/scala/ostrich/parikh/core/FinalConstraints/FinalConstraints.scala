@@ -18,14 +18,20 @@ import ostrich.parikh.automata.CEBasicOperations
 import ap.terfor.conjunctions.Conjunction
 import shapeless.Fin
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ap.parser.IExpression
 
 object FinalConstraints {
 
   private var finalLIA = Conjunction.TRUE
 
+  private var str2IntList = Seq[(IExpression, IExpression, Int)]()
+
   def apply() = finalLIA
 
   def conjFormula(f: Formula) = finalLIA = conj(finalLIA, f)
+
+  def addStr2IntPred(str: IExpression, int: IExpression, strlen: Int) =
+    str2IntList = str2IntList :+ (str, int, strlen)
 
   def unaryHeuristicACs(
       t: Term,
@@ -39,7 +45,7 @@ object FinalConstraints {
       t: Term,
       auts: Seq[CostEnrichedAutomatonTrait]
   ): BaselineFinalConstraints = {
-    val atomConstraints = auts.map(new ParikhAC(_))
+    val atomConstraints = auts.map(new BaselineAC(_))
     new BaselineFinalConstraints(t, atomConstraints)
   }
 
@@ -108,9 +114,3 @@ trait FinalConstraints {
         term.asInstanceOf[ConstantTerm]
       ))
 }
-
-
-
-
-
-

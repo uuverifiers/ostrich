@@ -12,8 +12,8 @@ dirname = os.path.dirname(__file__)
 timelimit = 60
 command = os.path.join(dirname, "../../ostrich")
 
-
-class Runner:
+# Interface to mutithreadingly run each file of a benchmark 
+class RunnerInterface:
     backend: str
     benchname: str
     proccess_num: int
@@ -25,13 +25,13 @@ class Runner:
         self.proccess_num = n
         self.outdir = outdir
 
-    def write_results(self, results: list[str]):
+    def write_results(self, results: 'list[str]'):
         with open(os.path.join(self.outdir, f"{self.backend}_log.txt"), "w") as f:
             for result in results:
                 f.write(f"{result}{os.linesep}")
                 f.flush()
 
-    def run_single_instance(self, benchmark: str):
+    def run_single_instance(self, benchmark: str) -> str:
         str_result = []
         str_result.append(f"Running [{benchmark}]")
         pbar.set_description(f"Running [{benchmark}]")

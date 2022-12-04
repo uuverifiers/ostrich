@@ -6,16 +6,17 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
 import TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import ap.terfor.linearcombination.LinearCombination
 
 object LengthCEPreOp {
-  def apply(length: Term): LengthCEPreOp = new LengthCEPreOp(length)
+  def apply(length: LinearCombination): LengthCEPreOp = new LengthCEPreOp(length)
 }
 
 /**
   * Pre-op for length constraints. 
   * @param length The length 
   */
-class LengthCEPreOp(length: Term) extends CEPreOp {
+class LengthCEPreOp(length: LinearCombination) extends CEPreOp {
 
   override def toString = "lengthCEPreOp"
 
@@ -38,7 +39,7 @@ class LengthCEPreOp(length: Term) extends CEPreOp {
     val registers = Seq(RegisterTerm())
     builder.prependRegisters(registers)
     // intFormula : r0 === `length`
-    builder.addRegsRelation(registers(0) === length)
+    builder.addRegsRelation(length === registers(0))
     (Iterator(Seq(builder.getAutomaton)), Seq())
   }
 

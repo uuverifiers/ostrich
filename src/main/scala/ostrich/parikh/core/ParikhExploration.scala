@@ -93,22 +93,101 @@ object ParikhExploration {
 }
 
 class ParikhExploration(
-    _funApps: Seq[(PreOp, Seq[Term], Term)],
-    _initialConstraints: Seq[(Term, Automaton)],
-    _strDatabase: StrDatabase,
-) extends Exploration(
-      _funApps,
-      _initialConstraints,
-      _strDatabase,
-      None, // lengthProver
-      Map(), // lengthVars
-      true, // strictLengths
-      OFlags() // flags
-    ) {
-
+    funApps: Seq[(PreOp, Seq[Term], Term)],
+    initialConstraints: Seq[(Term, Automaton)],
+    strDatabase: StrDatabase
+) {
   import Exploration._
 
-  override val leafTerms: Set[Term] =
+  def measure[A](op: String)(comp: => A): A =
+    if (OstrichConfig.measureTime)
+      ap.util.Timer.measure(op)(comp)
+    else
+      comp
+
+  // topological sorting of the function applications
+  // divide integer term and string term
+  private val (integerTerms, strTerms, sortedFunApps, ignoredApps) = {
+    // TODO: implement it
+    val integerTerms = MHashSet[Term]()
+    val strTerms = MHashSet[Term]()
+    for ((t, _) <- initialConstraints)
+      strTerms += t
+    funApps.foreach {
+      case (_: LengthCEPreOp, Seq(str), length) =>
+        integerTerms += length; strTerms += str
+      case (_: SubStringCEPreOp, Seq(str, start, length), subStr) =>
+        integerTerms += start; integerTerms += length; strTerms += str;
+        strTerms += subStr
+      case (_, strs, resstr) => strTerms ++= strs; strTerms += resstr
+    }
+
+    val sortedApps = new ArrayBuffer[(Seq[(PreOp, Seq[Term])], Term)]
+    var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
+    var remFunApps = funApps
+    var topSortedFunApps = funApps
+
+    val termCout = new MHashMap[Term, Int]
+    for ((op, args, res) <- funApps) {
+      termCout(res) = termCout.getOrElse(res, 0)
+      for (arg <- args) termCout(arg) = termCout.getOrElse(arg, 0) + 1
+    }
+    // all integer Terms are topologically sorted to the head
+    for (t <- integerTerms)
+      termCout(t) = 0
+
+    while (topSortedFunApps.nonEmpty) {
+      val (_topSortedFunApps, _remFunApps) = remFunApps partition {
+        case (op, args, res) => termCout(res) == 0
+      }
+      sortedApps ++= {
+        val grouped = _topSortedFunApps groupBy (_._3)
+        grouped map { case (res, apps) =>
+          (apps map (app => (app._1, app._2)), res)
+        }
+      }
+      for ((op, args, res) <- _topSortedFunApps) {
+        for (arg <- args) termCout(arg) = termCout(arg) - 1
+      }
+      topSortedFunApps = _topSortedFunApps
+      remFunApps = _remFunApps
+    }
+
+    if (remFunApps.nonEmpty) {
+      ignoredApps ++= remFunApps
+      println("WARNING: cyclic definitions found, ignoring them")
+    }
+
+    (integerTerms, strTerms, sortedApps, ignoredApps)
+  }
+
+  for ((apps, res) <- sortedFunApps) {
+    Console.withOut(Console.err) {
+
+      def term2String(t: Term) =
+        if (strTerms contains t) {
+          val str = strDatabase term2Str t
+          str match {
+            case Some(str) => "\"" + str + "\""
+            case None      => t.toString()
+          }
+        } else t.toString()
+
+      println("   " + term2String(res) + " =")
+      for ((op, args) <- apps)
+        println(
+          "     " + op +
+            "(" + (args map (term2String _) mkString ", ") + ")"
+        )
+    }
+  }
+
+  private val allTerms = integerTerms ++ strTerms
+
+  private val resultTerms =
+    (for ((_, t) <- sortedFunApps.iterator) yield t).toSet
+
+  val leafTerms =
     allTerms filter { case t => !(resultTerms contains t) }
 
   lazy val trivalConflict: ConflictSet = {
@@ -120,25 +199,7 @@ class ParikhExploration(
 
   private val constraintStores = new MHashMap[Term, ParikhStore]
 
-  // all integer terms and string terms
-  val (integerTerm, strTerms) = {
-    var _integerTerm = Set[Term]()
-    var _strTerms = allTerms
-    funApps.foreach {
-      case (_: LengthCEPreOp, _, res) => // length op
-        _strTerms -= res
-        _integerTerm += res
-      case (_: SubStringCEPreOp, Seq(_, beginIdx, length), _) =>
-        _strTerms -= beginIdx
-        _strTerms -= length
-        _integerTerm += length
-        _integerTerm += beginIdx
-      case _ =>
-    }
-    (_integerTerm, _strTerms)
-  }
-
-  override def findModel: Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+  def findModel: Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     for (t <- allTerms)
       constraintStores.put(t, newStore(t))
 
@@ -163,22 +224,22 @@ class ParikhExploration(
       case FoundModel(model) => Some(model)
       case UnknownException(info) =>
         println("--Unknown: " + info)
-        // System.exit(0)
+        System.exit(0)
         None
       case TimeoutException(time) =>
         println(s"--Timeout: $time s")
-        // System.exit(0)
+        System.exit(0)
         None
       case e: Exception =>
         println("--Exception: " + e)
         e.printStackTrace()
-        // System.exit(0)
+        System.exit(0)
         None
     }
   }
 
   // override the model generation function
-  override def dfExplore(apps: List[(PreOp, Seq[Term], Term)]): ConflictSet =
+  def dfExplore(apps: List[(PreOp, Seq[Term], Term)]): ConflictSet =
     apps match {
 
       case List() => {
@@ -193,12 +254,12 @@ class ParikhExploration(
         // val solver = new CatraBasedSolver
         val backendSolver =
           OstrichConfig.backend match {
-            case Catra()  => new CatraBasedSolver
+            case Catra()    => new CatraBasedSolver
             case Baseline() => new BaselineSolver
-            case Unary()  => new UnaryBasedSolver
+            case Unary()    => new UnaryBasedSolver
           }
 
-        backendSolver.setIntegerTerm(integerTerm)
+        backendSolver.setIntegerTerm(integerTerms.toSet)
         for (t <- leafTerms) {
           backendSolver.addConstraint(t, constraintStores(t).getContents)
         }
@@ -237,7 +298,7 @@ class ParikhExploration(
       }
     }
 
-  override def dfExploreOp(
+  def dfExploreOp(
       op: PreOp,
       args: Seq[Term],
       res: Term,
@@ -260,15 +321,14 @@ class ParikhExploration(
         measure("pre-op") { op(argConstraints, resAut) }
 
       // iterate over pre image
-      while (measure("pre-op hasNext") { newConstraintsIt.hasNext }) {
+      while (newConstraintsIt.hasNext) {
         ap.util.Timeout.check
 
-        val argCS = measure("pre-op next") { newConstraintsIt.next }
+        val argCS = newConstraintsIt.next
 
         // push
         for (a <- args)
           constraintStores(a).push
-        pushLengthConstraints
 
         try {
           val newConstraints = new MHashSet[TermConstraint]
@@ -308,7 +368,6 @@ class ParikhExploration(
           // pop
           for (a <- args)
             constraintStores(a).pop
-          popLengthConstraints
         }
       }
 
@@ -332,11 +391,7 @@ class ParikhExploration(
   }
 
   // need to be cost-enriched constraints
-  override val allInitialConstraints: Seq[(Term, Automaton)] = {
-    // transform brics automata to cost-enriched automata
-    val initialConstraints = _initialConstraints.map { case (t, aut) =>
-      (t, brics2CostEnriched(aut))
-    }
+  val allInitialConstraints: Seq[(Term, Automaton)] = {
     val term2Index =
       (for (((_, t), n) <- sortedFunApps.iterator.zipWithIndex)
         yield (t -> n)).toMap
@@ -350,7 +405,7 @@ class ParikhExploration(
 
     // check whether any of the terms have concrete definitions
     for (t <- strTerms)
-      for (w <- _strDatabase.term2List(t)) {
+      for (w <- strDatabase.term2List(t)) {
         val str: String = w.view.map(i => i.toChar).mkString("")
         additionalConstraints += ((t, CostEnrichedAutomaton fromString str))
         for (ind <- term2Index get t)

@@ -34,10 +34,6 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     */
   protected var etaMap: Map[(State, TLabel, State), Seq[Int]] = Map()
 
-  /** Map from transition to its term.
-    */
-  protected var transTermMap: Map[(State, TLabel, State), Term] = Map()
-
   /** Registers storing count value for accepting state.
     */
   protected var registers: Seq[Term] = Seq()
@@ -59,10 +55,6 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     transitions.foreach { transition =>
       etaMap += transition -> Seq.fill(registers.size)(0)
     }
-    if (OstrichConfig.backend == OstrichConfig.Baseline())
-      transitions.foreach(transition => {
-        transTermMap += transition -> TransitionTerm()
-      })
   }
 
   def &(that: Automaton): Automaton =
@@ -199,30 +191,8 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     tWithV.toSeq.sortBy(_._3.filter(_ == 0).size).iterator
   }
 
-  /** Given a state, iterate over all outgoing transitons with their terms, try
-    * to be deterministic
-    */
-  def outgoingTransitionsWithTerm(
-      s: State
-  ): Iterator[(State, TLabel, Term)] = for ((t, lbl) <- outgoingTransitions(s))
-    yield (t, lbl, transTermMap((s, lbl, t)))
 
-  /** Given a state, iterate over all outgoing transitons with vector and term
-    */
-  def outgoingTransitionsWithInfo(
-      s: State
-  ): Iterator[(State, TLabel, Seq[Int], Term)] = for (
-    (t, lbl) <- outgoingTransitions(s)
-  ) yield {
-    (t, lbl, etaMap((s, lbl, t)), transTermMap((s, lbl, t)))
-  }
 
-  /** Transitions with their terms
-    */
-  def transitionsWithTerm: Iterator[(State, TLabel, State, Term)] =
-    transitions.map { case (s, lbl, t) =>
-      (s, lbl, t, transTermMap((s, lbl, t)))
-    }
 
   /** Transitions with their costs
     */
@@ -237,17 +207,11 @@ trait CostEnrichedAutomatonTrait extends Automaton {
 
   def getEtaMap = etaMap
 
-  def getTransTermMap = transTermMap
-
-  def getTransitionsTerms = transTermMap.map(_._2).toSeq
 
   def setRegisters(_registers: Seq[Term]) = registers = _registers
 
   def addEtaMap(_etaMap: Map[(State, TLabel, State), Seq[Int]]) =
     etaMap ++= _etaMap
-
-  def addTransTermMap(_transTermMap: Map[(State, TLabel, State), Term]) =
-    transTermMap ++= _transTermMap
 
   def setRegsRelation(f: Formula) = regsRelation = f
 

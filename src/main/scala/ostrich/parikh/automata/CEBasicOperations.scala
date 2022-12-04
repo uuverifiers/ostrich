@@ -17,6 +17,7 @@ import scala.jdk.CollectionConverters._
 import ap.terfor.Term
 import ap.terfor.Formula
 import ostrich.automata.BricsTLabelOps
+import ostrich.automata.Automaton
 
 object CEBasicOperations {
   // TODO: implement them
@@ -126,7 +127,7 @@ object CEBasicOperations {
     union(Seq(aut1, aut2))
   }
 
-  def intersection[A<:CostEnrichedAutomatonTrait](
+  def intersection[A <: CostEnrichedAutomatonTrait](
       aut1: A,
       aut2: A
   ): CostEnrichedAutomaton = {
@@ -249,18 +250,26 @@ object CEBasicOperations {
     builder.getAutomaton
   }
 
+  def registersMustBeEmpty(aut: CostEnrichedAutomaton): Unit = {
+    if(aut.getRegisters.nonEmpty)
+      throw new Exception("Registers must be empty")
+  }
+
+  // TODO: We can not nest repeat automata with registers
   def repeat(aut: CostEnrichedAutomaton): CostEnrichedAutomaton = {
+    registersMustBeEmpty(aut)
     new CostEnrichedAutomaton(BasicOperations.repeat(aut.underlying))
   }
 
   def repeat(aut: CostEnrichedAutomaton, min: Int): CostEnrichedAutomaton = {
-     // we unfold the aut to avoid too many registers when the states of the 
+    // we unfold the aut to avoid too many registers when the states of the
     // unfold automaton are less than 1000 (aut.states.size * min <= 1000)
-    val unfoldMaxState = 1000   
-    if(aut.states.size * min <= unfoldMaxState) 
+    val unfoldMaxState = 50
+    if (aut.states.size * min <= unfoldMaxState)
       return new CostEnrichedAutomaton(
         BasicOperations.repeat(aut.underlying, min)
       )
+    registersMustBeEmpty(aut)
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
@@ -299,13 +308,14 @@ object CEBasicOperations {
       min: Int,
       max: Int
   ): CostEnrichedAutomaton = {
-    // we unfold the aut to avoid too many registers when the states of the 
+    // we unfold the aut to avoid too many registers when the states of the
     // unfold automaton are less than 1000 (aut.states.size * max <= 1000)
-    val unfoldMaxState = 1000   
-    if(aut.states.size * max <= unfoldMaxState) 
+    val unfoldMaxState = 50
+    if (aut.states.size * max <= unfoldMaxState)
       return new CostEnrichedAutomaton(
         BasicOperations.repeat(aut.underlying, min, max)
       )
+    registersMustBeEmpty(aut)
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
@@ -403,7 +413,7 @@ object CEBasicOperations {
           if (v.forall(_ == 0) && !seen(t)) {
             workstack.push(t)
             epsClosureSet.add(t)
-            if(aut.isAccept(t))
+            if (aut.isAccept(t))
               builder.setAccept(old2new(s), true)
             seen.add(t)
           }
@@ -475,10 +485,6 @@ object CEBasicOperations {
     builder.getAutomaton
   }
 
-  /** TODO: implement it Remove all state that can not reach the final state
-    * @param aut
-    * @return
-    */
   def removeDeadState(
       aut: CostEnrichedAutomaton
   ): CostEnrichedAutomaton = {
@@ -502,6 +508,35 @@ object CEBasicOperations {
     builder.setInitialState(old2new(aut.initialState))
     builder.appendRegisters(aut.getRegisters)
     builder.addRegsRelation(aut.getRegsRelation)
+    builder.getAutomaton
+  }
+
+  // add counter to log the value of int get from the accepting string from the automaton
+  // The size of the states of the result aut: O(10^len)
+  def str2intCounterAut(len: Int, intRes: Term): Automaton = {
+    val builder = CostEnrichedAutomaton.getBuilder
+    val newReg = RegisterTerm()
+    val initialState = builder.getNewState
+    builder.setInitialState(initialState)
+    val worklist = MStack[State](initialState)
+    var digitIdx = len - 1
+    while (digitIdx >= 0) {
+      val curState = worklist.pop()
+      for (i <- 0 to 9) {
+        val newState = builder.getNewState
+        builder.addTransition(
+          curState,
+          BricsTLabelOps.singleton((i + 48).toChar),
+          newState,
+          Seq(i * Math.pow(10, digitIdx).toInt)
+        )
+        if (digitIdx == 0) builder.setAccept(newState, true)
+        else worklist.push(newState)
+      }
+      digitIdx -= 1
+    }
+    builder.addRegsRelation(newReg === intRes)
+    builder.appendRegisters(Seq(newReg))
     builder.getAutomaton
   }
 }

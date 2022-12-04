@@ -1,8 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "1.1",
-  maxErrors             := 5,
+  version               := "1.2.1",
 //
   homepage := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses := Seq(

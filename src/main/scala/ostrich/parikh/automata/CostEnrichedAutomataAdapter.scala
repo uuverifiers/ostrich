@@ -24,11 +24,6 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
 
   registers = Seq.fill(underlying.getRegisters.size)(RegisterTerm())
 
-  if (OstrichConfig.backend == OstrichConfig.Baseline())
-    transitions.foreach { case (s, lbl, t) =>
-      transTermMap += ((s, lbl, t) -> TransitionTerm())
-    }
-
   etaMap = underlying.getEtaMap
 
   def computeReachableStates(

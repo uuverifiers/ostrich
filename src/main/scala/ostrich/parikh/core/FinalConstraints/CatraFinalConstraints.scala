@@ -26,7 +26,7 @@ class CatraFinalConstraints(
 ) extends FinalConstraints {
 
   // eagerly product, which means compute lia after producting
-  lazy val productAtom = new ParikhAC(getAutomata.reduceLeft(_ product _))
+  lazy val productAtom = new BaselineAC(getAutomata.reduceLeft(_ product _))
 
   def getRegsRelation: Formula = productAtom.getRegsRelation
 

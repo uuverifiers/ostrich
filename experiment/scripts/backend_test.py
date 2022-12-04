@@ -12,7 +12,7 @@ class ArgParser:
 
     def __init__(self) -> None:
         self.parser = argparse.ArgumentParser(
-            prog="backend_test.py",
+            prog=__file__,
             description="This script is used to run benchmark automatically",
         )
 
