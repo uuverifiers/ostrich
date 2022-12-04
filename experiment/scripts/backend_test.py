@@ -1,7 +1,7 @@
 import os
 import sys
 import argparse
-from runner import Runner
+from runner import RunnerInterface
 from datetime import datetime
 
 dirname = os.path.dirname(__file__)
@@ -58,6 +58,6 @@ date = datetime.now().strftime("%y-%m-%d_%H:%M:%S")
 outdir = os.path.join(dirname, f"../res/{date}{argparser.suffix}")
 os.makedirs(outdir, exist_ok=True)
 
-runners = [Runner(backend=backend, benchname=benchmarks, n = argparser.n, outdir=outdir) for backend in backends]
+runners = [RunnerInterface(backend=backend, benchname=benchmarks, n = argparser.n, outdir=outdir) for backend in backends]
 for runner in runners:
     runner.run()
