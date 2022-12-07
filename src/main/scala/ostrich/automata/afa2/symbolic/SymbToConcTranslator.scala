@@ -3,12 +3,17 @@ package ostrich.automata.afa2.symbolic
 import ostrich.automata.BricsTLabelEnumerator
 import ostrich.automata.afa2.concrete.AFA2
 import ostrich.automata.afa2.symbolic.SymbToConcTranslator.toSymbDisjointAFA2
-import ostrich.automata.afa2.{AFA2Utils, EpsTransition, Step, StepTransition, SymbTransition, Transition}
+import ostrich.automata.afa2.{AFA2PrintingUtils, EpsTransition, Step, StepTransition, SymbTransition, Transition}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Sorting
 
+
+/*
+Implements the symbolic to concrete translation by splitting all ranges so they do not
+overlap and keeping a map from ranges to concrete symbols.
+ */
 
 object SymbToConcTranslator {
 
@@ -72,7 +77,7 @@ object SymbToConcTranslator {
 class SymbToConcTranslator(_safa: SymbAFA2) {
 
   val safa = toSymbDisjointAFA2(_safa)
-  AFA2Utils.printAutDotToFile(safa, "symbDisjointAFA2.dot")
+  AFA2PrintingUtils.printAutDotToFile(safa, "symbDisjointAFA2.dot")
 
   val rangeMap : Map[Range, Int] = {
     val trans : Set[Range] = safa.transitions.values.flatten.map(_.symbLabel).toSet

@@ -1,12 +1,66 @@
 package ostrich.automata.afa2.symbolic
 
-import ostrich.automata.afa2.concrete.BState
+import ostrich.automata.afa2.symbolic.SymbMutableAFA2.rangeDiff
 import ostrich.automata.afa2.{EpsTransition, Left, Right, Step, SymbTransition}
+
+import scala.collection.mutable
+
+
+// Util class for a common operation used in this file.
+object SymbMutableAFA2 {
+  /*
+  Given a set ranges of (non-overlapping) Ranges, and a given a new range toRem, it subtracts toRem
+  to ranges, as follows:
+  (1) - generate first an ordered Seq[Int] of integers in ranges but not in toRem
+  (2) - reconstruct the set of Ranges from the Seq[Int]
+   */
+  def rangeDiff(ranges: Set[Range], toRem: Range): Set[Range] = {
+    // Step (1)
+    val newSeq = ((for (rng <- ranges) yield rng.filter(x => !toRem.contains(x))).flatten).toIndexedSeq.sorted(Ordering[Int])
+
+    //Step (2). Sweeping newSeq with two indexes until next element is previous+1
+    val newRanges = mutable.Set[Range]()
+    var lastInd, currInd = 0
+    //println("Indexes set = " + newSeq.indices)
+    if (newSeq.nonEmpty) {
+      while (currInd < newSeq.length) {
+        if (currInd + 1 < newSeq.length && newSeq(currInd + 1) != newSeq(currInd) + 1) {
+          newRanges += (new Range(newSeq(lastInd), newSeq(currInd) + 1, 1))
+          lastInd = currInd + 1
+        }
+        currInd += 1
+      }
+      newRanges += (new Range(newSeq(lastInd), newSeq(currInd - 1) + 1, 1))
+    }
+    newRanges.toSet
+  }
+}
+
+
+/*
+Classes for the recursive construction of the automaton from regex. The translation
+is the one from the paper, therefore the result is a symbolic extended 2AFA, with
+existential and universal transition and accepting at the beginning and end of a string.
+The complicated operations are the complementation and trimming, needed when there is
+a negative lookaraound.
+ */
+
+class BState(_dir: Step) {
+  val dir = this._dir
+
+
+  override def toString() = {
+    this.hashCode().toString
+  }
+
+  override def clone() = new BState(this.dir)
+}
+
 
 abstract sealed class SymbBTransition(val targets: Seq[BState])
 import ostrich.OstrichStringTheory
-import ostrich.automata.afa2.concrete.{AFA2, BState}
-import ostrich.automata.afa2.AFA2Utils
+import ostrich.automata.afa2.concrete.AFA2
+import ostrich.automata.afa2.AFA2PrintingUtils
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -33,7 +87,10 @@ class SymbAFA2Builder(theory: OstrichStringTheory) {
   val underscore = Range(95, 96)
 
 
-
+/*
+From here on, the basic building blocks for constructing the automaton from
+the ECMAregex cases.
+ */
   def charrangeAtomic2AFA(dir: Step, range: Range): SymbMutableAFA2 = {
     val iniState = new BState(dir)
     val finState = new BState(dir)
@@ -201,10 +258,10 @@ class SymbAFA2Builder(theory: OstrichStringTheory) {
   def wordBoundary2AFA(dir: Step): SymbMutableAFA2 = {
     val init = new BState(dir)
     val trans = ArrayBuffer[(BState, SymbBTransition)]()
-    var nonWordChar: Set[Range] = AFA2Utils.rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
-    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, uppCaseChars)
-    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, lowCaseChars)
-    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, underscore)
+    var nonWordChar: Set[Range] = rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
+    nonWordChar = rangeDiff(nonWordChar, uppCaseChars)
+    nonWordChar = rangeDiff(nonWordChar, lowCaseChars)
+    nonWordChar = rangeDiff(nonWordChar, underscore)
 
     // First part: checking if a new word is starting
     val s1 = new BState(Right)
@@ -251,10 +308,10 @@ class SymbAFA2Builder(theory: OstrichStringTheory) {
   def nonWordBoundary2AFA(dir: Step): SymbMutableAFA2 = {
     val init = new BState(dir)
     val trans = ArrayBuffer[(BState, SymbBTransition)]()
-    var nonWordChar: Set[Range] = AFA2Utils.rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
-    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, uppCaseChars)
-    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, lowCaseChars)
-    nonWordChar = AFA2Utils.rangeDiff(nonWordChar, underscore)
+    var nonWordChar: Set[Range] = rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
+    nonWordChar = rangeDiff(nonWordChar, uppCaseChars)
+    nonWordChar = rangeDiff(nonWordChar, lowCaseChars)
+    nonWordChar = rangeDiff(nonWordChar, underscore)
 
     // First part: checking if a new word is starting
     val s1 = new BState(Right)
@@ -368,7 +425,7 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
                            var initialState: BState,
                            var mainFinState: BState,
                            finStates: mutable.Set[BState],
-                           transitions: ArrayBuffer[(BState, SymbBTransition)]) {
+                           transitions: mutable.ArrayBuffer[(BState, SymbBTransition)]) {
 
 
   override def clone() : SymbMutableAFA2 = {
@@ -487,7 +544,7 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
       for (ts <- transMap.get(state);
            t <- ts) t match {
         case SymbBStepTransition(label, _, _) => {
-          outRanges = AFA2Utils.rangeDiff(outRanges, label)
+          outRanges = rangeDiff(outRanges, label)
         }
         case SymbBEpsTransition(_) =>
       }
@@ -572,7 +629,7 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
       newTransitions)
 
     res.checkConsistency()
-    AFA2Utils.printAutDotToFile(res.builderToSymbExtAFA(), "debug-complement.dot")
+    AFA2PrintingUtils.printAutDotToFile(res.builderToSymbExtAFA(), "debug-complement.dot")
     res
 
   }

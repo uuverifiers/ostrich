@@ -39,9 +39,9 @@ import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
-import ostrich.automata.afa2.concrete.{AFA2, AFA2Builder, AFA2StateDuplicator, EpsReducer, ExtAFA2, MutableAFA2, NFATranslator}
+import ostrich.automata.afa2.concrete.{AFA2, AFA2StateDuplicator, NFATranslator}
 import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2, SymbToConcTranslator}
-import ostrich.automata.afa2.AFA2Utils
+import ostrich.automata.afa2.AFA2PrintingUtils
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack}
 import scala.collection.immutable.VectorBuilder
@@ -197,6 +197,7 @@ object Regex2Aut {
       case IFunApp(parser.WordBoundary, x) => IFunApp(parser.WordBoundary, x)
       case IFunApp(parser.NonWordBoundary, x) => IFunApp(parser.NonWordBoundary, x)
 
+      // Old, textbook translation
       /*
       case IFunApp(parser.WordBoundary, _) => transformNF(
 
@@ -323,80 +324,6 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
 }
 
-
-
-class ECMAToAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
-
-  import ostrich.automata.afa2._
-  import theory.{
-    re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
-    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
-    re_opt_?, re_loop_?,
-    re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
-    re_begin_anchor, re_end_anchor,
-    re_from_ecma2020, re_from_ecma2020_flags,
-    re_case_insensitive
-  }
-
-  val builder = new AFA2Builder(parser.alphabetDebug)
-
-  // Just calls toMutableAFA2 with AFA2.Right direction and converts the result.
-  def toExt2AFA(t: ITerm) : ExtAFA2 = {
-    val mutAut = toMutableAFA2(Right, t)
-    //println("Builder automaton:\n" + mutAut)
-    val extAFA2 = mutAut.builderToExtAFA()
-    //println("Ext2AFA automaton:\n" + extAFA2)
-    extAFA2
-  }
-
-
-  private def toMutableAFA2(dir: Step, t: ITerm) : MutableAFA2 = {
-    t match {
-
-      case IFunApp(`re_eps`, _) =>
-        builder.epsAtomic2AFA(dir)
-
-      case IFunApp(`re_none`, _) =>
-        builder.emptyAtomic2AFA(dir)
-
-      case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
-        builder.charrangeAtomic2AFA(dir, new Range(l.intValue, u.intValue+1, 1))
-
-      case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
-
-      case IFunApp(`re_all`, _) => builder.allAtomic2AFA(dir)
-
-      case IFunApp(`re_++`, Seq(l, r)) =>
-        builder.concat2AFA(dir, toMutableAFA2(dir, l), toMutableAFA2(dir, r))
-
-      case IFunApp(`re_union`, Seq(l, r)) =>
-        builder.alternation2AFA(dir, toMutableAFA2(dir, l), toMutableAFA2(dir, r))
-
-      case IFunApp(`re_*`, Seq(t)) =>
-        builder.star2AFA(dir, toMutableAFA2(dir, t))
-
-      case IFunApp(parser.LookAhead, Seq(t)) =>
-        // Watch out here with the directions!
-        builder.lookaround2AFA(dir, toMutableAFA2(Right, t))
-
-      case IFunApp(parser.LookBehind, Seq(t)) =>
-        builder.lookaround2AFA(dir, toMutableAFA2(Left, t))
-
-      case IFunApp(parser.NegLookAhead, Seq(t)) =>
-        builder.negLookaround2AFA(dir, toMutableAFA2(Right, t))
-
-      case IFunApp(parser.NegLookBehind, Seq(t)) =>
-        builder.negLookaround2AFA(dir, toMutableAFA2(Left, t))
-
-      case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
-        builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toMutableAFA2(dir, t))
-
-      case _ => throw new RuntimeException("This shouldn't happen!")
-    }
-  }
-
-}
-
 class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.{re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
@@ -493,54 +420,69 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.strDatabase.EncodedString
 
+  /*
+  New transformation from ECMARegex to 2AFA and then NFA.
+   */
   private def to2AFA(t : ITerm, parser: ECMARegexParser) : BAutomaton = {
-    // -----------Symbolic case---------------
+    /*
+      Step 1: Building the symbolic extended 2AFA (the translation in the paper). This automaton
+      has eps transitions and accepts at the beginning and end of string (with two different kind of final states).
+    */
     var t1 = System.currentTimeMillis()
     val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
     val aut = ecmaAFA.toSymbExt2AFA(t)
-    AFA2Utils.printAutDotToFile(aut, "extSymbAFA2.dot")
+    AFA2PrintingUtils.printAutDotToFile(aut, "extSymbAFA2.dot")
 
+    /*
+    Step 2:
+    a) All epsilon transitions are removed: the existential with powerset construction and
+    the universal by adding forward and backward transitions reading any symbols (word markers included).
+    b) Also the resulting automaton accepts only at the right end of the word. This is done by adding
+    beginning and end markers of the word and by adding some states.
+    The result is therefore a symbolic2AFA (no eps trans, accepts only at the end, reads word markers)
+     */
     var t2 = System.currentTimeMillis()
     val epsRed = new SymbEpsReducer(theory, aut)
     val reducedAut = epsRed.afa
     var duration2 = (System.currentTimeMillis() - t2) / 1000d
     println("Time for eps-reduction: " + duration2)
 
+    // Used sometime for debugging...
     //throw new RuntimeException("Stop here.")
+
+    /*
+    Step 3: The symb2AFA, with ranges on the transitions, is transformed into a concrete one.
+    In order to do that, overlaps between ranges are eliminated and a map between ranges and concrete
+    symbols is kept. This is needed because the 2AFA -> NFA translation works only on concrete automata.
+     */
     t2 = System.currentTimeMillis()
     val transl = new SymbToConcTranslator(reducedAut)
     val concAut = transl.forth()
     duration2 = (System.currentTimeMillis() - t2) // / 1000d
     println("Time for symbolic to concrete: " + duration2)
-    AFA2Utils.printAutDotToFile(concAut, "concAut.dot")
+    AFA2PrintingUtils.printAutDotToFile(concAut, "concAut.dot")
     var duration = (System.currentTimeMillis() - t1) // / 1000d
+
+    /*
+    Step 4: Naive minimization of the automata. Essentially states with same outgoing labels going to
+    same states are merged. The procedure is iterative and reaches a fixpoint where no states can be merged
+    anymore. Output: 2AFA (concrete, only accepts at the end of word)
+     */
     println("Eliminating redundant states in progress...")
     val redConcAut = concAut.minimizeStates()
     println("Total time for regex -> 2AFA translation: " + duration)
-    AFA2Utils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
+    AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
     println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
 
+    /*
+    Step 5: 2AFA -> NFA translation
+     */
     t1 = System.currentTimeMillis()
     val res = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
     duration = (System.currentTimeMillis() - t1) // / 1000d
     println("Time for 2AFA -> NFA translation: " + duration)
     //println("BricsAutomaton:\n" + res)
     res
-    /* -----------Concrete case---------------
-          val ecma2Aut = new ECMAToAFA2(theory, parser)
-          val aut = ecma2Aut.toExt2AFA(r)
-          AFA2Utils.printAutDotToFile(aut, "extAFA2.dot")
-
-          //val epsRed = new EpsReducer(aut)
-          //val reducedAut = epsRed.afa
-
-          //throw new RuntimeException("Stop here.")
-          val t1 = System.nanoTime
-          val res = NFATranslator(aut).underlying
-          val duration = (System.nanoTime - t1) / 1e9d
-          println("Time for 2AFA -> NFA translation: " + duration)
-          res
-    -------------------------------------------- */
   }
 
   private def regex2Automaton(parser   : ECMARegexParser,

@@ -5,7 +5,12 @@ import scala.collection.mutable
 
 
 
-
+/*
+Symbolic Alternating 2 way automata:
+ - WITHOUT epsilon transition;
+  - accepting always at the (right) end of a string;
+  - it reads word markers (begin and end of string).
+ */
 case class SymbAFA2(initialStates : Seq[Int],
                     finalStates   : Seq[Int],
                     transitions   : Map[Int, Seq[SymbTransition]]) {
@@ -30,8 +35,36 @@ case class SymbAFA2(initialStates : Seq[Int],
 
 }
 
+/*
+Class EpsAFA2 is a 2AFA with:
+- epsilon transition;
+- accepting only at the right end of a string;
+- can be concrete or symbolic, in general.
+ */
+case class EpsAFA2(initialState: Int,
+                   finalStates: Seq[Int],
+                   transitions: Map[Int, Seq[Transition]]) {
+
+  lazy val states = {
+    val states = mutable.Set[Int](initialState)
+    states ++= finalStates
+    for ((s, ts) <- transitions;
+         t <- ts) {
+      states += s
+      states ++= t.targets
+    }
+    states.toIndexedSeq.sorted
+    states
+  }
+}
 
 
+/*
+Symbolic Alternating 2 way automata:
+ - WITH epsilon transitions;
+ - accepting both at the beginning and end of the word;
+ - it does not read word markings, but it has two kind of final states.
+ */
 case class SymbExtAFA2(initialStates : Seq[Int],
                        finalLeftStates: Seq[Int],
                        finalRightStates: Seq[Int],

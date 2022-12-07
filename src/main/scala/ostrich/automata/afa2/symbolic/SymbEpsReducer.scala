@@ -1,14 +1,20 @@
 package ostrich.automata.afa2.symbolic
 
 import ostrich.OstrichStringTheory
-import ostrich.automata.afa2.{AFA2Utils, EpsTransition, Left, Right, Step, StepTransition, SymbTransition, Transition}
-import ostrich.automata.afa2.concrete.{EpsAFA2, MState}
+import ostrich.automata.afa2.{AFA2PrintingUtils, EpsTransition, Left, Right, Step, StepTransition, SymbTransition, Transition}
 import ostrich.automata.afa2.symbolic.SymbToConcTranslator.toSymbDisjointTrans
 
 import scala.collection.immutable.Set
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+
+/*
+M stands for Macro(states), those structures are used for the powerset construction needed to get rid
+of existential epsilon transitions.
+ */
+
+case class MState(states : Set[Int])
 
 abstract class SymbMTransition(val targets: Set[MState])
 
@@ -55,27 +61,38 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
     curMaxState
   }
 
+  /*
+  Step 1: From symbExtAFA2 (accepting at beginning and end of string) to EpsAFA2 which accepts only
+  at the end of the string. The word markers are introduced.
+   */
   val epsafa: EpsAFA2 = symbExtAFA2ToEpsAFA2(extafa)
-  AFA2Utils.printAutDotToFile(epsafa, "epsAFA2.dot")
+  AFA2PrintingUtils.printAutDotToFile(epsafa, "epsAFA2.dot")
 
+  /*
+  Step 2: Eliminate existential eps trans with powerset construction.
+  From EpsAFA2 (with univ and exist transitions) to a symb macrostate 2AFA with only univ eps trans.
+   */
   val mafa: SymbMAFA2 = epsAFA2ToSymbMAFA2(epsafa)
   //println("mafa2:\n" + mafa)
 
+  /*
+  Step 3: From symb macrostate 2AFA back to eps2AFA only with eps univ. transitions.
+   */
   val epsafaReduced: EpsAFA2 = symbMAFA2ToEpsAFA2(mafa)
-  AFA2Utils.printAutDotToFile(epsafaReduced, "epsAFA2-noExistEps.dot")
+  AFA2PrintingUtils.printAutDotToFile(epsafaReduced, "epsAFA2-noExistEps.dot")
 
-
-  //Getting rid of universal eps transitions
-  //val mafa2: SymbMAFA2 = universalEpsAFA2ToSymbMAFA2(epsafaReduced)
-  //val epsafaReduced2: EpsAFA2 = symbMAFA2ToEpsAFA2(mafa2)
-  //AFA2Utils.printAutDotToFile(epsafaReduced2, "epsAFA2-noUniOrExistEps.dot")
-
+  /*
+  Step 4: From Eps2AFA with only univ. eps. trans., to symbolic2AFA with no epsilon transitions.
+  This is done by simulating an eps trans with a pair of forward and backward transitions
+  reading any symbol (including word markers).
+ */
   val afa: SymbAFA2 = epsAFA2ToSymbAFA2(epsafaReduced)
-  AFA2Utils.printAutDotToFile(afa, "AFA2.dot")
+  AFA2PrintingUtils.printAutDotToFile(afa, "AFA2.dot")
 
 
   /*
-  It translates an epsAFA2 (supposedly with only univ. eps transitions) into a AFA2
+  It translates a (symbolic) epsAFA2 (supposedly with only univ. eps transitions) into a symbolic AFA2,
+  therefore with no epsilon transitions.
    */
   def epsAFA2ToSymbAFA2(epsafa: EpsAFA2): SymbAFA2 = {
     val epsBackwardsSteps = new ArrayBuffer[(Int, Int)]
@@ -116,7 +133,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
 
 
   /*
-   Transforms the ExtAFA2, which has the two kinds of accepting states into an epsAFA2 with epsilon transitions
+   Transforms the symbolic ExtAFA2, which has the two kinds of accepting states into a (symbolic) epsAFA2 with epsilon transitions
    which accept only at the end of the word.
    */
   def symbExtAFA2ToEpsAFA2(extafa: SymbExtAFA2): EpsAFA2 = {
@@ -153,7 +170,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
 
   /*
 It performs a powerset construction to get rid of the existential epsilon transitions. The result is therefore a
-MacrostateAFA2, which has still universal epsilon transitions.
+symbolic MacrostateAFA2, which has still universal epsilon transitions.
  */
   def epsAFA2ToSymbMAFA2(epsafa: EpsAFA2): SymbMAFA2 = {
 
@@ -236,7 +253,7 @@ MacrostateAFA2, which has still universal epsilon transitions.
 
 
   /*
-It transforms a MAFA2 with universal eps transitions back into a epsAFA2 which has only universal eps-transitions.
+It transforms a MAFA2 with universal eps transitions back into an epsAFA2 which has only universal eps-transitions.
  */
   def symbMAFA2ToEpsAFA2(mafa: SymbMAFA2): EpsAFA2 = {
     val stMap: Map[MState, Int] = mafa.allStates.zipWithIndex.map { case (v, i) => (v, i) }.toMap

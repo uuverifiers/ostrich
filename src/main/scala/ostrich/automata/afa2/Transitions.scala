@@ -1,5 +1,9 @@
 package ostrich.automata.afa2
 
+/*
+Class for representing transitions.
+ */
+
   abstract class Transition(val targets: Seq[Int])
 
 

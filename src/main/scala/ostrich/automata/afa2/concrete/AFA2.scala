@@ -5,19 +5,19 @@ import ostrich.automata.afa2.{Left, Right, StepTransition, Transition}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, HashSet => MHashSet}
 
-//object AFA2 {
-
-  /*
-  //TODO: Is this used?
-  object Position extends Enumeration {
-    val LeftMost, Any, RightMost = Value
-  }
-  */
-
-
 /*
 Existential nondeterminism is implemented by having multiple transitions in the sequence.
 Universal   nondeterminism is implemented by having multiple target states in Transition.
+ */
+
+
+/*
+Class AFA2 implements a concrete 2AFA with:
+- only concrete transitions;
+- no epsilon transitions;
+- accepting only at the end of the string.
+
+This class is used as input for the 2AFA -> NFA translation.
  */
 case class AFA2(initialStates : Seq[Int],
                 finalStates   : Seq[Int],
@@ -91,6 +91,10 @@ case class AFA2(initialStates : Seq[Int],
     fwdReachable & bwdReachable
 
 
+  /*
+  Minimizes the states by merging states that have the same outgoing transitions to the same states.
+  It performs minimizeStatesStep until the fixpoint (of not being able to remove any more states) is reached.
+   */
   def minimizeStates() : AFA2 = {
 
     def minimizeStatesStep(aut: AFA2): AFA2 = {
@@ -177,6 +181,10 @@ case class AFA2(initialStates : Seq[Int],
       newAut.restrictToReachableStates
     }
 
+    /*
+    Similar to the one before but trying to take into account self-loop as explained below.
+    Currently not used as not extensively tested (but should work). Not much difference with the non-optimized verson.
+     */
     def minimizeStatesStepOptimised(aut: AFA2) : AFA2 = {
 
       //val flatTrans = for ((st, ts) <- aut.transitions.toSeq) yield (ts.toSet, st)
@@ -290,7 +298,9 @@ case class AFA2(initialStates : Seq[Int],
 
   }
 
-
+/*
+Eliminates non-forward reachable and non-backward reachable states.
+ */
   def restrictToReachableStates : AFA2 =
     if (reachableStates.size == states.size) {
       this
@@ -366,52 +376,4 @@ case class AFA2(initialStates : Seq[Int],
           StepTransition(l, _, _) <- ts.iterator)
     yield l).toSet.toIndexedSeq.sorted
 
-}
-
-case class ExtAFA2(initialStates    : Seq[Int],
-                   finalLeftStates : Seq[Int],
-                   finalRightStates   : Seq[Int],
-                   transitions      : Map[Int, Seq[Transition]]) {
-
-  assert(!initialStates.isEmpty)
-
-  val states = {
-    val states = new MHashSet[Int]
-
-    states ++= initialStates
-    states ++= finalLeftStates
-    states ++= finalRightStates
-
-    for ((source, ts) <- transitions.iterator;
-         trans        <- ts.iterator;
-         target       <- trans.targets.iterator) {
-      states += source
-      states += target
-    }
-
-    states.toIndexedSeq.sorted
-  }
-
-  lazy val letters =
-    (for ((source, ts)            <- transitions.iterator;
-          StepTransition(l, _, _) <- ts.iterator)
-    yield l).toSet.toIndexedSeq.sorted
-
-}
-
-case class EpsAFA2(initialState: Int,
-                   finalStates: Seq[Int],
-                   transitions: Map[Int, Seq[Transition]]) {
-
-  lazy val states = {
-    val states = mutable.Set[Int](initialState)
-    states ++= finalStates
-    for ((s, ts) <- transitions;
-         t <- ts) {
-      states += s
-      states ++= t.targets
-    }
-    states.toIndexedSeq.sorted
-    states
-  }
 }
