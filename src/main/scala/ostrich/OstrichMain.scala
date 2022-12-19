@@ -45,7 +45,7 @@ object OstrichMain {
    * specified on the command line, so it is possible to provide more specific
    * string solver options on the command line.
    */
-  val options = List("-stringSolver=ostrich.OstrichStringTheory:-regexTranslator=hybrid", "-logo")
+  val options = List("-stringSolver=ostrich.OstrichStringTheory:-regexTranslator=complete", "-logo")
 
   def main(args: Array[String]) : Unit =
     ap.CmdlMain.main((options ++ args).toArray)

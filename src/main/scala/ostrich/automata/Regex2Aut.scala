@@ -165,9 +165,9 @@ object Regex2Aut {
     def apply(t: ITerm) = {
       val diffElimin = new Regex2Aut.DiffEliminator(theory)
       val de = diffElimin(t);
-      //println("After diff elimination:\n" + de + "\n")
+      println("After diff elimination:\n" + de + "\n")
       val res = transformNF(de)
-      //println("After transformation:\n" + res + "\n")
+      println("After transformation:\n" + res + "\n")
       res
     }
 
@@ -469,7 +469,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
     anymore. Output: 2AFA (concrete, only accepts at the end of word)
      */
     println("Eliminating redundant states in progress...")
-    val redConcAut = concAut.minimizeStates()
+    //val redConcAut = concAut.minimizeStates()
+    val redConcAut = concAut
     println("Total time for regex -> 2AFA translation: " + duration)
     AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
     println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)

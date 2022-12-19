@@ -19,48 +19,57 @@ object SymbToConcTranslator {
 
   def toSymbDisjointTrans(trans: Map[Int, Seq[SymbTransition]]): Map[Int, Seq[SymbTransition]] = {
 
-    def isContained(r1: Range, r2: Range): Boolean = {
-      r1.start>=r2.start && r1.end<=r2.end
-    }
-
     val flatTrans = for((st, ts) <- trans.toSeq;
                         t <- ts) yield (st, t)
 
-    //println("Flat trans:\n"+flatTrans)
+    //println("Flat trans:\n" + flatTrans.map{t => t._2})
 
-    val points = (for ((st, ts) <- trans.toSeq;
+    val points = (for ((_, ts) <- trans.toSeq;
                       t <- ts) yield {
                         Seq(
-                          (t.symbLabel.start, true),
-                          (t.symbLabel.end, false)
+                          (t.symbLabel.start, t.symbLabel.end, true), //open the interval
+                          (t.symbLabel.end, t.symbLabel.start, false) //closes the interval
                         )
                       }).flatten.toSet.toArray
 
-    Sorting.quickSort[(Int, Boolean)](points)(Ordering[(Int, Boolean)].on(x => (x._1, x._2)))
+    Sorting.quickSort[(Int, Int, Boolean)](points)(Ordering[(Int, Boolean)].on(x => (x._1, x._3)))
 
-    //val it = points.iterator
+    val it = points.iterator
     //println("Points:")
     //while(it.hasNext) println(it.next())
 
     val ranges = ArrayBuffer[Range]()
-    var lastStart = (-1, false)
+    var open = (-1, -1, false) // This is always (index_start, index_end). True means the interval is currently open, false it is closed.
 
-    for ((index, b) <- points) {
+    for ((index_1, index_2, b) <- points) {
       if (b==true) {
-        if (lastStart._1 != -1 && lastStart._2==true) ranges += Range(lastStart._1, index)
-      lastStart=(index, b)
-      } else {
-        ranges+= (Range(lastStart._1, index))
-        lastStart=(index, b)
+        val index_start=index_1
+        val index_end=index_2
+        if (open._1 != -1 && open._3==true && index_start>open._1) {
+          assert(!(index_start > open._2), "Current open range: " + open + " I am seeing opening of: (" + index_1 +"," + index_2+")")
+          ranges += Range(open._1, index_start)
+        }
+        if (index_end>open._2) open=(index_start, index_end, true)
+        else open=(index_start, open._2, true)
+      }
+      else {
+        if (open._3 == true) {
+          val index_start = index_2
+          val index_end = index_1
+          ranges += (Range(open._1, index_end))
+          assert(!(index_end > open._2), "Current open range: " + open + " I am seeing closure of: (" + index_2 + "," + index_1 + ")")
+          if (index_end == open._2) open = (-1, -1, false)
+          else open = (index_end, open._2, true)
+        }
       }
     }
 
     val newTransFlat =
       for ((st, t) <- flatTrans;
          rg <- ranges;
-         if (isContained(rg, t.symbLabel))) yield (st, SymbTransition(rg, t.step, t.targets))
+         if (t.symbLabel.containsSlice(rg))) yield (st, SymbTransition(rg, t.step, t.targets))
 
-    //println("New flat trans:\n"+newTransFlat)
+    //println("New flat trans:\n"+ newTransFlat.map{t=>t._2})
 
     newTransFlat.groupBy(_._1).mapValues(l => l map (_._2))
   }
@@ -83,8 +92,6 @@ class SymbToConcTranslator(_safa: SymbAFA2) {
     val trans : Set[Range] = safa.transitions.values.flatten.map(_.symbLabel).toSet
     trans.zipWithIndex.map {case (k, v) => (k, v)}.toMap
   }
-
-  //println("Range map:\n" + rangeMap)
 
   def forth(): AFA2 = {
     val newTrans = safa.transitions.map{case (st, trSeq) =>
