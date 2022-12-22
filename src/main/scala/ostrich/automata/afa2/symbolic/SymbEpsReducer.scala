@@ -51,8 +51,8 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
   //val maxLetter = if (extafa.letters.isEmpty) 0 else extafa.letters.max
   val maxState = extafa.states.max
 
-  val beginMarker = theory.alphabetSize + 2
-  val endMarker = theory.alphabetSize + 4
+  val beginMarker = 65532
+  val endMarker = 65534
 
   var curMaxState = maxState
 
@@ -105,7 +105,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
           val newTargets = for (_ <- targets) yield newState
           epsBackwardsSteps ++= newTargets zip targets
           Seq(
-            SymbTransition(new Range(0, theory.alphabetSize, 1), Right, newTargets),
+            SymbTransition(new Range(0, (theory.upperBound).intValueSafe+1, 1), Right, newTargets),
             SymbTransition(new Range(endMarker, endMarker + 1, 1), Right, newTargets)
           )
       }
@@ -119,7 +119,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
     val extraTransitions: Seq[(Int, SymbTransition)] =
       (for ((source, target) <- epsBackwardsSteps) yield
         Seq(
-          (source, SymbTransition(new Range(0, theory.alphabetSize, 1), Left, Seq(target))),
+          (source, SymbTransition(new Range(0, (theory.upperBound).intValueSafe+1, 1), Left, Seq(target))),
           (source, SymbTransition(new Range(endMarker, endMarker + 1, 1), Left, Seq(target)))
         )).flatten
 
@@ -154,7 +154,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
       for (s <- extafa.finalRightStates)
         yield (s -> SymbTransition(new Range(endMarker, endMarker + 1, 1), Right, Seq(newFinalEndState)))
       ) ++ Seq(
-      (newFinalBeginState -> SymbTransition(new Range(0, theory.alphabetSize, 1), Right, Seq(newFinalBeginState))),
+      (newFinalBeginState -> SymbTransition(new Range(0, theory.upperBound.intValueSafe+1, 1), Right, Seq(newFinalBeginState))),
       (newFinalBeginState -> SymbTransition(new Range(beginMarker, beginMarker + 1, 1), Right, Seq(newFinalBeginState))),
       (newFinalBeginState -> SymbTransition(new Range(endMarker, endMarker + 1, 1), Right, Seq(newFinalBeginState)))
     ) ++ (

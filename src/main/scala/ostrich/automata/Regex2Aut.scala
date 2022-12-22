@@ -38,8 +38,8 @@ import ap.parser.IExpression.Const
 import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
-import ostrich.automata.afa2.concrete.{AFA2, AFA2StateDuplicator, NFATranslator}
+import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, Automaton => BAutomaton}
+import ostrich.automata.afa2.concrete.{AFA2StateDuplicator, NFATranslator}
 import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2, SymbToConcTranslator}
 import ostrich.automata.afa2.AFA2PrintingUtils
 
@@ -476,15 +476,40 @@ class Regex2Aut(theory : OstrichStringTheory) {
     println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
 
     /*
-    Step 5: 2AFA -> NFA translation
+    Step 5: 2AFA -> concrete NFA translation
      */
     t1 = System.currentTimeMillis()
-    val res = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
+    val concNFA = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed)
     duration = (System.currentTimeMillis() - t1) // / 1000d
     //println("Time for 2AFA -> NFA translation: " + duration)
-    //println("BricsAutomaton:\n" + res)
-    res
+    println("Concrete BricsAutomaton:\n" + concNFA)
+
+    /*
+    Step 6 concrete NFA -> symbolic NFA
+     */
+    val map = transl.rangeMap.map(_.swap)
+    for (i <- map.keys) println("Key: " + i + " Value: " + map.get(i).get)
+    val symbNFA = new BricsAutomatonBuilder()
+    symbNFA.setMinimize(true)
+    val concSymbMap = (for (st <- concNFA.states) yield (st, symbNFA.getNewState)).toMap
+
+    for (fst <- concNFA.acceptingStates)
+      symbNFA.setAccept(concSymbMap.get(fst).get, true)
+
+    symbNFA.setInitialState(concSymbMap.get(concNFA.initialState).get)
+
+    for (st <- concNFA.states;
+         tr <- st.getSortedTransitions(false).asScala;
+         i <- tr.getMin to tr.getMax) {
+      symbNFA.addTransition(concSymbMap.get(st).get, (map.get(i).get.start.toChar, (map.get(i).get.end-1).toChar), concSymbMap.get(tr.getDest).get)
+    }
+
+    //println("Baut: \n" + symbNFA.baut)
+
+    //println("Symbolic BricsAutomaton:\n" + symbNFA.getAutomaton)
+    symbNFA.getAutomaton.underlying
   }
+
 
   private def regex2Automaton(parser   : ECMARegexParser,
                               str      : String,

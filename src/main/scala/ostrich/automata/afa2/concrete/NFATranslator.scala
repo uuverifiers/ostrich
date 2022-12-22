@@ -14,15 +14,11 @@ object NFATranslator {
   val StrictConditions = true
 
   def apply(afa : AFA2, epsRed: SymbEpsReducer) : BricsAutomaton =
-    apply(afa, epsRed, None)
-
-  def apply(afa: AFA2, epsRed: SymbEpsReducer, charMap: Option[Map[Int, Range]]): BricsAutomaton =
-    new LazyNFATranslator(afa, epsRed, charMap).result
-
+    new LazyNFATranslator(afa, epsRed).result
 }
 
 
-class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map[Int, Range]]) {
+class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer) {
 
   import afa._
   import ostrich.automata.afa2.{Left, Right, Step}
@@ -289,16 +285,10 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
               val candidate = lowerToBound ++ s
               if (consideredToStates add candidate) {
                 if (transitionExists(fromStates, label, candidate)) {
-
-                  charMap match {
-                    case Some(map) => val range = map.get(label).get
-                      builder.addTransition (bricsState,
-                        (range.start.toChar, (range.end-1).toChar),
-                        getStateFor (candidate) )
-                    case None => builder.addTransition(bricsState,
+                  builder.addTransition(bricsState,
                                   (label.toChar, label.toChar),
                                   getStateFor(candidate))
-                  }
+
                   transitionCnt = transitionCnt + 1
                 }
               }
@@ -345,7 +335,9 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
         builder.setAccept(s2, true)
 
     val BeginLabel = preResult.LabelOps.singleton(epsRed.beginMarker.toChar)
+    //println("Begin label: " + BeginLabel._1.toInt + "-" + BeginLabel._2.toInt)
     val EndLabel = preResult.LabelOps.singleton(epsRed.endMarker.toChar)
+    //println("End label: " + EndLabel._1.toInt + "-" + EndLabel._2.toInt)
 
     for ((s1, s2) <- stateMap)
       for ((s3, l) <- preResult.outgoingTransitions(s1))

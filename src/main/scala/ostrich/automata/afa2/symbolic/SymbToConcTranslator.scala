@@ -90,7 +90,7 @@ class SymbToConcTranslator(_safa: SymbAFA2) {
 
   val rangeMap : Map[Range, Int] = {
     val trans : Set[Range] = safa.transitions.values.flatten.map(_.symbLabel).toSet
-    trans.zipWithIndex.map {case (k, v) => (k, v)}.toMap
+    trans.zipWithIndex.toMap
   }
 
   def forth(): AFA2 = {

@@ -58,7 +58,8 @@ object OstrichStringTheory {
   // TODO: at some point this has to be fixed, Unicode is
   // bigger. Seems to be a problem with the BRICS automata library;
   // use Unicode-16 encoding?
-  val alphabetSize = 0x10000 // 65536
+  //val alphabetSize = 0x10000 // 65536
+  val alphabetSize = 65530
 
   class OstrichStringSort extends ProxySort(Sort.Integer) {
     override val name = "String"
@@ -92,7 +93,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                           _flags : OFlags) extends {
 
   val StringSort   = new OstrichStringTheory.OstrichStringSort
-  val alphabetSize = OstrichStringTheory.alphabetSize
+  //val alphabetSize = OstrichStringTheory.alphabetSize
+  val alphabetSize = 65530 // we need beginning and end marking
   val upperBound   = IdealInt(alphabetSize - 1)
   val CharSort     = ModuloArithmetic.ModSort(IdealInt.ZERO, upperBound)
   val RegexSort    = Sort.createInfUninterpretedSort("RegLan")
