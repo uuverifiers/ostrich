@@ -77,8 +77,8 @@ case class SymbBStepTransition(label: Range,
 
 class SymbAFA2Builder(theory: OstrichStringTheory) {
   val alphabet_size = theory.alphabetSize
-  val max_char = theory.upperBound
-  val min_char = 0
+  val max_char = theory.max_char
+  val min_char = theory.min_char
 
   // From the parser!!!
   val decimal = Range(48, 58)

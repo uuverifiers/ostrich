@@ -96,6 +96,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   //val alphabetSize = OstrichStringTheory.alphabetSize
   val alphabetSize = 65530 // we need beginning and end marking
   val upperBound   = IdealInt(alphabetSize - 1)
+  val max_char = upperBound
+  val min_char = 0
   val CharSort     = ModuloArithmetic.ModSort(IdealInt.ZERO, upperBound)
   val RegexSort    = Sort.createInfUninterpretedSort("RegLan")
   val theoryFlags = _flags
