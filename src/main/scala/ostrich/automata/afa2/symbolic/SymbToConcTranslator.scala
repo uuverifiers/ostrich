@@ -1,12 +1,13 @@
 package ostrich.automata.afa2.symbolic
 
-import ostrich.automata.BricsTLabelEnumerator
+import ostrich.automata.{BricsTLabelEnumerator, BricsAutomaton, BricsAutomatonBuilder,
+                         AutomataUtils}
 import ostrich.automata.afa2.concrete.AFA2
 import ostrich.automata.afa2.symbolic.SymbToConcTranslator.toSymbDisjointAFA2
 import ostrich.automata.afa2.{AFA2PrintingUtils, EpsTransition, Step, StepTransition, SymbTransition, Transition}
 
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, MultiMap,
+                                 Set => MSet}
 import scala.util.Sorting
 
 
@@ -107,6 +108,41 @@ class SymbToConcTranslator(_safa: SymbAFA2) {
       (st, trSeq.map(x => SymbTransition(invMap.get(x.label).get, x.step, x._targets))) }
 
     SymbAFA2(afa.initialStates, afa.finalStates, newTrans)
+  }
+
+  def bricsBack(aut : BricsAutomaton,
+                toEpsLabels : Set[Int]) : BricsAutomaton = {
+    val builder =
+      new BricsAutomatonBuilder
+    val epsilons =
+      new MHashMap[BricsAutomaton#State, MSet[BricsAutomaton#State]]
+        with MultiMap[BricsAutomaton#State, BricsAutomaton#State]
+    val invMap =
+      rangeMap.map(_.swap)
+
+    val stateMap =
+      (for (s <- aut.states) yield (s -> builder.getNewState)).toMap
+
+    builder.setInitialState(stateMap(aut.initialState))
+
+    for ((s1, s2) <- stateMap)
+      if (aut isAccept s1)
+        builder.setAccept(s2, true)
+
+    for ((s1, s2) <- stateMap)
+      for ((s3, l) <- aut.outgoingTransitions(s1))
+        for (c <- aut.LabelOps.enumLetters(l)) {
+          val r = invMap(c)
+          if (r.start == r.end - 1 && (toEpsLabels contains r.start)) {
+            epsilons.addBinding(s2, stateMap(s3))
+          } else {
+            builder.addTransition(s2, (r.start.toChar, (r.end - 1).toChar), stateMap(s3))
+          }
+        }
+
+    AutomataUtils.buildEpsilons(builder, epsilons)
+
+    builder.getAutomaton
   }
 
 }

@@ -479,11 +479,14 @@ class Regex2Aut(theory : OstrichStringTheory) {
     Step 5: 2AFA -> NFA translation
      */
     t1 = System.currentTimeMillis()
-    val res = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap))).underlying
+    val concNFA = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap)))
     duration = (System.currentTimeMillis() - t1) // / 1000d
     //println("Time for 2AFA -> NFA translation: " + duration)
     //println("BricsAutomaton:\n" + res)
-    res
+
+    val symbNFA = transl.bricsBack(concNFA, Set(epsRed.beginMarker, epsRed.endMarker))
+
+    symbNFA.underlying
   }
 
   private def regex2Automaton(parser   : ECMARegexParser,

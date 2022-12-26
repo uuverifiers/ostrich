@@ -289,16 +289,9 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
               val candidate = lowerToBound ++ s
               if (consideredToStates add candidate) {
                 if (transitionExists(fromStates, label, candidate)) {
-
-                  charMap match {
-                    case Some(map) => val range = map.get(label).get
-                      builder.addTransition (bricsState,
-                        (range.start.toChar, (range.end-1).toChar),
-                        getStateFor (candidate) )
-                    case None => builder.addTransition(bricsState,
-                                  (label.toChar, label.toChar),
-                                  getStateFor(candidate))
-                  }
+                  builder.addTransition(bricsState,
+                                        (label.toChar, label.toChar),
+                                        getStateFor(candidate))
                   transitionCnt = transitionCnt + 1
                 }
               }
@@ -325,42 +318,7 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
 
   AutomataUtils.buildEpsilons(builder, epsilons)
 
-  val preResult = builder.getAutomaton
-
-
-  val result = {
-    val builder =
-      new BricsAutomatonBuilder
-    val epsilons =
-      new MHashMap[BricsAutomaton#State, MSet[BricsAutomaton#State]]
-        with MultiMap[BricsAutomaton#State, BricsAutomaton#State]
-
-    val stateMap =
-      (for (s <- preResult.states) yield (s -> builder.getNewState)).toMap
-
-    builder.setInitialState(stateMap(preResult.initialState))
-
-    for ((s1, s2) <- stateMap)
-      if (preResult isAccept s1)
-        builder.setAccept(s2, true)
-
-    val BeginLabel = preResult.LabelOps.singleton(epsRed.beginMarker.toChar)
-    val EndLabel = preResult.LabelOps.singleton(epsRed.endMarker.toChar)
-
-    for ((s1, s2) <- stateMap)
-      for ((s3, l) <- preResult.outgoingTransitions(s1))
-        l match {
-          case BeginLabel | EndLabel =>
-            epsilons.addBinding(s2, stateMap(s3))
-          case l =>
-            builder.addTransition(s2, l, stateMap(s3))
-        }
-
-    AutomataUtils.buildEpsilons(builder, epsilons)
-
-    builder.getAutomaton
-
-  }
+  val result = builder.getAutomaton
 
   /*println
   println("#states after minimization:      " + result.states.size)
