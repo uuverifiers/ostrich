@@ -574,10 +574,15 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
     // Map oldStates -> newStates
     val oldNew = (for (old <- oldStates) yield (old, old.clone())).toMap
 
-    //Swap final states. Again, **WARNING** all secondary final states.
+    /*
+    Swap final states. Again, **WARNING** all secondary final states.
+    BUGFIX: States with only outgoing epsilon transitions should not be swapped!
+     */
     val newFinStates = mutable.Set() ++=
       (for (old <- oldStates;
-            if !(old == mainFinState || finStates.contains(old))) yield oldNew.get(old).get)
+            if (!(old == mainFinState || finStates.contains(old))) &&
+               !(transitions.filter(x => x._1==old).forall(y => y._2.isInstanceOf[SymbBEpsTransition])) //This is the bugfix
+    ) yield oldNew.get(old).get)
 
     val transMap = transToMap()
     //println("TransMap:\n" + transMap)
