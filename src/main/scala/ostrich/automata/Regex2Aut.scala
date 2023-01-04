@@ -193,7 +193,7 @@ object Regex2Aut {
 
       case IFunApp(parser.NegLookBehind, Seq(t)) => IFunApp(parser.NegLookBehind, Seq(transformNF(t, true)))
 
-      // Ad hoc, optimised translations
+      // Ad hoc, optimised translation. DOES NOT WORK!
       case IFunApp(parser.WordBoundary, x) => IFunApp(parser.WordBoundary, x)
       case IFunApp(parser.NonWordBoundary, x) => IFunApp(parser.NonWordBoundary, x)
 
@@ -208,8 +208,7 @@ object Regex2Aut {
 
         ,reverse)
 
-      case IFunApp(parser.NonWordBoundary, _) =>
-        transformNF(
+      case IFunApp(parser.NonWordBoundary, _) => transformNF(
 
           re_union(
             re_++(IFunApp(parser.LookAhead, Seq(isWordChar)), IFunApp(parser.LookBehind, Seq(isWordChar))),
@@ -217,8 +216,7 @@ object Regex2Aut {
           )
 
           ,reverse)
-
-       */
+        */
 
       case IFunApp(`re_opt`, Seq(t)) => IFunApp(`re_union`, Seq(IFunApp(`re_eps`, Seq()), transformNF(t)))
 
