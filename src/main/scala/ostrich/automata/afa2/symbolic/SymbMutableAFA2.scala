@@ -255,24 +255,6 @@ the ECMAregex cases.
     return laut
   }
 
-  /*
-  This is for making modular the wordBoundary and nonWordBoundary ad-hoc automata.
-  WARNING: The main final state is fake, it will be overwritten by the wordBoundary2AFA
-  and nonWordBoundary2AFA!
-   */
-  private def wordCharAut(dir: Step): SymbMutableAFA2 = {
-    val init = new BState(dir)
-    val fin = new BState(dir)
-    val trans = ArrayBuffer[(BState, SymbBTransition)]()
-
-    // init --wordChar--> fin
-    trans += ((init, SymbBStepTransition(decimal, dir, Seq(fin))))
-    trans += ((init, SymbBStepTransition(uppCaseChars, dir, Seq(fin))))
-    trans += ((init, SymbBStepTransition(lowCaseChars, dir, Seq(fin))))
-    trans += ((init, SymbBStepTransition(underscore, dir, Seq(fin))))
-
-    SymbMutableAFA2(this, init, fin, mutable.Set(fin), trans) // WARNING! fin is both main final and secondary final!
-  }
 
   private def nonWordCharRange(): Set[Range] = {
     var nonWordChar: Set[Range] = rangeDiff(Set(Range(min_char, alphabet_size)), decimal)
@@ -280,33 +262,6 @@ the ECMAregex cases.
     nonWordChar = rangeDiff(nonWordChar, lowCaseChars)
     nonWordChar = rangeDiff(nonWordChar, underscore)
     nonWordChar.toSet
-  }
-
-  /*
-  This is for making modular the wordBoundary and nonWordBoundary ad-hoc automata.
-  WARNING: The main final state is fake, it will be overwritten by the wordBoundary2AFA
-  and nonWordBoundary2AFA!
-   */
-  private def nonWordCharAut(dir: Step): SymbMutableAFA2 = {
-    val initf1 = new BState(dir)
-    val f2 = new BState(dir)
-    val sink = new BState(dir)
-
-    val trans = ArrayBuffer[(BState, SymbBTransition)]()
-
-    //initf1 --wordChar--> sink
-    trans += ((initf1, SymbBStepTransition(decimal, dir, Seq(sink))))
-    trans += ((initf1, SymbBStepTransition(uppCaseChars, dir, Seq(sink))))
-    trans += ((initf1, SymbBStepTransition(lowCaseChars, dir, Seq(sink))))
-    trans += ((initf1, SymbBStepTransition(underscore, dir, Seq(sink))))
-
-    //initf1 --nonWordChar--> f2
-    trans ++= (for (rg <- nonWordCharRange) yield (initf1, SymbBStepTransition(rg, dir, Seq(f2))))
-
-    // f2 --true--> f2
-    trans += ((f2, SymbBStepTransition(new Range(min_char, alphabet_size, 1), dir, Seq(f2))))
-
-    SymbMutableAFA2(this, initf1, f2, mutable.Set(initf1, f2), trans) // WARNING! f2 is both main final and secondary final!
   }
 
 
@@ -321,9 +276,14 @@ the ECMAregex cases.
 
     // 1) wordChar+ AND nonWordChar-
     val s1 = new BState(Right)
+    // init --eps--> s1
     trans += ((init, SymbBEpsTransition(Seq(s1))))
 
-    val s2 = new BState(Left)
+    val s2 = new BState(dir)
+    val s2prime = new BState(Left)
+    val s2second = new BState(Left)
+
+    // s1 --wordChar+ --> s2
     trans += ((s1, SymbBStepTransition(decimal, Right, Seq(s2))))
     trans += ((s1, SymbBStepTransition(uppCaseChars, Right, Seq(s2))))
     trans += ((s1, SymbBStepTransition(lowCaseChars, Right, Seq(s2))))
@@ -331,7 +291,15 @@ the ECMAregex cases.
 
     val mainFinal = new BState(dir)
     val s3 = new BState(Left)
-    trans += ((s2, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s3))))
+
+    // s2 --eps--> {s2prime, s2second}
+    trans += ((s2, SymbBEpsTransition(Seq(s2prime, s2second))))
+
+    // s2prime --true- --> mainFinal
+    trans += ((s2prime, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal))))
+
+    //s2second --true- -->
+    trans += ((s2second, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(s3))))
 
     val f1 = new BState(dir)
     trans ++= (for (rg <- nonWordChar) yield (s3, SymbBStepTransition(rg, Left, Seq(f1))))
@@ -341,20 +309,35 @@ the ECMAregex cases.
 
     // 2) nonWordChar+ AND wordChar-
     val s4 = new BState(Right)
+    // init --eps--> s4
     trans += ((init, SymbBEpsTransition(Seq(s4))))
 
-    val s5 = new BState(Left)
+    val s5 = new BState(dir)
+    val s5prime = new BState(Left)
+    val s5second = new BState(Left)
+
+    // s4 --nonWordChar+ --> s5
     trans ++= (for (rg <- nonWordChar) yield (s4, SymbBStepTransition(rg, Right, Seq(s5))))
 
     val s6 = new BState(Left)
-    trans += ((s5, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s6))))
+
+    // s5 --eps--> {s5prime, s5second}
+    trans += ((s5, SymbBEpsTransition(Seq(s5prime, s5second))))
+
+    // s5prime --true- --> mainFinal
+    trans += ((s5second, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal))))
+
+    // s5second --true- -->s6
+    trans += ((s5second, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(s6))))
 
     val f2 = new BState(dir)
+    // s6 --wordChar- --> f2
     trans += ((s6, SymbBStepTransition(decimal, Left, Seq(f2))))
     trans += ((s6, SymbBStepTransition(uppCaseChars, Left, Seq(f2))))
     trans += ((s6, SymbBStepTransition(lowCaseChars, Left, Seq(f2))))
     trans += ((s6, SymbBStepTransition(underscore, Left, Seq(f2))))
 
+    // f2 --true --> f2
     trans += ((f2, SymbBStepTransition(Range(min_char, alphabet_size), dir, Seq(f2))))
 
 
@@ -402,7 +385,6 @@ the ECMAregex cases.
   }
 
 
-
   def nonWordBoundary2AFA(dir: Step): SymbMutableAFA2 = {
     val init = new BState(dir)
     val trans = ArrayBuffer[(BState, SymbBTransition)]()
@@ -416,7 +398,9 @@ the ECMAregex cases.
     // init --eps--> s1
     trans += ((init, SymbBEpsTransition(Seq(s1))))
 
-    val s2 = new BState(Left)
+    val s2 = new BState(dir)
+    val s2prime = new BState(Left)
+    val s2second = new BState(Left)
     // s1 --WChar+ --> s2
     trans += ((s1, SymbBStepTransition(decimal, Right, Seq(s2))))
     trans += ((s1, SymbBStepTransition(uppCaseChars, Right, Seq(s2))))
@@ -425,8 +409,16 @@ the ECMAregex cases.
 
     val mainFinal = new BState(dir)
     val s3 = new BState(Left)
-    // s2 --true--> {s3, mainFinal}
-    trans += ((s2, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal, s3))))
+
+    // s2 --true--> {s2prime, s2second}
+    trans += ((s2, SymbBEpsTransition(Seq(s2prime, s2second))))
+
+    // s2prime --true- --> s3
+    trans += ((s2prime, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(s3))))
+
+    // s2second --true--> mainFinal
+    trans += ((s2second, SymbBStepTransition(Range(min_char, alphabet_size), Left, Seq(mainFinal))))
+
 
     val f1 = new BState(dir)
     // s3 --wordChar- --> f1
@@ -476,7 +468,6 @@ the ECMAregex cases.
     // s9 --eps--> {mainFinal, f5}
     trans += ((s9, SymbBEpsTransition(Seq(mainFinal, f5))))
 
-
     // 4) empty string
     val s10 = new BState(dir)
 
@@ -484,7 +475,6 @@ the ECMAregex cases.
     trans += ((init, SymbBEpsTransition(Seq(s10))))
     // s10 --eps--> {s6, s9} which check beginning and end of string
     trans += ((s10, SymbBEpsTransition(Seq(s6, s9))))
-
 
     SymbMutableAFA2(this, init, mainFinal, mutable.Set(f1, f2, f3, f4, f5), trans)
 
