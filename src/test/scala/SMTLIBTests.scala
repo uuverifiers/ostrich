@@ -398,6 +398,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/parse-ecma-cases.smt2", "unsat")
   property("parse-ecma-cases-2.smt2") =
     checkFile("tests/parse-ecma-cases-2.smt2", "unsat")
+  property("parse-ecma-cases-3.smt2") =
+    checkFileOpts("tests/parse-ecma-cases-3.smt2", "sat", "-regexTranslator=complete", "")
   property("parse-ecma-groups.smt2") =
     checkFile("tests/parse-ecma-groups.smt2", "sat")
   property("parse-ecma-replace.smt2") =

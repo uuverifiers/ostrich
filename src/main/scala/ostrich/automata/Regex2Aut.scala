@@ -49,6 +49,8 @@ import collection.JavaConverters._
 
 object Regex2Aut {
 
+  val debug = false
+
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
   private val LookAheadBehind = """\(\?[=!<]""".r
 
@@ -147,16 +149,7 @@ object Regex2Aut {
 
     import IExpression._
     import theory._
-
-    import theory.{
-      re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
-      re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
-      re_opt_?, re_loop_?,
-      re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
-      re_begin_anchor, re_end_anchor,
-      re_from_ecma2020, re_from_ecma2020_flags,
-      re_case_insensitive
-    }
+    import theory.strDatabase.EncodedString
 
     val isWordChar = re_union(parser.decimal,
                         re_union(parser.uppCaseChars,
@@ -164,10 +157,12 @@ object Regex2Aut {
 
     def apply(t: ITerm) = {
       val diffElimin = new Regex2Aut.DiffEliminator(theory)
-      val de = diffElimin(t);
-      println("After diff elimination:\n" + de + "\n")
+      val de = diffElimin(t)
+      if (debug)
+        Console.err.println("After diff elimination:\n" + de + "\n")
       val res = transformNF(de)
-      println("After transformation:\n" + res + "\n")
+      if (debug)
+        Console.err.println("After transformation:\n" + res + "\n")
       res
     }
 
@@ -236,9 +231,17 @@ object Regex2Aut {
 
       case IFunApp(`re_loop` | `re_loop_?`, Seq(IIntLit(n1), IIntLit(n2), t)) => IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), transformNF(t, reverse)))
 
-      case IFunApp(x, y) => IFunApp(x, y.map(transformNF(_, reverse)))
+      case IFunApp(`str_to_re`, Seq(EncodedString(_str))) => {
+        val str = if (reverse) _str.reverse else _str
+        val charRegexes = for (c <- str) yield re_charrange(c, c)
+        if (str.isEmpty) re_eps() else charRegexes.reduceLeft(re_++(_, _))
+      }
 
-      case _ => throw new RuntimeException("This should not happen!")
+      case IFunApp(x@(`re_*` | `re_union` | `re_inter`), y) =>
+        IFunApp(x, y.map(transformNF(_, reverse)))
+
+      case t =>
+        throw new RuntimeException("Cannot normalize regular expression: " + t)
     }
 
   }
@@ -316,7 +319,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
       case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
         builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toSymbMutableAFA2(dir, t))
 
-      case t => throw new RuntimeException("This shouldn't happen!\n" + t)
+      case t => throw new RuntimeException("Cannot translate to 2AFA: " + t)
     }
   }
 
@@ -457,7 +460,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     val transl = new SymbToConcTranslator(reducedAut)
     val concAut = transl.forth()
     duration2 = (System.currentTimeMillis() - t2) // / 1000d
-    println("Time for symbolic to concrete: " + duration2)
+    //println("Time for symbolic to concrete: " + duration2)
     AFA2PrintingUtils.printAutDotToFile(concAut, "concAut.dot")
     var duration = (System.currentTimeMillis() - t1) // / 1000d
 
@@ -466,12 +469,13 @@ class Regex2Aut(theory : OstrichStringTheory) {
     same states are merged. The procedure is iterative and reaches a fixpoint where no states can be merged
     anymore. Output: 2AFA (concrete, only accepts at the end of word)
      */
-    println("Eliminating redundant states in progress...")
+    //println("Eliminating redundant states in progress...")
     val redConcAut = concAut.minimizeStates()
     //val redConcAut = concAut
-    println("Total time for regex -> 2AFA translation: " + duration)
+    //println("Total time for regex -> 2AFA translation: " + duration)
     AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
-    println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
+    if (debug)
+      Console.err.println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
 
     /*
     Step 5: 2AFA -> NFA translation

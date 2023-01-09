@@ -212,7 +212,9 @@ symbolic MacrostateAFA2, which has still universal epsilon transitions.
       outms = outms.mapValues(x => x.filter(y => y match {
         case et: EpsTransition => if (et.isExistential()) false else true
         case st: SymbTransition => true
-        case concStep: StepTransition => throw new RuntimeException("This should not happen!")
+        case concStep: StepTransition =>
+          throw new RuntimeException(
+            "Unexpected transition in epsilon elimination: " + concStep)
       }))
 
       // We do not need the starting states of those transitions anymore (as they are all in mst)
