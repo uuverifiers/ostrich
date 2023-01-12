@@ -617,9 +617,9 @@ class ECMARegexParser(theory : OstrichStringTheory,
     override def visit(p : ecma2020regex.Absyn.BClassEscape,
                        arg : VisitorArg) =
       charSet(0x0008)
-    override def visit(p : ecma2020regex.Absyn.DashClassEscape,
+/*    override def visit(p : ecma2020regex.Absyn.DashClassEscape,
                        arg : VisitorArg) =
-      charSet(0x002D)
+      charSet(0x002D) */
 
     override def visit(p : ecma2020regex.Absyn.LetterCharEscape,
                        arg : VisitorArg) = {

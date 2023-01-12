@@ -1,8 +1,41 @@
+/**
+ * This file is part of Ostrich, an SMT solver for strings.
+ * Copyright (c) 2022-2023 Riccado De Masellis. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package ostrich.automata.afa2.symbolic
 
 import ostrich.OstrichStringTheory
 import ostrich.automata.afa2.{AFA2PrintingUtils, EpsTransition, Left, Right, Step, StepTransition, SymbTransition, Transition}
 import ostrich.automata.afa2.symbolic.SymbToConcTranslator.toSymbDisjointTrans
+import ostrich.automata.Regex2Aut
 
 import scala.collection.immutable.Set
 import scala.collection.mutable
@@ -66,7 +99,8 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
   at the end of the string. The word markers are introduced.
    */
   val epsafa: EpsAFA2 = symbExtAFA2ToEpsAFA2(extafa)
-  AFA2PrintingUtils.printAutDotToFile(epsafa, "epsAFA2.dot")
+  if (Regex2Aut.debug)
+    AFA2PrintingUtils.printAutDotToFile(epsafa, "epsAFA2.dot")
 
   /*
   Step 2: Eliminate existential eps trans with powerset construction.
@@ -79,7 +113,8 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
   Step 3: From symb macrostate 2AFA back to eps2AFA only with eps univ. transitions.
    */
   val epsafaReduced: EpsAFA2 = symbMAFA2ToEpsAFA2(mafa)
-  AFA2PrintingUtils.printAutDotToFile(epsafaReduced, "epsAFA2-noExistEps.dot")
+  if (Regex2Aut.debug)
+    AFA2PrintingUtils.printAutDotToFile(epsafaReduced, "epsAFA2-noExistEps.dot")
 
   /*
   Step 4: From Eps2AFA with only univ. eps. trans., to symbolic2AFA with no epsilon transitions.
@@ -87,7 +122,8 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
   reading any symbol (including word markers).
  */
   val afa: SymbAFA2 = epsAFA2ToSymbAFA2(epsafaReduced)
-  AFA2PrintingUtils.printAutDotToFile(afa, "AFA2.dot")
+  if (Regex2Aut.debug)
+    AFA2PrintingUtils.printAutDotToFile(afa, "AFA2.dot")
 
 
   /*

@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -275,6 +275,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
 
 
   private def toSymbMutableAFA2(dir: Step, t: ITerm) : SymbMutableAFA2 = {
+    //ap.util.Timeout.check
     t match {
 
       case IFunApp(`re_eps`, _) =>
@@ -432,7 +433,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
     var t1 = System.currentTimeMillis()
     val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
     val aut = ecmaAFA.toSymbExt2AFA(t)
-    AFA2PrintingUtils.printAutDotToFile(aut, "extSymbAFA2.dot")
+    if (debug)
+      AFA2PrintingUtils.printAutDotToFile(aut, "extSymbAFA2.dot")
 
     /*
     Step 2:
@@ -461,7 +463,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
     val concAut = transl.forth()
     duration2 = (System.currentTimeMillis() - t2) // / 1000d
     //println("Time for symbolic to concrete: " + duration2)
-    AFA2PrintingUtils.printAutDotToFile(concAut, "concAut.dot")
+    if (debug)
+      AFA2PrintingUtils.printAutDotToFile(concAut, "concAut.dot")
     var duration = (System.currentTimeMillis() - t1) // / 1000d
 
     /*
@@ -473,7 +476,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
     val redConcAut = concAut.minimizeStates()
     //val redConcAut = concAut
     //println("Total time for regex -> 2AFA translation: " + duration)
-    AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
+    if (debug)
+      AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
     if (debug)
       Console.err.println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
 
