@@ -303,6 +303,8 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
   }
 
   while (!statesTodo.isEmpty) {
+    ap.util.Timeout.check
+
     val state :: rem = statesTodo
     statesTodo = rem
 

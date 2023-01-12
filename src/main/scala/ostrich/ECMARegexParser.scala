@@ -344,18 +344,22 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
         case false => {
           //println("Inside lookahead: " + p.listalternativec_)
-          LookAhead(p.listalternativec_ map (_.accept(this, arg)): _*)
+          LookAhead(
+            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
         }
       }
     }
 
     override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) = {
       APPROX match {
-        case true => NegLookAhead(
-                        re_comp(translateLookAhead(reUnionStar(
-                          p.listalternativec_ map (_.accept(this, arg)): _*))))
+        case true =>
+          NegLookAhead(
+            re_comp(translateLookAhead(reUnionStar(
+              p.listalternativec_ map (_.accept(this, arg)): _*))))
 
-        case false => NegLookAhead(p.listalternativec_ map (_.accept(this, arg)): _*)
+        case false =>
+          NegLookAhead(
+            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
       }
     }
 
@@ -367,17 +371,23 @@ class ECMARegexParser(theory : OstrichStringTheory,
             p.listalternativec_ map (_.accept(this, arg)): _*)))
         case false => {
           //println("Inside lookbehind: " + (p.listalternativec_ map (_.accept(this, arg))) )
-          LookBehind(p.listalternativec_ map (_.accept(this, arg)): _*)
+          LookBehind(
+            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
         }
       }
     }
 
     override def visit(p : ecma2020regex.Absyn.NegLookbehind, arg : VisitorArg) = {
       APPROX match {
-        case true => NegLookBehind (
-      re_comp (translateLookBehind (reUnionStar (
-      p.listalternativec_ map (_.accept (this, arg) ): _*) ) ) )
-        case false => NegLookBehind(p.listalternativec_ map (_.accept(this, arg)): _*)
+        case true =>
+          NegLookBehind (
+            re_comp (
+              translateLookBehind (
+                reUnionStar (
+                  p.listalternativec_ map (_.accept (this, arg) ): _*) ) ) )
+        case false =>
+          NegLookBehind(
+            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
       }
     }
 

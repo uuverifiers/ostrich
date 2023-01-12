@@ -16,6 +16,9 @@
                         (re.from_ecma2020 '.*[a-z].*')
                         (re.from_ecma2020 '.*[A-Z].*'))))
 
+        (= (str.in_re w (re.from_ecma2020 '.(?=a|b)[b-z]'))
+           (str.in_re w (re.from_ecma2020 '.b')))
+
  )))
 
 (check-sat)
