@@ -12,7 +12,7 @@
 ; (assert (= (str.from_code ch) x))
 (assert (= (str.from_code (- 1)) z))
 (assert (= (str.from_code (bv2nat #x73)) a))
-(assert (= (seq.unit #x73) b))
-(assert (= (str.++ (seq.unit #b01110011) (seq.unit #b01110100) (seq.unit #b01110010) (seq.unit #b01101001) (seq.unit #b01101110) (seq.unit #b01100111)) c))
+(assert (= (str.from_code (bv2nat #x73)) b))
+(assert (= (str.++ (str.from_code (bv2nat #b01110011)) (str.from_code (bv2nat #b01110100)) (str.from_code (bv2nat #b01110010)) (str.from_code (bv2nat #b01101001)) (str.from_code (bv2nat #b01101110)) (str.from_code (bv2nat #b01100111))) c))
 
 (check-sat)
