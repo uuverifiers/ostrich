@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "iQ$"))))
-(assert (str.in.re x (re.* (str.to.re "y^qs[*C.CCOCiQfCkC9d*8' '}"))))
-(assert (> (str.to.int x) 24))
-(assert (< (str.to.int x) 14))
-(check-sat)
-(get-model)

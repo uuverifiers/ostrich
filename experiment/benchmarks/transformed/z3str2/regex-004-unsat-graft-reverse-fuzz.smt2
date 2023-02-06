@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "e#ikB9L'\x0b'.oI9b"))
-(assert (str.in.re x (re.union (str.to.re "c>Cb[Cd") (re.* (str.to.re "c")))))
-(check-sat)
-(get-model)

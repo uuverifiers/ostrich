@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(declare-const m String)
-(declare-const n String)
-(assert (not (str.in.re x (str.to.re "'\x0c'z'\t'"))))
-(assert (= x "'\x0c'z'\t'"))
-(check-sat)
-(get-model)

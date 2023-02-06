@@ -1,6 +1,0 @@
-(declare-const x String)
-(assert (= (str.to.int x) 22))
-(assert (str.in.re x (re.+ (str.to.re ">C}n-@4X"))))
-(assert (str.in.re x (re.+ (str.to.re ",?3.&\\nD^;q'\t'F"))))
-(check-sat)
-(get-model)

@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "MM}}UUZZiiMM}}MM}}UU"))
-(assert (str.in.re x (str.to.re "MM}}UU")))
-(check-sat)
-(get-model)

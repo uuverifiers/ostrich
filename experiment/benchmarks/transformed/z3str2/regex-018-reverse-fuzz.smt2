@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.union (str.to.re "") (str.to.re "2")))))
-(assert (= 9 (str.len x)))
-(assert (not (= x "vDm]<3b$H]1")))
-(check-sat)
-(get-model)

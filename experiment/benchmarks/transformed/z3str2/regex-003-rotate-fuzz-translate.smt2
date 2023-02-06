@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "q'\t'[qD%%TQ.ix<RWDwl"))
-(assert (str.in.re x (re.* (re.union (str.to.re "E'\t'cz4") (str.to.re "Dl")))))
-(check-sat)
-(get-model)

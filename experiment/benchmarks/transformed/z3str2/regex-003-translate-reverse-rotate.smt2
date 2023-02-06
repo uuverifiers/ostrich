@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "J`'''\n'''`'''\n'''I_J`'''\n'''"))
-(assert (str.in.re x (re.* (re.union (str.to.re "`'''\n'''I_") (str.to.re "J`'''\n'''")))))
-(check-sat)
-(get-model)

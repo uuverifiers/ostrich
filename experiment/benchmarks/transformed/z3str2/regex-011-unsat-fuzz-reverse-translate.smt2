@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "{{X{{/u`q]Sbs){{O{{t"))))
-(assert (str.in.re y (re.* (str.to.re "R/qFFm"))))
-(assert (= (str.to.int x) 3))
-(check-sat)
-(get-model)

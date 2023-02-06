@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "FF[[1122"))))
-(assert (str.in.re y (re.* (str.to.re "FF[[1122"))))
-(assert (= (str.len x) 8))
-(assert (= 16 (str.len y)))
-(check-sat)
-(get-model)

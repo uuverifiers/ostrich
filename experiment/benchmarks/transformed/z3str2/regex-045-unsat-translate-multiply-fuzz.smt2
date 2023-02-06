@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(declare-const m String)
-(declare-const n String)
-(assert (not (str.in.re x (re.+ (str.to.re "ry''\t'")))))
-(assert (= x "o*2^stSN' '"))
-(check-sat)
-(get-model)

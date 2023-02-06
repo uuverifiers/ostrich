@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "__//^^XXQQ") (str.to.re "1133")))))
-(assert (= 44 (str.to.int x)))
-(assert (not (= x "``||//22cc22ffWWff++''!![[qq''00``wwjj^^hhoo'''\x0c''\x0c'''""""cc##\\\\%%99<<99^^==")))
-(assert (not (= x "HHnnFFZZ__jj!!\\\\SSRRQQ66kk""""kk88JJrr``&&kk__^^{{''' '' '''xxqq**RRyy33")))
-(check-sat)
-(get-model)

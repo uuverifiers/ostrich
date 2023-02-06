@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "!v'' ''v'' '',;"))
-(assert (str.in.re x (re.union (re.* (re.* (str.to.re "!v'' ''"))) (str.to.re "v'' '',;"))))
-(check-sat)
-(get-model)

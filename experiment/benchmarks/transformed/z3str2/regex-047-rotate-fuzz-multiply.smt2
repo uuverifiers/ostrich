@@ -1,7 +1,0 @@
-(declare-const key String)
-(declare-const val String)
-(define-fun QuoteRegex ((aRegex (RegEx String))) (RegEx String) (re.union (re.union aRegex (str.to.re """""")) (str.to.re "vv")))
-(assert (str.in.re key (QuoteRegex (re.+ (str.to.re "")))))
-(assert (= (str.to.int key) 8))
-(check-sat)
-(get-model)

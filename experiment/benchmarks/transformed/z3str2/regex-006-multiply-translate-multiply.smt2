@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "bbbb++++'''\t''\t''''''\t''\t'''bbbb++++'''\t''\t''''''\t''\t'''"))
-(assert (str.in.re x (re.* (re.* (str.to.re "bbbb++++'''\t''\t''''''\t''\t'''")))))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "yy^&Q)y@,^<q3]+52]n"))
-(assert (str.in.re x (re.+ (str.to.re "'\t'_"))))
-(check-sat)
-(get-model)

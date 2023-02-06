@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re y (re.* (re.* (str.to.re "abPpen^8'=l6Pd")))))
-(assert (= (str.to.int y) 8))
-(check-sat)
-(get-model)

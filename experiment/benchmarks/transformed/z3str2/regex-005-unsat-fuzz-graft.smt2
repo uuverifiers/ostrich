@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "C''\x0c''-aemw<aaaaaa"))
-(assert (str.in.re x (str.to.re "c(")))
-(check-sat)
-(get-model)

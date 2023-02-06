@@ -1,6 +1,0 @@
-(declare-const x String)
-(assert (= (str.to.int x) 43))
-(assert (str.in.re x (re.+ (str.to.re "tJ0cr=LWq-'\t'vleedd"))))
-(assert (str.in.re x (re.+ (str.to.re "aaZqeAwXySeFv'|fhPba>'\t'tcsh#E]XI$4.Ez~FQ@}1P'\n'Ctr=\\9h^lKQ{:'\x0c'XI~.p3v6rU'\n'IXc<"))))
-(check-sat)
-(get-model)

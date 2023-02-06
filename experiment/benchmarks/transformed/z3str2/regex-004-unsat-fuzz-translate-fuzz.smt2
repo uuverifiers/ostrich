@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "(5b[l].8\\H'\n'6G`/-M*^"))
-(assert (str.in.re x (re.++ (re.* (str.to.re "'T")) (re.+ (str.to.re ";N")))))
-(check-sat)
-(get-model)

@@ -19,15 +19,83 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 import ostrich.automata.BricsTLabelEnumerator
 import ap.basetypes.IdealInt
 import ostrich.parikh.automata.CostEnrichedAutomaton
+import scala.collection.mutable.ArrayBuffer
 
 object ParikhUtil {
+  private val CountingRegisters = new MHashSet[Term]()
+  def addCountingRegister(t: Term) = CountingRegisters += t
 
   type State = CostEnrichedAutomatonTrait#State
   type TLabel = CostEnrichedAutomatonTrait#TLabel
 
+  def findAllSCC(aut: CostEnrichedAutomatonTrait) = {
+    val state2idx = aut.states.zipWithIndex.toMap
+    // class MyHashMap extends MHashMap[State, Set[State]] {
+    //   override def toString(): String = {
+    //     val sb = new StringBuilder
+    //     for ((k, v) <- this) {
+    //       sb.append(s"s${state2idx(k)}" + " -> ")
+    //       sb.append("(")
+    //       for (s <- v) {
+    //         sb.append(s"s${state2idx(s)}" + ", ")
+    //       }
+    //       sb.append(")")
+    //     }
+    //     sb.toString()
+    //   }
+    // }
+    val state2SCC = new MHashMap[State, Set[State]]
+    val LReverse = new ArrayBuffer[State]()
+    val seenList = MHashSet[State]()
+    def dfsReverseAutStep(s: State) {
+      if (!seenList(s)) {
+        seenList += s
+        for ((t, _) <- aut.incomingTransitions(s)) {
+          dfsReverseAutStep(t)
+        }
+        LReverse += s
+      }
+    }
+    for (s <- aut.states) {
+      if (!seenList(s))
+        dfsReverseAutStep(s)
+    }
+    val L = LReverse.reverse
+    val visited = MHashSet[State]()
+    var lastSccFirstState = L(0)
+    val loopedRegisters = MHashSet[Term]()
+    while (visited.size < aut.states.size) {
+      val seenSet = MHashSet[State]()
+      val worklist = ArrayStack[State]()
+      worklist.push(lastSccFirstState)
+      while (!worklist.isEmpty) {
+        val s = worklist.pop
+        seenSet += s
+        for ((t, _, vec) <- aut.outgoingTransitionsWithVec(s)) {
+          if (!seenSet(t) && !visited(t)) {
+            vec.zipWithIndex.filter(_._1 != 0).foreach { case (v, regidx) =>
+              loopedRegisters += aut.getRegisters(regidx)
+            }
+            worklist.push(t)
+          }
+        }
+        for (s <- seenSet)
+          state2SCC(s) = seenSet.toSet
+      }
+      visited ++= seenSet
+      var i = 0
+      while (i < L.size && visited(L(i))) {
+        i += 1
+      }
+      if (i < L.size)
+        lastSccFirstState = L(i)
+    }
+    state2SCC
+  }
+
   /** Check whether all states are accepted
     */
-  def isAccepting(
+  private def isAccepting(
       auts: Seq[CostEnrichedAutomatonTrait],
       states: Seq[State],
       integerModel: MMap[Term, Int]
@@ -36,37 +104,158 @@ object ParikhUtil {
       aut.isAccept(state)
     }) && (integerModel.map(_._2).forall(_ == 0))
 
-  // TODO: Only support one automaton now. So the argument auts can only be length 1
+  private def repidlyRunBySCC(
+      aut: CostEnrichedAutomatonTrait,
+      scc: Set[State],
+      sccEntry: State,
+      finalValues: Seq[Int]
+  ): Option[(Seq[Char], Seq[Int], Int)] = {
+    val worklist = ArrayStack[Seq[State]]()
+    val visited = MHashSet[State]()
+    val sccExits = ArrayBuffer[State]()
+    val simpleCycles = ArrayBuffer[Seq[State]]()
+    for (s <- scc) {
+      for ((t, _) <- aut.outgoingTransitions(s)) {
+        if (!scc(t) || aut.isAccept(t)) {
+          sccExits += s
+        }
+      }
+    }
+    worklist.push(Seq(sccEntry))
+    while (!worklist.isEmpty) {
+      val path = worklist.pop
+      val top = path.head
+      visited.add(top)
+      for ((t, _) <- aut.incomingTransitions(top)) {
+        if (!visited(t)) {
+          worklist.push(t +: path)
+        } else if (t == sccEntry) {
+          simpleCycles += t +: path
+        }
+      }
+    }
+    val ite = simpleCycles.iterator
+    while (ite.hasNext) {
+      val cycle = ite.next()
+      if (cycle.exists(sccExits.contains)) {
+        var cycleUpdate = Seq.fill(aut.getRegisters.length)(0)
+        val cycleWord = new ArrayBuffer[Char]
+        for (i <- 0 until cycle.size - 1) {
+          val s = cycle(i)
+          val t = cycle(i + 1)
+          val (_, lbl, vec) =
+            aut.outgoingTransitionsWithVec(s).find(_._1 == t).get
+          cycleUpdate = cycleUpdate.zip(vec).map { case (a, b) => a + b }
+          cycleWord += lbl._1
+        }
+        if (cycleUpdate.indexOf(1) != -1) {
+          val uniqueRegIdx = cycleUpdate.indexOf(1)
+          val uniqueReg = aut.getRegisters(uniqueRegIdx)
+          if (ParikhUtil.CountingRegisters.contains(uniqueReg)) {
+            return Some((cycleWord.toSeq, cycleUpdate, uniqueRegIdx))
+          }
+        }
+      }
+
+    }
+    None
+  }
+
+  // TODO: Eager product now. We can do lazy product later
+  // Note: A sound but not complete search for string. We can repidly update value of
+  // counting register because it is be updated only by the same transition at most times.
+  // Sometimes it may be updated by different transitions, so the search is not complete.
   def findAcceptedWordByRegisters(
       auts: Seq[CostEnrichedAutomatonTrait],
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
 
+    Console.err.println("find accepted word by registers")
     val productAut = auts.reduceLeft(_ product _)
 
     val registersValue = productAut.getRegisters.map(registersModel(_).intValue)
-    val todoList = new ArrayStack[(State, Seq[Int], Seq[Char])]
+    // println(registersValue)
+    val todoList = new ArrayStack[(State, Seq[Int], Seq[Char], Boolean)]
     val visited = new MHashSet[(State, Seq[Int])]
     todoList.push(
-      (productAut.initialState, Seq.fill(productAut.getRegisters.size)(0), "")
+      (
+        productAut.initialState,
+        Seq.fill(productAut.getRegisters.size)(0),
+        "",
+        true
+      )
     )
     visited.add(
       (productAut.initialState, Seq.fill(productAut.getRegisters.size)(0))
     )
-
-    while (!todoList.isEmpty){
-      val (state, registers, word) = todoList.pop
-      if (productAut.isAccept(state) && registers == registersValue) {
+    val state2SCC = findAllSCC(productAut)
+    val notUniqueScc = MHashSet[Set[State]]()
+    while (!todoList.isEmpty) {
+      val (state, regsVal, word, rapaid) = todoList.pop
+      if (productAut.isAccept(state) && regsVal == registersValue) {
         return Some(word.map(_.toInt))
       }
-      for ((t, l, v) <- productAut.outgoingTransitionsWithVec(state)) {
-        val newRegisters = registers.zip(v).map { case (r, v) => r + v }
-        val newWord  = word :+ l._1
-        val newState = t
-        if (!visited.contains((newState, newRegisters)) && 
-          ! newRegisters.zip(registersValue).exists(r => r._1 > r._2)) {
-          todoList.push((newState, newRegisters, newWord))
-          visited.add((newState, newRegisters))
+      val scc = state2SCC(state)
+      // If find the cycle updating the counting register once in the SCC,
+      // we update the counting register to the value in the registersModel
+      if (!notUniqueScc(scc) && rapaid) {
+        repidlyRunBySCC(productAut, scc, state, registersValue) match {
+          case None =>
+            notUniqueScc += scc
+            for ((t, l, v) <- productAut.outgoingTransitionsWithVec(state)) {
+              val newRegsVal = regsVal.zip(v).map { case (r, v) => r + v }
+              val newWord = word :+ l._1
+              val newState = t
+              if (
+                !visited.contains((newState, newRegsVal)) &&
+                !newRegsVal.zip(registersValue).exists(r => r._1 > r._2)
+              ) {
+                todoList.push((newState, newRegsVal, newWord, true))
+                visited.add((newState, newRegsVal))
+              }
+            }
+          case Some((cycleWord, cycleUpdate, uniqueRegIdx)) =>
+            // The heuristicTime is remained not to be updated. Bigger it is, more precise the search is.
+            // It cannot be larger than `updateTime`
+            val heuristicTime = 10
+            val updateTime =
+              registersValue(uniqueRegIdx) - regsVal(uniqueRegIdx)
+            val heuristicUpdateTime = updateTime - heuristicTime
+            if (heuristicUpdateTime <= 0) {
+              todoList.push((state, regsVal, word, false))
+              visited.add((state, regsVal))
+            } else {
+              val newRegsVal =
+                regsVal.zip(cycleUpdate).map { case (r, v) =>
+                  r + heuristicUpdateTime * v
+                }
+              var newWord = word
+              for (i <- 0 until heuristicUpdateTime) {
+                newWord = newWord ++ cycleWord
+              }
+              val newState = state
+
+              if (
+                !visited.contains((newState, newRegsVal)) &&
+                !newRegsVal.zip(registersValue).exists(r => r._1 > r._2)
+              ) {
+                todoList.push((newState, newRegsVal, newWord, false))
+                visited.add((newState, newRegsVal))
+              }
+            }
+        }
+      } else {
+        for ((t, l, v) <- productAut.outgoingTransitionsWithVec(state)) {
+          val newRegsVal = regsVal.zip(v).map { case (r, v) => r + v }
+          val newWord = word :+ l._1
+          val newState = t
+          if (
+            !visited.contains((newState, newRegsVal)) &&
+            !newRegsVal.zip(registersValue).exists(r => r._1 > r._2)
+          ) {
+            todoList.push((newState, newRegsVal, newWord, true))
+            visited.add((newState, newRegsVal))
+          }
         }
       }
     }

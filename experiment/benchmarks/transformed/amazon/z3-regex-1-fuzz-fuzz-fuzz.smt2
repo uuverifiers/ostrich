@@ -1,6 +1,0 @@
-(declare-const S String)
-(assert (not (str.in.re S (re.union (str.to.re "'\x0c'-om'\x0c'Ka[`iE+dT'\r'FTEi3P45'\n'P`=EM^6nLYDC}2I^|b_|8|)A.""GjXwmT|%X}g{'\n'~c>1Zj7?-!Sm1Vd`.vtS>8rH;'\r''Jh$3OSwL~E?iD,' '3Pmy'\t'ATn#z~FbKmQi65NN.Vl}1hoc3_9\\D.@-6gDJb'\x0c'H'\x0b'iy)wb'\n'FHBGz;uNxN'x$MH\\.xC'\n'yD4t-DW7!)T)B]R3]D'~ct""mZ]TN@l>UyeGF=WyIjR$25'\t'*hMA*pcI7*'\x0c'+XI9*BkTXZj;8aQ\\Z%cp{Mh50c!PC"">>Jycy~^OR$]>'\n'S7<%Z$.~hyc_-}X+D;*7Ft;O)H'\n'6TV%avN'\t'EW1ud>'XH2=zN=wCJN'\r'j~TY'\x0c'`@*>@P'd""Q.;mv\\ddvsa{U~z'\t'b6''\n'''Wfl`tNbZ&TfKi>&G1'\r'8m6e}$klr6tku""g'TDavB)yksa1.N>HwX3""""6zA[)UC'\x0b's;h1:qq-&xs%'\x0c'F") re.allchar))))
-(assert (str.in.re S (re.union (re.++ (re.++ (str.to.re "' '") re.allchar) (str.to.re "w4P\\R|-'\x0b'k@!<8~2EGP08B]|YP?'\r'q-YG39.Fe'\x0b'Z_x%OOc@F-L`h45'\r'X")) re.allchar)))
-(check-sat)
-(get-model)
-(get-info :reason-unknown)

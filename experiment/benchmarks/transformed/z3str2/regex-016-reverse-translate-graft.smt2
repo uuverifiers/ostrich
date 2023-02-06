@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "321")))
-(assert (= (str.len x) 11))
-(assert (not (= x "SLO''\x0b''321SLO''\x0b''")))
-(assert (not (= x "321SLO''\x0b''SLO''\x0b''")))
-(check-sat)
-(get-model)

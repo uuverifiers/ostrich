@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.++ (str.to.re "R(""1FXnzt?rML}d") (str.to.re "t")))))
-(assert (= 15 (str.to.int x)))
-(assert (not (= x "`}:w2Q2*Rq""LwDRh""9[{;DM9dOy#NCYV['\x0c'(}o>X:4kMh-'\x0b'WS2Jd12cb7jX0Qv=p-je9k")))
-(assert (not (= x "&zq!ntAiD`?[&(|,Oe;6\\H;(Nms4CB<@0GK_]`4L'Jum' ''\t'u{1drJ9Tg2DPT!j*^q=5d.z=X]rF(='\r'}br$T(m;EnR&>ZiPjh$5'\n'1?e:<S6MEGWUr;yoBZGJE:~F,~7ta'\t'tU9Qa=f3ZDy>'\x0b'&'\x0c'_OFvV1kG'6Nr+q,B'm8,7mv,l79pW@p' ')|(rc9HJ(q5m^qTz=11\\pP_J#' 'r'\x0b''2fS{Ka&:'\x0b'.u'\r't#""a,|',|+ns[nXFv8>]0D0GT[gD.4!56'\x0c'G|EN8RB?cG&/dt]9'\x0c'\\'\x0b'Y1<w['\x0b'qa}JH((@FE$'\x0b'S^/kX2T6%X;Hv*s(|P:Q9)NS|v)sc:KC'i""iUzG'="",d<enWFK""S;a[d'\x0c's")))
-(check-sat)
-(get-model)

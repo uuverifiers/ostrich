@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "ceaT>$u5ENz,/{"))
-(assert (str.in.re x (str.to.re "Rmj")))
-(check-sat)
-(get-model)

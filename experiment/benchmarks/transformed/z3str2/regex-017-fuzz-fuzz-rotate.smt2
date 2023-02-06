@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.union (str.to.re "w\\") (re.union (str.to.re "/;Z5jr'' ''3""BrnOirXW") (str.to.re "7gB"))))))
-(assert (= 2 (str.to.int x)))
-(check-sat)
-(get-model)

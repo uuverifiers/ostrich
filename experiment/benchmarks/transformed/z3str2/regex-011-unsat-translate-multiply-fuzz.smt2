@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "a*[b}ZSGES)%@q:9ysB{(v|A-"))))
-(assert (str.in.re y (re.+ (str.to.re "w' 'qGX9(:`RIAcZER"))))
-(assert (= (str.to.int x) 20))
-(check-sat)
-(get-model)

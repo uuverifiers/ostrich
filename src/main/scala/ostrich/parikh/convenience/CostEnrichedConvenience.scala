@@ -15,7 +15,7 @@ object CostEnrichedConvenience {
 
   def brics2CostEnriched(aut: Automaton): Automaton = {
     if (aut.isInstanceOf[BricsAutomaton])
-      new CostEnrichedAutomaton(aut.asInstanceOf[BricsAutomaton].underlying)
+      CostEnrichedAutomaton(aut.asInstanceOf[BricsAutomaton].underlying)
     else if (aut.isInstanceOf[CostEnrichedAutomaton])
       aut
     else {

@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re ""))))
-(assert (= 8 (str.to.int x)))
-(assert (not (= x "[t[g}.]")))
-(check-sat)
-(get-model)

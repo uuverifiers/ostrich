@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "u!s'\x0c'")))
-(assert (= (str.len x) 11))
-(assert (not (= x "u!s'\x0c'123u!s'\x0c'")))
-(assert (not (= x "u!s'\x0c'u!s'\x0c'123")))
-(check-sat)
-(get-model)

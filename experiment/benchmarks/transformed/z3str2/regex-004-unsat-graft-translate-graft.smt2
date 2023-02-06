@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "jZf?f?,"))
-(assert (str.in.re x (str.to.re "jZf?")))
-(check-sat)
-(get-model)

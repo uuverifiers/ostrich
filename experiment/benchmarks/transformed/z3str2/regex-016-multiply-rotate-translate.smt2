@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.union (str.to.re "NN##""""dd") (str.to.re "112233")))))
-(assert (= 22 (str.len x)))
-(assert (not (= x "NN##""""dd112233NN##""""dd")))
-(assert (not (= x "NN##""""ddNN##""""dd112233")))
-(check-sat)
-(get-model)

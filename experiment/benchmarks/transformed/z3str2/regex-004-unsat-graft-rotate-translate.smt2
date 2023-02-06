@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "+-K'\r'K'\r'_"))
-(assert (str.in.re x (re.union (str.to.re "K'\r'_") (re.* (str.to.re "+-K'\r'")))))
-(check-sat)
-(get-model)

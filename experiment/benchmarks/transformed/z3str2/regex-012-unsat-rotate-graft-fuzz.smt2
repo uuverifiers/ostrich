@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "bcd")))
-(assert (= (str.to.int x) 8))
-(check-sat)
-(get-model)

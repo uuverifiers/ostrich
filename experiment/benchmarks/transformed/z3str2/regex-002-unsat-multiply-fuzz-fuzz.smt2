@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "a\\F5^C^W$W#<S8UI_[Or4'\x0c'GQkIU\\t|#0#-Pa!H""T:EN#a''>w<VDHAY]e!0TghdeTOA'\x0b'0""""4.ftLG-V@25$3@x'\x0c'pn>-:~Za|'\x0b'}SNB8rtIX<=hk5%=~RoUDt'\x0c''PJkp+u|{(\\6-9A69LWA;j??p,>1kT/{|(8'NKc}qLA5x/'\t'p-JSjgaa%)""US' 'UgL|&iF(A#&[^yZ+'~n'\x0c''%T;}J""w'\x0c'EBYPvJ{CYB5A[Z' 'W;e8b:sloa53' ',ueS/"))
-(assert (str.in.re x (re.+ (str.to.re "' '`=:H#yFJ]x'\t'M~;.}'\x0c'jo0w\\%M6,*V"))))
-(check-sat)
-(get-model)

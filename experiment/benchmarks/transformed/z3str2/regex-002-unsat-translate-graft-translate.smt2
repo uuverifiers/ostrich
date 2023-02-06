@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "'\x0c''\x0c''\x0c''\x0c''\x0c''\x0c''\x0c''\x0c''\x0c'"))
-(assert (str.in.re x (str.to.re "^ce")))
-(check-sat)
-(get-model)

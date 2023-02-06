@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "Gt90cG|-ttL"))
-(assert (str.in.re x (re.* (str.to.re "'\x0c'g""tP7"))))
-(check-sat)
-(get-model)

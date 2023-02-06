@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "o/p35(='\n'Cn[^dxoLH-ycj'\n'!el~'^<1;|O6"))
-(assert (str.in.re x (re.* (re.+ (str.to.re "^e")))))
-(check-sat)
-(get-model)

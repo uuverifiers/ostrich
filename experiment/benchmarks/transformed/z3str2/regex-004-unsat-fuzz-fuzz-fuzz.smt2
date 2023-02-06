@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "DB#@p,c"))
-(assert (str.in.re x (re.union (re.+ (str.to.re ")4A' 'm6p'\n'?")) (re.* (str.to.re "c' '.dnb`8")))))
-(check-sat)
-(get-model)

@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "--ddaa"))))
-(assert (str.in.re x (re.* (str.to.re "$$MMll++NN//'''\n''\n''''''\x0c''\x0c'''--ddkk'''\r''\r'''99bb//88WW>>"))))
-(assert (> (str.to.int x) 48))
-(assert (< (str.to.int x) 28))
-(check-sat)
-(get-model)

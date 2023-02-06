@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "<*c#c"))
-(assert (str.in.re x (re.+ (re.+ (str.to.re "{T!st")))))
-(check-sat)
-(get-model)

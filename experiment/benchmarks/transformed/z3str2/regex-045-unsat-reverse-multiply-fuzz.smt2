@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(declare-const m String)
-(declare-const n String)
-(assert (not (str.in.re x (re.+ (str.to.re "' '6$&y`e*,/HJobxE`^")))))
-(assert (= x "c'\n'pB[R""ba"))
-(check-sat)
-(get-model)

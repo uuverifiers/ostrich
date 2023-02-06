@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "TD'\t'&jTDTD'\t'"))
-(assert (str.in.re x (str.to.re "TD'\t'")))
-(check-sat)
-(get-model)

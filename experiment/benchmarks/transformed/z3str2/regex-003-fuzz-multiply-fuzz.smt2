@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "'}rR6Lbi-fS9QcPE1Z'\r'kk*SA3(Bfz#dmh9'\x0c'}Y4.~LJ|AKh:PJ,$Jk2Ipx93-Eo!T2' 'NZJivO[9'E%vV:XUqn'sOYDh=ZZ7Vq""aT'\x0c'=4OKV#<1W~'\r'prh9.Q#Ow{){W2C&MGB3O}<y0lRSXx+'\t'r'\x0c'M#K2Y8WXyf4#%r@5<McaA=Dtg%pwym]c%' '+An>u'\n'ze=9('\x0c'+:;=J}Jh*W2'' 'P(LZ@aE5*mfYV:he' 'Mr2Qz.oau=wSOl2Qbek$Tn7+'\n'n-gZq0:S.C;2Ok'\t'Oh'\n'e}}mF'\x0b'N>>Z@=' 'WnLPtsX+7EnMx^B(Zet)qY' 'Ru9G$4tSDz=(PPZZPPFj,rT*Hsx?.1)|}a'\r'J.|}`B#n'\x0c'uGcwU;PX.rDqo~I4'\x0c'MmtH:gzF'\x0b'=?H8&p'\x0b'"))
-(assert (str.in.re x (re.+ (re.union (str.to.re "WJl+J93WT,ql'\x0b'W,,vo''\x0c'G""H7?9_'\x0c'PuEPtNx$y%") (str.to.re "Hp|fY'\x0b'gfY>H")))))
-(check-sat)
-(get-model)

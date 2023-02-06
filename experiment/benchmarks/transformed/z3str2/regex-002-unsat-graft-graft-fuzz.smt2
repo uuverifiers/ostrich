@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "JS'\x0c';BLK^'\n'Tu5are_3n_/'\x0c'B'\n'Ja'\x0b'gY'[U?/'\x0c'lV#"))
-(assert (str.in.re x (str.to.re "eM{'\r'")))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "Ok/'JRUOp'*k(4:") (str.to.re "PLb2`>)")))))
-(assert (= 10 (str.len x)))
-(check-sat)
-(get-model)

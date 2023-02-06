@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "s''\n''~d")))
-(assert (= 18 (str.len x)))
-(assert (not (= x "a8J?32_$t-t[l=d13-/uF'' ''&$`n1?Qp$")))
-(assert (not (= x "#l{''\t''?M]b\\h8K7k)caqdG?VTP]1")))
-(check-sat)
-(get-model)

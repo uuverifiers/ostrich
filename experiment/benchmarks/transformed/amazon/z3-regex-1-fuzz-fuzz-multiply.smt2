@@ -1,6 +1,0 @@
-(declare-const S String)
-(assert (not (str.in.re S (re.union (str.to.re "KK::00II)),,DDDDUUCC[[}}''::,,KKZZjj77??jj//55..FF77UUyy''' '' '''II77QQ'''\x0b''\x0b'''LL++GGzzCC))'''\n''\n''''''\t''\t'''TTddWW||") re.allchar))))
-(assert (str.in.re S (re.++ (re.union (re.++ (str.to.re "aa") re.allchar) (str.to.re "ww44..((3399..FFee33//QQ%%'''\x0b''\x0b'''$$ZZ^^[[XX")) re.allchar)))
-(check-sat)
-(get-model)
-(get-info :reason-unknown)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "ccaa((^^!!22bb%%"))
-(assert (str.in.re x (re.* (re.* (str.to.re "33bb!!pp")))))
-(check-sat)
-(get-model)

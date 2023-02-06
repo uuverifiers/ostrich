@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re ""))))
-(assert (str.in.re x (re.+ (str.to.re "g#:w"))))
-(assert (str.in.re x (re.* (str.to.re "a''''5]!$"))))
-(assert (> (str.to.int x) 2))
-(check-sat)
-(get-model)

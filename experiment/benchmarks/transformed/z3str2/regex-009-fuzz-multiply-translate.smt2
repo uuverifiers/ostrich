@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re ",,hhnn***}**}***{{ZZ"))))
-(assert (str.in.re x (re.+ (str.to.re "**__WWoollZZ``ggss99DDCCkk44&&ttmm***u**u***99\\\\??"))))
-(assert (> (str.len x) 14))
-(assert (< (str.to.int x) 10))
-(check-sat)
-(get-model)

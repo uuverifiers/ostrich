@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "acO4>5d"))
-(assert (str.in.re x (re.++ (str.to.re "Vt&d") (re.+ (str.to.re "@w'\n'Tc*")))))
-(check-sat)
-(get-model)

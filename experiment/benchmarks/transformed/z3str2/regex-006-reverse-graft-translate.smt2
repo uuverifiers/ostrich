@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "h}uh}u"))
-(assert (str.in.re x (str.to.re "h}u")))
-(check-sat)
-(get-model)

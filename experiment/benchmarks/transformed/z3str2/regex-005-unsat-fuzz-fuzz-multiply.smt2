@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "jj22vv!!77$$RRaa>>TTzzoo(('''\n''\n'''rrMMee66JJ''++77))ee11""""[[@@nn"))
-(assert (str.in.re x (re.* (re.+ (str.to.re "ccdd")))))
-(check-sat)
-(get-model)

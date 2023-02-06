@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.+ (str.to.re "U,iP}'\n''\n'.'\n''\n'Y:")))))
-(assert (str.in.re x (re.* (str.to.re "Y:Y"))))
-(assert (str.in.re x (str.to.re "Y:")))
-(assert (> 2 (str.len x)))
-(check-sat)
-(get-model)

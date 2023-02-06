@@ -29,10 +29,17 @@ ecma2020/target
 log.txt
 
 #experiment
-experiment/benchmarks/
-experiment/extracted/
-experiment/smallbench/
+experiment/benchmarks
+experiment/extracted
+experiment/smallbench
+experiment/count_benchmark
+experiment/sanitized
+experiment/res
 experiment/*.zip
+automatark_sml
 
 # dot files
 dot/
+
+# compared solver binaries
+SolverBinaries/

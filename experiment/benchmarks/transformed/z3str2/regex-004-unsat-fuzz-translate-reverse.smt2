@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "qwk'' ''Y"))
-(assert (str.in.re x (re.++ (re.+ (str.to.re "?Y")) (re.+ (str.to.re "'' ''")))))
-(check-sat)
-(get-model)

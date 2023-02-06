@@ -36,9 +36,9 @@ trait AtomConstraint {
   /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
     * Encode the formula of registers meanwhile.
     */
-  def getCompleteLIA: Formula = {
+  lazy val getCompleteLIA: Formula = {
     Console.err.println("Note: use parikh image")
-    val transtion2Term = aut.transitions.map(t => (t, TransitionTerm())).toMap
+    lazy val transtion2Term = aut.transitions.map(t => (t, TransitionTerm())).toMap
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
       aut.outgoingTransitions(from).foreach { case (to, lbl) =>
@@ -168,7 +168,6 @@ trait AtomConstraint {
         )
 
     /////////////////////////////////////////////////////////////////////////////////
-
     conj(registerUpdateFormula, consistentFlowFormula, connectionFormula)
   }
 

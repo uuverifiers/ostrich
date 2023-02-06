@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "32{9"))))
-(assert (= (str.len x) 3))
-(assert (not (= x "'\t'9v321")))
-(check-sat)
-(get-model)

@@ -1,5 +1,0 @@
-(declare-const S String)
-(assert (str.in.re S (re.union re.allchar (str.to.re "bbbbbb'''\r''\r'''PPCCss}}CCpp'''\x0c''\x0c'''??ppBB'''\x0c''\x0c'''"))))
-(assert (not (str.in.re S (re.++ re.allchar (re.union (str.to.re "##ffzz}}") (re.++ re.allchar (str.to.re "jj44;;")))))))
-(check-sat)
-(get-model)

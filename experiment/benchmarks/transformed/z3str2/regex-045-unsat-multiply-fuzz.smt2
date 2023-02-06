@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(declare-const m String)
-(declare-const n String)
-(assert (not (str.in.re x (re.* (str.to.re "3~'\n''\t'Qbc'\n'\\`X")))))
-(assert (= x "HPrMi&[<i,E)c"))
-(check-sat)
-(get-model)

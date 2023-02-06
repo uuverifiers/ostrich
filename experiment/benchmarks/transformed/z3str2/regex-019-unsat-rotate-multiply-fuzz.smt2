@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re ":"))))
-(assert (= 14 (str.len x)))
-(assert (not (= x "...No_('\t'S.mP#ICLcfn-E>*u+wp")))
-(check-sat)
-(get-model)

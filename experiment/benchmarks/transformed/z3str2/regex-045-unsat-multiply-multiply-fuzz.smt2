@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(declare-const m String)
-(declare-const n String)
-(assert (not (str.in.re x (re.* (str.to.re "aa,&W(<eJ""IPT27(=C'$bc2M3q|")))))
-(assert (= x "aa85TI('\x0c'76kaaS&ayP%' 'S""b-AL~i#;'\x0b'cz\\ojOZ_b~c-Zf8;9p<ZK;-,!j"))
-(check-sat)
-(get-model)

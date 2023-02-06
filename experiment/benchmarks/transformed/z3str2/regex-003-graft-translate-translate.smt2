@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "XNO#^XNXNO"))
-(assert (str.in.re x (re.* (str.to.re "XNO"))))
-(check-sat)
-(get-model)

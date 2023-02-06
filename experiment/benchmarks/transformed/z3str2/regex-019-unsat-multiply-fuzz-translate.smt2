@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re ">>"))))
-(assert (= 18 (str.to.int x)))
-(assert (not (= x ">>bN1>W`Gu2vsH|!|%V%")))
-(check-sat)
-(get-model)

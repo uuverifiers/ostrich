@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "EEmm{{++'''\t''\t''''''\n''\n'''dd"))))
-(assert (str.in.re y (re.* (str.to.re "aa"))))
-(assert (= (str.to.int x) 18))
-(check-sat)
-(get-model)

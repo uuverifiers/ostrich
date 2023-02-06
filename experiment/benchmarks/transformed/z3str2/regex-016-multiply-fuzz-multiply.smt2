@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "aaaabbbbOO^^$$..99''''dddd") (str.to.re "111122mm%%RRWWss;;44''")))))
-(assert (= 18 (str.to.int x)))
-(assert (not (= x "aa\\\\]],,^^llPP88""""55))##ZZww55##pp##xx88{{\\\\qqPP'''''\n''\n'''0033NN||nn]]00'''\r''\r'''00ssBB,,!!!!KK--##oo^^))SS@@??%%'''\r''\r'''""""'''\x0b''\x0b'''dd11''' '' ''''''\r''\r''''''\x0c''\x0c'''44OOFF@@ttFFkkNN++ee333322EEaabbooJJ33QQYY66pp]]oodd")))
-(assert (not (= x "ZZ~~ddddvv((>>..bbccFFhhDDUUKKffff\\\\>>'''\x0c''\x0c'''PP----rrSS..``1188ww''' '' '''gg;;'''\x0c''\x0c'''pp99BB>>ttGGaa||;;XX??11JJ##}}QQKKppEEMMZZjjjjWWOO]]88OOkk22")))
-(check-sat)
-(get-model)

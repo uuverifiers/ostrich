@@ -1,6 +1,0 @@
-(declare-const S String)
-(assert (not (str.in.re S (re.++ (str.to.re "aaaaKKKK::::^^^^GGGG''''''' '' '''''' '' '''''''IIII7777QQQQjjjj....LLLL++++99996666") re.allchar))))
-(assert (str.in.re S (re.union (re.union (re.++ (str.to.re "aaaa1111") re.allchar) (str.to.re "````bbbb}}}}TTTT....")) re.allchar)))
-(check-sat)
-(get-model)
-(get-info :reason-unknown)

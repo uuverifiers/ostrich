@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "bcc#%p"))
-(assert (str.in.re x (re.++ (str.to.re "),bcd") (re.+ (re.+ (str.to.re "c>7?"))))))
-(check-sat)
-(get-model)

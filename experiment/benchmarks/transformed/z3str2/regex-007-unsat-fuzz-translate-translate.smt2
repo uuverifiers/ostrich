@@ -1,6 +1,0 @@
-(declare-const x String)
-(assert (= (str.to.int x) 8))
-(assert (str.in.re x (re.+ (str.to.re "'A[>"))))
-(assert (str.in.re x (re.* (str.to.re "tx'\t'x'\t'+'\t'Y?"))))
-(check-sat)
-(get-model)

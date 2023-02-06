@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "db"))))
-(assert (str.in.re y (str.to.re "]Gcba")))
-(assert (= 10 (str.len x)))
-(check-sat)
-(get-model)

@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "''\r''_")))
-(assert (= (str.len x) 5))
-(assert (not (= x "123''\r''_")))
-(check-sat)
-(get-model)

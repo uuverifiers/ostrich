@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "acX'\x0c'93}%<YF3gk^W|N'\x0b'kNX1](Je2&GvfZ<'\t'c:(P=zDaZNrZ,HE.QZA<5a'\r'+Rz?' 'y22E'\t'@;d"))))
-(assert (str.in.re y (re.+ (re.+ (str.to.re "as,cEkhbz?1TTvl_uI{0V+Oy825gkI|s{R`|' '%42")))))
-(assert (= (str.len x) 26))
-(assert (= (str.to.int y) 62))
-(check-sat)
-(get-model)

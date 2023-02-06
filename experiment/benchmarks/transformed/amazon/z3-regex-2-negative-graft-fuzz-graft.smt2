@@ -1,5 +1,0 @@
-(declare-const S String)
-(assert (str.in.re S (re.union (str.to.re "]oDP''\t''asL''\n''""bb") re.allchar)))
-(assert (not (str.in.re S (re.++ (re.++ (str.to.re "R.-") (str.to.re "aa")) re.allchar))))
-(check-sat)
-(get-model)

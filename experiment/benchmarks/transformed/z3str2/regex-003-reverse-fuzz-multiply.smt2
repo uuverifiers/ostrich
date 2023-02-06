@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "66yy``XXYY88++dd..'''\x0c''\x0c'''))bbIIeeooddqq%%qqPPFFEEPP"))
-(assert (str.in.re x (re.+ (re.++ (str.to.re "00,,[[%%") (str.to.re "ee")))))
-(check-sat)
-(get-model)

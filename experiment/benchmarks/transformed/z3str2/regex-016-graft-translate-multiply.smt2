@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "RRff'''\r''\r'''}}")))
-(assert (= (str.len x) 22))
-(assert (not (= x "RRff'''\r''\r'''}}112233RRff'''\r''\r'''}}")))
-(assert (not (= x "RRff'''\r''\r'''}}RRff'''\r''\r'''}}112233")))
-(check-sat)
-(get-model)

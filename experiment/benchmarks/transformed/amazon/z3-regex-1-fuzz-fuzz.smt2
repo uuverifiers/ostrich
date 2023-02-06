@@ -1,6 +1,0 @@
-(declare-const S String)
-(assert (not (str.in.re S (re.++ (str.to.re "$WL{EA>2") re.allchar))))
-(assert (str.in.re S (re.++ (re.++ (re.++ (str.to.re "w") re.allchar) (str.to.re "fQ")) re.allchar)))
-(check-sat)
-(get-model)
-(get-info :reason-unknown)

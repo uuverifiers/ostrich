@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "`(@y'\r''"))))
-(assert (str.in.re x (str.to.re "aagjU('\x0b'7z:*NLT+h'\x0b'BO.P1,8}dfl' 'n'\n'UQ~kbe#ytOF!r'\x0c'?nnmKseRyO*'\x0c'}^eM!q>.=0@kC\\5{]-o=7P{Y&$OjZyBf-")))
-(assert (> (str.len x) 7))
-(assert (< 32 (str.len x)))
-(check-sat)
-(get-model)

@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "w$Cu^RB^JI]TAC.\\Q'\x0c''\x0c'sJs'\x0c'Kn=G1@~Q\\TZTN"))
-(assert (str.in.re x (re.++ (re.* (str.to.re "TTA'\x0c'-W31")) (re.* (str.to.re "xU~^My%<%v=c*hu")))))
-(check-sat)
-(get-model)

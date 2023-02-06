@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "CSSQSSSS\\SSaSS\\SSaK"))
-(assert (str.in.re x (re.union (re.* (re.* (str.to.re "SS\\SSaK"))) (str.to.re "CSSQSSSS\\SSa"))))
-(check-sat)
-(get-model)

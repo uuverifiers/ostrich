@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "GGttLL&&--GGttGGttLL"))
-(assert (str.in.re x (re.* (str.to.re "GGttLL"))))
-(check-sat)
-(get-model)

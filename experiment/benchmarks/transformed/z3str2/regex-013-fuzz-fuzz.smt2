@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re y (re.+ (re.* (str.to.re "bcMQ~'\x0b')")))))
-(assert (= (str.len y) 18))
-(check-sat)
-(get-model)

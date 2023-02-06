@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "$a=[:l#3jN`cc#3KksZF'\x0b'DJ8%!op"))
-(assert (str.in.re x (re.union (re.+ (str.to.re "2<z=@'L~,M'\r'%,")) (re.+ (str.to.re "!O;*Y'\x0c',V1R9%jHFI}jhT@?")))))
-(check-sat)
-(get-model)

@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "$Da{;;"))
-(assert (str.in.re x (re.++ (re.+ (str.to.re ";aIX^;")) (re.+ (str.to.re ";'\r'rx")))))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.union (re.union (str.to.re "T{l(") (str.to.re "123")) (str.to.re "su")))))
-(assert (= (str.len x) 5))
-(check-sat)
-(get-model)

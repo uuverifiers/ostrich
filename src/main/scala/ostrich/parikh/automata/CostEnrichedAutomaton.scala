@@ -32,6 +32,7 @@ import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 import os.write
 import ostrich.parikh.core.FinalConstraints
+import scala.collection.JavaConverters.asScala
 
 object CostEnrichedAutomaton {
 
@@ -39,18 +40,40 @@ object CostEnrichedAutomaton {
   type TLabel = CostEnrichedAutomaton#TLabel
 
   def apply(): CostEnrichedAutomaton =
-    new CostEnrichedAutomaton(new BAutomaton)
+    CostEnrichedAutomaton(new BAutomaton)
+
+  def apply(underlying: BAutomaton): CostEnrichedAutomaton = {
+    val builder = new CostEnrichedAutomatonBuilder
+    val old2new = asScala(underlying.getStates()).map { state =>
+      state -> builder.getNewState
+    }.toMap
+    builder.setInitialState(old2new(underlying.getInitialState))
+    for (state <- asScala(underlying.getStates())) {
+      val newState = old2new(state)
+      builder.setAccept(newState, state.isAccept)
+      for (transition <- asScala(state.getTransitions())) {
+        builder.addTransition(
+          old2new(state),
+          (transition.getMin, transition.getMax),
+          old2new(transition.getDest),
+          Seq()
+        )
+      }
+    }
+    val a = builder.getAutomaton
+    a
+  }
 
   /** Build CostEnriched automaton from a regular expression in brics format
     */
   def apply(pattern: String): CostEnrichedAutomaton =
-    new CostEnrichedAutomaton(new RegExp(pattern).toAutomaton(false))
+    CostEnrichedAutomaton(new RegExp(pattern).toAutomaton(false))
 
   def fromString(str: String): CostEnrichedAutomaton =
-    new CostEnrichedAutomaton(BasicAutomata makeString str)
+    CostEnrichedAutomaton(BasicAutomata makeString str)
 
   def makeAnyString(): CostEnrichedAutomaton =
-    new CostEnrichedAutomaton(BAutomaton.makeAnyString)
+    CostEnrichedAutomaton(BAutomaton.makeAnyString)
 
   /** Check whether we should avoid ever minimising the given automaton.
     */
@@ -135,7 +158,7 @@ class CostEnrichedAutomaton(
   def toDetailedString: String = underlying.toString()
 
   def removeDuplicatedReg(): Unit = {
-    def removeIdxsValueOfSeq[A](s: Seq[A], idxs: Seq[Int]): Seq[A] = {
+    def removeIdxsValueOfSeq[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
       val res = ArrayBuffer[A]()
       for (i <- 0 until s.size) {
         if (!idxs.contains(i)) {
@@ -144,18 +167,31 @@ class CostEnrichedAutomaton(
       }
       res.toSeq
     }
-    val vectorsT = etaMap.map(_._2).transpose.zipWithIndex
-    val vectorsPatition = vectorsT.groupBy(_._1).map(_._2.map(_._2))
-    val deplicatedRegs = vectorsPatition.filter(_.size > 1)
-    deplicatedRegs.foreach { regidxs =>
+    val vectorsT = etaMap.map{case (t, v) => v}.transpose.zipWithIndex
+    val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
+    for ((v, i) <- vectorsT) {
+      val seqv = v.toSeq
+      if (!vectors2Idxs.contains(seqv)) {
+        vectors2Idxs += (seqv -> Set[Int]())
+      }
+      vectors2Idxs(seqv) += i
+    }
+    val duplicatedRegs = vectors2Idxs.map{case(v, idxs) => idxs}.filter(_.size > 1)
+    // val vectorsPatition = vectorsT.groupBy(_._1).map(_._2.map(_._2))
+    // val duplicatedRegs = vectorsPatition.filter(_.size > 1)
+    val removeIdxs = new MHashSet[Int]()
+    duplicatedRegs.foreach { regidxs =>
       val baseidx = regidxs.head
       regidxs.tail.foreach { idx =>
-        FinalConstraints.conjFormula(registers(baseidx) === registers(idx))
+        regsRelation = conj(regsRelation, (registers(baseidx) === registers(idx)))
       }
-      registers = removeIdxsValueOfSeq(registers, regidxs.tail.toSeq)
-      etaMap = etaMap.map { case (t, v) =>
-        (t, removeIdxsValueOfSeq(v, regidxs.tail.toSeq))
-      }
+      removeIdxs ++= regidxs.tail
+
     }
+    registers = removeIdxsValueOfSeq(registers, removeIdxs.toSet)
+    etaMap = etaMap.map { case (t, v) =>
+      (t, removeIdxsValueOfSeq(v, removeIdxs.toSet))
+    }
+
   }
 }

@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "'\x0c'""P""P' 'K"))
-(assert (str.in.re x (re.union (re.* (re.* (str.to.re "'\x0c'""P"))) (str.to.re """P' 'K"))))
-(check-sat)
-(get-model)

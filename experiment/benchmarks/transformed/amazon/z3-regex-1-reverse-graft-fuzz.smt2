@@ -1,6 +1,0 @@
-(declare-const S String)
-(assert (not (str.in.re S (str.to.re "bN""q"))))
-(assert (str.in.re S (re.union re.allchar (re.union (re.union re.allchar (str.to.re "cx|Qyj'\x0c'Iu' 'Pa")) (re.++ re.allchar (str.to.re "aaa"))))))
-(check-sat)
-(get-model)
-(get-info :reason-unknown)

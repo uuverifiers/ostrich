@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "'Lv/#'z@zX"))
-(assert (str.in.re x (re.* (re.+ (str.to.re "''X")))))
-(check-sat)
-(get-model)

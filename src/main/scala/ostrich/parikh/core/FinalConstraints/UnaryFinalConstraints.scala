@@ -28,16 +28,27 @@ class UnaryFinalConstraints(
   // eagerly product
   lazy val productAtom: AtomConstraint = {
     val productAut = getAutomata.reduce(_ product _)
-    val simplifyAut = CEBasicOperations.simplify(productAut)
-    new UnaryHeuristicAC(simplifyAut)
+    new UnaryHeuristicAC(productAut)
   }
 
-  lazy val mostlySimplifiedAut =
-    CEBasicOperations.determinateByVec(
-      CEBasicOperations.epsilonClosureByVec(
-        productAtom.aut
+  lazy val mostlySimplifiedAut = {
+    val res = 
+    CEBasicOperations.minimizeHopcroftByVec(
+      CEBasicOperations.determinateByVec(
+        CEBasicOperations.epsilonClosureByVec(
+          productAtom.aut
+        )
       )
     )
+    res
+  }
+
+  lazy val simplifyButRemainLabelAut =
+        CEBasicOperations.removeUselessTrans(
+          CEBasicOperations.minimizeHopcroft(
+            productAtom.aut
+          )
+        )
 
   def getUnderApprox(bound: Int): Formula =
     new UnaryHeuristicAC(mostlySimplifiedAut).getUnderApprox(bound)
@@ -55,9 +66,15 @@ class UnaryFinalConstraints(
 
   def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
+    ParikhUtil.findAcceptedWordByRegisters(
+      Seq(simplifyButRemainLabelAut),
+      registersModel
+    )
   }
 
-  if (OstrichConfig.outputdot) mostlySimplifiedAut.toDot(strId.toString)
+  if (OstrichConfig.outputdot) {
+    mostlySimplifiedAut.toDot("simplified_" + strId.toString)
+    simplifyButRemainLabelAut.toDot("original_" + strId.toString)
+  }
 
 }

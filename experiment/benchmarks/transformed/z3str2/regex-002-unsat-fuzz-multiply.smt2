@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "FF'''\x0b''\x0b'''xxLL||aa[[HHyy'''\x0c''\x0c'''##}}llRRss''' '' '''ee//11'''\x0c''\x0c'''aa"))
-(assert (str.in.re x (re.* (str.to.re "'''\n''\n'''ee"))))
-(check-sat)
-(get-model)

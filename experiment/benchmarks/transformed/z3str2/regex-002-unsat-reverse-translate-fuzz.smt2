@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "|il,z{N+:}:&},,,"))
-(assert (str.in.re x (re.* (str.to.re "SWR"))))
-(check-sat)
-(get-model)

@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "4@"))))
-(assert (str.in.re x (re.+ (str.to.re "pgp"))))
-(assert (str.in.re x (re.+ (str.to.re "c:9#`pgkGf"))))
-(assert (> (str.to.int x) 2))
-(check-sat)
-(get-model)

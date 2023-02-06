@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.++ (str.to.re "'0'\t'") (str.to.re "'\n'sb")))))
-(assert (= 8 (str.len x)))
-(assert (not (= x "Ah/rA_neFW3-Y-b`p%As'\t';.&?4|^%0Pb")))
-(assert (not (= x "2xwAskkb")))
-(check-sat)
-(get-model)

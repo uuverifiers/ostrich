@@ -33,7 +33,6 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   // to avoid repeated exploration
   private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
 
-
   /** Simplely explore the automaton by `ubound` step to get the
     * under-approximation
     * @param ubound
@@ -42,10 +41,12 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     *   the formula of the underapproximation
     */
   def getUnderApprox(ubound: Int): Formula = {
-    if (aut.getRegisters.isEmpty)
-      // We return True when this automaton do not have registers
-      // (which means there is only regex membership)
-      return Conjunction.TRUE
+    if (aut.getRegisters.isEmpty){
+      // The emptyness of the automaton is based on the emptyness of the
+      // accepting states
+      if(aut.acceptingStates.isEmpty) Conjunction.FALSE
+      else  Conjunction.TRUE
+    }
     val n = aut.states.size
     val rLen = aut.getRegisters.size
     val lowerBound = globalS.size
@@ -144,9 +145,11 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     val regsFormula = conj(
       for (aut <- reg2Aut)
         yield getLIAFromOneRegAut(
-          CEBasicOperations.determinateByVec(
-            CEBasicOperations.epsilonClosureByVec(
-              CEBasicOperations.simplify(aut)
+          CEBasicOperations.minimizeHopcroftByVec(
+            CEBasicOperations.determinateByVec(
+              CEBasicOperations.epsilonClosureByVec(
+                CEBasicOperations.simplify(aut)
+              )
             )
           )
         )
@@ -154,10 +157,9 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     regsFormula
   }
 
-
   def getRegsRelation: Formula = aut.getRegsRelation
 
-  def computeGlobalSWithRegsValue(
+  private def computeGlobalSWithRegsValue(
       sLen: Int
   ): Unit = {
     var idx = globalS.size
@@ -177,7 +179,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     }
   }
 
-  def computeS(
+  private def computeS(
       aut: CostEnrichedAutomatonTrait,
       sLen: Int
   ): ArrayBuffer[Set[State]] = {
@@ -201,7 +203,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   /** computing T_len, T_{len-1}, ..., T_0. Terminate if T_(2n^2-n-1) is
     * computed or pre(S_i) is empty
     */
-  def computeT(
+  private def computeT(
       aut: CostEnrichedAutomatonTrait,
       len: Int
   ): ArrayBuffer[Set[State]] = {
@@ -221,7 +223,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     T
   }
 
-  def periods(
+  private def periods(
       aut: CostEnrichedAutomatonTrait,
       s: State
   ): Set[Int] = {
@@ -246,13 +248,13 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     periods.toSet
   }
 
-  def succWithVec(
+  private def succWithVec(
       aut: CostEnrichedAutomatonTrait,
       s: State
   ): Iterator[(State, Seq[Int])] =
     for ((t, lbl, vec) <- aut.outgoingTransitionsWithVec(s)) yield (t, vec)
 
-  def preWithVec(
+  private def preWithVec(
       aut: CostEnrichedAutomatonTrait,
       t: State
   ): Iterator[(State, Seq[Int])] =
@@ -260,7 +262,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       yield (s, aut.getEtaMap((s, lbl, t)))
 
   // e.g (1,1) + (1,0) = (2,1)
-  def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]): Seq[Int] = {
+  private def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]): Seq[Int] = {
     seq1 zip seq2 map { case (a, b) => a + b }
   }
 

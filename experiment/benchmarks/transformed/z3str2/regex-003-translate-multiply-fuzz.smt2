@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "#;u$' 'EvufO7b*3B,'\n'[0&V'\x0c'1)~}Km'\n''!Ch\\b=PGSGnBx)']=ADBh'u!SYE`=*&tr'''|-e'\t'H' 'z[+LQZO;NiRX/|Kt~5'f3|618+;bB7iuc'\t'al@zhZ<-/4;Gt-w&'\x0c'J]|'\n'-5EpKU'\x0b']LEC32>5wZd8$AOw&0Oi=H\\q=M:N%J_R'\n'Q:-g39Fl5M'\x0c'5~pZq[uJ2'\x0b'qn~P{+q#!ZII'''\n''''``hc$I5Ud-G9Vc+{OR7Y+MObM37w%hE''\n'Ko' '4MXN$mX""}w8LlM4'\t'""vdnp%:@):Y<|,&C-7#B' '""?E?;1-~5nbHc`G438ol*rC/'\x0c'wsF!$;IdoxjLL,#rF'\x0c'-5>D'\r'CU'\t'04*/D*k8sY-znT;t'\x0b'um#iuZqr:Ua' 'gZQrSm(1X-_f2i)$AOs1U#XCI.;'l2]aoi"))
-(assert (str.in.re x (re.* (re.union (str.to.re "_'\x0c'OBpII'~u;u/K7g0}7'YV2hl8cmC~CY=~z!U'Mj=~Flh,%'\t'd(4xr''\x0b'JB~+~vYRWRiZ]nT") (str.to.re "SFV^'''\n'');f'@_3bZtJ")))))
-(check-sat)
-(get-model)

@@ -18,6 +18,8 @@ class CostEnrichedAutomatonBuilder{
   type TLabel = CostEnrichedAutomaton#TLabel
 
   var minimize = false
+  
+  private var stateidx = 0
 
   val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
 
@@ -74,7 +76,15 @@ class CostEnrichedAutomatonBuilder{
 
   /** Create a fresh state that can be used in the automaton
     */
-  def getNewState: State = new BState()
+  def getNewState: State = {
+    stateidx += 1
+    new BState(){
+      val idx = stateidx
+      override def toString(): String = {
+        s"s${idx}"
+      }
+    }
+  }
 
   /** Set the initial state
     */
@@ -127,9 +137,7 @@ class CostEnrichedAutomatonBuilder{
     val res = new CostEnrichedAutomaton(baut)
     res.setRegisters(registers.toSeq)
     res.addEtaMap(etaMap.toMap)
-    // res.addTransTermMap(transTermMap.toMap)
     res.setRegsRelation(regsRelation)
-    res.removeDuplicatedReg()
     res
   }
 }

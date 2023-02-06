@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "TTBBYY>>ddccdd}}WW55MM"))
-(assert (str.in.re x (re.++ (re.+ (str.to.re "llff'''\r''\r'''")) (re.* (str.to.re "eecc")))))
-(check-sat)
-(get-model)

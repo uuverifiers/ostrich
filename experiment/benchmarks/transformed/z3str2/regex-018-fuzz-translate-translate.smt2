@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "1RaR") (str.to.re "hJ+!+3")))))
-(assert (= 4 (str.to.int x)))
-(assert (not (= x "12.&f+#+")))
-(check-sat)
-(get-model)

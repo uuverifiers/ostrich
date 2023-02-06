@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.++ (re.* (str.to.re "<<<<")) (str.to.re "'''''''\n''\n''''''\n''\n'''''''")))))
-(assert (= (str.len x) 8))
-(assert (not (= x "'''''''\n''\n''''''\n''\n''''''''''''''\n''\n''''''\n''\n'''''''")))
-(assert (not (= x "<<<<'''''''\n''\n''''''\n''\n'''''''")))
-(check-sat)
-(get-model)

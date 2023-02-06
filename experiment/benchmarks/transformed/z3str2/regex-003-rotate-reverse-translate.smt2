@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "%lXlX=@%lX"))
-(assert (str.in.re x (re.* (re.union (str.to.re "lX=@") (str.to.re "%lX")))))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re y (re.+ (re.+ (str.to.re "@@KKaa;;ii")))))
-(assert (= (str.to.int y) 24))
-(check-sat)
-(get-model)

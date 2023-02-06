@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "abfQ'\n''\t'eA!^TZu'\x0b'cc\\'\r'adOM'52&0xB6q1wxM7wve#8'\x0c'~ZM'\r'O<") (str.to.re "4HIX4~o'\x0c',Q2xV%8^2^a'M!tj-33")))))
-(assert (= 31 (str.to.int x)))
-(assert (not (= x "bptU`T5Dmhf'\n'rYW0a407ms]US_}9w(dOcY7PNbl`RF71&' '?RA=QU'\x0b''\x0b'r*Vd[.q61%)'\n'A>sck>@p<'\n'Gd/k'\x0b'.~:3'\n'po&' ':'wAnv%tVx10()Tc`nJ;aZ);8B2\\>(!'\r'pTf8J'\x0c'$(se.[~p<y0$cM^6Ci\\C.'\x0b'hvNeoE' '@MB'\x0b'GEu_2IDf?OVsh]~0'\x0b'ErNW&t' 'N`2/Qh)w?7S1'\x0b'+2vmt#yP4'\x0c'3]%pwQ5}r3f#g[.3pyJ&A~`]*$\\j6V'\t'7a=1Er4CCc>i_~|bEd' 'j+AIEW?X'\x0c'kpU~0rb.1z@;~DjWxqNGfcc]75I'\x0b'w' '#M<`F'\t'?-'\n'fXb1""YP44Ilhdd")))
-(assert (not (= x "7&eG_EP1e' 'aabccc""gRr$R?,`>G4On'\x0b'8KYde' '\\'\t'^dxEUOzabwtFryX!!i-6'\x0b'X}$d70*\\YdcND&SdNH\\qkP:sX84|EVLUI&K5$pr5EVwO-I:''\x0b'!n/HbT7W_3~8>:'\t'H$+~Cm}Zc[}8ZL*un3djZ7Q=_<3e:fd12222Q>'\x0c'f~_rMU""Mj'\x0c']p-p->{0]eq,I<P*63")))
-(check-sat)
-(get-model)

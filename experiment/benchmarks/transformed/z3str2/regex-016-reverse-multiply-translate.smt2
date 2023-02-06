@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.union (str.to.re "GG[[kk}}") (str.to.re "332211")))))
-(assert (= 22 (str.len x)))
-(assert (not (= x "GG[[kk}}332211GG[[kk}}")))
-(assert (not (= x "332211GG[[kk}}GG[[kk}}")))
-(check-sat)
-(get-model)

@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.++ (str.to.re "m""") (str.to.re "23")))))
-(assert (= 9 (str.to.int x)))
-(assert (not (= x "mB1q3i'\r'QjENxu!'\x0b'q\\'\r'X9B5.*jnX<ISh8'\t'cP'\x0c'")))
-(assert (not (= x "[SMM<Q(lY]Bb}' '?@7<}]m)ATl7Ovo<r~Ss?apY-#")))
-(check-sat)
-(get-model)

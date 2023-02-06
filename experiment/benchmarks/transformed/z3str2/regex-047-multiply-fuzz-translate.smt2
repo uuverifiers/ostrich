@@ -1,7 +1,0 @@
-(declare-const key String)
-(declare-const val String)
-(define-fun QuoteRegex ((aRegex (RegEx String))) (RegEx String) (re.++ (re.++ (str.to.re "(#4iSi") aRegex) (str.to.re "J")))
-(assert (str.in.re key (QuoteRegex (re.* (str.to.re "")))))
-(assert (= (str.to.int key) 6))
-(check-sat)
-(get-model)

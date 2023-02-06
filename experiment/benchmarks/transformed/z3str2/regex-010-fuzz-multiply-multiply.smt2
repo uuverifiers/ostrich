@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "}}}}bbbb"))))
-(assert (str.in.re x (re.+ (str.to.re "bbbbaaaa"))))
-(assert (str.in.re x (re.+ (str.to.re "bbbb````tttt$$$$@@@@$$$$EEEEcccc"))))
-(check-sat)
-(get-model)

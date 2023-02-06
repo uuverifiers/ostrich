@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "8$""J") (str.to.re "0433")))))
-(assert (= 10 (str.len x)))
-(assert (not (= x "|c'\r'HC^4NL'\t'+*PutzhW9[rz")))
-(check-sat)
-(get-model)

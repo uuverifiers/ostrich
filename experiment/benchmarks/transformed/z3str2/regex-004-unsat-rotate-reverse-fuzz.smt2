@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x ">|U]|69.dc"))
-(assert (str.in.re x (re.++ (re.* (re.+ (str.to.re "dxw"))) (str.to.re "R<hca"))))
-(check-sat)
-(get-model)

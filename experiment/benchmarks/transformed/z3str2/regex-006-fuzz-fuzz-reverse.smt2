@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "hWabn&3"))
-(assert (str.in.re x (re.* (re.* (str.to.re "''\x0b''>}A)")))))
-(check-sat)
-(get-model)

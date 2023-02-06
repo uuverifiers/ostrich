@@ -2,40 +2,66 @@ from multiprocessing.dummy import Pool
 import os
 import glob
 import subprocess
-from datetime import datetime
-from unittest import result
 from tqdm import tqdm
-from time import time 
+from time import time
+from dataclasses import dataclass, field
 
-
-dirname = os.path.dirname(__file__)
 timelimit = 60
-command = os.path.join(dirname, "../../ostrich")
 
-# Interface to mutithreadingly run each file of a benchmark 
+
+@dataclass
+# Interface to mutithreadingly run each file of a benchmark directory.
+# The file extension should be specified.
 class RunnerInterface:
-    backend: str
-    benchname: str
+    benchdir: str
     proccess_num: int
     outdir: str
-    
-    def __init__(self, backend: str, benchname: str, n: int, outdir: str) -> None:
-        self.backend = backend
-        self.benchname = benchname
-        self.proccess_num = n
-        self.outdir = outdir
+    extension: str
 
-    def write_results(self, results: 'list[str]'):
+    def __post_init__(self) -> None:
+        self.benchmarks = glob.glob(
+            f"{self.benchdir}/**/*{self.extension}", recursive=True
+        )
+        self.pbar = tqdm(total=len(self.benchmarks))
+
+    def write_results(self, results: "list[str]"):
+        pass
+
+    def run_with_pbar_update(self, filename: str):
+        self.pbar.update(1)
+        return self.run_single_instance(filename)
+
+    def run_single_instance(self, filename: str):
+        pass
+
+    def run(self):
+        with Pool(processes=self.proccess_num) as pool:
+            results = pool.map(
+                self.run_with_pbar_update,
+                self.benchmarks,
+                chunksize=int(len(self.benchmarks) / self.proccess_num),
+            )
+            self.write_results(results)
+        self.pbar.close()
+
+
+@dataclass
+class BaseLineRunner(RunnerInterface):
+    extension: str = ".smt2"
+    backend = "baseline"
+
+    def write_results(self, results: "list[str]"):
         with open(os.path.join(self.outdir, f"{self.backend}_log.txt"), "w") as f:
             for result in results:
                 f.write(f"{result}{os.linesep}")
-                f.flush()
 
     def run_single_instance(self, benchmark: str) -> str:
         str_result = []
+        dirname = os.path.dirname(__file__)
+        command = os.path.join(dirname, "../../ostrich")
         str_result.append(f"Running [{benchmark}]")
-        pbar.set_description(f"Running [{benchmark}]")
-        now_time = last_time = time() * 1000
+        self.pbar.set_description(f"Running [{benchmark}]")
+        before_time = time() * 1000
         try:
             res = subprocess.run(
                 [
@@ -54,32 +80,92 @@ class RunnerInterface:
             str_result.append(res.stdout)
         except subprocess.TimeoutExpired:
             str_result.append(f"Timeout ")
-        now_time = time() * 1000
-        str_result.append(f"Time: {now_time - last_time} ms")
+        except Exception as e:
+            str_result.append(f"Exception: {e}")
+        after_time = time() * 1000
+        str_result.append(f"Time: {after_time - before_time} ms")
         str_result.append(f"----splitter----")
-        pbar.update(1)
         return os.linesep.join(str_result)
 
-    def run(self):
-        benchname = self.benchname
-        benchmarks = glob.glob(f"{benchname}/**/*.smt2", recursive=True)
-        global pbar
-        pbar = tqdm(total = len(benchmarks))
-        with Pool(processes=self.proccess_num) as pool:
-            results = pool.imap_unordered(
-                self.run_single_instance,
-                benchmarks,
-                chunksize = int(len(benchmarks)/self.proccess_num)
+
+class UnaryRunner(BaseLineRunner):
+    backend = "unary"
+
+
+class CatraRunner(BaseLineRunner):
+    backend = "catra"
+
+
+@dataclass
+class Z3Runner(RunnerInterface):
+    extension: str = "smt2"
+    backend = "z3"
+    command: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.command = ["z3"]
+
+    def write_results(self, results: "list[str]"):
+        with open(os.path.join(self.outdir, f"{self.backend}_log.txt"), "w") as f:
+            for result in results:
+                f.write(f"{result}{os.linesep}")
+
+    def run_single_instance(self, benchmark: str) -> str:
+        str_result = []
+        str_result.append(f"Running [{benchmark}]")
+        before_time = time() * 1000
+        try:
+            result = subprocess.run(
+                self.command + [benchmark],
+                timeout=timelimit,
+                capture_output=True,
+                encoding="utf-8",
             )
-            self.write_results(results)
-        pbar.close()
+            str_result.append(result.stdout)
+        except subprocess.TimeoutExpired:
+            str_result.append("Timeout")
+        except Exception as e:
+            str_result.append(f"Exception: {e}")
+        after_time = time() * 1000
+        str_result.append(f"Time: {after_time - before_time} ms")
+        str_result.append(f"----splitter----")
+        return os.linesep.join(str_result)
 
 
-# run benchmark concurrent, the processes number is 4
-# from multiprocessing import Pool
-# def runScript(runner):
-#     runner.run()
-# while True:
-#     with Pool(processes=4) as pool:  # start 4 worker processes
-#         pool.map(runScript, runners)
-#     time.sleep(100)
+@dataclass
+class CVC5Runner(Z3Runner):
+    command: list[str] = field(default_factory=list)
+    backend = "cvc5"
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.command = ["cvc5", "--lang=smt2", "--produce-models"]
+
+
+@dataclass
+class Z3Str3RERunner(Z3Runner):
+    command: list[str] = field(default_factory=list)
+    backend = "z3str3re"
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.command = [
+            "SolverBinaries/RegExSolver/z3",
+            "smt.string_solver=z3str3",
+            "smt.str.tactic=arr",
+            "smt.arith.solver=2",
+            "dump_models=true",
+        ]
+
+@dataclass
+class Z3TrauRunner(Z3Runner):
+    command: list[str] = field(default_factory=list)
+    backend = "z3trau"
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.command = [
+            "SolverBinaries/RegExSolver/z3",
+            "smt.string_solver=z3str3",
+        ]

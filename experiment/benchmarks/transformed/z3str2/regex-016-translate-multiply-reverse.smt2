@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.union (str.to.re "RR||QQ``") (str.to.re "332211")))))
-(assert (= 22 (str.len x)))
-(assert (not (= x "RR||QQ``332211RR||QQ``")))
-(assert (not (= x "332211RR||QQ``RR||QQ``")))
-(check-sat)
-(get-model)

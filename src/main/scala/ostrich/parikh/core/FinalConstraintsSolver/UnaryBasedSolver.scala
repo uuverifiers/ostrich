@@ -49,10 +49,11 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def solve: Result = {
     var res = solveUnderApprox
     if (!res.isSat){
-      try res = solveOverApprox 
-      catch {
-        case e: UnknownException => res = solveCompleteLIA
-      }
+      // try res = solveOverApprox 
+      // catch {
+      //   case e: UnknownException => res = solveCompleteLIA
+      // }
+      res = solveCompleteLIA
     }
     res
   }
@@ -86,7 +87,8 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
     SimpleAPI.withProver { p =>
       p setConstructProofs true
       val regsRelation = conj(constraints.map(_.getRegsRelation))
-      val finalArith = conj(f, regsRelation, FinalConstraints())
+      val inputAndGenerated = FinalConstraints()
+      val finalArith = conj(f, regsRelation, inputAndGenerated)
 
       val constants =
         SymbolCollector.constants(finalArith) ++ integerTerms

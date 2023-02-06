@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.union (str.to.re "z^S]") (str.to.re "321")))))
-(assert (= 11 (str.len x)))
-(assert (not (= x "z^S]321z^S]")))
-(assert (not (= x "321z^S]z^S]")))
-(check-sat)
-(get-model)

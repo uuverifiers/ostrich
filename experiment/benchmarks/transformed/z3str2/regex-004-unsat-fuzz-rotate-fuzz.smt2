@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "dwhmkEp"))
-(assert (str.in.re x (re.++ (re.+ (re.+ (str.to.re "B?"))) (str.to.re "FK[Wg`D8mcd"))))
-(check-sat)
-(get-model)

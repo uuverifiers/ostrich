@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "9n2q@f`z-RM")))
-(assert (= (str.to.int x) 22))
-(assert (not (= x "J,Pzp'bS'\t'IOLCY'\t'P#t'\x0b'-w~6R*QO,XSI8g?M_<""HB\\6cH?d<C?3#D#7!,{jU(B>Tx_mB,w3{""&QjL`%d.Lb%K;-JNa'?CPj6'@]t'\x0b''+GE%g\\'&TEO7:)y5r*W@3h&bll=13idjL4-'\t'gym1I_'\t''\r'<{|'\n'd89'\x0c')?01a|=2W}_a>>,+g'\r'-l'\t'NDlh:}5Ff""w?|`q&I""[\\^QsS@' '(LQL'\x0b'He;1,!j_1v8""cVUr..`$DY<S4NQB8^#4Z6/P*sk[*'\r'fUe' 'Be+1?|p{xkj'\r'kK'j<'\t'E&@Qp")))
-(assert (not (= x "#l''\t'''\r'F:7!\\uA83ZE4[4l/B*AP\\JZO\\B8%QkeX4-99'\t'!HZi7)i_%(al]N!5{:q.GLdEATN7.{>ThD4*K{qx(Wn:~KGV:|^{'\n'fN$cv)p>W/(_~/xs2BaO2D*7,P;%#LZ")))
-(check-sat)
-(get-model)

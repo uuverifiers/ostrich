@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "@}KA2]Bni[{97m+ev38Z"))))
-(assert (str.in.re y (re.+ (str.to.re "Ub''\n'h'\x0b''I@s"))))
-(assert (= (str.to.int x) 1))
-(assert (= (str.to.int y) 5))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(assert (= 13 (str.to.int x)))
-(assert (str.in.re x (re.+ (re.* (str.to.re "Vos'''\t'''")))))
-(assert (str.in.re x (str.to.re "O")))
-(check-sat)
-(get-model)

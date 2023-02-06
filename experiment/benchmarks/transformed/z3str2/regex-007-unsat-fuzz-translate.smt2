@@ -1,6 +1,0 @@
-(declare-const x String)
-(assert (= (str.to.int x) 8))
-(assert (str.in.re x (re.+ (str.to.re ".NF("))))
-(assert (str.in.re x (re.* (str.to.re "P-'-'\x0b';$"))))
-(check-sat)
-(get-model)

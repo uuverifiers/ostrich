@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (re.++ (str.to.re "S'`1'\r'~") (str.to.re "2")))))
-(assert (= 9 (str.len x)))
-(assert (not (= x "h,<'31")))
-(check-sat)
-(get-model)

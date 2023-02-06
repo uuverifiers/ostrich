@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "]t8k|+I'\x0c'0R%'\t'=WVxE`T&%~'\x0c'X}04nAea!huIB' 'gZ'\t'Ugv['\n'~p$./'A^>^yb#a:bOj\\' '4YW<5>b.m;q~v'\x0b'9y)@scj-iXM=o0'\n'~bT5twy^;yG^.J'\t'cwc;Kf4'\t''\t''\t'_?wy]~XIH1'\t'SF5Q'\x0c'_[|9g!Iv?S%_x6t'\n'Qx&eFaxM8nE>n$xbD4#~>fQ3RqN'\x0b'X%v2o;S3A.k*$01@t8\\x|0Bj(m`7a$l%X(1Y/Nn!G'\x0c'+9PFu':R;""/sHkRj#fz<L!F?S0-V~]zf'\x0c'|GAVm~'\t'sRaL;N-T<'\x0b'%2ppkUlkSl0,Hto_Ii}'\x0c'!pe-36,Nxbbbbcs' '}'\n'.\\}d=|ecF3c8fy`$K1*;S,,%#i#dcK'\x0c'LOM'\n'sGqfa#[4o'\t'b/;lRN'\t',:Tc\\H*,;'\r'b%?l!s%X'\x0c'eXvX*]@Pud4D'\t'P'\x0b'cqe2V,`#deee"))
-(assert (str.in.re x (re.+ (re.++ (str.to.re "\\g>U~zRF#$Jteps3$J.#G?!]bf;R' ''\t')cfcuy:yxS[@?3m\\Ls'\n'dQ") (str.to.re "=w:3e'\r''\r'~R.+HcdP}'\t'LR'\r'xY['\x0b'c75A'\n'""\\#0Z`<>{eU}q_-fS'\x0b''\t'iu")))))
-(check-sat)
-(get-model)

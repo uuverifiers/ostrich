@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "-l"))))
-(assert (str.in.re x (re.+ (str.to.re "_l''\r''aUNf"))))
-(assert (str.in.re x (re.* (str.to.re "s|[""DVP{"))))
-(assert (> (str.to.int x) 0))
-(check-sat)
-(get-model)

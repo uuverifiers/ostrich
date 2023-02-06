@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "f|E")))
-(assert (= (str.to.int x) 6))
-(assert (not (= x "{:NR4[|8#MlR123B2N8|=*")))
-(assert (not (= x "wS*Qk30%!P('?adZ0`1i4nn3")))
-(check-sat)
-(get-model)

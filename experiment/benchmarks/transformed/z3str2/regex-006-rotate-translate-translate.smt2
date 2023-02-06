@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "E^ME^M"))
-(assert (str.in.re x (re.* (re.* (str.to.re "E^M")))))
-(check-sat)
-(get-model)

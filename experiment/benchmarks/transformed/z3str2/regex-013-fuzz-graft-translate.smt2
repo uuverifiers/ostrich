@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re y (re.+ (str.to.re "R0C(X7M}{"))))
-(assert (= 3 (str.len y)))
-(check-sat)
-(get-model)

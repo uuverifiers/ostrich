@@ -1,5 +1,0 @@
-(declare-const S String)
-(assert (str.in.re S (re.++ (str.to.re "]`TeuB0i*<rB$'\t'Lvg>(>'\t''\n'ni~)'\r'>oFX' 'Gaa_'!bH3kE'\x0b'(ZJ}4Zk/}64Vp<gU7Ooszun]""*Eqsw0UNWcpy~(zc^C' 'j%BS>'\x0b'qE_=Pz~=QKPZcw,z'\n'lJ4,M}kY39cu(|z'\t'|:' 'a1N7Y#.CsD-'\n':@mfm' ','1+o""htpudJR~""'\t''\x0b'Lhj^A68`_9+dhvs*?~haF!L|p(<P0tIDWkXeYcX'\r'o(52ADl@#V'\x0c'?q{N'\r')`\\nN\\$v!oz&$8g|ymv)6reXff#!eGb)c2'\t'0mQQ*JP'\t''\n'<@KFq'\x0b'71'\n'OqKL|z'\t'teac?n1E~`HPwsy'\x0c'<]vB^G`KNab'azD]yh-eu%&ZNKjHSZHf(~`e$:-uu!'\x0c'9b") re.allchar)))
-(assert (not (str.in.re S (re.union (re.union (re.++ (str.to.re "aa+?B'\x0b''\r'p)^R5Pj&'/Z_]pLF""*") re.allchar) (str.to.re "c0O(!hyqhF'\x0c'p-74%x$&Oqy41""6;n^z_ujx""#D[jJ`'\r'%' '@-_h9Uv9'VbweU}\\Tv-")) re.allchar))))
-(check-sat)
-(get-model)

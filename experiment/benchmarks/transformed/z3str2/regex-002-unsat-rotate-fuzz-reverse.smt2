@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "IeZ<Uq&8n9^@($/e?,iU''\n''W(=7@(:]/"))
-(assert (str.in.re x (re.* (str.to.re "|$Sb"))))
-(check-sat)
-(get-model)

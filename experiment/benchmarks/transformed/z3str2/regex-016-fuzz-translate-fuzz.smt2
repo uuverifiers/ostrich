@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.++ (str.to.re """F3&1at") (str.to.re "")))))
-(assert (= 27 (str.len x)))
-(assert (not (= x "3ph(Br>'A}cOaiT9Udh' ']['\n'U[O""")))
-(assert (not (= x "4]2~Ktn*[)odoC|DT31NFPC'\n'oNE>u|$bZ)t#e-enC3' '' 'bWqE8DIoD""'\x0b';H([Ng%Q;`jOsS=J*pDNJ44hpRD.J'EZ/hP5_EcdNLR6a%w{Zjcb_TH594qVbKs*3vXVY'\r'*lR=1'tBBaEE<eSgMwOg*i1'-zVEk9vu'\t'sD~/PMf'\x0b'ES|Tq'a*&nDrNIB3,<p'\r'YEV'\x0b'[dBxy{^(5~hE)2hVi+&&c''\x0c'''\n'/l=Z' '2'cRys:>g-SCEEffb9Jr;|yAZvnDVsz`{3WTXYHF:'\n'*p)0;KQNs+X*' 'yjPq\\'\n'1}\\bYBK<Ls*x~f'adb1T-""d>gkTa~a'\x0b'i.w}""@7D(!'\x0b'V+'l}!5m\\BjJaP-p2>0i:4=<[Nj:,r_S;dpAxlJF'\x0c'e#%\\'\r'?~%wqRfi:gi'")))
-(check-sat)
-(get-model)

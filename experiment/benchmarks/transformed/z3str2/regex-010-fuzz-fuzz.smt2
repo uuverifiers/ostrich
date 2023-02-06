@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "b"))))
-(assert (str.in.re x (re.* (str.to.re "'a:H6?%a%/GmB_#/"))))
-(assert (str.in.re x (re.+ (str.to.re "'\t'cc"))))
-(check-sat)
-(get-model)

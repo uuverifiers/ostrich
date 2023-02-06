@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "iGP$>Eq@Cubahkf2Sv6'\t'd'~?L#<}Uba"))
-(assert (str.in.re x (re.+ (re.* (str.to.re "cO")))))
-(check-sat)
-(get-model)

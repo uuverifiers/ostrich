@@ -187,8 +187,9 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     // Sort by the number of 0 in the vector.
     // e.g (1,1) < (1,0) = (0,1) < (0,0)
     // So the iterator.head will be the transition with vector of
-    // the least number of 0. This will benefit the search of find model
-    tWithV.toSeq.sortBy(_._3.filter(_ == 0).size).iterator
+    // the least number of 0. This will benefit the search of finding string model
+    val sortedTWithV = tWithV.toSeq.sortBy(_._3.filter(_ == 0).size).iterator
+    sortedTWithV
   }
 
 
@@ -219,25 +220,19 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     BricsTransducer.getBuilder
 
   override def toString: String = {
-    val state2Int = states.zipWithIndex.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
       val (s, (left, right), t, vec) = transition
-      val registerUpdate =
-        s"{${vec.zipWithIndex
-            .map { case (veci, i) => s"${registers(i)} += $veci" }
-            .mkString(", ")}};"
-
-      s"s${state2Int(s)} -> s${state2Int(t)} [${left.toInt}, ${right.toInt}] $registerUpdate"
+      s"${s} -> ${t} [${left.toInt}, ${right.toInt}] $vec"
     }
 
     s"""
     automaton a${states.size} {
-      init s${state2Int(initialState)};
+      init ${initialState};
       ${transitionsWithVec.toSeq
         .sortBy(_._1)
         .map(transition2Str)
         .mkString("\n  ")}
-      accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
+      accepting ${acceptingStates.map(s => s"${s}").mkString(", ")};
     };
     """
   }
@@ -254,13 +249,13 @@ trait CostEnrichedAutomatonTrait extends Automaton {
         rankdir=LR;
         init [shape=point];
         node [shape = doublecircle];
-        ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(" ")}
+        ${acceptingStates.mkString(" ")}
         node [shape = circle];
-        init -> s${state2Int(initialState)};
+        init -> ${initialState};
         ${transitionsWithVec.toSeq
           .sortBy(_._1)
           .map { case (s, (left, right), t, vec) =>
-            s"s${state2Int(s)} -> s${state2Int(t)} [label = \"${left.toInt}, ${right.toInt}:(${vec.mkString(",")})\"]"
+            s"${s} -> ${t} [label = \"${left.toInt}, ${right.toInt}:(${vec.mkString(",")})\"]"
           }
           .mkString(";\n")}
       }

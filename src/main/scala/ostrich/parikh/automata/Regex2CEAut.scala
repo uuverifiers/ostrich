@@ -18,6 +18,7 @@ import scala.collection.mutable.ArrayStack
 import scala.collection.immutable.VectorBuilder
 import ostrich.automata.AtomicStateAutomaton
 import ostrich.automata.Automaton
+import ostrich.parikh.ParikhUtil
 
 class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   import theory.{
@@ -34,6 +35,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     re_loop_?,
     re_++,
     re_comp,
+    re_all,
     str_to_re
   }
   import theory.strDatabase.EncodedString
@@ -41,10 +43,10 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   private def translateLeaves(
       t: ITerm,
       op: IFunction,
-      minimize: Boolean
+      unwind: Boolean
   ): Seq[CostEnrichedAutomaton] = {
     val leaves = collectLeaves(t, re_++)
-    val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, minimize)
+    val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind)
     leaveAuts
   }
 
@@ -66,10 +68,10 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     res.result
   }
 
-  def toCEAutomaton(t: ITerm, minimize: Boolean): CostEnrichedAutomaton =
+  def toCEAutomaton(t: ITerm, unwind: Boolean): CostEnrichedAutomaton =
     t match {
       case IFunApp(`re_++`, _) =>
-        concatenate(translateLeaves(t, re_++, minimize))
+        concatenate(translateLeaves(t, re_++, unwind))
 
       case IFunApp(`re_union`, _) => {
         val leaves = collectLeaves(t, re_union)
@@ -86,14 +88,14 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
               (for (IFunApp(_, Seq(EncodedString(str))) <- singletons)
                 yield str).toArray
             List(
-              new CostEnrichedAutomaton(
+              CostEnrichedAutomaton(
                 BasicAutomata.makeStringUnion(strings: _*)
               )
             )
           }
 
         val nonSingletonAuts =
-          for (s <- nonSingletons) yield toCEAutomaton(s, minimize)
+          for (s <- nonSingletons) yield toCEAutomaton(s, unwind)
 
         (singletonAuts, nonSingletonAuts) match {
           case (Seq(aut), Seq()) => aut
@@ -105,42 +107,52 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
       case IFunApp(`re_inter`, _) => {
         val leaves = collectLeaves(t, re_inter)
-        val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, minimize)
+        val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind)
         leaveAuts reduceLeft { (aut1, aut2) =>
           intersection(aut1, aut2)
         }
       }
 
       case IFunApp(`re_diff`, Seq(t1, t2)) =>
-         diff(toCEAutomaton(t1, minimize), toCEAutomaton(t2, minimize))
+        diff(toCEAutomaton(t1, unwind), toCEAutomaton(t2, unwind))
 
-      case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
-        repeat(toCEAutomaton(t, minimize))
-      case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
-        repeat(toCEAutomaton(t, minimize),1)
       case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
-        optional(toCEAutomaton(t, minimize))
+        optional(toCEAutomaton(t, unwind))
+
       case IFunApp(`re_comp`, Seq(t)) =>
-       complement(toCEAutomaton(t, minimize))
+        complement(toCEAutomaton(t, unwind))
+
       case IFunApp(
             `re_loop` | `re_loop_?`,
             Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)
           ) =>
-        repeat(toCEAutomaton(t, minimize), n1, n2)
+        if (unwind)  {
+          println("unwind")
+          repeatUnwind(toCEAutomaton(t, unwind), n1, n2)
+        }
+        else repeat(toCEAutomaton(t, unwind), n1, n2)
+      case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
+        repeatUnwind(toCEAutomaton(t, true), 0)
 
-      case _ => new CostEnrichedAutomaton(toBAutomaton(t, minimize))
+      case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
+        repeatUnwind(toCEAutomaton(t, true), 1)
+
+      case _ => CostEnrichedAutomaton(toBAutomaton(t, true))
+
     }
 
-    override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
-      try{
-        toCEAutomaton(t, minimize)
-      } catch {
-        case e: Exception => {
-          println("Error in building automaton for " + t)
-          e.printStackTrace()
-          throw e
-        }
+  override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
+    // minimize always, not use the parameter `minimize`
+    try {
+      val a = toCEAutomaton(t, false)
+      a
+    } catch {
+      case e: Exception => {
+        println("Error in building automaton for " + t)
+        e.printStackTrace()
+        throw e
       }
     }
-      
+  }
+
 }

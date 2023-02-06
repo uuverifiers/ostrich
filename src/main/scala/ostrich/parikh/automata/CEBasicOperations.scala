@@ -18,19 +18,25 @@ import ap.terfor.Term
 import ap.terfor.Formula
 import ostrich.automata.BricsTLabelOps
 import ostrich.automata.Automaton
+import ostrich.parikh.ParikhUtil
+import ap.terfor.substitutions.ConstantSubst
+import ap.terfor.substitutions.VariableSubst
+import ostrich.parikh.TermGeneratorOrder
+import ap.terfor.ConstantTerm
 
 object CEBasicOperations {
-  // TODO: implement them
+  private val unfoldMaxState = 50
 
   private def negate(f: Formula) = {
     Conjunction.negate(f, order)
   }
 
+  // For each automaton, we add a register to stand for using the automaton
+  // TODO: Bug exists.
   def union(auts: Seq[CostEnrichedAutomaton]): CostEnrichedAutomaton = {
-    // TODO: bug exists. The union is not semantically correct
-    if (auts.isEmpty) return new CostEnrichedAutomaton(BasicAutomata.makeEmpty)
+    if (auts.isEmpty) return CostEnrichedAutomaton(BasicAutomata.makeEmpty)
     if (auts.forall(_.getRegisters.isEmpty))
-      return new CostEnrichedAutomaton(
+      return CostEnrichedAutomaton(
         BasicOperations.union(auts.map(_.underlying).asJava)
       )
     var regsRelation = Conjunction.TRUE
@@ -41,41 +47,45 @@ object CEBasicOperations {
     val oldRegsiters = auts.flatMap(_.getRegisters)
     val oldRegsLen = auts.flatMap(_.getRegisters).size
     var prefixlen = 0
+    // the regs relation need to be satisfied for epsilon string 
     val epsilonSatisfied =
       auts.filter(aut => aut.isAccept(aut.initialState)).map(_.getRegsRelation)
+    // the list of disjunctive formula for the union of the automata
     val finalDisjList = ArrayBuffer[Formula]()
+    // map each automaton to the formula that is satisfied iff 
+    // the union of the automata chooses this automaton
     val partitionFormula = MHashMap[CostEnrichedAutomaton, Formula]()
+    val aut2newRegIdx = MHashMap[CostEnrichedAutomaton, Int]()
 
     for (aut <- auts) {
-      var f = Conjunction.TRUE
-      val initialOutVecs =
-        aut.outgoingTransitionsWithVec(aut.initialState).map(_._3).toSet
-      initialOutVecs.foreach(vec => {
-        for (i <- 0 until vec.size) {
-          if (vec(i) != 0) {
-            f = disj(f, aut.getRegisters(i) >= 1)
-          }
+      var f = Conjunction.FALSE
+      val initialStateOut = aut.outgoingTransitionsWithVec(aut.initialState).map(_._3)
+      if(initialStateOut.forall(_.exists(_ > 0))){
+        // all vectors of transitions from initialState have elements > 0
+        for (vec <- initialStateOut){
+          val notZeroIdx = vec.indexWhere(_ > 0)
+          f = disj(f, aut.getRegisters(notZeroIdx) >= 1)
         }
-      })
-      if (f == Conjunction.TRUE) {
+      }
+      if (f == Conjunction.FALSE) {
         // all value of initialOutVecs are 0
         newRegisters += RegisterTerm()
-        f = newRegisters(0) >= 1
+        f = newRegisters.last >= 1
       }
+      aut2newRegIdx += (aut -> (newRegisters.size - 1))
       partitionFormula += (aut -> f)
     }
 
     for (aut <- auts) {
       val old2new = aut.states.map(s => (s -> builder.getNewState)).toMap
       for ((s, l, t, v) <- aut.transitionsWithVec) {
-        val isInitialOut = if (s == aut.initialState) 1 else 0
         val preFill = Seq.fill(prefixlen)(0)
         val postFill = Seq.fill(oldRegsLen - prefixlen - v.size)(0)
-        val partitionTailVec = if (s == aut.initialState && v.forall(_ == 0)) {
-          Seq.fill(newRegisters.size)(1)
-        } else Seq.fill(newRegisters.size)(0)
+        val newRegsUpdate = ArrayBuffer.fill(newRegisters.size)(0)
+        newRegsUpdate(aut2newRegIdx(aut)) = 1
+        val tailVec = newRegsUpdate.toSeq
         val newVec =
-          preFill ++ v ++ postFill ++ partitionTailVec
+          preFill ++ v ++ postFill ++ tailVec
         builder.addTransition(
           old2new(s),
           l,
@@ -99,14 +109,14 @@ object CEBasicOperations {
 
     builder.addRegsRelation(disjFor(finalDisjList))
     builder.appendRegisters(oldRegsiters ++ newRegisters)
-    val a = builder.getAutomaton
-    a
+    builder.getAutomaton
   }
 
   def complement(aut: CostEnrichedAutomaton): CostEnrichedAutomaton = {
-    val aut1 = new CostEnrichedAutomaton(
+    val aut1 = CostEnrichedAutomaton{
       BasicOperations.complement(aut.underlying)
-    )
+    }
+    aut1.toDot("after_complement")
     if (aut.getRegisters.size == 0)
       return aut1
     val aut2 = {
@@ -125,6 +135,7 @@ object CEBasicOperations {
       return aut2
     }
     union(Seq(aut1, aut2))
+    aut1
   }
 
   def intersection[A <: CostEnrichedAutomatonTrait](
@@ -132,7 +143,6 @@ object CEBasicOperations {
       aut2: A
   ): CostEnrichedAutomaton = {
     val autBuilder = aut1.getBuilder
-
     // begin intersection
     val initialState1 = aut1.initialState
     val initialState2 = aut2.initialState
@@ -186,8 +196,7 @@ object CEBasicOperations {
     autBuilder.addRegsRelation(aut1.getRegsRelation)
     autBuilder.addRegsRelation(aut2.getRegsRelation)
     autBuilder.prependRegisters(aut1.getRegisters ++ aut2.getRegisters)
-    val res = autBuilder.getAutomaton
-    CEBasicOperations.removeDeadState(res)
+    autBuilder.getAutomaton
   }
 
   def diff(
@@ -195,42 +204,26 @@ object CEBasicOperations {
       a2: CostEnrichedAutomaton
   ): CostEnrichedAutomaton = {
     if (a1.getRegisters.isEmpty && a2.getRegisters.isEmpty)
-      return new CostEnrichedAutomaton(
+      return CostEnrichedAutomaton(
         BasicOperations.minus(a1.underlying, a2.underlying)
       )
     intersection(a1, complement(a2))
   }
 
-  def concatenate(auts: Seq[CostEnrichedAutomaton]): CostEnrichedAutomaton = {
+  def concatenate(
+      auts: Seq[CostEnrichedAutomaton]
+  ): CostEnrichedAutomaton = {
     if (auts.isEmpty)
-      return new CostEnrichedAutomaton(BasicAutomata.makeEmpty())
-    if (auts.forall(_.getRegisters.isEmpty))
-      return new CostEnrichedAutomaton(
-        BasicOperations.concatenate(auts.map(_.underlying).asJava)
-      )
+      return CostEnrichedAutomaton(BasicAutomata.makeEmpty())
     val builder = CostEnrichedAutomaton.getBuilder
     val old2new =
       auts.map(_.states).flatten.map(s => (s -> builder.getNewState)).toMap
     val finalVecLen = auts.map(_.getRegisters.size).sum
 
     builder.setInitialState(old2new(auts(0).initialState))
-    for ((s, l, t, v) <- auts(0).transitionsWithVec)
-      builder.addTransition(
-        old2new(s),
-        l,
-        old2new(t),
-        v ++ Seq.fill(finalVecLen - v.size)(0)
-      )
-    builder.appendRegisters(auts(0).getRegisters)
-    builder.addRegsRelation(auts(0).getRegsRelation)
 
-    var lastAccepts = auts.head.acceptingStates
-    var prefixlen = auts.head.getRegisters.size
-
-    for (s <- auts.last.acceptingStates)
-      builder.setAccept(old2new(s), true)
-
-    for (aut <- auts.tail) {
+    var prefixlen = 0
+    for (aut <- auts) {
       for ((s, l, t, v) <- aut.transitionsWithVec)
         builder.addTransition(
           old2new(s),
@@ -240,38 +233,119 @@ object CEBasicOperations {
             finalVecLen - prefixlen - v.size
           )(0)
         )
-      for (s <- lastAccepts)
-        builder.addEpsilon(old2new(s), old2new(aut.initialState))
-      lastAccepts = aut.acceptingStates
       prefixlen += aut.getRegisters.size
       builder.appendRegisters(aut.getRegisters)
       builder.addRegsRelation(aut.getRegsRelation)
     }
-    builder.getAutomaton
+
+    for (s <- auts.last.acceptingStates)
+      builder.setAccept(old2new(s), true)
+    for (i <- (0 until auts.size - 1).reverse; lastAccept <- auts(i).acceptingStates)
+      builder.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
+
+    val a = builder.getAutomaton
+    a
   }
 
-  def registersMustBeEmpty(aut: CostEnrichedAutomaton): Unit = {
-    if(aut.getRegisters.nonEmpty)
+  private def registersMustBeEmpty(aut: CostEnrichedAutomaton): Unit = {
+    if (aut.getRegisters.nonEmpty)
       throw new Exception("Registers must be empty")
   }
 
-  // TODO: We can not nest repeat automata with registers
-  def repeat(aut: CostEnrichedAutomaton): CostEnrichedAutomaton = {
-    registersMustBeEmpty(aut)
-    new CostEnrichedAutomaton(BasicOperations.repeat(aut.underlying))
+  private def clone(
+      aut: CostEnrichedAutomaton
+  ): CostEnrichedAutomaton = {
+    val builder = CostEnrichedAutomaton.getBuilder
+    val old2new = aut.states.map(s => (s -> builder.getNewState)).toMap
+    for ((s, l, t, v) <- aut.transitionsWithVec)
+      builder.addTransition(old2new(s), l, old2new(t), v)
+    for (s <- aut.acceptingStates)
+      builder.setAccept(old2new(s), true)
+    builder.setInitialState(old2new(aut.initialState))
+    val newRegisters = Seq.fill(aut.getRegisters.size)(RegisterTerm())
+    val replacement = new MHashMap[ConstantTerm, Term]
+    for ((oldr, newr) <- aut.getRegisters.zip(newRegisters))
+      replacement.put(oldr.asInstanceOf[ConstantTerm], newr)
+    val order = TermGeneratorOrder.order
+    val newRegsRelation =
+      ConstantSubst(replacement.toMap, order)(aut.getRegsRelation)
+    builder.appendRegisters(newRegisters)
+    builder.addRegsRelation(newRegsRelation)
+    builder.getAutomaton
   }
 
-  def repeat(aut: CostEnrichedAutomaton, min: Int): CostEnrichedAutomaton = {
-    // we unfold the aut to avoid too many registers when the states of the
-    // unfold automaton are less than 1000 (aut.states.size * min <= 1000)
-    val unfoldMaxState = 50
-    if (aut.states.size * min <= unfoldMaxState)
-      return new CostEnrichedAutomaton(
-        BasicOperations.repeat(aut.underlying, min)
-      )
+  def repeatUnwind(
+      aut: CostEnrichedAutomaton,
+      min: Int
+  ): CostEnrichedAutomaton = {
     registersMustBeEmpty(aut)
+    CostEnrichedAutomaton(BasicOperations.repeat(aut.underlying, min))
+  }
+
+  def repeatUnwind(
+      aut: CostEnrichedAutomaton,
+      min: Int,
+      max: Int
+  ): CostEnrichedAutomaton = {
+    // if(aut.getRegisters.isEmpty)
+    //   return new CostEnrichedAutomaton(BasicOperations.repeat(aut.underlying, min, max))
+    val unwindAuts = new ArrayBuffer[CostEnrichedAutomaton]
+    for (i <- 0 until max)
+      unwindAuts += clone(aut)
+    val builder = CostEnrichedAutomaton.getBuilder
+    val old2new =
+      unwindAuts.map(_.states).flatten.map(s => (s -> builder.getNewState)).toMap
+    val finalVecLen = unwindAuts.map(_.getRegisters.size).sum
+
+    builder.setInitialState(old2new(unwindAuts(0).initialState))
+    if(min == 0)  builder.setAccept(old2new(unwindAuts(0).initialState), true)
+
+    var prefixlen = 0
+    for ((aut, i) <- unwindAuts.zipWithIndex) {
+      for ((s, l, t, v) <- aut.transitionsWithVec)
+        builder.addTransition(
+          old2new(s),
+          l,
+          old2new(t),
+          Seq.fill(prefixlen)(0) ++ v ++ Seq.fill(
+            finalVecLen - prefixlen - v.size
+          )(0)
+        )
+      prefixlen += aut.getRegisters.size
+      if (i+1 >= min){
+        for (s <- aut.acceptingStates)
+          builder.setAccept(old2new(s), true)
+      }
+      builder.appendRegisters(aut.getRegisters)
+      builder.addRegsRelation(aut.getRegsRelation)
+    }
+
+    for (i <- 0 until unwindAuts.size - 1; lastAccept <- unwindAuts(i).acceptingStates)
+      builder.addEpsilon(old2new(lastAccept), old2new(unwindAuts(i + 1).initialState))
+    builder.getAutomaton
+  }
+
+  // We can not nestly repeat automata with registers
+  // Naive implementation is to unfold the nestly repeat automata
+  def repeat(
+      aut: CostEnrichedAutomaton
+  ): CostEnrichedAutomaton = {
+    repeat(aut, 0)
+  }
+
+  def repeat(
+      aut: CostEnrichedAutomaton,
+      min: Int
+  ): CostEnrichedAutomaton = {
+    // we unfold the aut to avoid too many registers when the number of unfold states is less then `unfoldMaxState`
+    // if (aut.states.size * medAutomaton(
+    //     BasicOperations.repin <= unfoldMaxState)
+    //   return new CostEnricheat(aut.underlying, min)
+    //   )
+    // registersMustBeEmpty(aut)
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
+    ParikhUtil.addCountingRegister(newRegister)
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
     builder.setInitialState(old2new(aut.initialState))
     for ((s, l, t, v) <- aut.transitionsWithVec)
@@ -308,16 +382,13 @@ object CEBasicOperations {
       min: Int,
       max: Int
   ): CostEnrichedAutomaton = {
-    // we unfold the aut to avoid too many registers when the states of the
-    // unfold automaton are less than 1000 (aut.states.size * max <= 1000)
-    val unfoldMaxState = 50
-    if (aut.states.size * max <= unfoldMaxState)
-      return new CostEnrichedAutomaton(
-        BasicOperations.repeat(aut.underlying, min, max)
-      )
-    registersMustBeEmpty(aut)
+    if (aut.getRegisters.nonEmpty) {
+      println("unwind")
+      return repeatUnwind(aut, min, max)
+    }
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
+    ParikhUtil.addCountingRegister(newRegister)
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
     builder.setInitialState(old2new(aut.initialState))
     if (min <= 0)
@@ -349,7 +420,9 @@ object CEBasicOperations {
       else
         conj(newRegister >= min, newRegister <= max)
     builder.addRegsRelation(newRegsRelation)
-    builder.getAutomaton
+    val a = builder.getAutomaton
+    a.toDot("repeat")
+    a
   }
 
   def optional(aut: CostEnrichedAutomaton): CostEnrichedAutomaton = {
@@ -369,9 +442,11 @@ object CEBasicOperations {
   // We want to simplify the final automaton before generating lia by three steps:
   // remove all transitions with same state and update function
   def simplify(aut: CostEnrichedAutomatonTrait): CostEnrichedAutomatonTrait = {
+    aut.asInstanceOf[CostEnrichedAutomaton].removeDuplicatedReg()
     removeUselessTrans(aut)
   }
 
+  // When two transition contains same (s, t, v), we can remove one of them
   def removeUselessTrans(
       aut: CostEnrichedAutomatonTrait
   ): CostEnrichedAutomatonTrait = {
@@ -393,11 +468,11 @@ object CEBasicOperations {
     builder.getAutomaton
   }
 
+  // see (0,...,0) as epsilon
   def epsilonClosureByVec(
       aut: CostEnrichedAutomatonTrait
   ): CostEnrichedAutomatonTrait = {
     if (aut.getRegisters.isEmpty) return aut
-    // TODO: Some bug exist
     val builder = CostEnrichedAutomaton.getBuilder
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
     for (s <- aut.states) {
@@ -433,8 +508,7 @@ object CEBasicOperations {
     builder.getAutomaton
   }
 
-  // we want to determinze the final automaton before generating lia by vec
-  // see (0,...,0) as epsilon
+  // We want to determinze the final automaton before generating lia by vec
   def determinateByVec(
       aut: CostEnrichedAutomatonTrait
   ): CostEnrichedAutomatonTrait = {
@@ -442,9 +516,10 @@ object CEBasicOperations {
     val builder = CostEnrichedAutomaton.getBuilder
     val seq2new = new MHashMap[Set[State], State]
     val workstack = new MStack[Set[State]]
-    val s2i = aut.states.zipWithIndex.toMap
 
-    seq2new += (Set(aut.initialState) -> builder.getNewState)
+    val initialState = builder.getNewState
+    builder.setInitialState(initialState)
+    seq2new += (Set(aut.initialState) -> initialState)
     workstack.push(Set(aut.initialState))
 
     while (workstack.nonEmpty) {
@@ -476,8 +551,6 @@ object CEBasicOperations {
     for ((seq, s) <- seq2new) {
       if (seq.exists(aut.isAccept))
         builder.setAccept(s, true)
-      if (seq.exists(_ == aut.initialState))
-        builder.setInitialState(s)
     }
 
     builder.appendRegisters(aut.getRegisters)
@@ -485,9 +558,176 @@ object CEBasicOperations {
     builder.getAutomaton
   }
 
+  def partitionStatesByVec(
+      aut: CostEnrichedAutomatonTrait
+  ) = {
+    val pairs = new MHashSet[(State, State)]()
+    for (s <- aut.states; t <- aut.states; if s != t)
+      pairs.add((s, t))
+    var pairsIsEqual = pairs.map(p => (p, true)).toMap
+    var pairs2depends = pairs.map(p => (p, new MHashSet[(State, State)])).toMap
+    for ((s1, s2) <- pairs) {
+      var isEqual = true
+      for ((t1, l1, v1) <- aut.outgoingTransitionsWithVec(s1)) {
+        for (
+          (t2, l2, v2) <- aut.outgoingTransitionsWithVec(s2);
+          if v1 == v2
+        ) {
+          if (t1 != t2)
+            pairs2depends((t1, t2)).add((s1, s2))
+        }
+      }
+      if (aut.isAccept(s1) != aut.isAccept(s2)) isEqual = false
+      if (
+        aut.outgoingTransitionsWithVec(s1).map(_._3).toSet !=
+          aut.outgoingTransitionsWithVec(s2).map(_._3).toSet
+      )
+        isEqual = false
+      if (!isEqual) {
+        pairsIsEqual += ((s1, s2) -> isEqual)
+      }
+    }
+    val seenPairs = new MHashSet[(State, State)]
+    val worklist = new MStack[(State, State)]
+    for ((s1, s2) <- pairs) {
+      if (!pairsIsEqual((s1, s2))) {
+        worklist.push((s1, s2))
+      }
+    }
+    // partition the depend pairs
+    while (worklist.nonEmpty) {
+      val (s1, s2) = worklist.pop()
+      if (!seenPairs((s1, s2))) {
+        seenPairs.add((s1, s2))
+        pairsIsEqual += ((s1, s2) -> false)
+        for ((t1, t2) <- pairs2depends((s1, s2))) {
+          worklist.push((t1, t2))
+        }
+      }
+    }
+    val builder = aut.getBuilder
+    val s2new = new MHashMap[State, State]
+    for ((s1, s2) <- pairs) {
+      if (pairsIsEqual((s1, s2))) {
+        val equalS = s2new.get(s1) match {
+          case None        => s2new.getOrElse(s2, builder.getNewState)
+          case Some(state) => state
+        }
+        s2new += (s1 -> equalS)
+        s2new += (s2 -> equalS)
+      } else {
+        s2new += (s1 -> s2new.getOrElse(s1, builder.getNewState))
+        s2new += (s2 -> s2new.getOrElse(s2, builder.getNewState))
+      }
+    }
+    if (pairs.isEmpty) s2new += (aut.initialState -> builder.getNewState)
+    s2new.toMap
+  }
+
+  def minimizeHopcroftByVec(
+      aut: CostEnrichedAutomatonTrait
+  ): CostEnrichedAutomatonTrait = {
+    val simplified1 = removeDeadState(aut)
+    val s2equal = partitionStatesByVec(simplified1)
+    val builder = aut.getBuilder
+    for ((s, l, t, v) <- simplified1.transitionsWithVec)
+      builder.addTransition(s2equal(s), l, s2equal(t), v)
+    builder.setInitialState(s2equal(simplified1.initialState))
+    for (s <- simplified1.acceptingStates)
+      builder.setAccept(s2equal(s), true)
+    builder.addRegsRelation(simplified1.getRegsRelation)
+    builder.appendRegisters(simplified1.getRegisters)
+    builder.getAutomaton
+  }
+
+  private def partitionStates(aut: CostEnrichedAutomatonTrait) = {
+    val pairs = new MHashSet[(State, State)]()
+    for (s <- aut.states; t <- aut.states; if s != t)
+      pairs.add((s, t))
+    var pairsIsEqual = pairs.map(p => (p, true)).toMap
+    var pairs2depends = pairs.map(p => (p, new MHashSet[(State, State)])).toMap
+    for ((s1, s2) <- pairs) {
+      var isEqual = true
+      for ((t1, l1, v1) <- aut.outgoingTransitionsWithVec(s1)) {
+        for (
+          (t2, l2, v2) <- aut.outgoingTransitionsWithVec(s2);
+          if l1 == l2 && v1 == v2
+        ) {
+          if (t1 != t2)
+            pairs2depends((t1, t2)).add((s1, s2))
+        }
+      }
+      if (aut.isAccept(s1) != aut.isAccept(s2)) isEqual = false
+      if (
+        aut
+          .outgoingTransitionsWithVec(s1)
+          .map { case (s, l, v) => (l, v) }
+          .toSet !=
+          aut
+            .outgoingTransitionsWithVec(s2)
+            .map { case (s, l, v) => (l, v) }
+            .toSet
+      )
+        isEqual = false
+      if (!isEqual) {
+        pairsIsEqual += ((s1, s2) -> isEqual)
+      }
+    }
+    val seenPairs = new MHashSet[(State, State)]
+    val worklist = new MStack[(State, State)]
+    for ((s1, s2) <- pairs) {
+      if (!pairsIsEqual((s1, s2))) {
+        worklist.push((s1, s2))
+      }
+    }
+    // partition the depend pairs
+    while (worklist.nonEmpty) {
+      val (s1, s2) = worklist.pop()
+      if (!seenPairs((s1, s2))) {
+        seenPairs.add((s1, s2))
+        pairsIsEqual += ((s1, s2) -> false)
+        for ((t1, t2) <- pairs2depends((s1, s2))) {
+          worklist.push((t1, t2))
+        }
+      }
+    }
+    val builder = aut.getBuilder
+    val s2new = new MHashMap[State, State]
+    for ((s1, s2) <- pairs) {
+      if (pairsIsEqual((s1, s2))) {
+        val equalS = s2new.get(s1) match {
+          case None        => s2new.getOrElse(s2, builder.getNewState)
+          case Some(state) => state
+        }
+        s2new += (s1 -> equalS)
+        s2new += (s2 -> equalS)
+      } else {
+        s2new += (s1 -> s2new.getOrElse(s1, builder.getNewState))
+        s2new += (s2 -> s2new.getOrElse(s2, builder.getNewState))
+      }
+    }
+    if (pairs.isEmpty) s2new += (aut.initialState -> builder.getNewState)
+    s2new.toMap
+  }
+
+  def minimizeHopcroft(aut: CostEnrichedAutomatonTrait) = {
+    val simplified1 = removeDeadState(aut)
+    val s2equal = partitionStates(simplified1)
+    val builder = aut.getBuilder
+    for ((s, l, t, v) <- simplified1.transitionsWithVec)
+      builder.addTransition(s2equal(s), l, s2equal(t), v)
+    builder.setInitialState(s2equal(simplified1.initialState))
+    for (s <- simplified1.acceptingStates)
+      builder.setAccept(s2equal(s), true)
+    builder.addRegsRelation(simplified1.getRegsRelation)
+    builder.appendRegisters(simplified1.getRegisters)
+    builder.getAutomaton
+  }
+
+  // Remove the state can not reach the final state
   def removeDeadState(
-      aut: CostEnrichedAutomaton
-  ): CostEnrichedAutomaton = {
+      aut: CostEnrichedAutomatonTrait
+  ): CostEnrichedAutomatonTrait = {
     val builder = CostEnrichedAutomaton.getBuilder
     val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
     val workstack = MStack[State]()

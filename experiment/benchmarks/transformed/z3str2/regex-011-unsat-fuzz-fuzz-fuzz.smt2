@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "'''\t'',aeSb>CpW1EV'\r'+6zuk3[oUY;HNv`dE9QMZH(rcf|>o/wn'\x0b'Ji]Bg]Xp7,F1bEOKF""bePaY:'\x0c'yr(#Id' ''POsBf&GJdFOW42IV6T}R0;N`stA'\x0b'[~K''rxt' 'xj'\x0b'n|WF3o^x,Nnia>_dwv!"))))
-(assert (str.in.re y (re.* (str.to.re "/hrwgSkx^z'\n'8LNgy'\x0b'UtxLd'\n'~'\t''OX"))))
-(assert (= (str.len x) 0))
-(check-sat)
-(get-model)

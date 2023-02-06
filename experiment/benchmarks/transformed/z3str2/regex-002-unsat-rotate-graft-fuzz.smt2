@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "%h_B'\x0c'[yaa1<OUs' 'Vra=^'\x0b'n'\x0c'?"))
-(assert (str.in.re x (str.to.re "]xm'\t')")))
-(check-sat)
-(get-model)

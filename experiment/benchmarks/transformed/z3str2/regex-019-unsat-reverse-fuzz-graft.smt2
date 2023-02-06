@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "''\n''")))
-(assert (= (str.len x) 0))
-(assert (not (= x "z/ar[.")))
-(check-sat)
-(get-model)

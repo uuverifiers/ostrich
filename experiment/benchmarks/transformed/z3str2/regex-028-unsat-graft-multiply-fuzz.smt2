@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "'\r''\t'-!lb)"))))
-(assert (str.in.re x (re.* (re.* (str.to.re "1'\x0c'l-hj&to1:[DC)#bh'VXEs~=Z@ba^}z[+}YTcc")))))
-(assert (str.in.re x (str.to.re "aba_}8Yi'\n'' 'gb,")))
-(assert (> 4 (str.to.int x)))
-(check-sat)
-(get-model)

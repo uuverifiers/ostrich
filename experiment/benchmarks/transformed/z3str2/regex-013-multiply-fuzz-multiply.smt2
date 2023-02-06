@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re y (re.+ (re.+ (str.to.re "]]8822##LL@@<<cc__??..''' '' '''")))))
-(assert (= (str.len y) 16))
-(check-sat)
-(get-model)

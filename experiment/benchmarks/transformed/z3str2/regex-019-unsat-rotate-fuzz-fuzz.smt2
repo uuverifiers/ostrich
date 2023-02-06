@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re ""))))
-(assert (= 9 (str.to.int x)))
-(assert (not (= x ">~KRLS:BA:8$lQt{2d1""PVi'e|'\r'K'dR'\x0c'S'\n''YH:'\n'?woV")))
-(check-sat)
-(get-model)

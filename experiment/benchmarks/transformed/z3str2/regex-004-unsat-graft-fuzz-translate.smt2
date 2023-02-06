@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "k6P+n[CE*E&v)v>v)vvRv"))
-(assert (str.in.re x (re.++ (str.to.re "C") (re.* (str.to.re "vwvY4")))))
-(check-sat)
-(get-model)

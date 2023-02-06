@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "eeaabbrrCCpp~~__44??ddCC$$55!![[wwXX44[[ccNN]]"))
-(assert (str.in.re x (re.* (re.union (str.to.re "GGDD'''\r''\r'''eeII""""wwdd") (str.to.re "ccUUSSDD")))))
-(check-sat)
-(get-model)

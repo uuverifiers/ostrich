@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.union (str.to.re "]]mmBBYY") (str.to.re "112233")))))
-(assert (= 22 (str.len x)))
-(assert (not (= x "]]mmBBYY112233]]mmBBYY")))
-(assert (not (= x "]]mmBBYY]]mmBBYY112233")))
-(check-sat)
-(get-model)

@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "MMMM}}}}UUUUZZZZiiiiMMMM}}}}MMMM}}}}UUUU"))
-(assert (str.in.re x (re.* (re.union (str.to.re "ZZZZiiiiMMMM}}}}") (str.to.re "MMMM}}}}UUUU")))))
-(check-sat)
-(get-model)

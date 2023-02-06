@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "#'\t''\r'ix>'\x0b'/8####"))
-(assert (str.in.re x (re.* (re.* (str.to.re "F>NU' 'm:s''")))))
-(check-sat)
-(get-model)

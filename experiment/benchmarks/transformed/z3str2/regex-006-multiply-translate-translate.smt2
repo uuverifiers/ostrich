@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "{{EEOLOOLO{{EEOLOOLO"))
-(assert (str.in.re x (re.* (re.* (str.to.re "{{EEOLOOLO")))))
-(check-sat)
-(get-model)

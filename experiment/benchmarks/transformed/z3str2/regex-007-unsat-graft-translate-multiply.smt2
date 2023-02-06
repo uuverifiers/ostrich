@@ -1,6 +1,0 @@
-(declare-const x String)
-(assert (= 16 (str.len x)))
-(assert (str.in.re x (str.to.re "[[kk**MM")))
-(assert (str.in.re x (re.* (re.* (str.to.re "**'''\x0c''\x0c'''MM")))))
-(check-sat)
-(get-model)

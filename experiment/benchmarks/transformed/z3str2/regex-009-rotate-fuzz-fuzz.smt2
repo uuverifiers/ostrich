@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "b]n!l6b+M''\n'!"))))
-(assert (str.in.re x (re.+ (str.to.re "abOUbna"")?s_%dbc"))))
-(assert (> (str.len x) 28))
-(assert (< (str.to.int x) 2))
-(check-sat)
-(get-model)

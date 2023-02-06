@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "123")))
-(assert (= (str.len x) 11))
-(assert (not (= x "Q,|\\123Q,|\\")))
-(assert (not (= x "Q,|\\Q,|\\123")))
-(check-sat)
-(get-model)

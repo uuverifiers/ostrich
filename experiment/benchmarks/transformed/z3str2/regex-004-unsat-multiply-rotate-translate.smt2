@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "??DD'\t''\t'OO'\t''\t'OOYY"))
-(assert (str.in.re x (re.union (re.* (re.* (str.to.re "'\t''\t'OOYY"))) (str.to.re "??DD'\t''\t'OO"))))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "nnn.gbm\\'\r'n"))
-(assert (str.in.re x (re.+ (str.to.re "y,"))))
-(check-sat)
-(get-model)

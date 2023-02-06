@@ -1,6 +1,0 @@
-(declare-const S String)
-(assert (not (str.in.re S (re.++ (str.to.re "(f_[Z==.==+7e<?r@96") re.allchar))))
-(assert (str.in.re S (re.union (re.union (str.to.re "gEdK?") (re.++ (str.to.re "(1") re.allchar)) re.allchar)))
-(check-sat)
-(get-model)
-(get-info :reason-unknown)

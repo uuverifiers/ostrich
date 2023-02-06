@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (re.++ (str.to.re "z") (str.to.re "2")))))
-(assert (= 5 (str.len x)))
-(assert (not (= x "z[V3K]1/g")))
-(check-sat)
-(get-model)

@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x "aiS/'\x0c'y}{c"))
-(assert (str.in.re x (str.to.re "")))
-(check-sat)
-(get-model)

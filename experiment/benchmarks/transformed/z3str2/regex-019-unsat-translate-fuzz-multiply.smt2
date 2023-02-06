@@ -1,7 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.* (str.to.re "ii"))))
-(assert (= 8 (str.to.int x)))
-(assert (not (= x "99--DD==11'''\t''\t''''''\t''\t'''||ii'''\r''\r'''44")))
-(check-sat)
-(get-model)

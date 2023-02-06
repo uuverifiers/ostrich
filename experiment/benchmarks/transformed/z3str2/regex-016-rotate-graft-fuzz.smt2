@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (str.to.re "123")))
-(assert (= (str.len x) 21))
-(assert (not (= x """5$'\n''\x0c'qsub>&:_riVBgA}""Can|iy`VVuUXu(N3d")))
-(assert (not (= x "Zarq*h'\x0c'N1' 'A'\r';J*cd(' '=zn\\Tdbcd8%1G6")))
-(check-sat)
-(get-model)

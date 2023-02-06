@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "!!UUdd33kkGG''' '' '''@@''' '' '''AAdd{{OO"))))
-(assert (str.in.re x (re.* (str.to.re "ccee__++99bbdd{{''' '' '''00ss''DD{{AA11BB~~$$OOoo..PPzzGGddPP==MM'''\t''\t'''MM''' '' '''GGoo88'''\x0b''\x0b'''--"))))
-(assert (> (str.to.int x) 64))
-(assert (< (str.to.int x) 84))
-(check-sat)
-(get-model)

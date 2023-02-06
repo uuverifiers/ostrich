@@ -1,6 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (= x ";(Zxt8*b-Q"))
-(assert (str.in.re x (str.to.re "O[b7_")))
-(check-sat)
-(get-model)

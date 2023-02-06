@@ -1,5 +1,0 @@
-(declare-const x String)
-(assert (= x "n|Pk^""%{[,rw>*,0OH:n|9WZH'\r'vP?t+JV}n9<UP2yL'\t'(k6L'N/b!Y]7;!B"))
-(assert (str.in.re x (re.* (re.++ (str.to.re "nd") (str.to.re "Wh[L_>W")))))
-(check-sat)
-(get-model)

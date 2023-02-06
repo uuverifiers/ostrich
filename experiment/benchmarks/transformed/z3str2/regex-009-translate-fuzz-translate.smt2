@@ -1,8 +1,0 @@
-(declare-const x String)
-(declare-const y String)
-(assert (str.in.re x (re.+ (str.to.re "EUt3s:SGS'\n'SGS@t|?"))))
-(assert (str.in.re x (re.* (str.to.re "=+^n9;t|SGS0wSv|@1r&!?aq{*:t{'\t'' 'S%S' 'SGS:a8SVSm"))))
-(assert (> (str.to.int x) 32))
-(assert (< (str.to.int x) 42))
-(check-sat)
-(get-model)
