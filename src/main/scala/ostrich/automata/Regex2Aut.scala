@@ -559,6 +559,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
                minimize : Boolean = true) : Automaton =
     new BricsAutomaton(toBAutomaton(t, minimize))
 
+  def buildAutBeComplemented(t : ITerm,
+               minimize : Boolean = true) : Automaton =
+    new BricsAutomaton(toBAutomaton(t, minimize))
+
   private def numToUnicode(num : Int) : String =
     new String(Character.toChars(num))
 

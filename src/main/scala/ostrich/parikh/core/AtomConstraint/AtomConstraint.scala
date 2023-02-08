@@ -37,7 +37,6 @@ trait AtomConstraint {
     * Encode the formula of registers meanwhile.
     */
   lazy val getCompleteLIA: Formula = {
-    Console.err.println("Note: use parikh image")
     lazy val transtion2Term = aut.transitions.map(t => (t, TransitionTerm())).toMap
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer

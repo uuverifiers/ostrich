@@ -116,26 +116,26 @@ object CEBasicOperations {
     val aut1 = CostEnrichedAutomaton{
       BasicOperations.complement(aut.underlying)
     }
-    aut1.toDot("after_complement")
-    if (aut.getRegisters.size == 0)
-      return aut1
-    val aut2 = {
-      val builder = CostEnrichedAutomaton.getBuilder
-      val old2new = aut.states.map(s => (s -> builder.getNewState)).toMap
-      for ((s, l, t, v) <- aut.transitionsWithVec)
-        builder.addTransition(old2new(s), l, old2new(t), v)
-      for (s <- aut.acceptingStates)
-        builder.setAccept(old2new(s), true)
-      builder.setInitialState(old2new(aut.initialState))
-      builder.prependRegisters(aut.getRegisters)
-      builder.addRegsRelation(negate(aut.getRegsRelation))
-      builder.getAutomaton
-    }
-    if (aut1.isEmpty) {
-      return aut2
-    }
-    union(Seq(aut1, aut2))
-    aut1
+
+    // if (aut.getRegisters.size == 0)
+    //   return aut1
+    // val aut2 = {
+    //   val builder = CostEnrichedAutomaton.getBuilder
+    //   val old2new = aut.states.map(s => (s -> builder.getNewState)).toMap
+    //   for ((s, l, t, v) <- aut.transitionsWithVec)
+    //     builder.addTransition(old2new(s), l, old2new(t), v)
+    //   for (s <- aut.acceptingStates)
+    //     builder.setAccept(old2new(s), true)
+    //   builder.setInitialState(old2new(aut.initialState))
+    //   builder.prependRegisters(aut.getRegisters)
+    //   builder.addRegsRelation(negate(aut.getRegsRelation))
+    //   builder.getAutomaton
+    // }
+    // if (aut1.isEmpty) {
+    //   return aut2
+    // }
+    // union(Seq(aut1, aut2))
+     aut1
   }
 
   def intersection[A <: CostEnrichedAutomatonTrait](
@@ -289,7 +289,10 @@ object CEBasicOperations {
   ): CostEnrichedAutomaton = {
     // if(aut.getRegisters.isEmpty)
     //   return new CostEnrichedAutomaton(BasicOperations.repeat(aut.underlying, min, max))
+    Console.err.println("unwind repeat")
     val unwindAuts = new ArrayBuffer[CostEnrichedAutomaton]
+    if (max < min) return new CostEnrichedAutomaton(BasicAutomata.makeEmpty())
+    if (max == 0) return new CostEnrichedAutomaton(BasicAutomata.makeEmptyString())
     for (i <- 0 until max)
       unwindAuts += clone(aut)
     val builder = CostEnrichedAutomaton.getBuilder
@@ -383,9 +386,10 @@ object CEBasicOperations {
       max: Int
   ): CostEnrichedAutomaton = {
     if (aut.getRegisters.nonEmpty) {
-      println("unwind")
       return repeatUnwind(aut, min, max)
     }
+    if (max < min) return new CostEnrichedAutomaton(BasicAutomata.makeEmpty())
+    if (max == 0) return new CostEnrichedAutomaton(BasicAutomata.makeEmptyString())
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
     ParikhUtil.addCountingRegister(newRegister)

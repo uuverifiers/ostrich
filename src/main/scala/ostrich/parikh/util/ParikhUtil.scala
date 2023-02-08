@@ -30,20 +30,6 @@ object ParikhUtil {
 
   def findAllSCC(aut: CostEnrichedAutomatonTrait) = {
     val state2idx = aut.states.zipWithIndex.toMap
-    // class MyHashMap extends MHashMap[State, Set[State]] {
-    //   override def toString(): String = {
-    //     val sb = new StringBuilder
-    //     for ((k, v) <- this) {
-    //       sb.append(s"s${state2idx(k)}" + " -> ")
-    //       sb.append("(")
-    //       for (s <- v) {
-    //         sb.append(s"s${state2idx(s)}" + ", ")
-    //       }
-    //       sb.append(")")
-    //     }
-    //     sb.toString()
-    //   }
-    // }
     val state2SCC = new MHashMap[State, Set[State]]
     val LReverse = new ArrayBuffer[State]()
     val seenList = MHashSet[State]()
@@ -170,7 +156,6 @@ object ParikhUtil {
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
 
-    Console.err.println("find accepted word by registers")
     val productAut = auts.reduceLeft(_ product _)
 
     val registersValue = productAut.getRegisters.map(registersModel(_).intValue)

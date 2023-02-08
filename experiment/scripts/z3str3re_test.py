@@ -1,4 +1,4 @@
-from runner import Z3Runner
+from runner import Z3Str3RERunner
 import os,argparse
 from datetime import datetime
 
@@ -29,4 +29,4 @@ outdir = os.path.join(dirname, f"../res/{date}{args.suffix}")
 os.makedirs(outdir, exist_ok=True)
 
     
-Z3Runner(args.bench, args.n, outdir).run()
+Z3Str3RERunner(args.bench, args.n, outdir).run()

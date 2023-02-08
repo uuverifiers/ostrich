@@ -114,20 +114,19 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       }
 
       case IFunApp(`re_diff`, Seq(t1, t2)) =>
-        diff(toCEAutomaton(t1, unwind), toCEAutomaton(t2, unwind))
+        diff(toCEAutomaton(t1, true), toCEAutomaton(t2, true))
 
       case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
         optional(toCEAutomaton(t, unwind))
 
       case IFunApp(`re_comp`, Seq(t)) =>
-        complement(toCEAutomaton(t, unwind))
+        complement(toCEAutomaton(t, true))
 
       case IFunApp(
             `re_loop` | `re_loop_?`,
             Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)
           ) =>
         if (unwind)  {
-          println("unwind")
           repeatUnwind(toCEAutomaton(t, unwind), n1, n2)
         }
         else repeat(toCEAutomaton(t, unwind), n1, n2)
@@ -145,6 +144,20 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     // minimize always, not use the parameter `minimize`
     try {
       val a = toCEAutomaton(t, false)
+      a
+    } catch {
+      case e: Exception => {
+        println("Error in building automaton for " + t)
+        e.printStackTrace()
+        throw e
+      }
+    }
+  }
+
+  override def buildAutBeComplemented(t: ITerm, minimize: Boolean): Automaton = {
+    /// We can not complement a cost-enriched automaton. So we unwind it to be a NFA
+    try {
+      val a = toCEAutomaton(t, true)
       a
     } catch {
       case e: Exception => {
