@@ -36,9 +36,9 @@ object OstrichConfig {
 
   val log = true 
 
-  productStrategy match {
-    case Basic() => Console.err.println("Eager product")
-    case Lazy() => Console.err.println("Lazy product")
-  }
+  // productStrategy match {
+  //   case Basic() => Console.err.println("Eager product")
+  //   case Lazy() => Console.err.println("Lazy product")
+  // }
 
 }

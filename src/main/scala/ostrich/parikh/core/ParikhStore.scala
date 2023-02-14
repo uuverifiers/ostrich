@@ -4,13 +4,9 @@ import ostrich.Exploration
 import ap.terfor.Term
 import ostrich.automata.Automaton
 import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ap.terfor.Formula
-import ostrich.automata.AtomicStateAutomatonAdapter
 import Exploration._
-import ap.terfor.conjunctions.Conjunction
 import ap.util.Seqs
 
 object ParikhStore {

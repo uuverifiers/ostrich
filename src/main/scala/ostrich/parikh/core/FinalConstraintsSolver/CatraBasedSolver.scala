@@ -1,17 +1,12 @@
 package ostrich.parikh.core
 
-import ap.terfor.conjunctions.Conjunction
-import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import FinalConstraints._
 import ap.terfor.Term
-import ap.terfor.Formula
-import ostrich.parikh.OstrichConfig._
 import ap.basetypes.IdealInt
 import ostrich.parikh.writer.CatraWriter
 import uuverifiers.catra.CommandLineOptions
@@ -33,11 +28,8 @@ import uuverifiers.catra.Unsat
 import ap.terfor.ConstantTerm
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.ParikhUtil.measure
-import ap.parameters.Param
-import ostrich.OstrichMain
 import ostrich.parikh.util.TimeoutException
 import ostrich.OFlags
-import ostrich.parikh.ParikhExploration.Approx
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 

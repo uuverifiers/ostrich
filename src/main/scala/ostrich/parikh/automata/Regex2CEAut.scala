@@ -3,22 +3,12 @@ package ostrich.parikh.automata
 import ostrich.OstrichStringTheory
 import ostrich.automata.Regex2Aut
 import ap.parser._
-import scala.collection.mutable.ArrayBuffer
-import dk.brics.automaton.{
-  BasicAutomata,
-  BasicOperations,
-  RegExp,
-  Automaton => BAutomaton,
-  State
-}
+import dk.brics.automaton.BasicAutomata
 import ap.basetypes.IdealInt
-import scala.jdk.CollectionConverters._
 import CEBasicOperations._
 import scala.collection.mutable.ArrayStack
 import scala.collection.immutable.VectorBuilder
-import ostrich.automata.AtomicStateAutomaton
 import ostrich.automata.Automaton
-import ostrich.parikh.ParikhUtil
 
 class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   import theory.{
@@ -35,14 +25,12 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     re_loop_?,
     re_++,
     re_comp,
-    re_all,
     str_to_re
   }
   import theory.strDatabase.EncodedString
 
   private def translateLeaves(
       t: ITerm,
-      op: IFunction,
       unwind: Boolean
   ): Seq[CostEnrichedAutomaton] = {
     val leaves = collectLeaves(t, re_++)
@@ -71,7 +59,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   def toCEAutomaton(t: ITerm, unwind: Boolean): CostEnrichedAutomaton =
     t match {
       case IFunApp(`re_++`, _) =>
-        concatenate(translateLeaves(t, re_++, unwind))
+        concatenate(translateLeaves(t, unwind))
 
       case IFunApp(`re_union`, _) => {
         val leaves = collectLeaves(t, re_union)
@@ -114,7 +102,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       }
 
       case IFunApp(`re_diff`, Seq(t1, t2)) =>
-        diff(toCEAutomaton(t1, true), toCEAutomaton(t2, true))
+        diff(toCEAutomaton(t1, false), toCEAutomaton(t2, true))
 
       case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
         optional(toCEAutomaton(t, unwind))

@@ -1,9 +1,8 @@
 package ostrich.parikh.automata
 
 import ostrich.automata._
-import dk.brics.automaton.{State => BState, Automaton => BAutomaton}
+import dk.brics.automaton.{State => BState}
 
-import scala.collection.immutable.Map
 import scala.collection.mutable.{
   HashMap => MHashMap,
   Stack => MStack,
@@ -17,8 +16,6 @@ import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
-import ostrich.parikh.TransitionTerm
-import ostrich.parikh.OstrichConfig
 
 trait CostEnrichedAutomatonTrait extends Automaton {
 
@@ -44,57 +41,33 @@ trait CostEnrichedAutomatonTrait extends Automaton {
 
   /** The set of accepting states
     */
-  val acceptingStates: Set[State]
+  def acceptingStates: Set[State]
 
   /** Iterate over automaton states
     */
   def states: Iterable[State]
 
-  def initMap: Unit = {
+  /** Ask if state is accepting
+    */
+  def isAccept(q: State): Boolean
 
+  /** Given a state, iterate over all outgoing transitions
+    */
+  def outgoingTransitions(from: State): Iterator[(State, TLabel)]
+
+  def initMap: Unit = {
     transitions.foreach { transition =>
       etaMap += transition -> Seq.fill(registers.size)(0)
     }
   }
 
-  def &(that: Automaton): Automaton =
-    this.asInstanceOf[CostEnrichedAutomatonTrait] product that
-      .asInstanceOf[CostEnrichedAutomatonTrait]
+  def &(that: Automaton): Automaton = product(that.asInstanceOf[CostEnrichedAutomatonTrait])
 
   def product(that: CostEnrichedAutomatonTrait): CostEnrichedAutomatonTrait = {
     CEBasicOperations.intersection(this, that)
   }
 
-  /** Map state to its incoming transitions
-    */
-  lazy val incomingTransitionsMap: Map[State, Set[(State, TLabel)]] = {
-    val map = new MHashMap[State, Set[(State, TLabel)]]
-    val worklist = new MStack[State]
-    val seenstates = new MLinkedHashSet[State]
-
-    map.put(initialState, Set.empty)
-
-    worklist.push(initialState)
-    seenstates.add(initialState)
-
-    while (!worklist.isEmpty) {
-      val s = worklist.pop
-      outgoingTransitions(s).foreach { case (to, lbl) =>
-        val set = map.getOrElseUpdate(to, Set.empty)
-        map.put(to, set + ((s, lbl)))
-        if (!seenstates.contains(to)) {
-          worklist.push(to)
-          seenstates.add(to)
-        }
-      }
-    }
-    map.toMap
-  }
-
   val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
-
-  val labelEnumerator: TLabelEnumerator[TLabel] =
-    new BricsTLabelEnumerator(for ((_, lbl, _) <- transitions) yield lbl)
 
   /** Compute states that can only be reached through words with some unique
     * length
@@ -147,25 +120,41 @@ trait CostEnrichedAutomatonTrait extends Automaton {
       None
   }
 
-  def getBuilder: CostEnrichedAutomatonBuilder = {
-    new CostEnrichedAutomatonBuilder
-  }
+  def getBuilder = new CostEnrichedAutomatonBuilder
 
-  def getLengthAbstraction: Formula = Conjunction.TRUE // not use
-
-  /** Ask if state is accepting
-    */
-  def isAccept(q: State): Boolean
-
-  /** Given a state, iterate over all outgoing transitions
-    */
-  def outgoingTransitions(from: State): Iterator[(State, TLabel)]
+  def getLengthAbstraction = Conjunction.TRUE // not use
 
   /** Iterate over all transitions
     */
   def transitions: Iterator[(State, TLabel, State)] =
     for (s1 <- states.iterator; (s2, lbl) <- outgoingTransitions(s1))
       yield (s1, lbl, s2)
+  
+  /** Map state to its incoming transitions
+    */
+  lazy val incomingTransitionsMap: Map[State, Set[(State, TLabel)]] = {
+    val map = new MHashMap[State, Set[(State, TLabel)]]
+    val worklist = new MStack[State]
+    val seenstates = new MLinkedHashSet[State]
+
+    map.put(initialState, Set.empty)
+
+    worklist.push(initialState)
+    seenstates.add(initialState)
+
+    while (!worklist.isEmpty) {
+      val s = worklist.pop
+      outgoingTransitions(s).foreach { case (to, lbl) =>
+        val set = map.getOrElseUpdate(to, Set.empty)
+        map.put(to, set + ((s, lbl)))
+        if (!seenstates.contains(to)) {
+          worklist.push(to)
+          seenstates.add(to)
+        }
+      }
+    }
+    map.toMap
+  }
 
   def incomingTransitions(t: State): Iterator[(State, TLabel)] = {
     incomingTransitionsMap(t).iterator
@@ -192,15 +181,11 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     sortedTWithV
   }
 
-
-
-
   /** Transitions with their costs
     */
   def transitionsWithVec: Iterator[(State, TLabel, State, Seq[Int])] =
-    transitions.map { case (s, lbl, t) =>
-      (s, lbl, t, etaMap((s, lbl, t)))
-    }
+    (for (s <- states; (t, l, v) <- outgoingTransitionsWithVec(s)) 
+      yield (s, l, t, v)).iterator
 
   def getRegsRelation = regsRelation
 
@@ -238,7 +223,7 @@ trait CostEnrichedAutomatonTrait extends Automaton {
   }
 
   def toDot(suffix: String) = {
-    val state2Int = states.zipWithIndex.toMap
+    states.zipWithIndex.toMap
     val outdir = os.pwd / "dot" / LocalDate.now().toString
     os.makeDir.all(outdir)
     val dotfile = outdir / s"${suffix}.dot"
@@ -263,7 +248,4 @@ trait CostEnrichedAutomatonTrait extends Automaton {
     }
     writer.closeAfterWrite(toDotStr)
   }
-
-  initMap
-
 }

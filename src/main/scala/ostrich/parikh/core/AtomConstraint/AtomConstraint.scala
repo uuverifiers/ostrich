@@ -6,23 +6,14 @@ import ap.terfor.Formula
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
-  HashSet => MHashSet,
-  Stack => MStack
+  HashSet => MHashSet
 }
 import ap.terfor.Term
-import ostrich.parikh.KTerm
 import ap.terfor.conjunctions.Conjunction
 import ostrich.parikh.ZTerm
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.CostEnrichedConvenience._
-import ap.terfor.preds.Atom
-import ostrich.parikh.util.UnknownException
-import ostrich.parikh.writer.TempWriter
-import ostrich.parikh.writer.Logger
-import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.automata.CEBasicOperations
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.TransitionTerm
 
 trait AtomConstraint {
@@ -37,19 +28,19 @@ trait AtomConstraint {
     * Encode the formula of registers meanwhile.
     */
   lazy val getCompleteLIA: Formula = {
-    lazy val transtion2Term = aut.transitions.map(t => (t, TransitionTerm())).toMap
+    lazy val transtion2Term = aut.transitionsWithVec.map(t => (t, TransitionTerm())).toMap
     def outFlowTerms(from: State): Seq[Term] = {
       val outFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
-      aut.outgoingTransitions(from).foreach { case (to, lbl) =>
-        outFlowTerms += transtion2Term(from, lbl, to)
+      aut.outgoingTransitionsWithVec(from).foreach { case (to, lbl, vec) =>
+        outFlowTerms += transtion2Term(from, lbl, to, vec)
       }
       outFlowTerms.toSeq
     }
 
     def inFlowTerms(to: State): Seq[Term] = {
       val inFlowTerms: ArrayBuffer[Term] = new ArrayBuffer
-      aut.incomingTransitions(to).foreach { case (from, lbl) =>
-        inFlowTerms += transtion2Term(from, lbl, to)
+      aut.incomingTransitionsWithVec(to).foreach { case (from, lbl, vec) =>
+        inFlowTerms += transtion2Term(from, lbl, to, vec)
       }
       inFlowTerms.toSeq
     }
@@ -57,10 +48,10 @@ trait AtomConstraint {
     val zTerm = aut.states.map((_, ZTerm())).toMap
 
     val preStatesWithTTerm = new MHashMap[State, MHashSet[(State, Term)]]
-    for ((s, l, t) <- aut.transitions) {
-      val set = preStatesWithTTerm.getOrElseUpdate(t, new MHashSet)
-      val tTerm = transtion2Term(s, l, t)
-      set += ((s, tTerm))
+    for ((from, lbl, to, vec) <- aut.transitionsWithVec) {
+      val set = preStatesWithTTerm.getOrElseUpdate(to, new MHashSet)
+      val tTerm = transtion2Term(from, lbl, to, vec)
+      set += ((from, tTerm))
     }
     // consistent flow ///////////////////////////////////////////////////////////////
     var consistentFlowFormula = disj(
@@ -91,9 +82,9 @@ trait AtomConstraint {
     /////////////////////////////////////////////////////////////////////////////////
 
     // connection //////////////////////////////////////////////////////////////////
-    val zVarInitFormulas = aut.transitions.map {
-      case (from, lbl, to) => {
-        val tTerm = transtion2Term(from, lbl, to)
+    val zVarInitFormulas = aut.transitionsWithVec.map {
+      case (from, lbl, to, vec) => {
+        val tTerm = transtion2Term(from, lbl, to, vec)
         if (from == aut.initialState)
           (zTerm(from) === 0)
         else
@@ -125,27 +116,14 @@ trait AtomConstraint {
     // registers update map
     val registerUpdateMap: Map[Term, ArrayBuffer[LinearCombination]] = {
       val registerUpdateMap = new MHashMap[Term, ArrayBuffer[LinearCombination]]
-      val transitionsWithVector: Iterator[(State, TLabel, State, Seq[Int])] =
-        for (
-          s <- aut.states.iterator;
-          (to, label, vec) <- aut.outgoingTransitionsWithVec(s)
-        )
-          yield (
-            (
-              s,
-              label,
-              to,
-              vec
-            )
-          )
-      transitionsWithVector.foreach { case (from, lbl, to, vec) =>
-        val trasitionTerm = transtion2Term(from, lbl, to)
+      aut.transitionsWithVec.foreach { case (from, lbl, to, vec) =>
+        val trasitionTerm = transtion2Term(from, lbl, to, vec)
         vec.zipWithIndex.foreach {
           case (veci, i) => {
-            val registerTerm = aut.getRegisters(i)
+            val registeri = aut.getRegisters(i)
             val update =
               registerUpdateMap.getOrElseUpdate(
-                registerTerm,
+                registeri,
                 new ArrayBuffer[LinearCombination]
               )
             update.append(trasitionTerm * veci)

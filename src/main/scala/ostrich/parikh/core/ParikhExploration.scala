@@ -6,7 +6,6 @@ import ap.terfor.Term
 import ostrich.automata.Automaton
 import ostrich.StrDatabase
 import ap.SimpleAPI
-import ostrich.OFlags
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
@@ -29,10 +28,8 @@ import ostrich.parikh.core.BaselineSolver
 import ostrich.parikh.OstrichConfig.Catra
 import ostrich.parikh.OstrichConfig.Baseline
 import ostrich.parikh.OstrichConfig.Unary
-import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
-import ostrich.parikh.core.FinalConstraints
 
 object ParikhExploration {
   def isStringResult(op: PreOp): Boolean = op match {
@@ -138,7 +135,7 @@ class ParikhExploration(
 
     while (topSortedFunApps.nonEmpty) {
       val (_topSortedFunApps, _remFunApps) = remFunApps partition {
-        case (op, args, res) => termCout(res) == 0
+        case (_, _, res) => termCout(res) == 0
       }
       sortedApps ++= {
         val grouped = _topSortedFunApps groupBy (_._3)

@@ -8,17 +8,11 @@ import scala.collection.mutable.{
   ArrayStack
 }
 import ap.terfor.Term
-import ap.terfor.Formula
-import ap.terfor.conjunctions.Conjunction
-import ap.terfor.TerForConvenience._
-import TermGeneratorOrder._
-import CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
 
 import ostrich.automata.BricsTLabelEnumerator
 import ap.basetypes.IdealInt
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import scala.collection.mutable.ArrayBuffer
 
 object ParikhUtil {
@@ -29,11 +23,11 @@ object ParikhUtil {
   type TLabel = CostEnrichedAutomatonTrait#TLabel
 
   def findAllSCC(aut: CostEnrichedAutomatonTrait) = {
-    val state2idx = aut.states.zipWithIndex.toMap
+    aut.states.zipWithIndex.toMap
     val state2SCC = new MHashMap[State, Set[State]]
     val LReverse = new ArrayBuffer[State]()
     val seenList = MHashSet[State]()
-    def dfsReverseAutStep(s: State) {
+    def dfsReverseAutStep(s: State): Unit = {
       if (!seenList(s)) {
         seenList += s
         for ((t, _) <- aut.incomingTransitions(s)) {
@@ -59,7 +53,7 @@ object ParikhUtil {
         seenSet += s
         for ((t, _, vec) <- aut.outgoingTransitionsWithVec(s)) {
           if (!seenSet(t) && !visited(t)) {
-            vec.zipWithIndex.filter(_._1 != 0).foreach { case (v, regidx) =>
+            vec.zipWithIndex.filter(_._1 != 0).foreach { case (_, regidx) =>
               loopedRegisters += aut.getRegisters(regidx)
             }
             worklist.push(t)
@@ -81,14 +75,7 @@ object ParikhUtil {
 
   /** Check whether all states are accepted
     */
-  private def isAccepting(
-      auts: Seq[CostEnrichedAutomatonTrait],
-      states: Seq[State],
-      integerModel: MMap[Term, Int]
-  ): Boolean =
-    (states zip auts forall { case (state, aut) =>
-      aut.isAccept(state)
-    }) && (integerModel.map(_._2).forall(_ == 0))
+  
 
   private def repidlyRunBySCC(
       aut: CostEnrichedAutomatonTrait,

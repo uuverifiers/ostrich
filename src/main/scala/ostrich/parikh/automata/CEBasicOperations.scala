@@ -1,6 +1,6 @@
 package ostrich.parikh.automata
 
-import dk.brics.automaton.{BasicOperations, Automaton => BAutomaton, State}
+import dk.brics.automaton.{BasicOperations, State}
 import scala.collection.mutable.{
   HashMap => MHashMap,
   HashSet => MHashSet,
@@ -20,17 +20,10 @@ import ostrich.automata.BricsTLabelOps
 import ostrich.automata.Automaton
 import ostrich.parikh.ParikhUtil
 import ap.terfor.substitutions.ConstantSubst
-import ap.terfor.substitutions.VariableSubst
 import ostrich.parikh.TermGeneratorOrder
 import ap.terfor.ConstantTerm
 
 object CEBasicOperations {
-  private val unfoldMaxState = 50
-
-  private def negate(f: Formula) = {
-    Conjunction.negate(f, order)
-  }
-
   // For each automaton, we add a register to stand for using the automaton
   // TODO: Bug exists.
   def union(auts: Seq[CostEnrichedAutomaton]): CostEnrichedAutomaton = {
@@ -39,7 +32,6 @@ object CEBasicOperations {
       return CostEnrichedAutomaton(
         BasicOperations.union(auts.map(_.underlying).asJava)
       )
-    var regsRelation = Conjunction.TRUE
     val builder = CostEnrichedAutomaton.getBuilder
     val initialS = builder.getNewState
     builder.setInitialState(initialS)
@@ -293,7 +285,7 @@ object CEBasicOperations {
     val unwindAuts = new ArrayBuffer[CostEnrichedAutomaton]
     if (max < min) return new CostEnrichedAutomaton(BasicAutomata.makeEmpty())
     if (max == 0) return new CostEnrichedAutomaton(BasicAutomata.makeEmptyString())
-    for (i <- 0 until max)
+    for (_ <- 0 until max)
       unwindAuts += clone(aut)
     val builder = CostEnrichedAutomaton.getBuilder
     val old2new =
@@ -425,7 +417,6 @@ object CEBasicOperations {
         conj(newRegister >= min, newRegister <= max)
     builder.addRegsRelation(newRegsRelation)
     val a = builder.getAutomaton
-    a.toDot("repeat")
     a
   }
 
@@ -569,7 +560,7 @@ object CEBasicOperations {
     for (s <- aut.states; t <- aut.states; if s != t)
       pairs.add((s, t))
     var pairsIsEqual = pairs.map(p => (p, true)).toMap
-    var pairs2depends = pairs.map(p => (p, new MHashSet[(State, State)])).toMap
+    val pairs2depends = pairs.map(p => (p, new MHashSet[(State, State)])).toMap
     for ((s1, s2) <- pairs) {
       var isEqual = true
       for ((t1, l1, v1) <- aut.outgoingTransitionsWithVec(s1)) {
@@ -628,28 +619,43 @@ object CEBasicOperations {
     s2new.toMap
   }
 
+  // def minimizeHopcroftByVec(
+  //     aut: CostEnrichedAutomatonTrait
+  // ): CostEnrichedAutomatonTrait = {
+  //   val simplified1 = removeDeadState(aut)
+  //   val s2equal = partitionStatesByVec(simplified1)
+  //   val builder = aut.getBuilder
+  //   for ((s, l, t, v) <- simplified1.transitionsWithVec)
+  //     builder.addTransition(s2equal(s), l, s2equal(t), v)
+  //   builder.setInitialState(s2equal(simplified1.initialState))
+  //   for (s <- simplified1.acceptingStates)
+  //     builder.setAccept(s2equal(s), true)
+  //   builder.addRegsRelation(simplified1.getRegsRelation)
+  //   builder.appendRegisters(simplified1.getRegisters)
+  //   builder.getAutomaton
+  // }
   def minimizeHopcroftByVec(
-      aut: CostEnrichedAutomatonTrait
-  ): CostEnrichedAutomatonTrait = {
-    val simplified1 = removeDeadState(aut)
-    val s2equal = partitionStatesByVec(simplified1)
-    val builder = aut.getBuilder
-    for ((s, l, t, v) <- simplified1.transitionsWithVec)
-      builder.addTransition(s2equal(s), l, s2equal(t), v)
-    builder.setInitialState(s2equal(simplified1.initialState))
-    for (s <- simplified1.acceptingStates)
-      builder.setAccept(s2equal(s), true)
-    builder.addRegsRelation(simplified1.getRegsRelation)
-    builder.appendRegisters(simplified1.getRegisters)
-    builder.getAutomaton
-  }
+        aut: CostEnrichedAutomatonTrait
+    ): CostEnrichedAutomatonTrait = {
+      val simplified1 = removeDeadState(aut)
+      val s2equal = partitionStatesByVec(simplified1)
+      val vecAut = new VectorAutomaton(s2equal(simplified1.initialState))
+      for ((s, l, t, v) <- simplified1.transitionsWithVec)
+        vecAut.addTransition(s2equal(s), s2equal(t), v)
+      for (s <- simplified1.acceptingStates)
+        vecAut.setAccept(s2equal(s), true)
+      vecAut.setRegsRelation(simplified1.getRegsRelation)
+      vecAut.setRegisters(simplified1.getRegisters)
+      vecAut
+    }
+
 
   private def partitionStates(aut: CostEnrichedAutomatonTrait) = {
     val pairs = new MHashSet[(State, State)]()
     for (s <- aut.states; t <- aut.states; if s != t)
       pairs.add((s, t))
     var pairsIsEqual = pairs.map(p => (p, true)).toMap
-    var pairs2depends = pairs.map(p => (p, new MHashSet[(State, State)])).toMap
+    val pairs2depends = pairs.map(p => (p, new MHashSet[(State, State)])).toMap
     for ((s1, s2) <- pairs) {
       var isEqual = true
       for ((t1, l1, v1) <- aut.outgoingTransitionsWithVec(s1)) {
@@ -665,11 +671,11 @@ object CEBasicOperations {
       if (
         aut
           .outgoingTransitionsWithVec(s1)
-          .map { case (s, l, v) => (l, v) }
+          .map { case (_, l, v) => (l, v) }
           .toSet !=
           aut
             .outgoingTransitionsWithVec(s2)
-            .map { case (s, l, v) => (l, v) }
+            .map { case (_, l, v) => (l, v) }
             .toSet
       )
         isEqual = false

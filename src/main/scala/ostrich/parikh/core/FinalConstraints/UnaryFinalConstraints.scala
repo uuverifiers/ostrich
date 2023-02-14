@@ -1,24 +1,11 @@
 package ostrich.parikh.core
 
 import ap.terfor.Formula
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import ap.terfor.Term
-import ap.terfor.TerForConvenience._
-import ostrich.parikh.TermGeneratorOrder.order
-import ap.api.PartialModel
-import ap.basetypes.IdealInt
-import ap.terfor.ConstantTerm
-import ap.terfor.OneTerm
-import ap.terfor.linearcombination.LinearCombination
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
-import ap.types.SortedConstantTerm
 import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CEBasicOperations
-import ap.terfor.conjunctions.Conjunction
-import shapeless.Fin
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import FinalConstraints._
 
 class UnaryFinalConstraints(
     override val strId: Term,
@@ -32,23 +19,23 @@ class UnaryFinalConstraints(
   }
 
   lazy val mostlySimplifiedAut = {
-    val res = 
-    CEBasicOperations.minimizeHopcroftByVec(
-      CEBasicOperations.determinateByVec(
-        CEBasicOperations.epsilonClosureByVec(
-          productAtom.aut
+    val res =
+      CEBasicOperations.minimizeHopcroftByVec(
+        CEBasicOperations.determinateByVec(
+          CEBasicOperations.epsilonClosureByVec(
+            productAtom.aut
+          )
         )
       )
-    )
     res
   }
 
   lazy val simplifyButRemainLabelAut =
-        CEBasicOperations.removeUselessTrans(
-          CEBasicOperations.minimizeHopcroft(
-            productAtom.aut
-          )
-        )
+    CEBasicOperations.removeUselessTrans(
+      CEBasicOperations.minimizeHopcroft(
+        productAtom.aut
+      )
+    )
 
   def getUnderApprox(bound: Int): Formula =
     new UnaryHeuristicAC(mostlySimplifiedAut).getUnderApprox(bound)

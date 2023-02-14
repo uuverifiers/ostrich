@@ -339,6 +339,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val ostrichSolver      = new OstrichSolver (this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
+
   def plugin = Some(new Plugin {
 
     private val modelCache =
@@ -353,6 +354,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       lazy val predToEq =
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, flags)
 
+      // Confuse: Why the goalState(goal) will be Eager? and GoalState.values = {Eager, Intermeida, Final}
+      // println(Plugin.GoalState.values)
+      // println(goalState(goal))
       goalState(goal) match {
 
         case Plugin.GoalState.Intermediate => try {
@@ -366,7 +370,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           case t : Throwable =>  { t.printStackTrace; throw t }
         }
 
-        case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
+        case _ => try { //  Console.withOut(Console.err)
           nielsenSplitter.splitEquation                elseDo
           predToEq.lazyEnumeration                     elseDo
           callBackwardProp(goal)

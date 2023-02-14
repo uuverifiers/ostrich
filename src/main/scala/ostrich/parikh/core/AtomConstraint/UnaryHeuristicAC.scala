@@ -5,21 +5,12 @@ import ostrich.parikh.TermGeneratorOrder.order
 import ap.terfor.Formula
 import scala.collection.mutable.{
   ArrayBuffer,
-  HashMap => MHashMap,
   HashSet => MHashSet,
   Stack => MStack
 }
 import ap.terfor.Term
 import ostrich.parikh.KTerm
 import ap.terfor.conjunctions.Conjunction
-import ostrich.parikh.ZTerm
-import ap.terfor.linearcombination.LinearCombination
-import ostrich.parikh.CostEnrichedConvenience._
-import ap.terfor.preds.Atom
-import ostrich.parikh.util.UnknownException
-import ostrich.parikh.writer.TempWriter
-import ostrich.parikh.writer.Logger
-import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.CostEnrichedAutomaton
@@ -47,8 +38,8 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       if(aut.acceptingStates.isEmpty) Conjunction.FALSE
       else  Conjunction.TRUE
     }
-    val n = aut.states.size
-    val rLen = aut.getRegisters.size
+    aut.states.size
+    aut.getRegisters.size
     val lowerBound = globalS.size
     val upperBound = if (ubound < upperBoundMax) ubound else upperBoundMax
     computeGlobalSWithRegsValue(upperBound)
@@ -78,7 +69,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
     val n = aut.states.size
     val kSet = new MHashSet[Term]
-    val reg = aut.getRegisters(0)
+    aut.getRegisters(0)
     val S = computeS(aut, 2 * n * n + n)
     val t = computeT(aut, 2 * n * n - n)
 
@@ -163,7 +154,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       sLen: Int
   ): Unit = {
     var idx = globalS.size
-    val s2i = aut.states.zipWithIndex.toMap
+    aut.states.zipWithIndex.toMap
     if (idx == 0) {
       globalS += Set((aut.initialState, Seq.fill(aut.getRegisters.size)(0)))
       idx += 1
@@ -184,7 +175,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       sLen: Int
   ): ArrayBuffer[Set[State]] = {
     var idx = 1
-    val s2i = aut.states.zipWithIndex.toMap
+    aut.states.zipWithIndex.toMap
 
     val tmpS = ArrayBuffer(
       Set(aut.initialState)
@@ -207,7 +198,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       aut: CostEnrichedAutomatonTrait,
       len: Int
   ): ArrayBuffer[Set[State]] = {
-    val n = aut.states.size
+    aut.states.size
     val acceptingStates = aut.acceptingStates
     val T = ArrayBuffer[Set[State]]()
     T += acceptingStates
@@ -229,7 +220,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   ): Set[Int] = {
     var period = 0
     val n = aut.states.size
-    val rLen = aut.getRegisters.size
+    aut.getRegisters.size
     val periods = new MHashSet[Int]
     val workstack = MStack(Seq(s))
     while (period < n && workstack.nonEmpty) {
@@ -258,8 +249,8 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       aut: CostEnrichedAutomatonTrait,
       t: State
   ): Iterator[(State, Seq[Int])] =
-    for ((s, lbl) <- aut.incomingTransitions(t).iterator)
-      yield (s, aut.getEtaMap((s, lbl, t)))
+    for ((s, lbl, vec) <- aut.incomingTransitionsWithVec(t))
+      yield (s, vec)
 
   // e.g (1,1) + (1,0) = (2,1)
   private def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]): Seq[Int] = {

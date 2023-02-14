@@ -1,7 +1,6 @@
 package ostrich.parikh.core
 
 import ap.terfor.Formula
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import ap.terfor.Term
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
@@ -10,13 +9,7 @@ import ap.basetypes.IdealInt
 import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
 import ap.terfor.linearcombination.LinearCombination
-import scala.collection.mutable.{HashMap => MHashMap}
-import ostrich.parikh.ParikhUtil
-import ap.types.SortedConstantTerm
-import ostrich.parikh.OstrichConfig
-import ostrich.parikh.automata.CEBasicOperations
 import ap.terfor.conjunctions.Conjunction
-import shapeless.Fin
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
 import ap.parser.IExpression
 

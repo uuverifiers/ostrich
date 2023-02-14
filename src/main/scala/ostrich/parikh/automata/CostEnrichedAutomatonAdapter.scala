@@ -1,19 +1,13 @@
 package ostrich.parikh.automata
 
-import ostrich.automata.AtomicStateAutomatonAdapter
-import scala.collection.mutable.{HashMap => MHashMap}
-import ostrich.parikh.{TransitionTerm, RegisterTerm}
+import ostrich.parikh.RegisterTerm
 import ostrich.automata.Automaton
-import ap.terfor.Term
 import scala.collection.mutable.{
   HashMap => MHashMap,
   ArrayStack,
   HashSet => MHashSet,
-  MultiMap,
-  LinkedHashSet => MLinkedHashSet,
-  Set => MSet
+  LinkedHashSet => MLinkedHashSet
 }
-import ostrich.parikh.OstrichConfig
 
 // TODO: BUG occur because this class mixs underlying and internalise!!
 // Rewrite this class to only extends CostEnrichedAutomatonTrait

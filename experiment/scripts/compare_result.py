@@ -1,8 +1,8 @@
 import glob, os, re
 from dataclasses import dataclass, field
 
-res_dir1 = "23-02-07_16:21:47z3str3re"
-res_dir2 = "23-02-07_14:37:30unary"
+res_dir1 = "23-02-08_14:34:02z3str3re_output"
+res_dir2 = "23-02-09_10:15:39unary_output"
 
 dirname = os.path.dirname(__file__)
 analyzed_file1 = glob.glob(f"{dirname}/../res/{res_dir1}/*_log.txt", recursive=True)[0]
@@ -13,6 +13,7 @@ class ResultPartition:
   satfiles : list[str] = field(default_factory=list)
   unsatfiles : list[str] = field(default_factory=list)
   errorfiles : list[str] = field(default_factory=list)
+  file2res: dict = field(default_factory=dict)
   analyzed_file: str = ""
   
   def __post_init__(self) -> None:
@@ -25,10 +26,13 @@ class ResultPartition:
     instance = INSTANCE_RE.search(result).group(1)
     if SAT_RE.search(result):
       self.satfiles.append(instance)
+      self.file2res[instance] = "sat"
     elif UNSAT_RE.search(result):
       self.unsatfiles.append(instance)
+      self.file2res[instance] = "unsat"
     else:
       self.errorfiles.append(instance)
+      self.file2res[instance] = "error"
     
   def parse_res_file(self) -> None:
     with open(self.analyzed_file, "r") as f:
@@ -53,10 +57,13 @@ res2 = Result2()
 print("sat files diff:")
 for file in set(res1.satfiles) ^ set(res2.satfiles):
   print(file)
+  print(f"res1: {res1.file2res[file]}")
+  print(f"res2: {res2.file2res[file]}")
 
 print("unsat files diff:")
 for file in set(res1.unsatfiles) ^ set(res2.unsatfiles):
   print(file)
-
+  print(f"res1: {res1.file2res[file]}")
+  print(f"res2: {res2.file2res[file]}")
   
   

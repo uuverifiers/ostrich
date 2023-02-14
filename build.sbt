@@ -50,7 +50,10 @@ lazy val commonSettings = Seq(
 //
   scalaVersion          := "2.13.7",
 //  scalacOptions         += "-deprecation",
+  scalacOptions         += "-Ywarn-unused",
   run / fork           := true,
+  semanticdbEnabled := true,
+  semanticdbVersion := scalafixSemanticdb.revision,
   cancelable in Global  := true,
 //
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )

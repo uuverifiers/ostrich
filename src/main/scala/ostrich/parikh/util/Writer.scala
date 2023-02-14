@@ -1,7 +1,5 @@
 package ostrich.parikh.writer
 
-import uuverifiers.common.Tracing
-import uuverifiers.catra.SolveRegisterAutomata
 import java.io.{File, BufferedWriter, FileWriter}
 import ostrich.parikh.OstrichConfig
 

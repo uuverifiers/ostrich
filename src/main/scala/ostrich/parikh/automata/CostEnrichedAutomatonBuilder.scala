@@ -11,14 +11,13 @@ import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
-import ostrich.parikh.TransitionTerm
 
-class CostEnrichedAutomatonBuilder{
+class CostEnrichedAutomatonBuilder {
   type State = CostEnrichedAutomaton#State
   type TLabel = CostEnrichedAutomaton#TLabel
 
   var minimize = false
-  
+
   private var stateidx = 0
 
   val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
@@ -47,7 +46,7 @@ class CostEnrichedAutomatonBuilder{
   // prepends regsters
   def prependRegisters(_registers: Seq[Term]): ArrayBuffer[Term] =
     _registers ++=: registers
-  
+
   def appendRegisters(_registers: Seq[Term]): ArrayBuffer[Term] =
     registers ++= _registers
 
@@ -78,7 +77,7 @@ class CostEnrichedAutomatonBuilder{
     */
   def getNewState: State = {
     stateidx += 1
-    new BState(){
+    new BState() {
       val idx = stateidx
       override def toString(): String = {
         s"s${idx}"
@@ -90,7 +89,6 @@ class CostEnrichedAutomatonBuilder{
     */
   def setInitialState(q: State): Unit =
     baut.setInitialState(q)
-
 
   /** Add a new transition q1 --label,vector--> q2
     */
@@ -114,8 +112,8 @@ class CostEnrichedAutomatonBuilder{
       yield (t.getDest, (t.getMin, t.getMax))
 
   def outgoingTransitionsWithVec(
-    q: State
-  ): Iterator[(State, TLabel, Seq[Int])] = 
+      q: State
+  ): Iterator[(State, TLabel, Seq[Int])] =
     for ((t, l) <- outgoingTransitions(q))
       yield (t, l, etaMap((q, l, t)))
 
@@ -126,7 +124,7 @@ class CostEnrichedAutomatonBuilder{
 
   def addEpsilon(q: State, q2: State): Unit = {
     if (isAccept(q2)) setAccept(q, true)
-    for ((t, l, v) <- outgoingTransitionsWithVec(q2)){
+    for ((t, l, v) <- outgoingTransitionsWithVec(q2)) {
       addTransition(q, l, t, v)
     }
   }

@@ -2,14 +2,12 @@ package ostrich.parikh.automata
 
 import ostrich.automata._
 
-import scala.collection.JavaConverters.asScala
 
 import dk.brics.automaton.{
   BasicAutomata,
   BasicOperations,
   RegExp,
-  Automaton => BAutomaton,
-  State => BState
+  Automaton => BAutomaton
 }
 import scala.collection.mutable.{
   HashMap => MHashMap,
@@ -18,20 +16,10 @@ import scala.collection.mutable.{
   Stack => MStack
 }
 
-import ap.terfor.Term
-import ap.terfor.Formula
-import ap.terfor.conjunctions.Conjunction
-import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
-import ap.terfor.linearcombination.LinearCombination
-import scala.collection.mutable.ArrayStack
 import ostrich.parikh._
 import ap.terfor.TerForConvenience._
 import TermGeneratorOrder.order
-import java.time.LocalDate
-import ostrich.parikh.writer.DotWriter
-import os.write
-import ostrich.parikh.core.FinalConstraints
 import scala.collection.JavaConverters.asScala
 
 object CostEnrichedAutomaton {
@@ -96,6 +84,8 @@ class CostEnrichedAutomaton(
     val underlying: BAutomaton
 ) extends CostEnrichedAutomatonTrait {
 
+  initMap
+
   def unary_! = {
     CEBasicOperations.complement(this)
   }
@@ -120,7 +110,7 @@ class CostEnrichedAutomaton(
 
   lazy val initialState: State = underlying.getInitialState
 
-  val acceptingStates: Set[State] =
+  def acceptingStates: Set[State] =
     (for (s <- states; if s.isAccept) yield s).toSet
 
   def states: Iterable[State] = {
@@ -167,7 +157,7 @@ class CostEnrichedAutomaton(
       }
       res.toSeq
     }
-    val vectorsT = etaMap.map{case (t, v) => v}.transpose.zipWithIndex
+    val vectorsT = etaMap.map{case (_, v) => v}.transpose.zipWithIndex
     val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
     for ((v, i) <- vectorsT) {
       val seqv = v.toSeq
@@ -176,7 +166,7 @@ class CostEnrichedAutomaton(
       }
       vectors2Idxs(seqv) += i
     }
-    val duplicatedRegs = vectors2Idxs.map{case(v, idxs) => idxs}.filter(_.size > 1)
+    val duplicatedRegs = vectors2Idxs.map{case(_, idxs) => idxs}.filter(_.size > 1)
     // val vectorsPatition = vectorsT.groupBy(_._1).map(_._2.map(_._2))
     // val duplicatedRegs = vectorsPatition.filter(_.size > 1)
     val removeIdxs = new MHashSet[Int]()

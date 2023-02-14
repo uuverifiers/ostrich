@@ -10,7 +10,6 @@ import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
 import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.automata.CostEnrichedAutomatonAdapter
 object CostEnrichedConvenience {
 
   def brics2CostEnriched(aut: Automaton): Automaton = {
