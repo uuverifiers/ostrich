@@ -15,6 +15,7 @@ class UnaryFinalConstraints(
   // eagerly product
   lazy val productAtom: AtomConstraint = {
     val productAut = getAutomata.reduce(_ product _)
+    productAut.toDot("product_aut")
     new UnaryHeuristicAC(productAut)
   }
 

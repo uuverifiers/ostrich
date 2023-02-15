@@ -382,6 +382,7 @@ object CEBasicOperations {
     }
     if (max < min) return new CostEnrichedAutomaton(BasicAutomata.makeEmpty())
     if (max == 0) return new CostEnrichedAutomaton(BasicAutomata.makeEmptyString())
+    aut.toDot("before_repeat")
     val builder = CostEnrichedAutomaton.getBuilder
     val newRegister = RegisterTerm()
     ParikhUtil.addCountingRegister(newRegister)
