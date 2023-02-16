@@ -31,11 +31,11 @@ import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.TimeoutException
 import ostrich.OFlags
 import ostrich.parikh.util.UnknownException
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(catraACs(t, auts))
   }
 
@@ -103,7 +103,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
   }
 
   def toCatraInputAutomaton(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       name: String
   ): String = {
     val sb = new StringBuilder
@@ -130,14 +130,14 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
   }
 
   def toCatraInputRegisterUpdate(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       update: Seq[Int]
   ) = {
     val sb = new StringBuilder
     sb.append("{")
     val updateStringSeq =
       for ((v, i) <- update.zipWithIndex; if v > 0)
-        yield s"${aut.getRegisters(i)} += $v"
+        yield s"${aut.registers(i)} += $v"
     sb.append(updateStringSeq.mkString(", "))
     sb.append("}")
     sb.toString()

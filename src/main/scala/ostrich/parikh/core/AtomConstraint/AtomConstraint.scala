@@ -13,16 +13,16 @@ import ap.terfor.conjunctions.Conjunction
 import ostrich.parikh.ZTerm
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.CostEnrichedConvenience._
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.parikh.TransitionTerm
 
 trait AtomConstraint {
 
-  type State = CostEnrichedAutomatonTrait#State
+  type State = CostEnrichedAutomatonBase#State
 
-  type TLabel = CostEnrichedAutomatonTrait#TLabel
+  type TLabel = CostEnrichedAutomatonBase#TLabel
 
-  val aut: CostEnrichedAutomatonTrait
+  val aut: CostEnrichedAutomatonBase
 
   /** Parikh image of this automaton, using algorithm in Verma et al, CADE 2005.
     * Encode the formula of registers meanwhile.
@@ -120,7 +120,7 @@ trait AtomConstraint {
         val trasitionTerm = transtion2Term(from, lbl, to, vec)
         vec.zipWithIndex.foreach {
           case (veci, i) => {
-            val registeri = aut.getRegisters(i)
+            val registeri = aut.registers(i)
             val update =
               registerUpdateMap.getOrElseUpdate(
                 registeri,
@@ -135,7 +135,7 @@ trait AtomConstraint {
 
     val registerUpdateFormula =
       if (registerUpdateMap.size == 0)
-        conj(for (r <- aut.getRegisters) yield r === 0)
+        conj(for (r <- aut.registers) yield r === 0)
       else
         conj(
           for ((r, update) <- registerUpdateMap)

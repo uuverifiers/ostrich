@@ -42,7 +42,7 @@ import scala.collection.mutable.{
   Set => MSet,
   Map => MMap
 }
-import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.automata.BricsAutomatonWrapper
 import ap.basetypes.Node
 import ap.terfor.Term
 

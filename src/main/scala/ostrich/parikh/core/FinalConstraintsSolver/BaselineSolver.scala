@@ -10,10 +10,10 @@ import FinalConstraints._
 import ap.terfor.Term
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 class BaselineSolver extends FinalConstraintsSolver[BaselineFinalConstraints] {
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(baselineACs(t, auts))
   }
 

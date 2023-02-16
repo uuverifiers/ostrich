@@ -50,7 +50,7 @@ class UnaryFinalConstraints(
   def getRegsRelation: Formula =
     new UnaryHeuristicAC(mostlySimplifiedAut).getRegsRelation
 
-  val interestTerms: Seq[Term] = productAtom.aut.getRegisters
+  val interestTerms: Seq[Term] = productAtom.aut.registers
 
   def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel

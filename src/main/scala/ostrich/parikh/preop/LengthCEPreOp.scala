@@ -24,23 +24,22 @@ class LengthCEPreOp(length: LinearCombination) extends CEPreOp {
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val builder = CostEnrichedAutomaton.getBuilder;
-    val initalState = builder.initialState;
+    val ceAut = new CostEnrichedAutomaton
+    val initalState = ceAut.initialState
 
     // 0 -> (sigma, 1) -> 0
-    builder.addTransition(
+    ceAut.addTransition(
       initalState,
-      builder.LabelOps.sigmaLabel,
+      ceAut.LabelOps.sigmaLabel,
       initalState,
       Seq(1)
     )
-    builder.setAccept(initalState, true)
+    ceAut.setAccept(initalState, true)
     // registers: (r0)
-    val registers = Seq(RegisterTerm())
-    builder.prependRegisters(registers)
+    ceAut.registers = Seq(RegisterTerm())
     // intFormula : r0 === `length`
-    builder.addRegsRelation(length === registers(0))
-    (Iterator(Seq(builder.getAutomaton)), Seq())
+    ceAut.regsRelation = length === ceAut.registers(0)
+    (Iterator(Seq(ceAut)), Seq())
   }
 
   /** Evaluate the described function; return <code>None</code> if the function

@@ -5,7 +5,7 @@ import ap.terfor.Term
 import ostrich.automata.Automaton
 import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
 import ostrich.parikh.CostEnrichedConvenience._
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import Exploration._
 import ap.util.Seqs
 
@@ -70,7 +70,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
     *   ture if not conflict; false otherwise
     */
   private def isConsistency(
-      auts: Seq[CostEnrichedAutomatonTrait]
+      auts: Seq[CostEnrichedAutomatonBase]
   ): Boolean = {
     !auts.reduceLeft(_ & _).isEmpty
   }

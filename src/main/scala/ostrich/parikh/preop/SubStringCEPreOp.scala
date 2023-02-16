@@ -3,7 +3,8 @@ package ostrich.parikh.preop
 import ap.terfor.Term
 import ostrich.automata.Automaton
 import ostrich.parikh.automata.CostEnrichedAutomaton
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.BricsAutomatonWrapper
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.parikh.RegisterTerm
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
@@ -28,20 +29,19 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
 
-    val builder = CostEnrichedAutomaton.getBuilder
-    val lbOps = builder.LabelOps
+    val ceAut = new CostEnrichedAutomaton
+    val lbOps = ceAut.LabelOps
 
-    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonTrait]
-    val noUpdate = Seq.fill(res.getRegisters.size)(0)
+    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    val noUpdate = Seq.fill(res.registers.size)(0)
     val resState2new = res.states.map { case s =>
-      (s, builder.getNewState)
+      (s, ceAut.newState())
     }.toMap
 
-    val initialState = builder.getNewState
-    builder.setInitialState(initialState)
+    val initialState = ceAut.initialState
 
     // 0 -> (sigma, (1,0)) -> 0 to update `beginIdx`
-    builder.addTransition(
+    ceAut.addTransition(
       initialState,
       lbOps.sigmaLabel,
       initialState,
@@ -50,13 +50,13 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     // 0 -> epsilon -> resState2new(res.initialState)
     res.outgoingTransitionsWithVec(res.initialState).foreach {
       case (t, lbl, vec) =>
-        builder
+        ceAut
           .addTransition(initialState, lbl, resState2new(t), vec ++ Seq(0, 1))
     }
     // i -> (a, (0,1)) -> j to update `length`, where char a and state
     // i,j from `resultConstraint`
     res.transitionsWithVec.foreach { case (s, lbl, t, vec) =>
-      builder.addTransition(
+      ceAut.addTransition(
         resState2new(s),
         lbl,
         resState2new(t),
@@ -65,11 +65,11 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     }
 
     // resState2new(res.finalState) -> (sigma, (0, 0)) -> f
-    val finalState = builder.getNewState
-    builder.setAccept(finalState, true)
+    val finalState = ceAut.newState()
+    ceAut.setAccept(finalState, true)
     res.acceptingStates.foreach { case s =>
-      builder.setAccept(resState2new(s), true)
-      builder.addTransition(
+      ceAut.setAccept(resState2new(s), true)
+      ceAut.addTransition(
         resState2new(s),
         lbOps.sigmaLabel,
         finalState,
@@ -78,7 +78,7 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     }
 
     // f -> (sigma, (0,0)) -> f to stand for tail string
-    builder.addTransition(
+    ceAut.addTransition(
       finalState,
       lbOps.sigmaLabel,
       finalState,
@@ -87,17 +87,17 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
 
     // registers : (r0, r1)
     val registers = Seq.fill(2)(RegisterTerm())
-    builder.prependRegisters(registers ++ res.getRegisters)
-    builder.addRegsRelation(
+    ceAut.registers = registers ++ res.registers
+    ceAut.regsRelation = (
       (registers(0) === beginIdx) & (registers(1) === length)
     )
 
     (
       Iterator(
         Seq(
-          builder.getAutomaton,
-          CostEnrichedAutomaton.makeAnyString,
-          CostEnrichedAutomaton.makeAnyString
+          ceAut,
+          BricsAutomatonWrapper.makeAnyString,
+          BricsAutomatonWrapper.makeAnyString
         )
       ),
       Seq()

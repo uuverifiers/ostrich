@@ -10,7 +10,7 @@ import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.conjunctions.Conjunction
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression
 
 object FinalConstraints {
@@ -28,7 +28,7 @@ object FinalConstraints {
 
   def unaryHeuristicACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomatonTrait]
+      auts: Seq[CostEnrichedAutomatonBase]
   ): UnaryFinalConstraints = {
     val atomConstraints = auts.map(new UnaryHeuristicAC(_))
     new UnaryFinalConstraints(t, atomConstraints)
@@ -36,7 +36,7 @@ object FinalConstraints {
 
   def baselineACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomatonTrait]
+      auts: Seq[CostEnrichedAutomatonBase]
   ): BaselineFinalConstraints = {
     val atomConstraints = auts.map(new BaselineAC(_))
     new BaselineFinalConstraints(t, atomConstraints)
@@ -44,7 +44,7 @@ object FinalConstraints {
 
   def catraACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomatonTrait]
+      auts: Seq[CostEnrichedAutomatonBase]
   ): CatraFinalConstraints = {
     val atomConstraints = auts.map(new CatraAC(_))
     new CatraFinalConstraints(t, atomConstraints)

@@ -42,7 +42,7 @@ class BaselineFinalConstraints(
   def getRegsRelation: Formula = 
     new BaselineAC(mostlySimplifiedAut).getRegsRelation
 
-  val interestTerms: Seq[Term] = productAtom.aut.getRegisters
+    val interestTerms: Seq[Term] = productAtom.aut.registers
 
   def getModel: Option[Seq[Int]] = {
     val transtionModel = MHashMap() ++ interestTermsModel

@@ -10,6 +10,10 @@ import scala.collection.mutable.ArrayStack
 import scala.collection.immutable.VectorBuilder
 import ostrich.automata.Automaton
 
+import ostrich.parikh.automata.CostEnrichedAutomaton
+
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
+
 class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   import theory.{
     re_inter,
@@ -32,7 +36,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   private def translateLeaves(
       t: ITerm,
       unwind: Boolean
-  ): Seq[CostEnrichedAutomaton] = {
+  ): Seq[CostEnrichedAutomatonBase] = {
     val leaves = collectLeaves(t, re_++)
     val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind)
     leaveAuts
@@ -56,7 +60,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     res.result
   }
 
-  def toCEAutomaton(t: ITerm, unwind: Boolean): CostEnrichedAutomaton =
+  def toCEAutomaton(t: ITerm, unwind: Boolean): CostEnrichedAutomatonBase =
     t match {
       case IFunApp(`re_++`, _) =>
         concatenate(translateLeaves(t, unwind))
@@ -76,7 +80,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
               (for (IFunApp(_, Seq(EncodedString(str))) <- singletons)
                 yield str).toArray
             List(
-              CostEnrichedAutomaton(
+              BricsAutomatonWrapper(
                 BasicAutomata.makeStringUnion(strings: _*)
               )
             )
@@ -124,7 +128,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
         repeatUnwind(toCEAutomaton(t, true), 1)
 
-      case _ => CostEnrichedAutomaton(toBAutomaton(t, true))
+      case _ => BricsAutomatonWrapper(toBAutomaton(t, true))
 
     }
 

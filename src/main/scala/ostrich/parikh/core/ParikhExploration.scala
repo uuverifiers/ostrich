@@ -12,7 +12,7 @@ import scala.collection.mutable.{
   HashSet => MHashSet,
   BitSet => MBitSet
 }
-import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.automata.BricsAutomatonWrapper
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.preop.LengthCEPreOp
 import ap.basetypes.IdealInt
@@ -404,7 +404,7 @@ class ParikhExploration(
     for (t <- strTerms)
       for (w <- strDatabase.term2List(t)) {
         val str: String = w.view.map(i => i.toChar).mkString("")
-        additionalConstraints += ((t, CostEnrichedAutomaton fromString str))
+        additionalConstraints += ((t, BricsAutomatonWrapper fromString str))
         for (ind <- term2Index get t)
           coveredTerms += ind
       }
@@ -415,7 +415,7 @@ class ParikhExploration(
         if (!(coveredTerms contains n)) {
           coveredTerms += n
           additionalConstraints +=
-            ((sortedFunApps(n)._2, CostEnrichedAutomaton.makeAnyString))
+            ((sortedFunApps(n)._2, BricsAutomatonWrapper.makeAnyString))
         }
         true
       };

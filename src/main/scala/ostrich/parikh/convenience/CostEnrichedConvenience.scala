@@ -1,6 +1,6 @@
 package ostrich.parikh
 
-import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.automata.BricsAutomatonWrapper
 import ostrich.automata.Automaton
 import ap.parser.Internal2InputAbsy
 import ap.terfor.Term
@@ -9,14 +9,12 @@ import ap.terfor.ConstantTerm
 import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 object CostEnrichedConvenience {
 
   def brics2CostEnriched(aut: Automaton): Automaton = {
     if (aut.isInstanceOf[BricsAutomaton])
-      CostEnrichedAutomaton(aut.asInstanceOf[BricsAutomaton].underlying)
-    else if (aut.isInstanceOf[CostEnrichedAutomaton])
-      aut
+      BricsAutomatonWrapper(aut.asInstanceOf[BricsAutomaton].underlying)
     else {
       val e = new Exception(
         s"Automaton $aut is not a bricsAutomaton or a costEnrichedAutomaton"
@@ -48,14 +46,14 @@ object CostEnrichedConvenience {
 
   implicit def automaton2CostEnriched(
       auts: Seq[Automaton]
-  ): Seq[CostEnrichedAutomatonTrait] =
+  ): Seq[CostEnrichedAutomatonBase] =
     auts.map(automaton2CostEnriched(_))
 
-  implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonTrait = {
+  implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonBase = {
     if (
-      aut.isInstanceOf[CostEnrichedAutomatonTrait]
+      aut.isInstanceOf[CostEnrichedAutomatonBase]
     ) {
-      aut.asInstanceOf[CostEnrichedAutomatonTrait]
+      aut.asInstanceOf[CostEnrichedAutomatonBase]
     } else {
       val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
       e.printStackTrace()

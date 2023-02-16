@@ -11,10 +11,10 @@ import ap.terfor.Term
 import ap.terfor.Formula
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit = {
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(unaryHeuristicACs(t, auts))
   }
 

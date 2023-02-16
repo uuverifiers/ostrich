@@ -57,7 +57,7 @@ import ostrich.parikh.OstrichConfig
 import ostrich.parikh.ParikhExploration.Approx
 import ostrich.parikh.ParikhExploration
 import ostrich.parikh.automata.CEBasicOperations
-import ostrich.parikh.automata.CostEnrichedAutomaton
+import ostrich.parikh.automata.BricsAutomatonWrapper
 
 object OstrichSolver {
 
@@ -258,7 +258,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         case Seq((IdealInt.ONE, c: ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
           val str = strDatabase id2Str 0
-          val negAut = if (OstrichConfig.useCostEnriched) !(CostEnrichedAutomaton fromString str)
+          val negAut = if (OstrichConfig.useCostEnriched) !(BricsAutomatonWrapper fromString str)
               else !(BricsAutomaton fromString str)
           regexes += ((l(c), negAut))
         }
@@ -266,7 +266,7 @@ class OstrichSolver(theory : OstrichStringTheory,
             if (stringConstants contains c) &&
               (strDatabase containsId -coeff) => {
           val str = strDatabase id2Str -coeff
-          val negAut = if (OstrichConfig.useCostEnriched) !(CostEnrichedAutomaton fromString str)
+          val negAut = if (OstrichConfig.useCostEnriched) !(BricsAutomatonWrapper fromString str)
               else !(BricsAutomaton fromString str)
           regexes += ((l(c), negAut))
         }
@@ -292,7 +292,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         for ((t, _) <- regexes)
           regexCoveredTerms += t
 
-        val anyString = if (OstrichConfig.useCostEnriched) CostEnrichedAutomaton.makeAnyString()
+        val anyString = if (OstrichConfig.useCostEnriched) BricsAutomatonWrapper.makeAnyString()
             else BricsAutomaton.makeAnyString()
         for ((c, d) <- negEqs) {
           if (regexCoveredTerms add c)

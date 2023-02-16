@@ -15,7 +15,7 @@ class CatraFinalConstraints(
 
   def getRegsRelation: Formula = productAtom.getRegsRelation
 
-  val interestTerms: Seq[Term] = atoms.map(_.aut).flatMap(_.getRegisters)
+  val interestTerms: Seq[Term] = atoms.map(_.aut).flatMap(_.registers)
 
   def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel

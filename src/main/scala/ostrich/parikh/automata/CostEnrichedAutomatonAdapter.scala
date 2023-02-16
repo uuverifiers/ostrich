@@ -9,21 +9,22 @@ import scala.collection.mutable.{
   LinkedHashSet => MLinkedHashSet
 }
 
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
+
 // TODO: BUG occur because this class mixs underlying and internalise!!
 // Rewrite this class to only extends CostEnrichedAutomatonTrait
 // never use AtomicStateAutomatonAdapter
-abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
+abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
     val underlying: A
-) extends CostEnrichedAutomatonTrait {
+) extends CostEnrichedAutomatonBase {
 
-  registers = Seq.fill(underlying.getRegisters.size)(RegisterTerm())
-
-  etaMap = underlying.getEtaMap
+  // initialize registers
+  this.registers = Seq.fill(underlying.registers.size)(RegisterTerm())
 
   def computeReachableStates(
       initState: State,
       accStates: Set[State]
-  ): Set[State] = {
+  ): Iterator[State] = {
     val fwdReachable, bwdReachable = new MLinkedHashSet[State]
     fwdReachable += initState
 
@@ -31,14 +32,14 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
     worklist push initState
 
     while (!worklist.isEmpty)
-      for ((s, _) <- underlying.outgoingTransitions(worklist.pop))
+      for ((s, _, _) <- underlying.outgoingTransitionsWithVec(worklist.pop))
         if (fwdReachable add s)
           worklist push s
 
     val backMapping = new MHashMap[State, MHashSet[State]]
 
     for (s <- fwdReachable)
-      for ((t, _) <- underlying.outgoingTransitions(s))
+      for ((t, _, _) <- underlying.outgoingTransitionsWithVec(s))
         backMapping.getOrElseUpdate(t, new MHashSet) += s
 
     for (_s <- accStates; s = _s.asInstanceOf[State])
@@ -55,39 +56,36 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonTrait](
     if (bwdReachable.isEmpty)
       bwdReachable add initState
 
-    bwdReachable.toSet
+    bwdReachable.toSet.iterator
   }
 
   lazy val internalise: CostEnrichedAutomaton = {
     val smap = new MHashMap[underlying.State, underlying.State]
-
-    val builder =
-      underlying.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
+    val ceAut = new CostEnrichedAutomaton
 
     for (s <- states)
-      smap.put(s, builder.getNewState)
+      smap.put(s, ceAut.newState())
 
-    for (s <- states) {
-      val t = smap(s)
-      for ((to, label, update) <- outgoingTransitionsWithVec(s))
-        builder.addTransition(t, label, smap(to), update)
-      builder.setAccept(t, isAccept(s))
+    for (from <- states) {
+      for ((to, label, update) <- outgoingTransitionsWithVec(from))
+        ceAut.addTransition(smap(from), label, smap(to), update)
+      ceAut.setAccept(smap(from), isAccept(from))
     }
 
-    builder.addRegsRelation(this.regsRelation)
-    builder.appendRegisters(this.registers)
-    builder.setInitialState(smap(initialState))
-    builder.getAutomaton
+    ceAut.registers = _registers
+    ceAut.regsRelation = _regsRelation
+    ceAut.initialState = smap(initialState)
+    ceAut
   }
 
 }
 
 object CostEnrichedInitFinalAutomaton {
-  def apply[A <: CostEnrichedAutomatonTrait](
+  def apply[A <: CostEnrichedAutomatonBase](
       aut: A,
       initialState: A#State,
       acceptingStates: Set[A#State]
-  ): CostEnrichedAutomatonTrait =
+  ): CostEnrichedAutomatonBase =
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, _, _) =>
         _CostEnrichedInitFinalAutomaton(a, initialState, acceptingStates)
@@ -95,10 +93,10 @@ object CostEnrichedInitFinalAutomaton {
         _CostEnrichedInitFinalAutomaton(aut, initialState, acceptingStates)
     }
 
-  def setInitial[A <: CostEnrichedAutomatonTrait](
+  def setInitial[A <: CostEnrichedAutomatonBase](
       aut: A,
       initialState: A#State
-  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonTrait] =
+  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonBase] =
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, _, oldFinal) =>
         _CostEnrichedInitFinalAutomaton(a, initialState, oldFinal)
@@ -106,10 +104,10 @@ object CostEnrichedInitFinalAutomaton {
         _CostEnrichedInitFinalAutomaton(aut, initialState, aut.acceptingStates)
     }
 
-  def setFinal[A <: CostEnrichedAutomatonTrait](
+  def setFinal[A <: CostEnrichedAutomatonBase](
       aut: A,
-      acceptingStates: Set[CostEnrichedAutomatonTrait#State]
-  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonTrait] =
+      acceptingStates: Set[CostEnrichedAutomatonBase#State]
+  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonBase] =
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, oldInit, _) =>
         _CostEnrichedInitFinalAutomaton(a, oldInit, acceptingStates)
@@ -118,113 +116,37 @@ object CostEnrichedInitFinalAutomaton {
     }
 }
 
-case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonTrait](
+case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonBase](
     override val underlying: A,
-    val _initialState: A#State,
+    val initialS: A#State,
     val _acceptingStates: Set[A#State]
 ) extends CostEnrichedAutomatonAdapter[A](underlying) {
 
-  lazy val initialState = _initialState
+  this.initialState = initialS
 
-  lazy val states =
+  override lazy val states =
     computeReachableStates(_initialState, _acceptingStates)
 
-  lazy val acceptingStates: Set[State] =
-    _acceptingStates & states
+  override lazy val acceptingStates: Set[State] =
+    _acceptingStates & states.toSet
 
-  def unary_! = {
-    internalise.unary_!
-  }
+  override def isAccept(s: State): Boolean = acceptingStates.contains(s)
 
-  def |(that: Automaton): Automaton = {
-    internalise | that
-  }
-
-  def apply(word: Seq[Int]): Boolean = {
-    var state = initialState
-    var finalIdx = 0
+  override def outgoingTransitionsWithVec(q: State) = {
     for (
-      (c, idx) <- word.zipWithIndex;
-      (to, lbl) <- outgoingTransitions(state)
-      if LabelOps.labelContains(c.toChar, lbl)
-    ) {
-      state = to
-      finalIdx = idx
-    }
-    isAccept(state) && finalIdx == word.size - 1
-  }
-
-  def isAccept(s: State): Boolean = acceptingStates.contains(s)
-
-  def getAcceptedWord: Option[Seq[Int]] = {
-
-    val s2word = new MHashMap[State, Seq[Int]]
-    val worklist = new ArrayStack[State]
-    worklist.push(initialState)
-    s2word.put(initialState, Seq())
-
-    if (isAccept(initialState))
-      return Some(Seq())
-
-    while (!worklist.isEmpty) {
-      val s = worklist.pop
-      val word = s2word(s)
-      for ((to, label) <- outgoingTransitions(s)) {
-        if (!s2word.contains(to)) {
-          s2word.put(to, word :+ label._1.toInt)
-          worklist.push(to)
-        }
-        if (isAccept(to)) return Some(s2word(to))
-      }
-    }
-    None
-  }
-
-  def isEmpty: Boolean = {
-    return !isAccept(initialState) && outgoingTransitions(initialState).isEmpty
-  }
-
-  override def outgoingTransitions(q: State): Iterator[(State, TLabel)] = {
-    val _states = states
-    for (
-      p @ (s, _) <- underlying.outgoingTransitions(q);
-      if _states contains s
+      p @ (s, _, _) <- underlying.outgoingTransitionsWithVec(q);
+      if states contains s
     )
       yield p
   }
 
-  override def incomingTransitions(
+  override def incomingTransitionsWithVec(
       t: State
-  ): Iterator[(State, (Char, Char))] = {
-    val _states = states
+  ) = {
     for (
-      p @ (s, _) <- underlying.incomingTransitions(t);
-      if _states contains s
+      p @ (s, _, _) <- underlying.incomingTransitionsWithVec(t);
+      if states contains s
     )
       yield p
-  }
-
-  override def toString: String = {
-    val state2Int = states.zipWithIndex.toMap
-    def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
-      val (s, (left, right), t, vec) = transition
-      val registerUpdate =
-        s"{${vec.zipWithIndex
-            .map { case (veci, i) => s"${registers(i)} += $veci" }
-            .mkString(", ")}};"
-
-      s"s${state2Int(s)} -> s${state2Int(t)} [${left.toInt}, ${right.toInt}] $registerUpdate"
-    }
-
-    s"""
-    automaton a${states.size} {
-      init s${state2Int(initialState)};
-      ${transitionsWithVec.toSeq
-        .sortBy(_._1)
-        .map(transition2Str)
-        .mkString("\n  ")}
-      accepting ${acceptingStates.map(s => s"s${state2Int(s)}").mkString(", ")};
-    };
-    """
   }
 }

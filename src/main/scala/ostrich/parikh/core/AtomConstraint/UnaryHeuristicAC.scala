@@ -11,11 +11,11 @@ import scala.collection.mutable.{
 import ap.terfor.Term
 import ostrich.parikh.KTerm
 import ap.terfor.conjunctions.Conjunction
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.CostEnrichedAutomaton
 
-class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
+class UnaryHeuristicAC(val aut: CostEnrichedAutomatonBase)
     extends AtomConstraint {
 
   private val upperBoundMax = 100
@@ -32,14 +32,14 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     *   the formula of the underapproximation
     */
   def getUnderApprox(ubound: Int): Formula = {
-    if (aut.getRegisters.isEmpty){
+    if (aut.registers.isEmpty){
       // The emptyness of the automaton is based on the emptyness of the
       // accepting states
       if(aut.acceptingStates.isEmpty) Conjunction.FALSE
       else  Conjunction.TRUE
     }
     aut.states.size
-    aut.getRegisters.size
+    aut.registers.size
     val lowerBound = globalS.size
     val upperBound = if (ubound < upperBoundMax) ubound else upperBoundMax
     computeGlobalSWithRegsValue(upperBound)
@@ -47,7 +47,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       // the globalS does not change
       return Conjunction.FALSE
     }
-    val registers = aut.getRegisters
+    val registers = aut.registers
 
     val r1Formula = disjFor(
       for (
@@ -64,12 +64,12 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
 
   /** Get LIA formula of this automaton. The algorithm is complete.
     */
-  private def getLIAFromOneRegAut(aut: CostEnrichedAutomatonTrait): Formula = {
-    assert(aut.getRegisters.size == 1)
+  private def getLIAFromOneRegAut(aut: CostEnrichedAutomatonBase): Formula = {
+    assert(aut.registers.size == 1)
 
     val n = aut.states.size
     val kSet = new MHashSet[Term]
-    aut.getRegisters(0)
+    aut.registers(0)
     val S = computeS(aut, 2 * n * n + n)
     val t = computeT(aut, 2 * n * n - n)
 
@@ -80,7 +80,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
           s <- S(j);
           if (aut.isAccept(s))
         ) yield {
-          aut.getRegisters(0) === j
+          aut.registers(0) === j
         }
       )
       val r2Formula = disjFor(
@@ -95,7 +95,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
           ) yield {
             val k = KTerm()
             kSet += k
-            aut.getRegisters(0) === c + k * period
+            aut.registers(0) === c + k * period
           }
         } else Seq()
       )
@@ -119,19 +119,19 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     * @return
     */
   def getOverApprox: Formula = {
-    val reg2Aut = for (i <- 0 until aut.getRegisters.size) yield {
-      val reg = aut.getRegisters(i)
-      val builder = CostEnrichedAutomaton.getBuilder
-      val old2new = aut.states.map(s => (s, builder.getNewState)).toMap
-      builder.setInitialState(old2new(aut.initialState))
+    val reg2Aut = for (i <- 0 until aut.registers.size) yield {
+      val reg = aut.registers(i)
+      val ceAut = new CostEnrichedAutomaton
+      val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
+      ceAut.initialState = old2new(aut.initialState)
       for ((s, l, t, v) <- aut.transitionsWithVec) {
-        builder.addTransition(old2new(s), l, old2new(t), Seq(v(i)))
+        ceAut.addTransition(old2new(s), l, old2new(t), Seq(v(i)))
       }
       for (s <- aut.acceptingStates) {
-        builder.setAccept(old2new(s), true)
+        ceAut.setAccept(old2new(s), true)
       }
-      builder.appendRegisters(Seq(reg))
-      builder.getAutomaton
+      ceAut.registers = Seq(reg)
+      ceAut
     }
     val regsFormula = conj(
       for (aut <- reg2Aut)
@@ -148,7 +148,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     regsFormula
   }
 
-  def getRegsRelation: Formula = aut.getRegsRelation
+  def getRegsRelation: Formula = aut.regsRelation
 
   private def computeGlobalSWithRegsValue(
       sLen: Int
@@ -156,7 +156,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     var idx = globalS.size
     aut.states.zipWithIndex.toMap
     if (idx == 0) {
-      globalS += Set((aut.initialState, Seq.fill(aut.getRegisters.size)(0)))
+      globalS += Set((aut.initialState, Seq.fill(aut.registers.size)(0)))
       idx += 1
     }
     while (idx < sLen && !globalS(idx - 1).isEmpty) {
@@ -171,7 +171,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   }
 
   private def computeS(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       sLen: Int
   ): ArrayBuffer[Set[State]] = {
     var idx = 1
@@ -195,7 +195,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
     * computed or pre(S_i) is empty
     */
   private def computeT(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       len: Int
   ): ArrayBuffer[Set[State]] = {
     aut.states.size
@@ -215,12 +215,12 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   }
 
   private def periods(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       s: State
   ): Set[Int] = {
     var period = 0
     val n = aut.states.size
-    aut.getRegisters.size
+    aut.registers.size
     val periods = new MHashSet[Int]
     val workstack = MStack(Seq(s))
     while (period < n && workstack.nonEmpty) {
@@ -228,7 +228,7 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
       val nextStates =
         for (
           s <- seqstates;
-          (t, l) <- aut.outgoingTransitions(s)
+          (t, l, _) <- aut.outgoingTransitionsWithVec(s)
         ) yield t
       workstack.push(nextStates)
       period += 1
@@ -240,13 +240,13 @@ class UnaryHeuristicAC(val aut: CostEnrichedAutomatonTrait)
   }
 
   private def succWithVec(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       s: State
   ): Iterator[(State, Seq[Int])] =
     for ((t, lbl, vec) <- aut.outgoingTransitionsWithVec(s)) yield (t, vec)
 
   private def preWithVec(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       t: State
   ): Iterator[(State, Seq[Int])] =
     for ((s, lbl, vec) <- aut.incomingTransitionsWithVec(t))

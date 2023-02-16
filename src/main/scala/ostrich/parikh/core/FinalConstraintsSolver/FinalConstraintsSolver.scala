@@ -4,7 +4,7 @@ import ap.api.SimpleAPI.ProverStatus
 import ap.terfor.Term
 import ap.basetypes.IdealInt
 import ostrich.parikh.ParikhUtil.measure
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 class Result {
   protected var status = ProverStatus.Unknown
@@ -42,7 +42,7 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def setIntegerTerm(terms: Set[Term]): Unit = integerTerms = terms
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonTrait]): Unit
+  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit
 
   def addConstraint(c: A) = constraints = constraints :+ c
 

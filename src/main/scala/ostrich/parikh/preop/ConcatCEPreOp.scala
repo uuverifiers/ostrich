@@ -6,24 +6,24 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.automata.CostEnrichedInitFinalAutomaton
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "concatCEPreOp"
 
   def addConcatPreRegsFormula(
-      concatLeft: CostEnrichedAutomatonTrait,
-      concatRight: CostEnrichedAutomatonTrait,
-      result: CostEnrichedAutomatonTrait
+      concatLeft: CostEnrichedAutomatonBase,
+      concatRight: CostEnrichedAutomatonBase,
+      result: CostEnrichedAutomatonBase
   ): Unit = {
-    val leftRegs = concatLeft.getRegisters
-    val rightRegs = concatRight.getRegisters
-    val resultRegs = result.getRegisters
+    val leftRegs = concatLeft.registers
+    val rightRegs = concatRight.registers
+    val resultRegs = result.registers
     val derivedRegsRelation = conj(leftRegs.zipWithIndex.map { case (reg, i) =>
       (reg + rightRegs(i)) === resultRegs(i)
     })
-    val letfRegsRelation = concatLeft.getRegsRelation
-    val resRegsRelation = result.getRegsRelation
-    concatLeft.setRegsRelation(conj(letfRegsRelation, derivedRegsRelation, resRegsRelation))
+    val letfRegsRelation = concatLeft.regsRelation
+    val resRegsRelation = result.regsRelation
+    concatLeft.regsRelation = conj(letfRegsRelation, derivedRegsRelation, resRegsRelation)
   }
 
   def apply(
@@ -35,9 +35,9 @@ object ConcatCEPreOp extends CEPreOp {
       for (argAuts <- argumentConstraints) yield {
         (for (
           aut <- argAuts;
-          if aut.isInstanceOf[CostEnrichedAutomaton];
+          if aut.isInstanceOf[CostEnrichedAutomatonBase];
           lengths <- aut
-            .asInstanceOf[CostEnrichedAutomaton]
+            .asInstanceOf[CostEnrichedAutomatonBase]
             .uniqueAcceptedWordLengths
         )
           yield (aut, lengths)).toSeq.headOption

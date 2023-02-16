@@ -8,8 +8,7 @@ import scala.collection.mutable.{
   ArrayStack
 }
 import ap.terfor.Term
-import ostrich.parikh.automata.CostEnrichedAutomatonTrait
-import ostrich.parikh.automata.CostEnrichedAutomatonBuilder
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 import ostrich.automata.BricsTLabelEnumerator
 import ap.basetypes.IdealInt
@@ -19,10 +18,10 @@ object ParikhUtil {
   private val CountingRegisters = new MHashSet[Term]()
   def addCountingRegister(t: Term) = CountingRegisters += t
 
-  type State = CostEnrichedAutomatonTrait#State
-  type TLabel = CostEnrichedAutomatonTrait#TLabel
+  type State = CostEnrichedAutomatonBase#State
+  type TLabel = CostEnrichedAutomatonBase#TLabel
 
-  def findAllSCC(aut: CostEnrichedAutomatonTrait) = {
+  def findAllSCC(aut: CostEnrichedAutomatonBase) = {
     aut.states.zipWithIndex.toMap
     val state2SCC = new MHashMap[State, Set[State]]
     val LReverse = new ArrayBuffer[State]()
@@ -30,7 +29,7 @@ object ParikhUtil {
     def dfsReverseAutStep(s: State): Unit = {
       if (!seenList(s)) {
         seenList += s
-        for ((t, _) <- aut.incomingTransitions(s)) {
+        for ((t, _, _) <- aut.incomingTransitionsWithVec(s)) {
           dfsReverseAutStep(t)
         }
         LReverse += s
@@ -54,7 +53,7 @@ object ParikhUtil {
         for ((t, _, vec) <- aut.outgoingTransitionsWithVec(s)) {
           if (!seenSet(t) && !visited(t)) {
             vec.zipWithIndex.filter(_._1 != 0).foreach { case (_, regidx) =>
-              loopedRegisters += aut.getRegisters(regidx)
+              loopedRegisters += aut.registers(regidx)
             }
             worklist.push(t)
           }
@@ -78,7 +77,7 @@ object ParikhUtil {
   
 
   private def repidlyRunBySCC(
-      aut: CostEnrichedAutomatonTrait,
+      aut: CostEnrichedAutomatonBase,
       scc: Set[State],
       sccEntry: State,
       finalValues: Seq[Int]
@@ -88,7 +87,7 @@ object ParikhUtil {
     val sccExits = ArrayBuffer[State]()
     val simpleCycles = ArrayBuffer[Seq[State]]()
     for (s <- scc) {
-      for ((t, _) <- aut.outgoingTransitions(s)) {
+      for ((t, _, _) <- aut.outgoingTransitionsWithVec(s)) {
         if (!scc(t) || aut.isAccept(t)) {
           sccExits += s
         }
@@ -99,7 +98,7 @@ object ParikhUtil {
       val path = worklist.pop
       val top = path.head
       visited.add(top)
-      for ((t, _) <- aut.incomingTransitions(top)) {
+      for ((t, _, _) <- aut.incomingTransitionsWithVec(top)) {
         if (!visited(t)) {
           worklist.push(t +: path)
         } else if (t == sccEntry) {
@@ -111,7 +110,7 @@ object ParikhUtil {
     while (ite.hasNext) {
       val cycle = ite.next()
       if (cycle.exists(sccExits.contains)) {
-        var cycleUpdate = Seq.fill(aut.getRegisters.length)(0)
+        var cycleUpdate = Seq.fill(aut.registers.length)(0)
         val cycleWord = new ArrayBuffer[Char]
         for (i <- 0 until cycle.size - 1) {
           val s = cycle(i)
@@ -123,7 +122,7 @@ object ParikhUtil {
         }
         if (cycleUpdate.indexOf(1) != -1) {
           val uniqueRegIdx = cycleUpdate.indexOf(1)
-          val uniqueReg = aut.getRegisters(uniqueRegIdx)
+          val uniqueReg = aut.registers(uniqueRegIdx)
           if (ParikhUtil.CountingRegisters.contains(uniqueReg)) {
             return Some((cycleWord.toSeq, cycleUpdate, uniqueRegIdx))
           }
@@ -139,26 +138,26 @@ object ParikhUtil {
   // counting register because it is be updated only by the same transition at most times.
   // Sometimes it may be updated by different transitions, so the search is not complete.
   def findAcceptedWordByRegisters(
-      auts: Seq[CostEnrichedAutomatonTrait],
+      auts: Seq[CostEnrichedAutomatonBase],
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
 
     val productAut = auts.reduceLeft(_ product _)
 
-    val registersValue = productAut.getRegisters.map(registersModel(_).intValue)
+    val registersValue = productAut.registers.map(registersModel(_).intValue)
     // println(registersValue)
     val todoList = new ArrayStack[(State, Seq[Int], Seq[Char], Boolean)]
     val visited = new MHashSet[(State, Seq[Int])]
     todoList.push(
       (
         productAut.initialState,
-        Seq.fill(productAut.getRegisters.size)(0),
+        Seq.fill(productAut.registers.size)(0),
         "",
         true
       )
     )
     visited.add(
-      (productAut.initialState, Seq.fill(productAut.getRegisters.size)(0))
+      (productAut.initialState, Seq.fill(productAut.registers.size)(0))
     )
     val state2SCC = findAllSCC(productAut)
     val notUniqueScc = MHashSet[Set[State]]()
@@ -270,7 +269,7 @@ object ParikhUtil {
   //       case aut +: otherAuts => {
   //         val state +: otherStates = states
   //         for (
-  //           (to, label, term) <- aut.outgoingTransitionsWithTerm(
+  //           (to, label, term) <- aut.outgoingTransitionsWithVecWithTerm(
   //             state
   //           );
   //           newILabel <- aut.LabelOps
@@ -336,22 +335,22 @@ object ParikhUtil {
     * @param synclen
     *   the length need to synchronize
     */
-  def getSyncLenAuts(
-      auts: Seq[CostEnrichedAutomatonTrait],
-      labels: MTreeSet[TLabel],
-      synclen: Int
-  ): (Seq[CostEnrichedAutomatonTrait], MMap[State, Seq[TLabel]]) = {
-    if (synclen <= 0) {
-      return (auts, MMap())
-    }
-    val newState2Prefix = new MHashMap[State, Seq[TLabel]]
-    val newAuts = auts.map { case aut =>
-      val (newAut, map) = getSyncLenAut(aut, labels, synclen)
-      newState2Prefix ++= map
-      newAut
-    }
-    (newAuts, newState2Prefix)
-  }
+  // def getSyncLenAuts(
+  //     auts: Seq[CostEnrichedAutomatonBase],
+  //     labels: MTreeSet[TLabel],
+  //     synclen: Int
+  // ): (Seq[CostEnrichedAutomatonBase], MMap[State, Seq[TLabel]]) = {
+  //   if (synclen <= 0) {
+  //     return (auts, MMap())
+  //   }
+  //   val newState2Prefix = new MHashMap[State, Seq[TLabel]]
+  //   val newAuts = auts.map { case aut =>
+  //     val (newAut, map) = getSyncLenAut(aut, labels, synclen)
+  //     newState2Prefix ++= map
+  //     newAut
+  //   }
+  //   (newAuts, newState2Prefix)
+  // }
 
   /** Given an automaton and synchronized length, return an automaton that is
     * equivalent to the given automaton. And return the map from state to its
@@ -361,80 +360,80 @@ object ParikhUtil {
     * @param synclen
     *   the length need to synchronize
     */
-  def getSyncLenAut(
-      aut: CostEnrichedAutomatonTrait,
-      labels: MTreeSet[TLabel],
-      synclen: Int
-  ): (CostEnrichedAutomatonTrait, MMap[State, Seq[TLabel]]) = {
-    assert(synclen >= 1)
-    // prefix len
-    val prefixLen = synclen - 1
-    // (old state, prefix string) pair
-    val worklist = new ArrayStack[(State, Seq[TLabel])]
-    val seenSet = new MHashSet[(State, Seq[TLabel])]
-    // pair (old state, prefix string) to new state
-    val oldStateWithPrefix2newState = new MHashMap[(State, Seq[TLabel]), State]
-    // new state to prefix string
-    val newState2Prefix = new MHashMap[State, Seq[TLabel]]
-    val builder = aut.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
+  // def getSyncLenAut(
+  //     aut: CostEnrichedAutomatonBase,
+  //     labels: MTreeSet[TLabel],
+  //     synclen: Int
+  // ): (CostEnrichedAutomatonBase, MMap[State, Seq[TLabel]]) = {
+  //   assert(synclen >= 1)
+  //   // prefix len
+  //   val prefixLen = synclen - 1
+  //   // (old state, prefix string) pair
+  //   val worklist = new ArrayStack[(State, Seq[TLabel])]
+  //   val seenSet = new MHashSet[(State, Seq[TLabel])]
+  //   // pair (old state, prefix string) to new state
+  //   val oldStateWithPrefix2newState = new MHashMap[(State, Seq[TLabel]), State]
+  //   // new state to prefix string
+  //   val newState2Prefix = new MHashMap[State, Seq[TLabel]]
+  //   val builder = aut.getBuilder.asInstanceOf[CostEnrichedAutomatonBuilder]
 
-    val initialState = builder.getNewState
-    builder.setInitialState(initialState)
-    builder.setAccept(initialState, aut.isAccept(aut.initialState))
+  //   val initialState = builder.getNewState
+  //   builder.setInitialState(initialState)
+  //   builder.setAccept(initialState, aut.isAccept(aut.initialState))
 
-    worklist.push((aut.initialState, Seq()))
-    oldStateWithPrefix2newState += ((aut.initialState, Seq()) -> initialState)
-    newState2Prefix += (initialState -> Seq())
+  //   worklist.push((aut.initialState, Seq()))
+  //   oldStateWithPrefix2newState += ((aut.initialState, Seq()) -> initialState)
+  //   newState2Prefix += (initialState -> Seq())
 
-    while (!worklist.isEmpty) {
-      val (oldStatePre, prefix) = worklist.pop
-      if (seenSet.add((oldStatePre, prefix))) {
-        val newStatePre = oldStateWithPrefix2newState((oldStatePre, prefix))
-        for (
-          (to, (lMin, lMax), vec) <- aut.outgoingTransitionsWithVec(oldStatePre)
-        ) {
-          val splitLabelIt = labels
-            .from((lMin, Char.MinValue))
-            .to((lMax, Char.MaxValue))
-            .toIterable
-          for (label <- splitLabelIt) {
-            val newPrefix = (prefix :+ label).take(prefixLen)
-            val newState = oldStateWithPrefix2newState.getOrElse(
-              (to, newPrefix),
-              builder.getNewState
-            )
-            builder.addTransition(newStatePre, label, newState, vec)
-            builder.setAccept(newState, aut.isAccept(to))
-            worklist.push((to, newPrefix))
-            oldStateWithPrefix2newState += ((to, newPrefix) -> newState)
-            newState2Prefix += (newState -> newPrefix)
-          }
-        }
-      }
-    }
-    builder addRegsRelation (aut.getRegsRelation)
-    builder prependRegisters (aut.getRegisters)
-    (builder.getAutomaton, newState2Prefix)
-  }
+  //   while (!worklist.isEmpty) {
+  //     val (oldStatePre, prefix) = worklist.pop
+  //     if (seenSet.add((oldStatePre, prefix))) {
+  //       val newStatePre = oldStateWithPrefix2newState((oldStatePre, prefix))
+  //       for (
+  //         (to, (lMin, lMax), vec) <- aut.outgoingTransitionsWithVec(oldStatePre)
+  //       ) {
+  //         val splitLabelIt = labels
+  //           .from((lMin, Char.MinValue))
+  //           .to((lMax, Char.MaxValue))
+  //           .toIterable
+  //         for (label <- splitLabelIt) {
+  //           val newPrefix = (prefix :+ label).take(prefixLen)
+  //           val newState = oldStateWithPrefix2newState.getOrElse(
+  //             (to, newPrefix),
+  //             builder.getNewState
+  //           )
+  //           builder.addTransition(newStatePre, label, newState, vec)
+  //           builder.setAccept(newState, aut.isAccept(to))
+  //           worklist.push((to, newPrefix))
+  //           oldStateWithPrefix2newState += ((to, newPrefix) -> newState)
+  //           newState2Prefix += (newState -> newPrefix)
+  //         }
+  //       }
+  //     }
+  //   }
+  //   builder addRegsRelation (aut.getRegsRelation)
+  //   builder prependRegisters (aut.registers)
+  //   (builder.getAutomaton, newState2Prefix)
+  // }
 
   /** Given a sequence of automata, return a set of labels. The labels represent
     * all labels in `auts` and have min interval
     * @param auts
     *   the sequence of automata
     */
-  def split2MinLabels(
-      auts: Seq[CostEnrichedAutomatonTrait]
-  ): MTreeSet[TLabel] = {
-    val oldLabels = new MHashSet[TLabel]
-    for (aut <- auts)
-      for ((_, label, _) <- aut.transitions)
-        oldLabels += label
-    val splitedLabels = new MTreeSet[TLabel]
-    new BricsTLabelEnumerator(oldLabels.iterator).enumDisjointLabels.foreach(
-      splitedLabels += _
-    )
-    splitedLabels
-  }
+  // def split2MinLabels(
+  //     auts: Seq[CostEnrichedAutomatonBase]
+  // ): MTreeSet[TLabel] = {
+  //   val oldLabels = new MHashSet[TLabel]
+  //   for (aut <- auts)
+  //     for ((_, label, _) <- aut.transitions)
+  //       oldLabels += label
+  //   val splitedLabels = new MTreeSet[TLabel]
+  //   new BricsTLabelEnumerator(oldLabels.iterator).enumDisjointLabels.foreach(
+  //     splitedLabels += _
+  //   )
+  //   splitedLabels
+  // }
 
   /** Compute a formula that represents the synchronization of substring from
     * length 1 to `synclen` in `auts`
