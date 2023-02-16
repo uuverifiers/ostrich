@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -337,6 +337,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, flags)
 
       goalState(goal) match {
+
+        case Plugin.GoalState.Eager =>
+          List()
 
         case Plugin.GoalState.Intermediate => try {
           breakCyclicEquations(goal).getOrElse(List()) elseDo
