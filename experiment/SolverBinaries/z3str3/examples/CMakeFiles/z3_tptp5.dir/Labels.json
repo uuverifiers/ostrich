@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/CMakeFiles/z3_tptp5"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/CMakeFiles/z3_tptp5.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/CMakeFiles/z3_tptp5-complete.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-install.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-mkdir.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-download.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-update.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-patch.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-configure.rule"
+		},
+		{
+			"file" : "/home/mku/tools/z3_59e9c87/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"z3_tptp5"
+		],
+		"name" : "z3_tptp5"
+	}
+}

@@ -1,12 +1,20 @@
-# Metals config files
-.metals/
-.bloop/
-.ammonite/
-metals.sbt
-/target/
-*.swo
-*.swp
-/.bsp
+# bloop and metals
+.bloop
+.bsp
+.metals
+project/metals.sbt
+*.yml
+
+# vs code
+.vscode
+
+# scala 3
+.tasty
+
+# sbt
+project/project/
+project/target/
+target/
 
 # scalafmt conf
 *scala*.conf
@@ -16,9 +24,8 @@ metals.sbt
 **/testMain.scala
 *.jar
 
-# IDEA config
+# idea 
 .idea/
-.vscode/
 
 # compiled file 
 project
@@ -28,18 +35,23 @@ ecma2020/target
 *.log
 log.txt
 
-#experiment
-experiment/benchmarks
+#experiment res
+experiment/res
+
+#benchmarks
+benchmarks
+models
 experiment/extracted
 experiment/smallbench
 experiment/count_benchmark
-experiment/sanitized
-experiment/res
-experiment/*.zip
-automatark_sml
 
-# dot files
-dot/
+# dot 
+dot
 
-# compared solver binaries
-SolverBinaries/
+# python byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+

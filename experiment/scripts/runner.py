@@ -123,6 +123,7 @@ class Z3Runner(RunnerInterface):
                 encoding="utf-8",
             )
             str_result.append(result.stdout)
+            str_result.append(result.stderr)
         except subprocess.TimeoutExpired:
             str_result.append("Timeout")
         except Exception as e:

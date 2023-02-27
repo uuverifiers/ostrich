@@ -1,0 +1,28 @@
+z3str3 meeting - 23.02.2020
+---------------------------
+- unique feature instance pyex
+  -> lots of string operations
+  -> Federico want's to take a look at a probing
+
+- Histogramm for string operations 
+  -> Level of granularity up to me
+---> FOR PROBING, HOW LONG SHOULD WE RUN THE SEQUENCE SOLVER
+
+
+
+--- Validation with all other solvers
+-> stable version as a validator. 
+
+-> add total unknonws/errors etc. to total table
+
+
+
+--- SEND BAD INSTANCES OF z3str4-murphy
+
+
+
+--------- INFOS:
+
+- Solved form: the the solution can essentially be read out of the formula -> substitute the solutiuon just into the formula
+   > try to simplify a forumla to solved form.
+   > trouble: overlapping variables ---- IDEA: bv algorithm; UNSATS by len-abs solver (multiset check?)

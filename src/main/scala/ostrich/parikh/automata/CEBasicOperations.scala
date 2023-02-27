@@ -48,7 +48,10 @@ object CEBasicOperations {
       auts: Seq[CostEnrichedAutomatonBase]
   ): CostEnrichedAutomatonBase = {
     val bauts = auts.map(toBricsAutomaton)
-    BricsAutomatonWrapper(BasicOperations.union(bauts.asJava))
+    val a = BricsAutomatonWrapper(BasicOperations.union(bauts.asJava))
+    a.toDot("union")
+    a
+
   }
 
   def union(
@@ -249,8 +252,6 @@ object CEBasicOperations {
           )(0)
         )
       prefixlen += aut.registers.size
-      // builder.registers(aut.registers)
-      // builder.addRegsRelation(aut.regsRelation)
     }
 
     for (s <- auts.last.acceptingStates)
@@ -258,7 +259,7 @@ object CEBasicOperations {
     for (
       i <- (0 until auts.size - 1).reverse;
       lastAccept <- auts(i).acceptingStates
-    )
+    ) // Bug: should set accept first, add epsilon later
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
     ceAut.regsRelation = conj(auts.map(_.regsRelation))
@@ -270,29 +271,28 @@ object CEBasicOperations {
     if (aut.registers.nonEmpty)
       throw new Exception("Registers must be empty")
   }
-
-  private def clone(
-      aut: CostEnrichedAutomatonBase
-  ): CostEnrichedAutomatonBase = {
-    val ceAut = new CostEnrichedAutomaton
-    // val builder = CostEnrichedAutomatonTrait.getBuilder
-    val old2new = aut.states.map(s => (s -> ceAut.newState())).toMap
-    for ((s, l, t, v) <- aut.transitionsWithVec)
-      ceAut.addTransition(old2new(s), l, old2new(t), v)
-    for (s <- aut.acceptingStates)
-      ceAut.setAccept(old2new(s), true)
-    ceAut.initialState = old2new(aut.initialState)
-    val newRegisters = Seq.fill(aut.registers.size)(RegisterTerm())
-    val replacement = new MHashMap[ConstantTerm, Term]
-    for ((oldr, newr) <- aut.registers.zip(newRegisters))
-      replacement.put(oldr.asInstanceOf[ConstantTerm], newr)
-    val order = TermGeneratorOrder.order
-    val newRegsRelation =
-      ConstantSubst(replacement.toMap, order)(aut.regsRelation)
-    ceAut.registers = newRegisters
-    ceAut.regsRelation = newRegsRelation
-    ceAut
-  }
+  // private def clone(
+  //     aut: CostEnrichedAutomatonBase
+  // ): CostEnrichedAutomatonBase = {
+  //   val ceAut = new CostEnrichedAutomaton
+  //   // val builder = CostEnrichedAutomatonTrait.getBuilder
+  //   val old2new = aut.states.map(s => (s -> ceAut.newState())).toMap
+  //   for ((s, l, t, v) <- aut.transitionsWithVec)
+  //     ceAut.addTransition(old2new(s), l, old2new(t), v)
+  //   for (s <- aut.acceptingStates)
+  //     ceAut.setAccept(old2new(s), true)
+  //   ceAut.initialState = old2new(aut.initialState)
+  //   val newRegisters = Seq.fill(aut.registers.size)(RegisterTerm())
+  //   val replacement = new MHashMap[ConstantTerm, Term]
+  //   for ((oldr, newr) <- aut.registers.zip(newRegisters))
+  //     replacement.put(oldr.asInstanceOf[ConstantTerm], newr)
+  //   val order = TermGeneratorOrder.order
+  //   val newRegsRelation =
+  //     ConstantSubst(replacement.toMap, order)(aut.regsRelation)
+  //   ceAut.registers = newRegisters
+  //   ceAut.regsRelation = newRegsRelation
+  //   ceAut
+  // }
 
   def repeatUnwind(
       aut: CostEnrichedAutomatonBase,
@@ -307,104 +307,72 @@ object CEBasicOperations {
     )
   }
 
-  def repeatUnwind(
+   def repeatUnwind(
       aut: CostEnrichedAutomatonBase,
       min: Int,
       max: Int
   ): CostEnrichedAutomatonBase = {
-    val unwindAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
-    if (max < min)
-      return new BricsAutomatonWrapper(BasicAutomata.makeEmpty())
-    if (max == 0)
-      return new BricsAutomatonWrapper(BasicAutomata.makeEmptyString())
-    for (_ <- 0 until max)
-      unwindAuts += clone(aut)
-    val ceAut = new CostEnrichedAutomaton
-    // val builder = CostEnrichedAutomatonTrait.getBuilder
-    val old2new =
-      unwindAuts.map(_.states).flatten.map(s => (s -> ceAut.newState())).toMap
-    val finalVecLen = unwindAuts.map(_.registers.size).sum
-
-    ceAut.initialState = old2new(unwindAuts(0).initialState)
-    if (min == 0) ceAut.setAccept(old2new(unwindAuts(0).initialState), true)
-
-    var prefixlen = 0
-    for ((aut, i) <- unwindAuts.zipWithIndex) {
-      for ((s, l, t, v) <- aut.transitionsWithVec)
-        ceAut.addTransition(
-          old2new(s),
-          l,
-          old2new(t),
-          Seq.fill(prefixlen)(0) ++ v ++ Seq.fill(
-            finalVecLen - prefixlen - v.size
-          )(0)
-        )
-      prefixlen += aut.registers.size
-      if (i + 1 >= min) {
-        for (s <- aut.acceptingStates)
-          ceAut.setAccept(old2new(s), true)
-      }
-      // builder.registers(aut.registers)
-      // builder.addRegsRelation(aut.regsRelation)
-    }
-
-    for (
-      i <- 0 until unwindAuts.size - 1;
-      lastAccept <- unwindAuts(i).acceptingStates
+    registersMustBeEmpty(aut)
+    BricsAutomatonWrapper(
+      BasicOperations.repeat(
+        toBricsAutomaton(aut),
+        min,
+        max
+      )
     )
-      ceAut.addEpsilon(
-        old2new(lastAccept),
-        old2new(unwindAuts(i + 1).initialState)
-      )
-    ceAut.registers = unwindAuts.flatMap(_.registers).toSeq
-    ceAut.regsRelation = conj(unwindAuts.map(_.regsRelation))
-    ceAut
   }
 
-  // We can not nestly repeat automata with registers
-  // Naive implementation is to unfold the nestly repeat automata
-  def repeat(
-      aut: CostEnrichedAutomatonBase
-  ): CostEnrichedAutomatonBase = {
-    repeat(aut, 0)
-  }
+  // def repeatUnwind(
+  //     aut: CostEnrichedAutomatonBase,
+  //     min: Int,
+  //     max: Int
+  // ): CostEnrichedAutomatonBase = {
+  //   val unwindAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
+  //   if (max < min)
+  //     return new BricsAutomatonWrapper(BasicAutomata.makeEmpty())
+  //   if (max == 0)
+  //     return new BricsAutomatonWrapper(BasicAutomata.makeEmptyString())
+  //   for (_ <- 0 until max)
+  //     unwindAuts += clone(aut)
+  //   val ceAut = new CostEnrichedAutomaton
+  //   // val builder = CostEnrichedAutomatonTrait.getBuilder
+  //   val old2new =
+  //     unwindAuts.map(_.states).flatten.map(s => (s -> ceAut.newState())).toMap
+  //   val finalVecLen = unwindAuts.map(_.registers.size).sum
 
-  def repeat(
-      aut: CostEnrichedAutomatonBase,
-      min: Int
-  ): CostEnrichedAutomatonBase = {
-    val ceAut = new CostEnrichedAutomaton
-    val newRegister = RegisterTerm()
-    ParikhUtil.addCountingRegister(newRegister)
-    val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
-    ceAut.initialState = old2new(aut.initialState)
-    for ((s, l, t, v) <- aut.transitionsWithVec)
-      ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
-    for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
-      ceAut.addTransition(
-        old2new(aut.initialState),
-        l,
-        old2new(t),
-        v ++ Seq(1)
-      )
-    for (s <- aut.acceptingStates) {
-      for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
-        ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(1))
-      ceAut.setAccept(old2new(s), true)
-    }
-    val newRegisters = aut.registers ++ Seq(newRegister)
-    val newRegsRelation =
-      if (aut.isAccept(aut.initialState))
-        disjFor(
-          conj(newRegister >= min),
-          conj(newRegisters.map(_ === 0) :+ aut.regsRelation)
-        )
-      else
-        conj(newRegister >= min)
-    ceAut.registers = newRegisters
-    ceAut.regsRelation = newRegsRelation
-    ceAut
-  }
+  //   ceAut.initialState = old2new(unwindAuts(0).initialState)
+  //   if (min == 0) ceAut.setAccept(old2new(unwindAuts(0).initialState), true)
+
+  //   var prefixlen = 0
+  //   for ((aut, i) <- unwindAuts.zipWithIndex) {
+  //     for ((s, l, t, v) <- aut.transitionsWithVec)
+  //       ceAut.addTransition(
+  //         old2new(s),
+  //         l,
+  //         old2new(t),
+  //         Seq.fill(prefixlen)(0) ++ v ++ Seq.fill(
+  //           finalVecLen - prefixlen - v.size
+  //         )(0)
+  //       )
+  //     prefixlen += aut.registers.size
+  //     if (i + 1 >= min) {
+  //       for (s <- aut.acceptingStates)
+  //         ceAut.setAccept(old2new(s), true)
+  //     }
+  //   }
+
+  //   for (
+  //     i <- 0 until unwindAuts.size - 1;
+  //     lastAccept <- unwindAuts(i).acceptingStates
+  //   )
+  //     ceAut.addEpsilon(
+  //       old2new(lastAccept),
+  //       old2new(unwindAuts(i + 1).initialState)
+  //     )
+  //   ceAut.registers = unwindAuts.flatMap(_.registers).toSeq
+  //   ceAut.regsRelation = conj(unwindAuts.map(_.regsRelation))
+  //   ceAut
+  // }
 
   def repeat(
       aut: CostEnrichedAutomatonBase,
@@ -414,20 +382,19 @@ object CEBasicOperations {
     if (aut.registers.nonEmpty) {
       return repeatUnwind(aut, min, max)
     }
-    if (max < min)
+    if (max < min || min < 0 || aut.isEmpty)
       return new BricsAutomatonWrapper(BasicAutomata.makeEmpty())
     if (max == 0)
       return new BricsAutomatonWrapper(BasicAutomata.makeEmptyString())
-    aut.toDot("before_repeat")
+    aut.toDot("repeat-before")
     val ceAut = new CostEnrichedAutomaton
     val newRegister = RegisterTerm()
     ParikhUtil.addCountingRegister(newRegister)
     val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
     ceAut.initialState = old2new(aut.initialState)
-    if (min <= 0)
+    if (min == 0)
       ceAut.setAccept(old2new(aut.initialState), true)
-    for ((s, l, t, v) <- aut.transitionsWithVec)
-      ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
+    // construct update of the new register
     for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
       ceAut.addTransition(
         old2new(aut.initialState),
@@ -435,39 +402,32 @@ object CEBasicOperations {
         old2new(t),
         v ++ Seq(1)
       )
+    // construct other updates
+    for ((s, l, t, v) <- aut.transitionsWithVec; if s != aut.initialState)
+    ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
     for (s <- aut.acceptingStates) {
       for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
         ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(1))
       ceAut.setAccept(old2new(s), true)
     }
     val newRegisters = aut.registers ++ Seq(newRegister)
-    // if epsilon is accepted by the aut, then the repeat of the aut should also
-    // accept epsilon
+    // if empty string is accepted by the aut, then the repeat of the aut should also
+    // accept empty string
     val newRegsRelation =
       if (aut.isAccept(aut.initialState))
-        disjFor(
-          conj(newRegister >= min, newRegister <= max),
-          conj(newRegisters.map(_ === 0) :+ aut.regsRelation)
-        )
+          newRegister <= max
       else
         conj(newRegister >= min, newRegister <= max)
     ceAut.registers = newRegisters
     ceAut.regsRelation = newRegsRelation
+    ceAut.toDot("repeat-after")
     ceAut
   }
 
   def optional(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
-    val ceAut = new CostEnrichedAutomaton
-    val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
-    ceAut.initialState = old2new(aut.initialState)
-    for ((s, l, t, v) <- aut.transitionsWithVec)
-      ceAut.addTransition(old2new(s), l, old2new(t), v)
-    for (s <- aut.acceptingStates)
-      ceAut.setAccept(old2new(s), true)
-    ceAut.setAccept(old2new(aut.initialState), true)
-    ceAut.registers = aut.registers
-    ceAut.regsRelation = aut.regsRelation
-    ceAut
+    aut.setAccept(aut.initialState, true)
+    aut.regsRelation = disjFor(aut.regsRelation, conj(aut.registers.map(_ === 0)))
+    aut
   }
 
   // We want to simplify the final automaton before generating lia by three steps:

@@ -1,0 +1,13 @@
+# Target labels
+ c_maxsat_example
+# Source files and their labels
+/home/mku/tools/z3_TRAU/examples/CMakeFiles/c_maxsat_example
+/home/mku/tools/z3_TRAU/examples/CMakeFiles/c_maxsat_example.rule
+/home/mku/tools/z3_TRAU/examples/CMakeFiles/c_maxsat_example-complete.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-install.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-mkdir.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-download.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-update.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-patch.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-configure.rule
+/home/mku/tools/z3_TRAU/examples/c_maxsat_example-prefix/src/c_maxsat_example-stamp/c_maxsat_example-build.rule

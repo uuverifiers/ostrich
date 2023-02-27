@@ -1,8 +1,8 @@
 import glob, os, re
 from dataclasses import dataclass, field
 
-res_dir1 = "23-02-08_14:34:02z3str3re_output"
-res_dir2 = "23-02-09_10:15:39unary_output"
+res_dir1 = "23-02-23_14:27:11unary_small_debug"
+res_dir2 = "23-02-23_22:52:07z3str3re_small_debug"
 
 dirname = os.path.dirname(__file__)
 analyzed_file1 = glob.glob(f"{dirname}/../res/{res_dir1}/*_log.txt", recursive=True)[0]

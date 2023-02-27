@@ -1,0 +1,43 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/sat_smt.dir/arith_axioms.cpp.o"
+  "CMakeFiles/sat_smt.dir/arith_diagnostics.cpp.o"
+  "CMakeFiles/sat_smt.dir/arith_internalize.cpp.o"
+  "CMakeFiles/sat_smt.dir/arith_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/array_axioms.cpp.o"
+  "CMakeFiles/sat_smt.dir/array_internalize.cpp.o"
+  "CMakeFiles/sat_smt.dir/array_model.cpp.o"
+  "CMakeFiles/sat_smt.dir/array_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/atom2bool_var.cpp.o"
+  "CMakeFiles/sat_smt.dir/ba_card.cpp.o"
+  "CMakeFiles/sat_smt.dir/ba_constraint.cpp.o"
+  "CMakeFiles/sat_smt.dir/ba_internalize.cpp.o"
+  "CMakeFiles/sat_smt.dir/ba_pb.cpp.o"
+  "CMakeFiles/sat_smt.dir/ba_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/ba_xor.cpp.o"
+  "CMakeFiles/sat_smt.dir/bv_ackerman.cpp.o"
+  "CMakeFiles/sat_smt.dir/bv_delay_internalize.cpp.o"
+  "CMakeFiles/sat_smt.dir/bv_internalize.cpp.o"
+  "CMakeFiles/sat_smt.dir/bv_invariant.cpp.o"
+  "CMakeFiles/sat_smt.dir/bv_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/dt_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_ackerman.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_internalize.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_invariant.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_model.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_proof.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_relevancy.cpp.o"
+  "CMakeFiles/sat_smt.dir/euf_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/fpa_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/q_mbi.cpp.o"
+  "CMakeFiles/sat_smt.dir/q_model_fixer.cpp.o"
+  "CMakeFiles/sat_smt.dir/q_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/sat_dual_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/sat_th.cpp.o"
+  "CMakeFiles/sat_smt.dir/user_solver.cpp.o"
+  "CMakeFiles/sat_smt.dir/xor_solver.cpp.o"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/sat_smt.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

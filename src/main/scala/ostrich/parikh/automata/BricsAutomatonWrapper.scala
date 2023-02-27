@@ -49,17 +49,19 @@ object BricsAutomatonWrapper {
   private val MINIMIZE_LIMIT = 100000
 }
 
-/** Wrapper for the BRICS automaton class. It is the same as the BRICS automaton
-  * class, except that it has registers and update for each transition.
+/** Wrapper for the dk.brics.automaton. Extend dk.brics.automaton with
+  * registers and update for each transition.
   */
 class BricsAutomatonWrapper(val underlying: BAutomaton)
     extends CostEnrichedAutomatonBase {
+
+  override def initialState_= (s: State) = underlying.setInitialState(s)
+
+  override def initialState: State = underlying.getInitialState()
+  
   // initialize
-  val old2new = asScala(underlying.getStates()).map(s => (s, newState())).toMap
   for (s <- asScala(underlying.getStates())){
-    setAccept(old2new(s), s.isAccept)
     for (t <- asScala(s.getTransitions()))
-      addTransition(old2new(s), (t.getMin(), t.getMax()), old2new(t.getDest()), Seq())
+      addTransition(s, (t.getMin(), t.getMax()), t.getDest(), Seq())
   }
-  initialState = old2new(underlying.getInitialState)
 }

@@ -1,34 +1,50 @@
+# This file is used to fine tune the benchmarks.
+
 # remove benchmarks with re.reference
-# remove benchmarks with re.+?, re.loop?, re.*?
+# replace re.+?, re.loop?, re.*?, re.opt? to re.+, re.loop, re.*, re.opt
+# replace str.in.re, str.to.re to str.in_re, str.to_re  (smtlib2.6)
+# replace \x[0-9a-f]{2,2} to \u{[0-9a-f]{2,2}} (consistent to ostrich)
+# prepend (set-logic QF_SLIA)\n(set-option :produce-models true)\n to speed up cvc5
+
 
 from runner import RunnerInterface
-import argparse, os, shutil, re
+import argparse, os, re
 from dataclasses import dataclass
+
+dirname = os.path.dirname(__file__)
 
 @dataclass
 class Sanitizer(RunnerInterface):
   extension : str = "smt2" 
   
   def run_single_instance(self, filename: str):
-    ERR_RE = re.compile(r"re.range \"[^ ]{3}", re.M)
+    # ERR_RE = re.compile(r"re.range \"[^ ]{3}", re.M)
     try:
       read_f = open(filename, "r", encoding="utf-8")
       file_contents = read_f.read()
       read_f.close()
       removeLazyOperator = file_contents
-      if "re.+?" in file_contents:
-        removeLazyOperator = removeLazyOperator.replace("re.+?", "re.+")
-      if "re.loop?" in file_contents:
-        removeLazyOperator = removeLazyOperator.replace("re.loop?", "re.loop")
-      if "re.*?" in file_contents:
-        removeLazyOperator = removeLazyOperator.replace("re.*?", "re.*")
-      if ERR_RE.search(file_contents) or "re.reference" in file_contents:
-        return f"{filename} removed"
-      with open(filename, "w", encoding="utf-8") as wrt_f:
-        wrt_f.write(removeLazyOperator)
-      newfile =  os.path.join(self.outdir, os.path.relpath(filename, self.benchdir))
+      # remove lazy operator
+      removeLazyOperator = removeLazyOperator.replace("re.+?", "re.+")
+      removeLazyOperator = removeLazyOperator.replace("re.loop?", "re.loop")
+      removeLazyOperator = removeLazyOperator.replace("re.*?", "re.*")
+      removeLazyOperator = removeLazyOperator.replace("re.opt?", "re.opt")
+      # consistent to cvc5
+      smtlib2020 = removeLazyOperator.replace("str.to.re", "str.to_re")
+      smtlib2020 = smtlib2020.replace("str.in.re", "str.in_re")
+      ascii2unicode = re.sub(r"\\x([0-9a-f]{2,2})", r"\\u{\1}", smtlib2020, flags=re.M)
+      prepend = "(set-logic QF_SLIA)\n(set-option :produce-models true)\n"
+      prepended = prepend + ascii2unicode
+      (head, benchdirname) = os.path.split(self.benchdir)
+      # if ERR_RE.search(file_contents) or "re.reference" in file_contents:
+      #   return f"{filename} removed"
+      newfile =  os.path.join(
+        self.outdir, 
+        benchdirname,
+        os.path.relpath(filename, self.benchdir))
       os.makedirs(os.path.dirname(newfile), exist_ok=True)
-      shutil.copy(filename, newfile)
+      with open(newfile, "w", encoding="utf-8") as wrt_f:
+        wrt_f.write(prepended)
     except:
       print("An exception occurred when read file")
       
@@ -39,11 +55,11 @@ argparser = argparse.ArgumentParser(
   description='Sanitize benchmarks',
 )
 argparser.add_argument("bench")
-argparser.add_argument("--outdir", default=".")
+argparser.add_argument("--outdir", default="../benchmarks")
 
 args = argparser.parse_args()
-working_dir = os.getcwd() 
-outdir = os.path.join(working_dir, args.outdir, 'sanitized')
+dirname = os.path.dirname(__file__) 
+outdir = os.path.join(dirname, args.outdir, 'sanitized')
 os.makedirs(outdir, exist_ok=True)
 Sanitizer(args.bench, 4, outdir).run()
 

@@ -68,9 +68,7 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
       // We must treat TermGenerator.order carefully. 
       // Note that finalArith.order == TermGenerator.order 
-      // because TermGenerator.order is the implicit order
-      // The call addAssertion will fail some asserttion 
-      // if the TermGenerator is extended with too many constants. 
+      // The call addAssertion will fail some asserttion if the TermGenerator is extended with too many constants. 
       // (run ostrich with +assert option)
       p !! finalArith
       val status = measure(

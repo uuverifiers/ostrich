@@ -119,9 +119,9 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
             Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)
           ) =>
         if (unwind)  {
-          repeatUnwind(toCEAutomaton(t, unwind), n1, n2)
+          repeatUnwind(toCEAutomaton(t, true), n1, n2)
         }
-        else repeat(toCEAutomaton(t, unwind), n1, n2)
+        else repeat(toCEAutomaton(t, true), n1, n2)
       case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
         repeatUnwind(toCEAutomaton(t, true), 0)
 

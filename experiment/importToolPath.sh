@@ -1,0 +1,1 @@
+bash toolconfigGen.sh > zaligvinder/toolconfig.json

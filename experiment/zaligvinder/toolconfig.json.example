@@ -1,0 +1,25 @@
+{
+    "Binaries" : {
+	"woorpje" : {
+	    "path" : "/home/caramon/Development/Woorpje/build/woorpje"
+	},
+	"woorpjeSMT" : {
+	    "path" : "/home/caramon/Development/Woorpje/build/woorpjeSMT"
+	},
+	"woorpje2SMT" : {
+	    "path" : "/home/caramon/Development/Woorpje/build/woorpje2SMT"
+	},
+	"Z3" : {
+	    "path" : "/usr/bin/z3"
+	},
+	"cvc4" : {
+	    "path" : "/usr/bin/cvc4"
+	},
+	"norn" : {
+	    "path" : "/path/to/norn"
+	},
+	"Trau" : {
+	    "path" : "/path/to/Trau"
+	}
+    }
+}

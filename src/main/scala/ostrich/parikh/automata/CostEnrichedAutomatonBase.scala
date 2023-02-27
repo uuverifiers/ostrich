@@ -19,7 +19,8 @@ import ostrich.parikh.writer.DotWriter
 import dk.brics.automaton.{State => BState}
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
-
+import dk.brics.automaton.BasicOperations
+import CEBasicOperations.toBricsAutomaton
 
 class CostEnrichedAutomatonBase extends Automaton {
   type State = BState
@@ -249,7 +250,10 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
 
   // not implement methods
-  def unary_! = throw new UnsupportedOperationException
+  def unary_! = {
+    if (registers.nonEmpty) throw new UnsupportedOperationException
+    BricsAutomatonWrapper(BasicOperations.complement(toBricsAutomaton(this)))
+  }
   def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
   // def isEmpty: Boolean = throw new UnsupportedOperationException
   def getAcceptedWord: Option[Seq[Int]] = throw new UnsupportedOperationException
