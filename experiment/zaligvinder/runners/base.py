@@ -2,7 +2,7 @@
 import os
 import sys
 import utils
-import tools.cvc4
+import experiment.zaligvinder.tools.cvc5
 import tools.z3seq
 
 def progressMessage (track,file,solver,cur,total):

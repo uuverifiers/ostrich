@@ -386,7 +386,6 @@ object CEBasicOperations {
       return new BricsAutomatonWrapper(BasicAutomata.makeEmpty())
     if (max == 0)
       return new BricsAutomatonWrapper(BasicAutomata.makeEmptyString())
-    aut.toDot("repeat-before")
     val ceAut = new CostEnrichedAutomaton
     val newRegister = RegisterTerm()
     ParikhUtil.addCountingRegister(newRegister)
@@ -420,7 +419,6 @@ object CEBasicOperations {
         conj(newRegister >= min, newRegister <= max)
     ceAut.registers = newRegisters
     ceAut.regsRelation = newRegsRelation
-    ceAut.toDot("repeat-after")
     ceAut
   }
 

@@ -1,6 +1,8 @@
 import os
 import shutil
 
+dirname = os.path.dirname(__file__)
+
 class Result:
     def __init__(self,result,time,timeouted,smtcalls,output = "",model="",verified=None):
         self.result = result
@@ -38,7 +40,7 @@ class ProgramLocator:
     def __init__(self):
         self._map = {
             'woorpje' : 'WOORPJEBINARY',
-            'cvc4' : 'CVC4BINARY',
+            'cvc5' : 'CVC5BINARY',
             'norn' : 'NORNBINARY',
             'woorpjeSMT' : 'WOORPJESMTBINARY',
             'Z3' : 'Z3BINARY',
@@ -49,7 +51,7 @@ class ProgramLocator:
         return os.environ.get(environmentvar) or shutil.which (toolname) 
 
 class JSONProgramConfig:
-    def __init__(self,configfile = "./toolconfig.json"):
+    def __init__(self,configfile = os.path.join(dirname, "toolconfig.json")):
         import json
         with open(configfile) as config_file:
             data = json.load(config_file)

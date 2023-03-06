@@ -79,7 +79,7 @@ class CactusGenerator:
 
             if woorpjebest:
                 woorpjePrefix = "woorpje-"#-hack-"
-                general_solvers = ["cvc4","z3seq","z3str3"]
+                general_solvers = ["cvc5","z3seq","z3str3"]
                 if all_instances:
                     self._solvers = self._woorpjeSolvers(woorpjePrefix,general_solvers,None)
                 else: 
@@ -208,11 +208,11 @@ if __name__ == "__main__":
     for i in cactusPoints:
         print('\\resizebox{.2\\textwidth}{!}{\\begin{tikzpicture}\\begin{axis}[title=Track '+str(int_to_Roman(i))+',xlabel=Solved instances,ylabel=Time (seconds),legend style={at={(0.02,0.98)},anchor=north west}]')
 
-        solverNames = ["woorpje","cvc4","z3str3","z3seq","norn","sloth"]
+        solverNames = ["woorpje","cvc5","z3str3","z3seq","norn","sloth"]
         #if i == 5:
         #    solvers = ["WoorpjeSAT","z3str3Solver","z3sequenceSolver","Norn"]
 
-        for t in solverNames: # ,"CVC4"ec
+        for t in solverNames: # ,"CVC5"ec
             solverNo+=1
             output = ('\\addplot coordinates {')
 

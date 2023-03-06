@@ -70,7 +70,7 @@ class TheRunner:
 if __name__ == "__main__":
     import z3seq
     import z3str3
-    import cvc4
+    import cvc5
     import woorpje
     import summarygenerators
 
@@ -78,15 +78,13 @@ if __name__ == "__main__":
 
     solvers = {'z3str3' : z3str3.run,
            'z3seq' : z3seq.run,
-           'cvc4' : cvc4.run,
+           'cvc5' : cvc5.run,
            'woorpje' :  woorpje.run
     }
 
     summaries = [summarygenerators.terminalResult,
                  summarygenerators.cactusPlot
     ]
-
-    print("LOL")
 
 
     outputfile = open("res.cvs",'w')

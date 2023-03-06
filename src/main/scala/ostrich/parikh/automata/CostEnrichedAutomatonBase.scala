@@ -157,6 +157,14 @@ class CostEnrichedAutomatonBase extends Automaton {
     yield (from, lbl, to, vec)
   }
 
+  // def vectors: Iterator[Seq[Int]] = {
+  //   for ((from, set) <- _state2transtions.iterator;
+  //         if set.nonEmpty;  // outgoing transitions not empty
+  //         if (states contains from);  // reachable from initial state
+  //        (to, lbl, vec) <- set.iterator)
+  //   yield vec
+  // }
+
   def addTransition(from: State, lbl: TLabel, to: State, vec: Seq[Int]): Unit = {
     _state2transtions.get(from) match {
       case Some(set) => set.add((to, lbl, vec))

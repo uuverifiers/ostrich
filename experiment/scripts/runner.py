@@ -7,6 +7,7 @@ from time import time
 from dataclasses import dataclass, field
 
 timelimit = 60
+dirname = os.path.dirname(__file__)
 
 
 @dataclass
@@ -57,7 +58,6 @@ class BaseLineRunner(RunnerInterface):
 
     def run_single_instance(self, benchmark: str) -> str:
         str_result = []
-        dirname = os.path.dirname(__file__)
         command = os.path.join(dirname, "../../ostrich")
         str_result.append(f"Running [{benchmark}]")
         self.pbar.set_description(f"Running [{benchmark}]")
@@ -141,7 +141,13 @@ class CVC5Runner(Z3Runner):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.command = ["cvc5", "--lang=smt2", "--produce-models"]
+        command_without_params = os.path.join(
+            dirname, "../SolverBinaries/cvc5")
+        self.command = [
+            command_without_params,
+            "--lang=smt2",
+            "--produce-models"
+        ]
 
 
 @dataclass
@@ -151,13 +157,16 @@ class Z3Str3RERunner(Z3Runner):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        command_without_params = os.path.join(
+            dirname, "../SolverBinaries/RegExSolver/z3")
         self.command = [
-            "SolverBinaries/RegExSolver/z3",
+            command_without_params,
             "smt.string_solver=z3str3",
             "smt.str.tactic=arr",
             "smt.arith.solver=2",
             "dump_models=true",
         ]
+
 
 @dataclass
 class Z3TrauRunner(Z3Runner):
@@ -166,7 +175,9 @@ class Z3TrauRunner(Z3Runner):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        command_without_params = os.path.join(
+            dirname, "../SolverBinaries/RegExSolver/z3")
         self.command = [
-            "SolverBinaries/RegExSolver/z3",
+            command_without_params,
             "smt.string_solver=z3str3",
         ]

@@ -19,15 +19,13 @@ class UnaryFinalConstraints(
   }
 
   lazy val mostlySimplifiedAut = {
-    val res =
-      CEBasicOperations.minimizeHopcroftByVec(
-        CEBasicOperations.determinateByVec(
-          CEBasicOperations.epsilonClosureByVec(
-            productAtom.aut
-          )
+    CEBasicOperations.minimizeHopcroftByVec(
+      CEBasicOperations.determinateByVec(
+        CEBasicOperations.epsilonClosureByVec(
+          productAtom.aut
         )
       )
-    res
+    )
   }
 
   lazy val simplifyButRemainLabelAut =

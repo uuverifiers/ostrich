@@ -7,7 +7,7 @@ cat << EOF
 		"RegExSolver" : {
 						"path" : "$tPath/SolverBinaries/RegExSolver/z3"
 					},
-		"Z3Bin" : {
+		"Z3seq" : {
 							"path" : "$tPath/SolverBinaries/z3seq/bin/z3"
 					},
 		"Z3str3" : {

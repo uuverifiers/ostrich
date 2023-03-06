@@ -32,11 +32,11 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
   def solveUnderApprox: Result = {
     // add bound iterately
-    val maxBound = 20
+    val maxBound = 15
     val step = 5
     var nowBound = 5
     var result = new Result
-    while (nowBound < maxBound && !result.isSat) {
+    while (nowBound <= maxBound && !result.isSat) {
       result = solveFormula(
         conj(constraints.map(_.getUnderApprox(nowBound)))
       )
@@ -70,6 +70,7 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
       // Note that finalArith.order == TermGenerator.order 
       // The call addAssertion will fail some asserttion if the TermGenerator is extended with too many constants. 
       // (run ostrich with +assert option)
+      println(finalArith)
       p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

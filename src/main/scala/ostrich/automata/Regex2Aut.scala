@@ -251,7 +251,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
           ", cannot handle " + t)
 
     case IFunApp(`str_to_re`, Seq(EncodedString(str))) =>
-      BasicAutomata.makeString(str)
+      // TODO: handle escaping
+      val str2 = str.replaceAll("""\\\\""", "\\\\")
+      BasicAutomata.makeString(str2)
 
     case IFunApp(`re_from_str`, Seq(EncodedString(str))) => {
       // TODO: this translation has to be checked more carefully, there might

@@ -11,7 +11,7 @@ import models.stringfuzzregexgenerated_sml
 import models.automatark_sml
 import startwebserver
 
-import tools.cvc4
+import experiment.zaligvinder.tools.cvc5
 import tools.z3str3
 import tools.regExSolverHeuristics
 import tools.ostrich
@@ -28,7 +28,7 @@ tracks = (models.automatark_sml.getTrackData("AutomatArk Preview")+
         )
 
 solvers = {}
-for s in [tools.cvc4,
+for s in [tools.cvc5,
           tools.ostrich,
           tools.z3seq,
           tools.z3str3,
