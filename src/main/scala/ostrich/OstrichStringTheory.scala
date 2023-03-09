@@ -358,6 +358,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       // println(Plugin.GoalState.values)
       // println(goalState(goal))
       goalState(goal) match {
+        case Plugin.GoalState.Eager =>
+          List()
 
         case Plugin.GoalState.Intermediate => try {
           breakCyclicEquations(goal).getOrElse(List()) elseDo

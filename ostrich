@@ -55,7 +55,7 @@ for p; do
         echo "$USAGE"
         exit 0
         ;;
-    [+-]incremental | -timeout=*)
+    [+-]incremental | -timeout=* | *.smt*)
         princessParams+=("$p")
         ;;
     *)

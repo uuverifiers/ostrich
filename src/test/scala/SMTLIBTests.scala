@@ -426,7 +426,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("negated-equation-2.smt2") =
     checkFile("tests/negated-equation-2.smt2", "unknown")
   property("concat-empty.smt2") =
-    checkFile("tests/concat-empty.smt2", "unsat")t
+    checkFile("tests/concat-empty.smt2", "unsat")
   property("replace-bug.smt2") =
     checkFile("tests/replace-bug.smt2", "unsat")
 
