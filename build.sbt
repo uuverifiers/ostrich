@@ -59,25 +59,8 @@ lazy val commonSettings = Seq(
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )
 )
 
-// lazy val parserSettings = Seq(
-// //    publishArtifact in packageDoc := false,
-// //    publishArtifact in packageSrc := false,
-//   exportJars := true,
-//   crossPaths := true
-// )
-
-// lazy val ecma2020parser = (project in file("ecma2020"))
-//   .settings(commonSettings: _*)
-//   .settings(parserSettings: _*)
-//   .settings(
-//     name := "OSTRICH-ECMA2020-parser",
-//     Compile / packageBin := baseDirectory.value / "ecma2020-regex-parser.jar"
-//   )
-//   .disablePlugins(AssemblyPlugin)
 
 lazy val root = (project in file("."))
-  // .aggregate(ecma2020parser)
-  // .dependsOn(ecma2020parser)
   .settings(commonSettings: _*)
   .settings(
     Compile / mainClass := Some("ostrich.OstrichMain"),
@@ -86,13 +69,11 @@ lazy val root = (project in file("."))
     resolvers += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/")
       .withAllowInsecureProtocol(true),
 //
-//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2022-07-01",
     libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-     libraryDependencies   += "uuverifiers" %% "ostrich-ecma2020-parser" % "1.2",
+    libraryDependencies += "uuverifiers" %% "ostrich-ecma2020-parser" % "1.2",
     libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
-    libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.17.1",
     libraryDependencies += "com.lihaoyi" %% "os-lib" % "0.8.1",
     libraryDependencies += "uuverifiers" % "catra_2.13" % "0.1.0-SNAPSHOT"
   )

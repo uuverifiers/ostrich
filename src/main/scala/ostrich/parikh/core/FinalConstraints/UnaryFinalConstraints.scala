@@ -57,7 +57,7 @@ class UnaryFinalConstraints(
     )
   }
 
-  if (OstrichConfig.outputdot) {
+  if (OstrichConfig.debug) {
     mostlySimplifiedAut.toDot("simplified_" + strId.toString)
     simplifyButRemainLabelAut.toDot("original_" + strId.toString)
   }

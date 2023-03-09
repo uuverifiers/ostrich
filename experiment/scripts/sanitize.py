@@ -8,7 +8,7 @@
 
 
 from runner import RunnerInterface
-import argparse, os, re, shutil
+import argparse, os, re
 from dataclasses import dataclass
 
 dirname = os.path.dirname(__file__)
@@ -18,7 +18,7 @@ class Sanitizer(RunnerInterface):
   extension : str = "smt2" 
   
   def run_single_instance(self, filename: str):
-    ERR_RE = re.compile(r"(re.range \"[0-9a-zA-Z]{2,}\")|(re.range \".{1}\" \"[0-9a-zA-Z]{2,}\")", re.M)
+    ERR_RE = re.compile(r"(re.range \"[0-9a-zA-Z\\]{2,}\")|(re.range \".{1}\" \"[0-9a-zA-Z\\]{2,}\")", re.M)
     try:
       read_f = open(filename, "r", encoding="utf-8")
       file_contents = read_f.read()

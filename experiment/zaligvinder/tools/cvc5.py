@@ -46,6 +46,9 @@ def run(eq, timeout, ploc, wd, solver="1", param="60"):
 
         if "(set-logic" in l:
             l = re.sub("\(set-logic.*?\)", "(set-logic QF_ALL)", l)
+        # str.in.re to str.in_re, str.to.re to str.to_re
+        l = l.replace("str.in.re", "str.in_re")
+        l = l.replace("str.to.re", "str.to_re")
         copy.write(l)
 
     copy.write("\n(check-sat)")

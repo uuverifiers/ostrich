@@ -1,5 +1,4 @@
 package ostrich.parikh.automata
-import scala.collection.mutable.{Stack, HashMap => MHashMap, HashSet => MHashSet}
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 class CostEnrichedAutomaton extends CostEnrichedAutomatonBase{

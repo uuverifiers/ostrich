@@ -63,7 +63,7 @@ class AutDatabase(theory: OstrichStringTheory, minimizeAutomata: Boolean) {
   import AutDatabase._
 
   private val regex2Aut =
-    if (OstrichConfig.useCostEnriched && OstrichConfig.regex2ce)
+    if (OstrichConfig.useCostEnriched )
       new Regex2CEAut(theory)
     else
       new Regex2Aut(theory)

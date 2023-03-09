@@ -52,7 +52,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       "Loading " + name + " " + version +
         ", a solver for string constraints"
     )
-    println("(c) Matthew Hague, Philipp Rümmer, 2018-2022")
+    println("(c)Denghang Hu, Matthew Hague, Philipp Rümmer, 2018-2023")
     println(
       "With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf."
     )
@@ -62,20 +62,31 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   private val usage =
     s"""
-    Usage:./ostrich <options> <files or directories>
+    Usage:./ostrich <options> files
 
-    Available options :
-       [+-]costenriched     -- use cost enriched automata               (default: not use cost enriched automata)
-       [+-]minimizeAutomata -- minimize the initial regular constraints (default: not minimize)
-       -backend=val         -- backend to use for solving               (default: unary)
-       -heuristic=val       -- heuristic strategy to use for solving    (default: all)
+    Available options : (for boolean arguments, + is ture and - is false)
+
+      [+-]costenriched           -- use cost enriched automata               (default: false)
+
+      when costenriched is true, the following options are available:
+      -backend=val               -- backend to use for solving               (default: unary; available: unary, catra, baseline)
+      [+-]under-approx           -- use under-approximation heuristic        (default: true)
+      [+-]over-approx            -- use over-approximation heuristic         (default: true)
+      [+-]find-model-heuristic   -- use find model heuristic                 (default: true)
+
+      when costenriched is false, the following options are available: 
+      [+-]minimizeAutomata       -- minimize the initial regular constraints (default: false)
+      [+-]eager                  -- eagerly solve regular constraints        (default: false)
+      [+-]forward                -- use forward analysis                     (default: false)
+      [+-]parikh                 -- use parikh image                         (default: false)
     """
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh, useCostEnriched = false
+  private var eager, forward, minimizeAuts, useParikh = false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
+  // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
     case CmdlParser.Opt("eager", value) =>
       eager = value
@@ -91,8 +102,20 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forward = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+
+    // Options for cost-enriched-automata based solver
+    case CmdlParser.Opt("measuretime", value) =>
+      OstrichConfig.measureTime = value
     case CmdlParser.Opt("costenriched", value) =>
       OstrichConfig.useCostEnriched = value
+    case CmdlParser.Opt("under-approx", value) =>
+      OstrichConfig.underApprox = value
+    case CmdlParser.Opt("over-approx", value) =>
+      OstrichConfig.overApprox = value
+    case CmdlParser.Opt("debug", value) => 
+      OstrichConfig.debug = value
+    case CmdlParser.Opt("find-model-heuristic", value) =>
+      OstrichConfig.findStringHeu = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
       OstrichConfig.backend = OstrichConfig.Baseline()
     case CmdlParser.ValueOpt("backend", "unary") =>
@@ -100,14 +123,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.ValueOpt("backend", "catra") =>
       OstrichConfig.backend = OstrichConfig.Catra()
     // ignore")
-    case CmdlParser.Opt("help", _) =>
-      println(usage)
-      System.exit(0)
     case str =>
-      throw new TheoryBuilder.TheoryBuilderException(
-        "Parameter " + str + " is not supported by theory " + name + "\n" + usage
-      )
-    // super.parseParameter(str)
+      println("Parameter " + str + " is not supported by theory " + name + "\n")
+      System.exit(1)
   }
 
   import StringTheoryBuilder._

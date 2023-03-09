@@ -5,17 +5,8 @@ import dk.brics.automaton.{
   RegExp,
   Automaton => BAutomaton
 }
-import scala.collection.mutable.{
-  HashMap => MHashMap,
-  HashSet => MHashSet,
-  LinkedHashSet => MLinkedHashSet,
-  Stack => MStack
-}
 
-import scala.collection.mutable.ArrayBuffer
 import ostrich.parikh._
-import ap.terfor.TerForConvenience._
-import TermGeneratorOrder.order
 import scala.collection.JavaConverters.asScala
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase

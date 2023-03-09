@@ -2,7 +2,6 @@ package ostrich.parikh.preop
 
 import ostrich.automata.Automaton
 import ostrich.parikh.CostEnrichedConvenience._
-import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.automata.CostEnrichedInitFinalAutomaton
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._

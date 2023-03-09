@@ -37,6 +37,7 @@ def run(eq, timeout, ploc, wd):
                     "-inputFormat=smtlib",
                     "+model",
                     "-timeout=" + str(timeout) + "000",
+                    "-stringSolver=ostrich.OstrichStringTheory:+costenriched,-backend=unary",
                     smtfile,
                 ],
                 timeout=timeout,

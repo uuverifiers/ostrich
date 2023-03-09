@@ -1,44 +1,29 @@
 package ostrich.parikh
-import pureconfig._
-import pureconfig.generic.auto._
 
 object OstrichConfig {
-
-  sealed trait ProductStrategy
-  case class Basic() extends ProductStrategy
-  case class Lazy() extends ProductStrategy
 
   sealed trait Backend
   case class Baseline() extends Backend
   case class Unary() extends Backend
   case class Catra() extends Backend
   
-  case class ParikhConf(
-      strategy: ProductStrategy = Basic(),
-      backend: Backend = Baseline(),
-      measureTime: Boolean = true,
-      useCostEnriched: Boolean = false
-  )
 
-  lazy val config: ConfigReader.Result[ParikhConf] = ConfigSource.default.load[ParikhConf]
+  var backend : Backend = Unary()
 
-  lazy val productStrategy = config.right.get.strategy
+  var measureTime = true
 
-  var backend = config.right.get.backend
+  var useCostEnriched = false 
 
-  lazy val measureTime = config.right.get.measureTime
+  var debug = false
 
-  var useCostEnriched = config.right.get.useCostEnriched
+  var log = false 
 
-  val outputdot = true
+  var underApprox = true 
 
-  val regex2ce = true
+  var underApproxBound = 15
 
-  val log = true 
+  var overApprox = true 
 
-  // productStrategy match {
-  //   case Basic() => Console.err.println("Eager product")
-  //   case Lazy() => Console.err.println("Lazy product")
-  // }
+  var findStringHeu = true 
 
 }

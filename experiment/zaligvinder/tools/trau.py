@@ -24,6 +24,9 @@ def run (eq,timeout,ploc,wd):
     copy=open(smtfile,"w")
     for l in f:
         if "(get-model)" not in l:
+            # substitute str.to_re to str.to.re, str.in_re to str.in.re
+            l = l.replace("str.to_re", "str.to.re")
+            l = l.replace("str.in_re", "str.in.re")
             copy.write(l)
     
     f.close()

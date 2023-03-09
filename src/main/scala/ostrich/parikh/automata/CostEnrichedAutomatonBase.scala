@@ -5,7 +5,6 @@ import ostrich.automata._
 import scala.collection.mutable.{
   HashMap => MHashMap,
   Stack => MStack,
-  LinkedHashSet => MLinkedHashSet,
   HashSet => MHashSet,
   ArrayBuffer
 }

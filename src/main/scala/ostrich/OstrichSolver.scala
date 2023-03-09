@@ -331,18 +331,11 @@ class OstrichSolver(theory : OstrichStringTheory,
 
           import TerForConvenience._
           implicit val o = lengthProver.order
-
           Some(lengthProver)
         } else
           None
 
-      
-
-      // val result = exploration.findModel
       val result = if(OstrichConfig.useCostEnriched){
-        // first use under-approximation to find a model
-        // then if under unsat, use over-approximation to check unsat
-        // if over sat and under unsat, then use completeExp(slowest)
         val approxExp = new ParikhExploration(funApps.toSeq, regexes.toSeq, strDatabase)
         approxExp.findModel
       } else {

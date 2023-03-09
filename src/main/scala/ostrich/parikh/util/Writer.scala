@@ -25,12 +25,17 @@ trait Writer {
   def flush() = writer.flush()
 }
 
-class Logger extends Writer {
-  val filename: String = (os.pwd / "log.txt").toString()
+class TmpWriter extends  Writer{
 
-  val file  = new File(filename)
+  val filename: String = (os.pwd / "tmp.txt").toString()
+
+  val file = new File(filename) 
 
   val writer = new BufferedWriter(new FileWriter(file))
+}
+
+class Logger extends TmpWriter {
+  override val filename: String = (os.pwd / "log.txt").toString()
 
   def log(s: String) = {
     if (OstrichConfig.log) {
@@ -46,8 +51,6 @@ class Logger extends Writer {
   }
 }
 
-class CatraWriter(override val filename: String) extends Logger
+class CatraWriter(override val filename: String) extends TmpWriter
 
-class DotWriter(override val filename: String) extends Logger
-
-class TempWriter(override val filename: String) extends Logger
+class DotWriter(override val filename: String) extends TmpWriter

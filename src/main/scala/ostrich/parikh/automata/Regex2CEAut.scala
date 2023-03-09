@@ -10,7 +10,6 @@ import scala.collection.mutable.ArrayStack
 import scala.collection.immutable.VectorBuilder
 import ostrich.automata.Automaton
 
-import ostrich.parikh.automata.CostEnrichedAutomaton
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 

@@ -1,7 +1,6 @@
 package ostrich.parikh.automata
 
 import ostrich.parikh.RegisterTerm
-import ostrich.automata.Automaton
 import scala.collection.mutable.{
   HashMap => MHashMap,
   ArrayStack,

@@ -21,18 +21,19 @@ class ExtractSmtWithCount(RunnerInterface):
     extension: str = ".smt2"
 
     def run_single_instance(self, filename: str):
-        largedir = os.path.join(self.outdir, "large")
-        smalldir = os.path.join(self.outdir, "small")
-        os.makedirs(largedir, exist_ok=True)
-        os.makedirs(smalldir, exist_ok=True)
+        largedir = os.path.join(self.outdir, os.path.basename(self.benchdir), "large")
+        smalldir = os.path.join(self.outdir, os.path.basename(self.benchdir), "small")
+        # os.makedirs(largedir, exist_ok=True)
+        # os.makedirs(smalldir, exist_ok=True)
         (islarge, haveloop, have_str_to_int) = analyze(filename)
         basename = os.path.basename(filename)
-        if have_str_to_int:
-            return
-        if islarge:
-            shutil.copyfile(filename, os.path.join(largedir, basename))
-        elif haveloop:
-            shutil.copyfile(filename, os.path.join(smalldir, basename))
+        if haveloop and not have_str_to_int:
+            os.makedirs(largedir, exist_ok=True)
+            os.makedirs(smalldir, exist_ok=True)
+            if islarge:
+                shutil.copyfile(filename, os.path.join(largedir, basename))
+            else:
+                shutil.copyfile(filename, os.path.join(smalldir, basename))
 
 
 # parse arguments

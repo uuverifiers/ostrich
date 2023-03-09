@@ -466,7 +466,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       Incompleteness.set
 
     val preprocessor = new OstrichInternalPreprocessor(this, flags)
-    // if(OstrichConfig.useCostEnriched) return f 
     preprocessor.preprocess(f, order)
   }
 
