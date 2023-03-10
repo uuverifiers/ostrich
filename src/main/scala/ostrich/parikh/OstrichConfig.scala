@@ -10,7 +10,7 @@ object OstrichConfig {
 
   var backend : Backend = Unary()
 
-  var measureTime = true
+  var measureTime = false
 
   var useCostEnriched = false 
 

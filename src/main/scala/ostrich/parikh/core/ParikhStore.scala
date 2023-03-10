@@ -8,6 +8,7 @@ import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import Exploration._
 import ap.util.Seqs
+import ostrich.parikh.automata.BricsAutomatonWrapper
 
 object ParikhStore {
   sealed trait LIAStrategy // linear integer arithmetic generating strategy
@@ -72,7 +73,12 @@ class ParikhStore(t: Term) extends ConstraintStore {
   private def isConsistency(
       auts: Seq[CostEnrichedAutomatonBase]
   ): Boolean = {
-    !auts.reduceLeft(_ & _).isEmpty
+    var productAut : CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
+    auts.sortBy(_.states.size).foreach { aut =>
+      productAut = productAut & aut
+      if(productAut.isEmpty) return false
+    }
+    true
   }
 
   /** Check if constraints are still consistent after adding `aut`

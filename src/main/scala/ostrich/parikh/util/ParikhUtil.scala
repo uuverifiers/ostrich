@@ -126,31 +126,29 @@ object ParikhUtil {
   }
 
   def findAcceptedWordByRegistersComplete(
-      auts: Seq[CostEnrichedAutomatonBase],
+      aut: CostEnrichedAutomatonBase,
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
 
-    val productAut = auts.reduceLeft(_ product _)
-
-    val registersValue = productAut.registers.map(registersModel(_).intValue)
+    val registersValue = aut.registers.map(registersModel(_).intValue)
     val todoList = new ArrayStack[(State, Seq[Int], Seq[Char])]
     val visited = new MHashSet[(State, Seq[Int])]
     todoList.push(
       (
-        productAut.initialState,
-        Seq.fill(productAut.registers.size)(0),
+        aut.initialState,
+        Seq.fill(aut.registers.size)(0),
         ""
       )
     )
     visited.add(
-      (productAut.initialState, Seq.fill(productAut.registers.size)(0))
+      (aut.initialState, Seq.fill(aut.registers.size)(0))
     )
     while (!todoList.isEmpty) {
       val (state, regsVal, word) = todoList.pop
-      if (productAut.isAccept(state) && regsVal == registersValue) {
+      if (aut.isAccept(state) && regsVal == registersValue) {
         return Some(word.map(_.toInt))
       }
-      for ((t, l, v) <- productAut.outgoingTransitionsWithVec(state)) {
+      for ((t, l, v) <- aut.outgoingTransitionsWithVec(state)) {
         val newRegsVal = regsVal.zip(v).map { case (r, v) => r + v }
         val newWord = word :+ l._1
         val newState = t
@@ -170,10 +168,11 @@ object ParikhUtil {
   // counting register because it is be updated only by the same transition at most times.
   // Sometimes it may be updated by different transitions, so the search is not complete.
   def findAcceptedWordByRegistersHeuristic(
-      auts: Seq[CostEnrichedAutomatonBase],
+      aut: CostEnrichedAutomatonBase,
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
-    val aut = auts.reduce(_ product _)
+    // we only heuristically search for string with large register values (the sum is greater than 200) 
+    if(registersModel.map(_._2.intValue).sum <= 200) return None
     val s2scc = findAllSCC(aut)
     val paths: ArrayBuffer[Seq[State]] = ArrayBuffer()
     val worklist = ArrayStack[Seq[State]]()
@@ -205,7 +204,6 @@ object ParikhUtil {
         }
       }
     }
-    println(paths)
     for (path <- paths) {
       findAcceptedWordInPath(aut, registersModel, s2scc, path) match {
         case Some(value) => return Some(value)
@@ -277,13 +275,13 @@ object ParikhUtil {
             if value.intValue > 0
           ) yield (s, value.intValue)).toMap
           var acceptedWord = Seq[Char]()
-          for ((s, t) <- pathpair){
-            if(state2Int.contains(s)){
+          for ((s, t) <- pathpair) {
+            if (state2Int.contains(s)) {
               for (_ <- 0 until state2Int(s))
                 acceptedWord ++= state2Word(s)
             }
-            if(t == path.head)  return Some(acceptedWord.map(_.toInt))
-            acceptedWord ++= trans2Word((s,t))
+            if (t == path.head) return Some(acceptedWord.map(_.toInt))
+            acceptedWord ++= trans2Word((s, t))
           }
         case _ => // do nothing
       }
@@ -296,10 +294,15 @@ object ParikhUtil {
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
-    println("find string model")
-    findAcceptedWordByRegistersHeuristic(auts, registersModel) match {
-      case None => findAcceptedWordByRegistersComplete(auts, registersModel)
-      case Some(value) => Some(value)
-    }
+    val aut = auts.reduce(_ product _)
+    if (OstrichConfig.findStringHeu) {
+      if(OstrichConfig.debug) println("find string heuristic")
+      findAcceptedWordByRegistersHeuristic(aut, registersModel) match {
+        case None => findAcceptedWordByRegistersComplete(aut, registersModel)
+        case Some(value) => Some(value)
+      }
+    } else
+      findAcceptedWordByRegistersComplete(aut, registersModel)
+
   }
 }

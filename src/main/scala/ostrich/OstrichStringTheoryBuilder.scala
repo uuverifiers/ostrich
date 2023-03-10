@@ -122,6 +122,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       OstrichConfig.backend = OstrichConfig.Unary()
     case CmdlParser.ValueOpt("backend", "catra") =>
       OstrichConfig.backend = OstrichConfig.Catra()
+    case CmdlParser.ValueOpt("under-approx-bound", value) =>
+      OstrichConfig.underApproxBound = value.toInt
     // ignore")
     case str =>
       println("Parameter " + str + " is not supported by theory " + name + "\n")

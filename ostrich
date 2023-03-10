@@ -24,6 +24,9 @@ Usage:./ostrich <options> files
 Available options : (for boolean arguments, + is ture and - is false)
 [+-]incremental           Incremental SMT-LIB 2 interpreter.           (default: -)
                             (Must use +incremental when generating models)
+[+-]quiet                 Suppress all output to stderr                (default: -)
+-inputFormat=val          Specify format of problem file:              (default: auto)
+                            auto, pri, smtlib, tptp
 -timeout=val              Set a timeout in milliseconds                (default: infty)
 
 [+-]costenriched           -- use cost enriched automata               (default: -)
@@ -44,7 +47,7 @@ END
 
 for p; do
     case "$p" in
-    [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | [+-]costenriched | [+-]under-approx | [+-]over-approx | [+-]find-model-heuristric | -backend=*)
+    [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | [+-]debug | [+-]costenriched | [+-]under-approx | [+-]over-approx | [+-]find-model-heuristic | -backend=*)
         if [ x"$ostrichParams" = x"" ]; then
             ostrichParams=$p
         else
@@ -55,7 +58,7 @@ for p; do
         echo "$USAGE"
         exit 0
         ;;
-    [+-]incremental | -timeout=* | *.smt*)
+    [+-]incremental | -timeout=* | *.smt* | [+-]quiet | -inputFormat=*)
         princessParams+=("$p")
         ;;
     *)

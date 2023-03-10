@@ -91,7 +91,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
                  re_comp, re_loop, re_loop_?, re_eps, re_capture, re_reference,
-                 re_begin_anchor, re_end_anchor, FunPred, strDatabase,
+                 re_begin_anchor, re_end_anchor, FunPred, strDatabase
                 }
 
   val rexOps : Set[IFunction] =

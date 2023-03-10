@@ -7,7 +7,7 @@ import sys
 import timer
 
 
-def run(eq, timeout, ploc, wd):
+def run(params, eq, timeout, ploc, wd):
     path = ploc.findProgram("Ostrich")
     if not path:
         raise "Ostrich Not in Path"
@@ -35,9 +35,7 @@ def run(eq, timeout, ploc, wd):
                     "+incremental",
                     "-inputFormat=smtlib",
                     "-timeout=" + str(timeout) + "000",
-                    "+costenriched",
-                    smtfile,
-                ],
+                ] + params + [smtfile],
                 timeout=timeout,
             )
             .decode()
@@ -56,7 +54,8 @@ def run(eq, timeout, ploc, wd):
         return utils.Result(False, time.getTime_ms(), False, 1, out)
     elif "sat" in out:
         return utils.Result(
-            True, time.getTime_ms(), False, 1, out, "\n".join(out.split("\n")[1:])
+            True, time.getTime_ms(), False, 1, out, "\n".join(
+                out.split("\n")[1:])
         )
     elif time.getTime() >= timeout:
         return utils.Result(None, timeout * 1000, True, 1)
@@ -70,7 +69,15 @@ def run(eq, timeout, ploc, wd):
 
 
 def addRunner(addto):
-    addto["ostrich"] = run
+    from functools import partial
+    params = {"baseline":                [],
+              "all":                     ["+costenriched"],
+              "no-under":                ["+costenriched", "-under-approx"],
+              "no-over":                 ["+costenriched", "-over-approx"],
+              "no-find-model-heuristic": ["+costenriched", "-find-model-heuristic"],
+              }
+    for i in params.keys():
+        addto['ostrich_'+i] = partial(run, params[i])
 
 
 if __name__ == "__main__":

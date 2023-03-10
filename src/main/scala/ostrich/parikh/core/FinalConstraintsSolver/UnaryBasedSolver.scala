@@ -12,6 +12,7 @@ import ap.terfor.Formula
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ostrich.parikh.OstrichConfig
 
 class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
@@ -19,20 +20,22 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
   }
 
   def solve: Result = {
-    var res = solveUnderApprox
-    if (!res.isSat){
-      // try res = solveOverApprox 
-      // catch {
-      //   case e: UnknownException => res = solveCompleteLIA
-      // }
-      res = solveCompleteLIA
+    if(OstrichConfig.underApprox){
+      if(OstrichConfig.debug) println("under-approximation")
+      val res = solveUnderApprox
+      if(res.isSat) return res
     }
-    res
+    if(OstrichConfig.overApprox){
+      if(OstrichConfig.debug) println("over-approximation")
+      val res = solveOverApprox 
+      if(res.isUnsat) return res
+    }
+    solveCompleteLIA
   }
 
   def solveUnderApprox: Result = {
     // add bound iterately
-    val maxBound = 10
+    val maxBound = OstrichConfig.underApproxBound
     val step = 5
     var nowBound = 5
     var result = new Result
@@ -46,14 +49,14 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
   }
 
   def solveOverApprox: Result = solveFormula(
-    conj(constraints.map(_.getOverApprox))
+    conj(constraints.map(_.getOverApprox)), false
   )
 
   def solveCompleteLIA: Result = solveFormula(
     conj(constraints.map(_.getCompleteLIA))
   )
 
-  def solveFormula(f: Formula): Result = {
+  def solveFormula(f: Formula, generateModel: Boolean = true): Result = {
     import FinalConstraints.evalTerm
     val res = new Result
     SimpleAPI.withProver { p =>
@@ -77,7 +80,8 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
         p.???
       }
       status match {
-        case ProverStatus.Sat =>
+        case ProverStatus.Sat if generateModel =>
+          if (OstrichConfig.debug)  println("generate string model")
           val partialModel = p.partialModel
           // update string model
           for (singleString <- constraints) {

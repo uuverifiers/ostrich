@@ -1,11 +1,11 @@
 {
   "Binaries" : {
 		"RegExSolver" : {
-						"path" : "/home/hudh/github/ostrich/experiment/SolverBinaries/RegExSolver/z3"
-					},
+			"path" : "/home/hudh/github/ostrich/experiment/SolverBinaries/RegExSolver/z3"
+		},
 		"Z3seq" : {
-							"path" : "/home/hudh/github/ostrich/experiment/SolverBinaries/z3seq/bin/z3"
-					},
+			"path" : "/home/hudh/github/ostrich/experiment/SolverBinaries/z3seq/bin/z3"
+		},
 		"Z3str3" : {
 				"path" : "/home/hudh/github/ostrich/experiment/SolverBinaries/z3str3/z3"
 		},
