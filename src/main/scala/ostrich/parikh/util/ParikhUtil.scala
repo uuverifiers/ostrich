@@ -171,8 +171,8 @@ object ParikhUtil {
       aut: CostEnrichedAutomatonBase,
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
-    // we only heuristically search for string with large register values (the sum is greater than 200) 
-    if(registersModel.map(_._2.intValue).sum <= 200) return None
+    // we only heuristically search for string with large register values (the sum is greater than 200)
+    if (registersModel.map(_._2.intValue).sum <= 200) return None
     val s2scc = findAllSCC(aut)
     val paths: ArrayBuffer[Seq[State]] = ArrayBuffer()
     val worklist = ArrayStack[Seq[State]]()
@@ -296,13 +296,12 @@ object ParikhUtil {
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
     if (OstrichConfig.findStringHeu) {
-      if(OstrichConfig.debug) println("find string heuristic")
       findAcceptedWordByRegistersHeuristic(aut, registersModel) match {
         case None => findAcceptedWordByRegistersComplete(aut, registersModel)
         case Some(value) => Some(value)
       }
     } else
-      findAcceptedWordByRegistersComplete(aut, registersModel)
+    findAcceptedWordByRegistersComplete(aut, registersModel)
 
   }
 }

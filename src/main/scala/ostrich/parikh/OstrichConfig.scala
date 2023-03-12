@@ -24,6 +24,8 @@ object OstrichConfig {
 
   var overApprox = true 
 
-  var findStringHeu = true 
-
+  var findStringHeu = false 
+  
+  var simplifyAut = true 
+  
 }

@@ -21,12 +21,10 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
   def solve: Result = {
     if(OstrichConfig.underApprox){
-      if(OstrichConfig.debug) println("under-approximation")
       val res = solveUnderApprox
       if(res.isSat) return res
     }
     if(OstrichConfig.overApprox){
-      if(OstrichConfig.debug) println("over-approximation")
       val res = solveOverApprox 
       if(res.isUnsat) return res
     }
@@ -81,7 +79,6 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
       }
       status match {
         case ProverStatus.Sat if generateModel =>
-          if (OstrichConfig.debug)  println("generate string model")
           val partialModel = p.partialModel
           // update string model
           for (singleString <- constraints) {

@@ -74,7 +74,7 @@ def addRunner(addto):
               "all":                     ["+costenriched"],
               "no-under":                ["+costenriched", "-under-approx"],
               "no-over":                 ["+costenriched", "-over-approx"],
-              "no-find-model-heuristic": ["+costenriched", "-find-model-heuristic"],
+              "no-simplify-aut":         ["+costenriched", "-simplify-aut"],
               }
     for i in params.keys():
         addto['ostrich_'+i] = partial(run, params[i])

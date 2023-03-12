@@ -11,43 +11,21 @@ class BaselineFinalConstraints(
     override val atoms: Seq[AtomConstraint]
 ) extends FinalConstraints {
 
-  lazy val productAtom: AtomConstraint = {
-    val productAut = getAutomata.reduce(_ product _)
-    val simplifyAut = CEBasicOperations.simplify(productAut)
-    new UnaryHeuristicAC(simplifyAut)
-  }
-
-  lazy val mostlySimplifiedAut = {
-    val res =
-      CEBasicOperations.minimizeHopcroftByVec(
-        CEBasicOperations.determinateByVec(
-          CEBasicOperations.epsilonClosureByVec(
-            productAtom.aut
-          )
-        )
-      )
-    res
-  }
-
-  lazy val simplifyButRemainLabelAut =
-    CEBasicOperations.removeUselessTrans(
-      CEBasicOperations.minimizeHopcroft(
-        productAtom.aut
-      )
-    )
+  lazy val productAut = getAutomata.reduce(_ product _)
+  
 
   def getCompleteLIA: Formula = 
-    new BaselineAC(mostlySimplifiedAut).getCompleteLIA
+    new BaselineAC(productAut).getCompleteLIA
 
   def getRegsRelation: Formula = 
-    new BaselineAC(mostlySimplifiedAut).getRegsRelation
+    new BaselineAC(productAut).getRegsRelation
 
-    val interestTerms: Seq[Term] = productAtom.aut.registers
+    val interestTerms: Seq[Term] = productAut.registers
 
   def getModel: Option[Seq[Int]] = {
     val transtionModel = MHashMap() ++ interestTermsModel
     ParikhUtil.findAcceptedWordByRegisters(
-      Seq(simplifyButRemainLabelAut),
+      Seq(productAut),
       transtionModel
     )
   }

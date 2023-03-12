@@ -825,7 +825,7 @@ class SQLiteDB:
         dirname = os.path.dirname(__file__)
         dbdir = os.path.join(dirname, "..", "result_db")
         os.makedirs(dbdir, exist_ok=True)
-        timestamp = datetime.timestamp(datetime.now())
+        timestamp = datetime.now().strftime("%y-%m-%d_%H:%M:%S")
         self._db = DB(os.path.join(dbdir, prefix+"_results_"+str(timestamp)+".db"))
         self._instancerepo = TrackInstanceRepository (self._db)
         self._trackrepo = TrackRepository (self._db,self._instancerepo)

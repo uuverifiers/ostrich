@@ -28,7 +28,7 @@ tracks = (models.automatark.getTrackData() +
           models.regexlib.getTrackData() +
           models.stackoverflow.getTrackData()
          + [])
-
+# tracks = testbench.getTrackData() + []
 solvers = {}
 for s in [
     tools.ostrichHeuristics,
@@ -44,7 +44,8 @@ store = storage.SQLiteDB("ATVA2023")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 # verifiers = ["cvc5", "z3seq"]
 verifiers = []
-testrunner(20).runTestSetup(
+
+testrunner(10).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )
 startwebserver.Server(store.getDB()).startServer()

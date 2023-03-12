@@ -13,16 +13,13 @@ class UnaryFinalConstraints(
 ) extends FinalConstraints {
 
   // eagerly product
-  lazy val productAtom: AtomConstraint = {
-    val productAut = getAutomata.reduce(_ product _)
-    new UnaryHeuristicAC(productAut)
-  }
+  lazy val productAut = getAutomata.reduce(_ product _)
 
   lazy val mostlySimplifiedAut = {
     CEBasicOperations.minimizeHopcroftByVec(
       CEBasicOperations.determinateByVec(
         CEBasicOperations.epsilonClosureByVec(
-          productAtom.aut
+          productAut
         )
       )
     )
@@ -31,33 +28,37 @@ class UnaryFinalConstraints(
   lazy val simplifyButRemainLabelAut =
     CEBasicOperations.removeUselessTrans(
       CEBasicOperations.minimizeHopcroft(
-        productAtom.aut
+        productAut 
       )
     )
 
+  lazy val checkSatAut = if(OstrichConfig.simplifyAut) mostlySimplifiedAut else productAut
+  lazy val findModelAut = if(OstrichConfig.simplifyAut) simplifyButRemainLabelAut else productAut 
+  
   def getUnderApprox(bound: Int): Formula =
-    new UnaryHeuristicAC(mostlySimplifiedAut).getUnderApprox(bound)
+    new UnaryHeuristicAC(checkSatAut).getUnderApprox(bound)
 
   def getOverApprox: Formula =
-    new UnaryHeuristicAC(mostlySimplifiedAut).getOverApprox
+    new UnaryHeuristicAC(checkSatAut).getOverApprox
 
   def getCompleteLIA: Formula =
-    new UnaryHeuristicAC(mostlySimplifiedAut).getCompleteLIA
+    new UnaryHeuristicAC(checkSatAut).getCompleteLIA
 
   def getRegsRelation: Formula =
-    new UnaryHeuristicAC(mostlySimplifiedAut).getRegsRelation
+    new UnaryHeuristicAC(checkSatAut).getRegsRelation
 
-  val interestTerms: Seq[Term] = productAtom.aut.registers
+  val interestTerms: Seq[Term] = productAut.registers
 
   def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel
     ParikhUtil.findAcceptedWordByRegisters(
-      Seq(simplifyButRemainLabelAut),
+      Seq(findModelAut),
       registersModel
     )
   }
 
   if (OstrichConfig.debug) {
+    productAut.toDot("product_" + strId.toString)
     mostlySimplifiedAut.toDot("simplified_" + strId.toString)
     simplifyButRemainLabelAut.toDot("original_" + strId.toString)
   }

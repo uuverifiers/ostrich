@@ -60,27 +60,6 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
   }
 
-  private val usage =
-    s"""
-    Usage:./ostrich <options> files
-
-    Available options : (for boolean arguments, + is ture and - is false)
-
-      [+-]costenriched           -- use cost enriched automata               (default: false)
-
-      when costenriched is true, the following options are available:
-      -backend=val               -- backend to use for solving               (default: unary; available: unary, catra, baseline)
-      [+-]under-approx           -- use under-approximation heuristic        (default: true)
-      [+-]over-approx            -- use over-approximation heuristic         (default: true)
-      [+-]find-model-heuristic   -- use find model heuristic                 (default: true)
-
-      when costenriched is false, the following options are available: 
-      [+-]minimizeAutomata       -- minimize the initial regular constraints (default: false)
-      [+-]eager                  -- eagerly solve regular constraints        (default: false)
-      [+-]forward                -- use forward analysis                     (default: false)
-      [+-]parikh                 -- use parikh image                         (default: false)
-    """
-
   def setAlphabetSize(w: Int): Unit = ()
 
   private var eager, forward, minimizeAuts, useParikh = false
@@ -104,6 +83,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useParikh = value
 
     // Options for cost-enriched-automata based solver
+    case CmdlParser.Opt("simplify-aut", value) =>
+      OstrichConfig.simplifyAut = value
     case CmdlParser.Opt("measuretime", value) =>
       OstrichConfig.measureTime = value
     case CmdlParser.Opt("costenriched", value) =>
