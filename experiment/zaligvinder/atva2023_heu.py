@@ -23,10 +23,11 @@ import tools.cvc5
 
 import summarygenerators
 
-tracks = (models.automatark.getTrackData() +
-          models.redos.getTrackData() +
-          models.regexlib.getTrackData() +
-          models.stackoverflow.getTrackData()
+tracks = (
+            models.automatark.getTrackData() +
+            models.redos.getTrackData() +
+            models.regexlib.getTrackData() +
+            models.stackoverflow.getTrackData()
          + [])
 # tracks = testbench.getTrackData() + []
 solvers = {}

@@ -16,16 +16,16 @@ dirname = os.path.dirname(__file__)
 @dataclass
 class Sanitizer(RunnerInterface):
   extension : str = "smt2" 
+  outdir: str = ""
   
   def run_single_instance(self, filename: str):
     ERR_RE = re.compile(r"(re.range \"[0-9a-zA-Z\\]{2,}\")|(re.range \".{1}\" \"[0-9a-zA-Z\\]{2,}\")", re.M)
     try:
-      read_f = open(filename, "r", encoding="utf-8")
-      file_contents = read_f.read()
-      read_f.close()
-      removeLazyOperator = file_contents
+      readf= open(filename, "r", encoding="utf-8")
+      file_contents = readf.read()
+      readf.close()
       # remove lazy operator
-      removeLazyOperator = removeLazyOperator.replace("re.+?", "re.+")
+      removeLazyOperator = file_contents.replace("re.+?", "re.+")
       removeLazyOperator = removeLazyOperator.replace("re.loop?", "re.loop")
       removeLazyOperator = removeLazyOperator.replace("re.*?", "re.*")
       removeLazyOperator = removeLazyOperator.replace("re.opt?", "re.opt")
@@ -33,35 +33,23 @@ class Sanitizer(RunnerInterface):
       smtlib2020 = removeLazyOperator.replace("str.to.re", "str.to_re")
       smtlib2020 = smtlib2020.replace("str.in.re", "str.in_re")
       ascii2unicode = re.sub(r"\\x([0-9a-f]{2,2})", r"\\u{\1}", smtlib2020, flags=re.M)
-      prepend = "(set-logic QF_SLIA)\n(set-option :produce-models true)\n"
-      prepended = prepend + ascii2unicode
-      (head, benchdirname) = os.path.split(self.benchdir)
-      if ERR_RE.search(prepended) or "re.reference" in prepended:
+      if ERR_RE.search(ascii2unicode) or "re.reference" in ascii2unicode:
         print(f"{filename} removed")
+        os.remove(filename)
         return
-      newfile =  os.path.join(
-        self.outdir, 
-        benchdirname,
-        os.path.relpath(filename, self.benchdir))
-      os.makedirs(os.path.dirname(newfile), exist_ok=True)
-      with open(newfile, "w", encoding="utf-8") as wrt_f:
-        wrt_f.write(prepended)
+      writef = open(filename, "w", encoding="utf-8")
+      writef.write(ascii2unicode)
+      writef.close()
     except Exception as e:
-      print(f"Open file {filename} wrong: {e}")
-      
-
+      print(f"Sanitize file {filename} wrong: {e}")
 
 argparser = argparse.ArgumentParser(
   prog=__file__,
   description='Sanitize benchmarks',
 )
 argparser.add_argument("bench")
-argparser.add_argument("--outdir", default="../benchmarks")
 
 args = argparser.parse_args()
-dirname = os.path.dirname(__file__) 
-outdir = os.path.join(dirname, args.outdir, 'sanitized')
-os.makedirs(outdir, exist_ok=True)
-Sanitizer(args.bench, 4, outdir).run()
+Sanitizer(args.bench, 4).run()
 
 
