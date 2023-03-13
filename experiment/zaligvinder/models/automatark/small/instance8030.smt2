@@ -1,0 +1,10 @@
+(set-logic QF_SLIA)
+(set-option :produce-models true)
+(declare-const X String)
+; $(\n|\r\n)
+(assert (str.in_re X (re.++ (re.union (str.to_re "\u{0a}") (str.to_re "\u{0d}\u{0a}")) (str.to_re "\u{0a}"))))
+; (^(\d{2}\x2E\d{3}\x2E\d{3}[-]\d{1})$|^(\d{2}\x2E\d{3}\x2E\d{3})$)
+(assert (not (str.in_re X (re.++ (re.union (re.++ ((_ re.loop 2 2) (re.range "0" "9")) (str.to_re ".") ((_ re.loop 3 3) (re.range "0" "9")) (str.to_re ".") ((_ re.loop 3 3) (re.range "0" "9")) (str.to_re "-") ((_ re.loop 1 1) (re.range "0" "9"))) (re.++ ((_ re.loop 2 2) (re.range "0" "9")) (str.to_re ".") ((_ re.loop 3 3) (re.range "0" "9")) (str.to_re ".") ((_ re.loop 3 3) (re.range "0" "9")))) (str.to_re "\u{0a}")))))
+; ^([\w\-\.]+)\s.*$
+(assert (str.in_re X (re.++ (re.+ (re.union (str.to_re "-") (str.to_re ".") (re.range "0" "9") (re.range "A" "Z") (re.range "a" "z") (str.to_re "_"))) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) (re.* re.allchar) (str.to_re "\u{0a}"))))
+(check-sat)

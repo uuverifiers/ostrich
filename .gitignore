@@ -40,7 +40,6 @@ experiment/res
 
 #benchmarks
 benchmarks
-models
 experiment/extracted
 experiment/smallbench
 experiment/count_benchmark

@@ -1,0 +1,8 @@
+;test regex [ftp:\/\/www\/.-https:\/\/-http:\/\/][a-zA-Z0-9u00a1-uffff0]{1,3}[^ ]{1,1000}
+(declare-const X String)
+(assert (str.in_re X (re.++ (re.union (str.to_re "f") (re.union (str.to_re "t") (re.union (str.to_re "p") (re.union (str.to_re ":") (re.union (str.to_re "/") (re.union (str.to_re "/") (re.union (str.to_re "w") (re.union (str.to_re "w") (re.union (str.to_re "w") (re.union (str.to_re "/") (re.union (str.to_re ".") (re.union (str.to_re "-") (re.union (str.to_re "h") (re.union (str.to_re "t") (re.union (str.to_re "t") (re.union (str.to_re "p") (re.union (str.to_re "s") (re.union (str.to_re ":") (re.union (str.to_re "/") (re.union (re.range "/" "h") (re.union (str.to_re "t") (re.union (str.to_re "t") (re.union (str.to_re "p") (re.union (str.to_re ":") (re.union (str.to_re "/") (str.to_re "/")))))))))))))))))))))))))) (re.++ ((_ re.loop 1 3) (re.union (re.range "a" "z") (re.union (re.range "A" "Z") (re.union (re.range "0" "9") (re.union (str.to_re "u") (re.union (str.to_re "00") (re.union (str.to_re "a") (re.union (re.range "1" "u") (re.union (str.to_re "f") (re.union (str.to_re "f") (re.union (str.to_re "f") (re.union (str.to_re "f") (str.to_re "0"))))))))))))) ((_ re.loop 1 1000) (re.diff re.allchar (str.to_re " ")))))))
+; sanitize danger characters:  < > ' " \ / &
+(assert (not (str.in_re X (re.* (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{5c}") (str.to_re "\u{2f}") (str.to_re "\u{26}"))))))
+(assert (< 50 (str.len X)))
+(check-sat)
+(get-model)
