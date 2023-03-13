@@ -14,7 +14,7 @@ project/metals.sbt
 # sbt
 project/project/
 project/target/
-
+/target/
 
 # scalafmt conf
 *scala*.conf
