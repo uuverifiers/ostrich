@@ -67,7 +67,6 @@ class BaseLineRunner(RunnerInterface):
                 [
                     command,
                     "+costenriched",
-                    "+minimizeAutomata",
                     f"-backend={self.backend}",
                     "+incremental",
                     "-inputFormat=smtlib",

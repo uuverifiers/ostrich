@@ -19,7 +19,7 @@ class Sanitizer(RunnerInterface):
   outdir: str = ""
   
   def run_single_instance(self, filename: str):
-    ERR_RE = re.compile(r"(re.range \"[0-9a-zA-Z\\]{2,}\")|(re.range \".{1}\" \"[0-9a-zA-Z\\]{2,}\")", re.M)
+    ERR_RE = re.compile(r"(re.range \"[0-9a-zA-Z\\]{2,}\")|(re.range \"(.|\\.{[0-9a-zA-Z]{1,4}})\" \"[0-9a-zA-Z\\]{2,}\")", re.M)
     try:
       readf= open(filename, "r", encoding="utf-8")
       file_contents = readf.read()
@@ -50,6 +50,6 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument("bench")
 
 args = argparser.parse_args()
-Sanitizer(args.bench, 4).run()
+Sanitizer(args.bench, 1).run()
 
 
