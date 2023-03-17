@@ -1,8 +1,8 @@
 ;test regex \{1:F21XXXXXXXX9999123456\}\{4:\{177:1007300\d{2}8\}\{451:0\}\{108:XXX190876234-1\}\}
 (declare-const X String)
 (assert (str.in_re X (re.++ (str.to_re "{") (re.++ (str.to_re "1") (re.++ (str.to_re ":") (re.++ (str.to_re "F") (re.++ (str.to_re "21") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "9999123456") (re.++ (str.to_re "}") (re.++ (str.to_re "{") (re.++ (str.to_re "4") (re.++ (str.to_re ":") (re.++ (str.to_re "{") (re.++ (str.to_re "177") (re.++ (str.to_re ":") (re.++ (str.to_re "1007300") (re.++ ((_ re.loop 2 2) (re.range "0" "9")) (re.++ (str.to_re "8") (re.++ (str.to_re "}") (re.++ (str.to_re "{") (re.++ (str.to_re "451") (re.++ (str.to_re ":") (re.++ (str.to_re "0") (re.++ (str.to_re "}") (re.++ (str.to_re "{") (re.++ (str.to_re "108") (re.++ (str.to_re ":") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "X") (re.++ (str.to_re "190876234") (re.++ (str.to_re "-") (re.++ (str.to_re "1") (re.++ (str.to_re "}") (str.to_re "}")))))))))))))))))))))))))))))))))))))))))))
-; sanitize danger characters:  < > ' " \ / &
-(assert (not (str.in_re X (re.* (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{5c}") (str.to_re "\u{2f}") (str.to_re "\u{26}"))))))
+; sanitize danger characters:  < > ' " &
+(assert (not (str.in_re X (re.++ re.all (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{26}")) re.all))))
 (assert (< 20 (str.len X)))
 (check-sat)
 (get-model)

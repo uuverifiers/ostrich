@@ -12,19 +12,13 @@ import models.regexlib
 import models.stackoverflow
 import startwebserver
 
-import tools.z3str3
-import tools.regExSolver
 import tools.ostrichHeuristics
-import tools.ostrich
-import tools.z3seq
-import tools.trau
-import tools.cvc5
 
 
 import summarygenerators
 
 tracks = (
-            models.automatark.getTrackData() +
+            # models.automatark.getTrackData() +
             models.redos.getTrackData() +
             models.regexlib.getTrackData() +
             models.stackoverflow.getTrackData()
@@ -33,7 +27,6 @@ tracks = (
 solvers = {}
 for s in [
     tools.ostrichHeuristics,
-    # tools.trau,   // tran can not deal with re.diff
 ]:
     s.addRunner(solvers)
 
@@ -41,12 +34,11 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("ATVA2023")
+store = storage.SQLiteDB("ATVA2023-heuristic")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-# verifiers = ["cvc5", "z3seq"]
 verifiers = []
 
-testrunner(10).runTestSetup(
+testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )
 startwebserver.Server(store.getDB()).startServer()

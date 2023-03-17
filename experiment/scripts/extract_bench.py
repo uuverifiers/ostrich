@@ -55,6 +55,6 @@ for feature in extract_files.keys():
     feature_dir = os.path.join(extract_dir, feature)
     for instance in extract_files[feature]:
         shutil.copy(
-            os.path.join(dirname, "../../", instance),
+            os.path.join(dirname, "../", instance),
             feature_dir,
         )

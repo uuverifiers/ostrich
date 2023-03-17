@@ -301,6 +301,7 @@ object ParikhUtil {
         case Some(value) => Some(value)
       }
     } else
+    println("findString model")
     findAcceptedWordByRegistersComplete(aut, registersModel)
 
   }
