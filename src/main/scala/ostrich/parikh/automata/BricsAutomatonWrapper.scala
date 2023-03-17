@@ -6,7 +6,6 @@ import dk.brics.automaton.{
   Automaton => BAutomaton
 }
 
-import ostrich.parikh._
 import scala.collection.JavaConverters.asScala
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase

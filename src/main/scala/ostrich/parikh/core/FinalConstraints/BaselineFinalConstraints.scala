@@ -4,7 +4,6 @@ import ap.terfor.Formula
 import ap.terfor.Term
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
-import ostrich.parikh.automata.CEBasicOperations
 
 class BaselineFinalConstraints(
     override val strId: Term,
