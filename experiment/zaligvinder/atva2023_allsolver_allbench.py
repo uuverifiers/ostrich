@@ -45,9 +45,9 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("ATVA2023")
+store = storage.SQLiteDB("ATVA2023-allSolver-allBench")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = ["cvc5", "z3seq"]
+verifiers = ["cvc5", "z3seq", "ostrichCEA"]
 # verifiers = []
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers

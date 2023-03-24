@@ -18,7 +18,7 @@ import tools.ostrichHeuristics
 import summarygenerators
 
 tracks = (
-            # models.automatark.getTrackData() +
+            # models.automatark.getTrackData() 
             models.redos.getTrackData() +
             models.regexlib.getTrackData() +
             models.stackoverflow.getTrackData()
@@ -34,7 +34,7 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("ATVA2023-heuristic")
+store = storage.SQLiteDB("ATVA2023-heuristic-allBench")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = []
 

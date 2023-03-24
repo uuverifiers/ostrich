@@ -44,8 +44,9 @@ experiment/extracted
 experiment/smallbench
 experiment/count_benchmark
 
-# dot 
+# temperal files
 dot
+tmp
 
 # python byte-compiled / optimized / DLL files
 __pycache__/

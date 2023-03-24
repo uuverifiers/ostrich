@@ -14,7 +14,7 @@ class TableGenerator:
         self._groups = groups or [tup[0] for tup in list(self._track.getAllGroups ())]
 
     def _solverNameMap(self,name):
-        solvermapping = { "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrich" : "OSTRICH", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"}
+        solvermapping = { "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrich" : "Ostrich", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"}
         if name in solvermapping:
             return solvermapping[name]
         else:
@@ -29,7 +29,7 @@ class TableGenerator:
             self._output.write ("" + solverLayout + "\\\\ \n  \\hline\\hline \n")
         
     def getData (self,all=True,group=None):
-        output = ["sat ","unsat ","\\hline \n unknown ","timeout ","soundness error ","program crashes ","\\hline \n Total correct ", "Time (s) ", "Time w/o timeouts (s) "]
+        output = ["sat ","unsat ","\\hline \n unknown ","timeout ","soundness error ","program crashes ","\\hline \n Total correct ", "Time (ms) ", "Time w/o timeouts (ms) "]
         key = ["sat","unsat","unk","timeout","errorsTotal","crash","totalClassified","time","timeWO"]
         for s in self._solvers:
             if not all:
@@ -112,9 +112,9 @@ if __name__ == "__main__":
     program error &  &  &  \\
     \hline
     \hline
-    Time (s) &  &  &  \\
+    Time (ms) &  &  &  \\
     \hline
-    Time w/o timeouts (s) &  &  &  \\
+    Time w/o timeouts (ms) &  &  &  \\
     \hline
 \end{tabular}
 
