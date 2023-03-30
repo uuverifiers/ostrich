@@ -10,9 +10,6 @@ import scala.collection.mutable.{
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
-// TODO: BUG occur because this class mixs underlying and internalise!!
-// Rewrite this class to only extends CostEnrichedAutomatonTrait
-// never use AtomicStateAutomatonAdapter
 abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
     val underlying: A
 ) extends CostEnrichedAutomatonBase {

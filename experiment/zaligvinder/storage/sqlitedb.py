@@ -279,8 +279,10 @@ class ResultRepository:
         rows = self._db.executeRet (query,(solver,))
         return [t[0] for t in rows]
 
-
-
+    def getAllUnsolvedFilesForSolver(self,solver):
+        query = '''SELECT TrackInstance.filepath FROM Result,TrackInstance WHERE solver = ? and Result.result IS NULL AND Result.instanceid = TrackInstance.id ORDER BY time ASC'''
+        rows = self._db.executeRet (query,(solver,))
+        return [t[0] for t in rows]
 
     def getResultForSolverGroupNoUnk (self,solver,group):
         query = '''SELECT * FROM Result,TrackInstanceMap,Track,TrackInstance WHERE solver = ? AND TrackInstance.id = Result.instanceid AND TrackInstance.expected = Result.result AND Result.verified IS NOT false AND Result.result IS NOT NULL and Result.instanceid = TrackInstanceMap.instance  and TrackInstanceMap.track = Track.id and Track.bgroup = ?  ORDER BY time ASC '''
