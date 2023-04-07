@@ -20,7 +20,7 @@ class CactusGenerator:
 
 
     def _solverNameMap(self,name):
-        solvermapping = { "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrich" : "OSTRICH", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"}
+        solvermapping = { "Cvc5": "CVC5", "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrichCEA": "OstrichCEA", "ostrich" : "Ostrich", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"} 
         if name in solvermapping:
             return solvermapping[name]
         else:
@@ -56,7 +56,7 @@ class CactusGenerator:
                 group = "Total"
             #self._output.write ('\\resizebox{.95\\textwidth}{!}{\\pgfplotsset{scaled x ticks=false}\\pgfplotsset{scaled y ticks=false}\\begin{tikzpicture}\\begin{axis}[title='+str(group)+',xmin=-1000,xlabel=Solved instances,ylabel=Time (seconds),,legend columns=2,legend style={nodes={scale=0.5, transform shape}, fill=none,anchor=east,align=center },axis line style={draw=none}, xtick pos=left, ytick pos=left, ymajorgrids=true, legend style={draw=none},x post scale=2,y post scale=1]')
         
-            self._output.write ('\\resizebox{.95\\textwidth}{!}{\\pgfplotsset{scaled x ticks=false}\\pgfplotsset{scaled y ticks=false}\\begin{tikzpicture}\\begin{axis}[title='+str(group)+',xlabel=Solved instances,ylabel=Time (seconds),,legend columns=2,legend style={nodes={scale=0.5, transform shape}, fill=none,anchor=east,align=center },axis line style={draw=none}, xtick pos=left, ytick pos=left, ymajorgrids=true, legend style={draw=none},x post scale=2,y post scale=1]') #,xmin=-1000]')
+            self._output.write ('\\resizebox{.95\\textwidth}{!}{\\pgfplotsset{scaled x ticks=false}\\pgfplotsset{scaled y ticks=false}\\begin{tikzpicture}\\begin{axis}[title='+str(group)+',xlabel=Solved instances,ylabel=Time (ms),,legend columns=2,legend style={nodes={scale=0.5, transform shape}, fill=none,anchor=east,align=center },axis line style={draw=none}, xtick pos=left, ytick pos=left, ymajorgrids=true, legend style={draw=none},x post scale=2,y post scale=1]') #,xmin=-1000]')
         
 
             #[xmin=-1000,xlabel=Solved instances,ylabel=Time (seconds),,legend columns=2,legend style={nodes={scale=0.5, transform shape}, fill=none,anchor=east,align=center },axis line style={draw=none}, xtick pos=left, ytick pos=left, ymajorgrids=true, legend style={draw=none},x post scale=2,y post scale=1]

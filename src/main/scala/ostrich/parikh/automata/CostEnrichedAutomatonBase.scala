@@ -21,6 +21,14 @@ import ostrich.parikh.TermGeneratorOrder.order
 import dk.brics.automaton.BasicOperations
 import CEBasicOperations.toBricsAutomaton
 
+/**
+  * This is the implementation of cost-enriched finite automaton(CEFA). Each transition of 
+  * CEFA contains a vector of integers, which is used to record the cost of the transition.
+  * The cost of a word is the sum of the costs of its transitions. 
+  * A linear arithmetic constrait is used to restrict the cost of the word. For example, 
+  * the accepting condition can be r < 10, where r is the register storing the cost and if
+  * r is length of the word, we get a automation accepting words of length less than 10.
+  */
 class CostEnrichedAutomatonBase extends Automaton {
   type State = BState
   type TLabel = (Char, Char)
@@ -28,7 +36,7 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   private var stateidx = 0
 
-  /** The relations of different registers
+  /** The accepting condition
     */
   protected var _regsRelation: Formula = Conjunction.TRUE
 

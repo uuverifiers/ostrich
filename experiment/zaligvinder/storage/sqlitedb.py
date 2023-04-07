@@ -284,6 +284,13 @@ class ResultRepository:
         rows = self._db.executeRet (query,(solver,))
         return [t[0] for t in rows]
 
+    def getAllErrorFilesForSolver(self, solver):
+        errorquery = '''SELECT TrackInstance.filepath FROM Result,TrackInstance WHERE solver = ? AND Result.result != TrackInstance.expected AND Result.result IS NOT NULL AND TrackInstance.id = Result.instanceid ORDER BY time ASC'''
+        invalidquery = ''' SELECT TrackInstance.filepath FROM Result,TrackInstance WHERE Result.solver = ? AND Result.result IS NOT NULL AND Result.instanceid = TrackInstance.id AND Result.verified = false'''
+        error_rows = self._db.executeRet (errorquery,(solver,))
+        invalid_rows = self._db.executeRet (invalidquery,(solver,))
+        return [t[0] for t in error_rows] + [t[0] for t in invalid_rows]    
+    
     def getResultForSolverGroupNoUnk (self,solver,group):
         query = '''SELECT * FROM Result,TrackInstanceMap,Track,TrackInstance WHERE solver = ? AND TrackInstance.id = Result.instanceid AND TrackInstance.expected = Result.result AND Result.verified IS NOT false AND Result.result IS NOT NULL and Result.instanceid = TrackInstanceMap.instance  and TrackInstanceMap.track = Track.id and Track.bgroup = ?  ORDER BY time ASC '''
         

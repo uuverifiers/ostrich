@@ -14,7 +14,7 @@ class TableGenerator:
         self._groups = groups or [tup[0] for tup in list(self._track.getAllGroups ())]
 
     def _solverNameMap(self,name):
-        solvermapping = { "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrich" : "Ostrich", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"}
+        solvermapping = { "Cvc5": "CVC5", "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrichCEA": "OstrichCEA", "ostrich" : "Ostrich", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"}
         if name in solvermapping:
             return solvermapping[name]
         else:

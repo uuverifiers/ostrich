@@ -5,7 +5,6 @@ import utils
 import storage
 import voting.majority as voting
 
-import models.regexlib.small as testbench
 import models.automatark as automark
 import models.redos as redos
 import models.regexlib as regexlib
@@ -38,6 +37,7 @@ for s in [
     tools.z3str3,
     tools.z3seq,
     tools.regExSolver,
+    tools.trau
 ]:
     s.addRunner(solvers)
 
@@ -47,7 +47,7 @@ ploc = utils.JSONProgramConfig()
 
 store = storage.SQLiteDB("ATVA2023-allSolver-allBench")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = ["cvc5", "z3seq", "ostrichCEA"]
+verifiers = ["Cvc5", "Z3str3RE", "ostrichCEA"]
 # verifiers = []
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers

@@ -78,7 +78,7 @@ def addRunner(addto):
               "all-off":                 ["-under-approx", "-over-approx", "-simplify-aut"],
             }
     for i in params.keys():
-        addto['ostrich_'+i] = partial(run, params[i])
+        addto['ostrich-'+i] = partial(run, params[i])
 
 
 if __name__ == "__main__":

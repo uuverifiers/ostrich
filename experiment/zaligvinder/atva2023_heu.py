@@ -5,7 +5,6 @@ import utils
 import storage
 import voting.majority as voting
 
-import models.automatark_sml as testbench
 import models.automatark
 import models.redos
 import models.regexlib
@@ -18,7 +17,7 @@ import tools.ostrichHeuristics
 import summarygenerators
 
 tracks = (
-            # models.automatark.getTrackData() 
+            models.automatark.getTrackData() +
             models.redos.getTrackData() +
             models.regexlib.getTrackData() +
             models.stackoverflow.getTrackData()
@@ -36,7 +35,7 @@ ploc = utils.JSONProgramConfig()
 
 store = storage.SQLiteDB("ATVA2023-heuristic-allBench")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = []
+verifiers = ["ostrich-all"]
 
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
