@@ -20,7 +20,7 @@ class CactusGenerator:
 
 
     def _solverNameMap(self,name):
-        solvermapping = { "Cvc5": "CVC5", "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrichCEA": "OstrichCEA", "ostrich" : "Ostrich", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq"} 
+        solvermapping = { "Cvc5": "CVC5", "Z3str3RE-base" : "Z3str3RE" , "Z3Trau" : "Z3-Trau", "ostrichCEA": "OstrichCEA", "ostrich" : "Ostrich", "Z3str3_59e9c87" : "Z3str3", "Z3seq-489" : "Z3Seq", "ostrich-all": "OstrichCEA", "ostrich-no-under": "Under Approximation off", "ostrich-no-simplify-aut": "Simplification off", "ostrich-all-off": "All off"}  
         if name in solvermapping:
             return solvermapping[name]
         else:
@@ -182,7 +182,7 @@ class CactusGenerator:
         self.genLatexDocumentFoot()
 
     def genLatexDocumentHead(self):
-        self._output.write('''\\documentclass[11pt]{article}
+        self._output.write('''\\documentclass[11pt]{standalone}
 \\usepackage{color}
 \\usepackage{tikz}
 \\usepackage{pgfplots}
