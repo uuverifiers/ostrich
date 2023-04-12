@@ -46,7 +46,7 @@ experiment/count_benchmark
 
 # temperal files
 dot
-tmp
+tmp*
 
 # python byte-compiled / optimized / DLL files
 __pycache__/

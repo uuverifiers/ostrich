@@ -24,10 +24,10 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
       val res = solveUnderApprox
       if(res.isSat) return res
     }
-    if(OstrichConfig.overApprox){
-      val res = solveOverApprox 
-      if(res.isUnsat) return res
-    }
+    // if(OstrichConfig.overApprox){
+    //   val res = solveOverApprox 
+    //   if(res.isUnsat) return res
+    // }
     solveCompleteLIA
   }
 
@@ -46,9 +46,9 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
     result
   }
 
-  def solveOverApprox: Result = solveFormula(
-    conj(constraints.map(_.getOverApprox)), false
-  )
+  // def solveOverApprox: Result = solveFormula(
+  //   conj(constraints.map(_.getOverApprox)), false
+  // )
 
   def solveCompleteLIA: Result = solveFormula(
     conj(constraints.map(_.getCompleteLIA))
@@ -69,8 +69,6 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
       // We must treat TermGenerator.order carefully. 
       // Note that finalArith.order == TermGenerator.order 
-      // The call addAssertion will fail some asserttion if the TermGenerator is extended with too many constants. 
-      // (run ostrich with +assert option)
       p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

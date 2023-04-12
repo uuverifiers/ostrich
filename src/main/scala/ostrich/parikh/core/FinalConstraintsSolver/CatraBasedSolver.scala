@@ -94,7 +94,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
     for (constraint <- constraints) {
       sb.append("synchronised {\n")
       val autNamePrefix = constraint.strId.toString
-      for ((aut, i) <- constraint.getAutomata.zipWithIndex) {
+      for ((aut, i) <- constraint.auts.zipWithIndex) {
         sb.append(toCatraInputAutomaton(aut, autNamePrefix + i))
       }
       sb.append("};\n")

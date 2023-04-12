@@ -335,7 +335,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         } else
           None
 
-      val result = if(OstrichConfig.useCostEnriched){
+      val result = if (OstrichConfig.useCostEnriched){
         val approxExp = new ParikhExploration(funApps.toSeq, regexes.toSeq, strDatabase)
         approxExp.findModel
       } else {
