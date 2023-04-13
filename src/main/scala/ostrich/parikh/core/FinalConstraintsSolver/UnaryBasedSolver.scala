@@ -59,9 +59,8 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
     val res = new Result
     SimpleAPI.withProver { p =>
       p setConstructProofs true
-      val regsRelation = conj(constraints.map(_.getRegsRelation))
       val inputAndGenerated = FinalConstraints()
-      val finalArith = conj(f, regsRelation, inputAndGenerated)
+      val finalArith = conj(f, inputAndGenerated)
 
       SymbolCollector.constants(finalArith) ++ integerTerms
 

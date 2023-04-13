@@ -34,7 +34,6 @@ object ConcatCEPreOp extends CEPreOp {
       for (argAuts <- argumentConstraints) yield {
         (for (
           aut <- argAuts;
-          if aut.isInstanceOf[CostEnrichedAutomatonBase];
           lengths <- aut
             .asInstanceOf[CostEnrichedAutomatonBase]
             .uniqueAcceptedWordLengths

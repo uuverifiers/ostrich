@@ -5,7 +5,7 @@ import utils
 import storage
 import voting.majority as voting
 
-import models.automatark_sml as test_bench
+import models.automatark as test_bench
 
 import startwebserver
 
@@ -27,11 +27,11 @@ solvers = {}
 for s in [
     tools.cvc5,
     tools.ostrichCEA,
-    tools.ostrich,
-    tools.z3str3,
-    tools.z3seq,
-    tools.regExSolver,
-    tools.trau
+    # tools.ostrich,
+    # tools.z3str3,
+    # tools.z3seq,
+    # tools.regExSolver,
+    # tools.trau
 ]:
     s.addRunner(solvers)
 

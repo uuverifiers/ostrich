@@ -91,12 +91,14 @@ class ParikhStore(t: Term) extends ConstraintStore {
     val consideredAuts = new ArrayBuffer[Automaton]
     for (aut2 <- constraints :+ aut) {
       consideredAuts += aut2
-      if (!isConsistency(consideredAuts.toSeq))
+      if (!isConsistency(consideredAuts.toSeq)){
         return Some(consideredAuts.toSeq)
+      }
     }
     None
   }
   def assertConstraint(aut: Automaton): Option[ConflictSet] = {
+    Console.err.println("assert")
 
     if (!constraints.contains(aut)) {
       // check if the stored automata is consistent after adding the aut
@@ -135,7 +137,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
           None
         }
       }
-    } else Console.err.println("contain")
+    } else Console.err.println("contains")
     None
   }
 

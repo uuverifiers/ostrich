@@ -105,7 +105,6 @@ class ParikhExploration(
   // topological sorting of the function applications
   // divide integer term and string term
   private val (integerTerms, strTerms, sortedFunApps, ignoredApps) = {
-    // TODO: implement it
     val integerTerms = MHashSet[Term]()
     val strTerms = MHashSet[Term]()
     for ((t, _) <- initialConstraints)
@@ -116,6 +115,9 @@ class ParikhExploration(
       case (_: SubStringCEPreOp, Seq(str, start, length), subStr) =>
         integerTerms += start; integerTerms += length; strTerms += str;
         strTerms += subStr
+      case (_: IndexOfCEPreOp, Seq(str, subStr, start), index) =>
+        integerTerms += start; strTerms += str; strTerms += subStr;
+        integerTerms += index
       case (_, strs, resstr) => strTerms ++= strs; strTerms += resstr
     }
 

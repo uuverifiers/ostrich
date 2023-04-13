@@ -22,21 +22,27 @@ class UnaryFinalConstraints(
   lazy val productAut = auts.reduce(_ product _)
 
   lazy val mostlySimplifiedAut = {
-    CEBasicOperations.minimizeHopcroftByVec(
+    val ceAut = CEBasicOperations.minimizeHopcroftByVec(
       CEBasicOperations.determinateByVec(
         CEBasicOperations.epsilonClosureByVec(
           productAut
         )
       )
     )
+    ceAut.removeDuplicatedReg()
+    ceAut
   }
 
-  lazy val simplifyButRemainLabelAut =
-    CEBasicOperations.removeUselessTrans(
+  lazy val simplifyButRemainLabelAut = {
+    val ceAut = CEBasicOperations.removeUselessTrans(
       CEBasicOperations.minimizeHopcroft(
         productAut
       )
     )
+    ceAut.removeDuplicatedReg()
+    ceAut
+  }
+    
 
   lazy val checkSatAut =
     if (OstrichConfig.simplifyAut) mostlySimplifiedAut else productAut
@@ -73,8 +79,11 @@ class UnaryFinalConstraints(
         conj(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
       }
     )
-    r1Formula
+    conj(r1Formula, getRegsRelation)
   }
+
+  override lazy val getCompleteLIA: Formula = 
+    getCompleteLIA(checkSatAut)
 
   def getRegsRelation: Formula = checkSatAut.regsRelation
 
@@ -118,7 +127,7 @@ class UnaryFinalConstraints(
   private def succWithVec(
       aut: CostEnrichedAutomatonBase,
       s: State
-  ): Iterator[(State, Seq[Int])] =
+  ): Iterable[(State, Seq[Int])] =
     for ((t, lbl, vec) <- aut.outgoingTransitionsWithVec(s)) yield (t, vec)
 
   // e.g (1,1) + (1,0) = (2,1)

@@ -97,7 +97,8 @@ object CEBasicOperations {
         val preFill = Seq.fill(prefixlen)(0)
         val postFill = Seq.fill(oldRegsLen - prefixlen - v.size)(0)
         val newRegsUpdate = ArrayBuffer.fill(newRegisters.size)(0)
-        newRegsUpdate(aut2newRegIdx(aut)) = 1
+        if(aut2newRegIdx(aut) >= 0)
+          newRegsUpdate(aut2newRegIdx(aut)) = 1
         val tailVec = newRegsUpdate.toSeq
         val newVec =
           preFill ++ v ++ postFill ++ tailVec

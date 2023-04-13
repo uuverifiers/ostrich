@@ -106,8 +106,9 @@ trait FinalConstraints {
         term.asInstanceOf[ConstantTerm]
       ))
 
-  lazy val getCompleteLIA: Formula = {
-    val aut = auts.reduce(_ product _)
+  lazy val getCompleteLIA: Formula = getCompleteLIA(auts.reduce(_ product _))
+
+  def getCompleteLIA(aut: CostEnrichedAutomatonBase): Formula = {
     lazy val transtion2Term =
       aut.transitionsWithVec.map(t => (t, TransitionTerm())).toMap
     def outFlowTerms(from: State): Seq[Term] = {

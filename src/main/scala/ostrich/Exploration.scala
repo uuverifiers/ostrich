@@ -817,6 +817,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     }
 
     def assertConstraint(aut : Automaton) : Option[ConflictSet] = {
+      // Console.err.println("assert")
       var potentialConflicts =
         (watchedAutomata get aut) match {
           case Some(incAuts) => {
