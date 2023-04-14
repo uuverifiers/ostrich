@@ -5,7 +5,7 @@ import utils
 import storage
 import voting.majority as voting
 
-import models.automatark as test_bench
+import models.tmp.tmp as test_bench
 
 import startwebserver
 
@@ -27,11 +27,11 @@ solvers = {}
 for s in [
     tools.cvc5,
     tools.ostrichCEA,
-    # tools.ostrich,
-    # tools.z3str3,
-    # tools.z3seq,
-    # tools.regExSolver,
-    # tools.trau
+    tools.ostrich,
+    tools.z3str3,
+    tools.z3seq,
+    tools.regExSolver,
+    tools.trau
 ]:
     s.addRunner(solvers)
 
@@ -41,8 +41,7 @@ ploc = utils.JSONProgramConfig()
 
 store = storage.SQLiteDB("test")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = ["Cvc5"]
-# verifiers = []
+verifiers = []
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )

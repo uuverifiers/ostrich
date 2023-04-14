@@ -35,16 +35,6 @@ object TransitionTerm {
   }
 }
 
-object LabelTerm {
-  var count = 0
-  def apply(): Term = {
-    count += 1
-    val transTerm = new ConstantTerm(s"L$count")
-    TermGeneratorOrder.extend(transTerm)
-    transTerm
-  }
-}
-
 object ZTerm {
   var count = 0
   def apply(): Term = {
@@ -55,22 +45,12 @@ object ZTerm {
   }
 }
 
-object KTerm {
+object LenTerm {
   var count = 0
   def apply(): Term = {
     count += 1
-    val kTerm = new ConstantTerm(s"K$count")
-    TermGeneratorOrder.extend(kTerm)
-    kTerm
-  }
-}
-
-object LTerm {
-  var count = 0
-  def apply(): Term = {
-    count += 1
-    val lTerm = new ConstantTerm(s"L$count")
-    TermGeneratorOrder.extend(lTerm)
-    lTerm
+    val lenTerm = new ConstantTerm(s"Len$count")
+    TermGeneratorOrder.extend(lenTerm)
+    lenTerm
   }
 }

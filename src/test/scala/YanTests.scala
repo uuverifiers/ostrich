@@ -1,10 +1,10 @@
-package ostrich
+// package ostrich
 
-import ap.CmdlMain
-import ap.DialogUtil.asString
+// import ap.CmdlMain
+// import ap.DialogUtil.asString
 
-import org.scalacheck.{Arbitrary, Gen, Properties}
-import org.scalacheck.Prop._
+// import org.scalacheck.{Arbitrary, Gen, Properties}
+// import org.scalacheck.Prop._
 
 // object YanTests extends Properties("YanTests") {
 
@@ -115,5 +115,5 @@ import org.scalacheck.Prop._
 //     checkFile("tests/yan-benchmarks/replaceAll-024.smt2", "sat")
 //   property("tests/yan-benchmarks/replaceAll-025.smt2") =
 //     checkFile("tests/yan-benchmarks/replaceAll-025.smt2", "sat")
-
+// // 
 // }

@@ -52,6 +52,7 @@ lazy val commonSettings = Seq(
 //  scalacOptions         += "-deprecation",
   scalacOptions         += "-Ywarn-unused",
   run / fork           := true,
+  Test / fork := true,
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
   cancelable in Global  := true,

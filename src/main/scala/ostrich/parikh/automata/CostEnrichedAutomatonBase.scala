@@ -254,6 +254,29 @@ class CostEnrichedAutomatonBase extends Automaton {
     true
   }
 
+  def getAcceptedWord: Option[Seq[Int]] = {
+    if (regsRelation != Conjunction.TRUE | registers.nonEmpty) {
+      throw new UnsupportedOperationException
+    }
+    val seenlist = new MHashSet[State]
+    val worklist = new MStack[State]
+    var acceptedword = Seq[Int]()
+    worklist.push(initialState)
+    seenlist.add(initialState)
+    while (!worklist.isEmpty) {
+      val s = worklist.pop
+      if (isAccept(s)) {
+        return Some(acceptedword)
+      }
+      for ((to, (lbl, _), _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)) {
+        acceptedword = acceptedword :+ lbl
+        worklist.push(to)
+        seenlist.add(to)
+      }
+    }
+    None
+  }
+
   // not implement methods
   def unary_! = {
     if (registers.nonEmpty) throw new UnsupportedOperationException
@@ -261,7 +284,6 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
   def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
   // def isEmpty: Boolean = throw new UnsupportedOperationException
-  def getAcceptedWord: Option[Seq[Int]] = throw new UnsupportedOperationException
 
   def product(that: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     CEBasicOperations.intersection(this, that)

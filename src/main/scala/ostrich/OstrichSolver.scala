@@ -54,7 +54,6 @@ import ostrich.parikh.CostEnrichedConvenience
 import ostrich.parikh.core.FinalConstraints
 import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.OstrichConfig
-import ostrich.parikh.ParikhExploration.Approx
 import ostrich.parikh.ParikhExploration
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.BricsAutomatonWrapper

@@ -305,6 +305,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
+                   str_indexof, str_substr,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
@@ -480,7 +481,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     val visitor2 = new OstrichRegexEncoder (this)
     // Added by Riccardo
     val visitor3 = new OstrichStringEncoder(this)
-
+    // Added by Denghang
     val visitor4 = new OstrichCostEnrichEncoder(this)
 
     try {

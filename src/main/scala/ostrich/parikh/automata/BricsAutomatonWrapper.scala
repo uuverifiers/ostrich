@@ -30,6 +30,9 @@ object BricsAutomatonWrapper {
 
   def makeAnyString(): BricsAutomatonWrapper =
     BricsAutomatonWrapper(BAutomaton.makeAnyString)
+  
+  def makeEmpty(): BricsAutomatonWrapper =
+    BricsAutomatonWrapper(BAutomaton.makeEmpty)
 
   /** Check whether we should avoid ever minimising the given automaton.
     */

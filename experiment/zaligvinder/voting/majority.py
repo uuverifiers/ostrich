@@ -8,11 +8,9 @@ from functools import reduce
 class MajorityVoter:
     def voteOnResult (self,track,res,verifiers=[]):
         name,instances = track.name,track.instances
-        print(res.keys())
         for i,inst in enumerate(instances):
             if inst.expected == None:
                 toolResults = [res[solver][i] for solver in res.keys() if (solver in verifiers or len(verifiers) == 0)]
-                print(toolResults)
                 
                 satVerified = False
                 if len(verifiers) > 0:

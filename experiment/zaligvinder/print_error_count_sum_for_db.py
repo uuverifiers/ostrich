@@ -1,6 +1,8 @@
-import os, argparse
+import os
+import argparse
 import storage.sqlitedb
 import re
+
 
 def parseCountString(count: str):
     if (count == ''):
@@ -22,18 +24,33 @@ def regexesCount(filename: str):
     f.close()
 
 
-
-def count_for_db(db, solver):
+def unsolved(db, solver):
     trackinstance_db = storage.sqlitedb.TrackInstanceRepository(db)
     track_db = storage.sqlitedb.TrackRepository(db, trackinstance_db)
-    result_db = storage.sqlitedb.ResultRepository(db, track_db, trackinstance_db)
-    unsolved_files = result_db.getAllUnsolvedFilesForSolver(solver) 
+    result_db = storage.sqlitedb.ResultRepository(
+        db, track_db, trackinstance_db)
+    unsolved_files = result_db.getAllUnsolvedFilesForSolver(solver)
     for file in unsolved_files:
         regexesCount(file)
     return len(unsolved_files)
 
-argparser = argparse.ArgumentParser(prog=__file__, description="count the sum of repetition times in the error instances of a database")
+
+def unique(db):
+    trackinstance_db = storage.sqlitedb.TrackInstanceRepository(db)
+    track_db = storage.sqlitedb.TrackRepository(db, trackinstance_db)
+    result_db = storage.sqlitedb.ResultRepository(
+        db, track_db, trackinstance_db)
+    unique_files = result_db.getUniquelyClassifiedInstances()
+    for key in unique_files:
+        print(key)
+        for file in unique_files[key]:
+            print(file)
+
+argparser = argparse.ArgumentParser(
+    prog=__file__, description="count the sum of repetition times in the error instances of a database")
 argparser.add_argument("database")
 args = argparser.parse_args()
-db = storage.sqlitedb.DB (args.database)
-print(count_for_db(db, "ostrich"))
+db = storage.sqlitedb.DB(args.database)
+unsolved_num = unsolved(db, "Cvc5")
+
+# unique(db)
