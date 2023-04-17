@@ -24,6 +24,11 @@ object FinalConstraints {
 
   def apply() = finalLIA
 
+  def reset() = {
+    finalLIA = Conjunction.TRUE
+    str2IntList = Seq[(IExpression, IExpression, Int)]()
+  }
+
   def conjFormula(f: Formula) = finalLIA = conj(finalLIA, f)
 
   def addStr2IntPred(str: IExpression, int: IExpression, strlen: Int) =

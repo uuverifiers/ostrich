@@ -5,13 +5,18 @@ import ap.terfor.ConstantTerm
 import ap.terfor.TermOrder
 
 object TermGeneratorOrder {
+  def reset() = {
+    order = TermOrder.EMPTY
+  }
   implicit var order: TermOrder = TermOrder.EMPTY
   def apply(): TermOrder = order
   def extend(t: ConstantTerm): Unit = {
-    order = order.extend(t)
+    if(!order.orderedConstants.contains(t))
+      order = order.extend(t)
   }
   def extend(t: Seq[ConstantTerm]): Unit = {
-    order = order.extend(t)
+    val newConsts = t.toSet &~ order.orderedConstants  
+    order = order.extend(newConsts.toSeq)
   }
 }
 

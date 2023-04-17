@@ -93,7 +93,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  re_begin_anchor, re_end_anchor, FunPred, strDatabase
                 }
 
-  val rexOps : Set[IFunction] =
+val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
         re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps, str_to_re,
         re_from_str, re_capture, re_reference, re_begin_anchor, re_end_anchor,
@@ -109,8 +109,6 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     val atoms = goal.facts.predConj
     val order = goal.order
-
-    TermGeneratorOrder.extend(order.orderedConstants.toSeq)
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
@@ -311,7 +309,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
-
+    TermGeneratorOrder.reset
+    FinalConstraints.reset
+    OstrichConfig.reset
+    TermGeneratorOrder.order = goal.facts.arithConj.order
     FinalConstraints.conjFormula(goal.facts.arithConj)
     
     SimpleAPI.withProver { lengthProver =>

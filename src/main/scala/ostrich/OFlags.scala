@@ -32,9 +32,6 @@
 
 package ostrich
 
-import ap.parameters.GlobalSettings
-import ap.parameters.Param
-
 object OFlags {
 
   object LengthOptions extends Enumeration {
@@ -48,6 +45,7 @@ object OFlags {
 
   val timeout = 60000
 }
+
 
 case class OFlags(
 
