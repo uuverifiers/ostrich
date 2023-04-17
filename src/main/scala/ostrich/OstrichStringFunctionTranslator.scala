@@ -44,7 +44,6 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
 import ostrich.parikh.preop.ConcatCEPreOp
 import ostrich.parikh.preop.SubStringCEPreOp
-import ostrich.parikh.OstrichConfig
 import ostrich.parikh.preop.IndexOfCEPreOp
 
 /**
@@ -78,11 +77,11 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_++`) if OstrichConfig.useCostEnriched =>
+    case FunPred(`str_++`) if theory.getflags.useCostEnriched =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
-    case FunPred(`str_substr`) if OstrichConfig.useCostEnriched =>
+    case FunPred(`str_substr`) if theory.getflags.useCostEnriched =>
       Some((() => SubStringCEPreOp(a(1), a(2)), Seq(a(0), a(1), a(2)), a(3)))
-    case FunPred(`str_indexof`) if OstrichConfig.useCostEnriched =>
+    case FunPred(`str_indexof`) if theory.getflags.useCostEnriched =>
       Some((() => IndexOfCEPreOp(a(2), a(3)), Seq(a(0), a(1), a(2)), a(3)))
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))

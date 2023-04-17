@@ -35,7 +35,6 @@ package ostrich
 import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
-import ostrich.parikh.OstrichConfig
 
 /**
  * Pre-processor for reducing some operators to more basic ones.
@@ -125,7 +124,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case (IFunApp(`str_indexof`, _),
           Seq(bigStr : ITerm,
               subStr@ConcreteString(subStrStr),
-              startIndex : ITerm)) if !OstrichConfig.useCostEnriched => {
+              startIndex : ITerm)) if !theory.getflags.useCostEnriched => {
       // we need one epsilon and 5 quantifiers, so shift by 6
       val shift = 6
 

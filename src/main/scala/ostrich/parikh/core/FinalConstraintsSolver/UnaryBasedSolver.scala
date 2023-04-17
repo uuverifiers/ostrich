@@ -12,20 +12,21 @@ import ap.terfor.Formula
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
-import ostrich.parikh.OstrichConfig
+import ostrich.OFlags
 
-class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
+class UnaryBasedSolver(flags: OFlags)
+    extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    addConstraint(unaryHeuristicACs(t, auts))
+    addConstraint(unaryHeuristicACs(t, auts, flags))
   }
 
   def solve: Result = {
-    if(OstrichConfig.underApprox){
+    if (flags.underApprox) {
       val res = solveUnderApprox
-      if(res.isSat) return res
+      if (res.isSat) return res
     }
     // if(OstrichConfig.overApprox){
-    //   val res = solveOverApprox 
+    //   val res = solveOverApprox
     //   if(res.isUnsat) return res
     // }
     solveCompleteLIA
@@ -33,7 +34,7 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
   def solveUnderApprox: Result = {
     // add bound iterately
-    val maxBound = OstrichConfig.underApproxBound
+    val maxBound = flags.underApproxBound
     val step = 5
     var nowBound = 5
     var result = new Result
@@ -66,8 +67,8 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
 
       p addConstants order.orderedConstants
 
-      // We must treat TermGenerator.order carefully. 
-      // Note that finalArith.order == TermGenerator.order 
+      // We must treat TermGenerator.order carefully.
+      // Note that finalArith.order == TermGenerator.order
       p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

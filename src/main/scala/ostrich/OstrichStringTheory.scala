@@ -53,7 +53,6 @@ import ap.util.Seqs
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
 import ostrich.parikh.OstrichCostEnrichEncoder
-import ostrich.parikh.OstrichConfig
 
 object OstrichStringTheory {
 
@@ -105,12 +104,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val SSo = StringSort
   private val RSo = RegexSort
 
+  
   def int2Char(t : ITerm) : ITerm =
     ModuloArithmetic.cast2Interval(IdealInt.ZERO, upperBound, t)
 
   def char2Int(t : ITerm) : ITerm = t
 
   //////////////////////////////////////////////////////////////////////////////
+
+  def getflags () = flags
 
   import Sort.Integer
 
@@ -496,5 +498,4 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   TheoryRegistry register this
   StringTheory register this
-
 }

@@ -4,15 +4,16 @@ import ap.terfor.Formula
 import ap.terfor.Term
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
-import ostrich.parikh.OstrichConfig
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ap.terfor.conjunctions.Conjunction
 import scala.collection.mutable.ArrayBuffer
+import ostrich.OFlags
 
 class UnaryFinalConstraints(
     override val strId: Term,
-    override val auts: Seq[CostEnrichedAutomatonBase]
+    override val auts: Seq[CostEnrichedAutomatonBase],
+    flags : OFlags
 ) extends FinalConstraints {
   // the globalS is used to store the state we have explored before
   // to avoid repeated exploration
@@ -45,9 +46,9 @@ class UnaryFinalConstraints(
     
 
   lazy val checkSatAut =
-    if (OstrichConfig.simplifyAut) mostlySimplifiedAut else productAut
+    if (flags.simplifyAut) mostlySimplifiedAut else productAut
   lazy val findModelAut =
-    if (OstrichConfig.simplifyAut) simplifyButRemainLabelAut else productAut
+    if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
 
   /**
     * Like Bounded Model Checking(BMC), we find all runs of length less and equal to 
@@ -97,7 +98,7 @@ class UnaryFinalConstraints(
     )
   }
 
-  if (OstrichConfig.debug) {
+  if (flags.debug) {
     productAut.toDot("product_" + strId.toString)
     mostlySimplifiedAut.toDot("simplified_" + strId.toString)
     simplifyButRemainLabelAut.toDot("original_" + strId.toString)

@@ -15,6 +15,7 @@ import ap.parser.IExpression
 import ostrich.parikh.TransitionTerm
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, HashSet => MHashSet}
 import ostrich.parikh.ZTerm
+import ostrich.OFlags
 
 object FinalConstraints {
 
@@ -36,9 +37,10 @@ object FinalConstraints {
 
   def unaryHeuristicACs(
       t: Term,
-      auts: Seq[CostEnrichedAutomatonBase]
+      auts: Seq[CostEnrichedAutomatonBase],
+      flags: OFlags
   ): UnaryFinalConstraints = {
-    new UnaryFinalConstraints(t, auts)
+    new UnaryFinalConstraints(t, auts, flags)
   }
 
   def baselineACs(

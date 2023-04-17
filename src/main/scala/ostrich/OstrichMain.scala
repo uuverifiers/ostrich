@@ -30,8 +30,6 @@
 
 package ostrich
 
-import ostrich.parikh.OstrichConfig
-
 /** Wrapper around <code>ap.CmdlMain</code>, adding the option
   * <code>-stringSolver=ostrich.OstrichStringTheory</code>.
   */
@@ -48,8 +46,5 @@ object OstrichMain extends App {
   ap.CmdlMain.stackTraces = true
   
   ap.CmdlMain.main((options ++ args).toArray)
-  
-  if (OstrichConfig.measureTime)
-    println(ap.util.Timer.toString())
 
 }

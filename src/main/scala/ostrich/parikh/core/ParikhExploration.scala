@@ -25,11 +25,9 @@ import ostrich.parikh.core.Model.{IntValue, StringValue}
 import ostrich.parikh.preop.IndexOfCEPreOp
 import ostrich.parikh.core.CatraBasedSolver
 import ostrich.parikh.core.BaselineSolver
-import ostrich.parikh.OstrichConfig.Catra
-import ostrich.parikh.OstrichConfig.Baseline
-import ostrich.parikh.OstrichConfig.Unary
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
+import ostrich.{OFlags, Catra, Baseline, Unary}
 
 object ParikhExploration {
   private def isStringResult(op: PreOp): Boolean = op match {
@@ -85,15 +83,13 @@ object ParikhExploration {
 class ParikhExploration(
     funApps: Seq[(PreOp, Seq[Term], Term)],
     initialConstraints: Seq[(Term, Automaton)],
-    strDatabase: StrDatabase
+    strDatabase: StrDatabase,
+    flags: OFlags
 ) {
   import Exploration._
 
   def measure[A](op: String)(comp: => A): A =
-    if (OstrichConfig.measureTime)
-      ap.util.Timer.measure(op)(comp)
-    else
-      comp
+    ParikhUtil.measure(op)(comp)(flags.debug)
 
   // topological sorting of the function applications
   // divide integer term and string term
@@ -197,10 +193,10 @@ class ParikhExploration(
 
     for ((t, aut) <- allInitialConstraints) {
       constraintStores(t).assertConstraint(aut) match {
-        case Some(confilctSet) => 
+        case Some(confilctSet) =>
           // println(confilctSet)
           return None
-        case None    => // nothing
+        case None => // nothing
       }
     }
 
@@ -244,10 +240,10 @@ class ParikhExploration(
         // check linear arith consistency of final automata
 
         val backendSolver =
-          OstrichConfig.backend match {
+          flags.backend match {
             case Catra()    => new CatraBasedSolver
             case Baseline() => new BaselineSolver
-            case Unary()    => new UnaryBasedSolver
+            case Unary()    => new UnaryBasedSolver(flags)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
@@ -385,7 +381,7 @@ class ParikhExploration(
   val allInitialConstraints: Seq[(Term, Automaton)] = {
     val coveredTerms = new MHashSet[Term]
     for ((t, _) <- initialConstraints)
-        coveredTerms += t
+      coveredTerms += t
 
     val additionalConstraints = new ArrayBuffer[(Term, Automaton)]
 

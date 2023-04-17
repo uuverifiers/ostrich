@@ -37,7 +37,6 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
-import ostrich.parikh.OstrichConfig
 
 /** The entry class of the Ostrich string solver.
   */
@@ -62,8 +61,11 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh = false
+  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug = false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  private var backend: Backend = Unary()
+  private var underApprox, simplifyAut = true
+  private var underApproxBound = 15
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -84,27 +86,21 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
     // Options for cost-enriched-automata based solver
     case CmdlParser.Opt("simplify-aut", value) =>
-      OstrichConfig.simplifyAut = value
-    case CmdlParser.Opt("measuretime", value) =>
-      OstrichConfig.measureTime = value
+      simplifyAut = value
     case CmdlParser.Opt("costenriched", value) =>
-      OstrichConfig.useCostEnriched = value
+      useCostEnriched = value
     case CmdlParser.Opt("under-approx", value) =>
-      OstrichConfig.underApprox = value
-    case CmdlParser.Opt("over-approx", value) =>
-      OstrichConfig.overApprox = value
+      underApprox = value
     case CmdlParser.Opt("debug", value) => 
-      OstrichConfig.debug = value
-    case CmdlParser.Opt("find-model-heuristic", value) =>
-      OstrichConfig.findStringHeu = value
+      debug = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
-      OstrichConfig.backend = OstrichConfig.Baseline()
+      backend = Baseline()
     case CmdlParser.ValueOpt("backend", "unary") =>
-      OstrichConfig.backend = OstrichConfig.Unary()
+      backend = Unary()
     case CmdlParser.ValueOpt("backend", "catra") =>
-      OstrichConfig.backend = OstrichConfig.Catra()
+      backend = Catra()
     case CmdlParser.ValueOpt("under-approx-bound", value) =>
-      OstrichConfig.underApproxBound = value.toInt
+      underApproxBound = value.toInt
     // ignore")
     case str =>
       println("Parameter " + str + " is not supported by theory " + name + "\n")
@@ -148,7 +144,13 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
         useLength = useLen,
         useParikhConstraints = useParikh,
         forwardApprox = forward,
-        minimizeAutomata = minimizeAuts
+        minimizeAutomata = minimizeAuts,
+        backend = backend,
+        useCostEnriched = useCostEnriched,
+        debug = debug,
+        underApprox = underApprox,
+        underApproxBound = underApproxBound,
+        simplifyAut = simplifyAut
       )
     )
   }
