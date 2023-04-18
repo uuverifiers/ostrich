@@ -14,7 +14,7 @@ import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.OFlags
 
-class UnaryBasedSolver(flags: OFlags)
+class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[Term, Term])
     extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(unaryHeuristicACs(t, auts, flags))
@@ -68,7 +68,7 @@ class UnaryBasedSolver(flags: OFlags)
       p addConstants order.orderedConstants
 
       // We must treat TermGenerator.order carefully.
-      // Note that finalArith.order == TermGenerator.order
+      // finalArith.order should equal to TermGenerator.order
       p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
@@ -92,7 +92,7 @@ class UnaryBasedSolver(flags: OFlags)
           }
           // update integer model
           for (term <- integerTerms) {
-            val value = evalTerm(term, partialModel)
+            val value = evalTerm(freshIntTerm2orgin(term), partialModel)
             res.updateModel(term, value)
           }
 

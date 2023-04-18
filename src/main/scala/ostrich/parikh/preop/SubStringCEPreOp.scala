@@ -8,6 +8,11 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.parikh.RegisterTerm
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
+import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
+import ap.terfor.linearcombination.LinearCombination
+import ostrich.parikh.automata.CEBasicOperations.{intersection, concatenate}
+import ostrich.parikh.LenTerm
+import ostrich.automata.BricsAutomaton
 
 object SubStringCEPreOp {
   def apply(beginIdx: Term, length: Term) =
@@ -28,80 +33,62 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-
-    val ceAut = new CostEnrichedAutomaton
-    val lbOps = ceAut.LabelOps
-
+    var preimages = Iterator[Seq[Automaton]]()
+    var preimagesOfEmptyStr = Iterator[Seq[Automaton]]()
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    val noUpdate = Seq.fill(res.registers.size)(0)
-    val resState2new = res.states.map { case s =>
-      (s, ceAut.newState())
-    }.toMap
-
-    val initialState = ceAut.initialState
-
-    // 0 -> (sigma, (1,0)) -> 0 to update `beginIdx`
-    ceAut.addTransition(
-      initialState,
-      lbOps.sigmaLabel,
-      initialState,
-      Seq(1, 0) ++ noUpdate
-    )
-    // 0 -> epsilon -> resState2new(res.initialState)
-    res.outgoingTransitionsWithVec(res.initialState).foreach {
-      case (t, lbl, vec) =>
-        ceAut
-          .addTransition(initialState, lbl, resState2new(t), vec ++ Seq(0, 1))
-    }
-    // i -> (a, (0,1)) -> j to update `length`, where char a and state
-    // i,j from `resultConstraint`
-    res.transitionsWithVec.foreach { case (s, lbl, t, vec) =>
-      ceAut.addTransition(
-        resState2new(s),
-        lbl,
-        resState2new(t),
-        Seq(0, 1) ++ vec
-      )
-    }
-
-    // resState2new(res.finalState) -> (sigma, (0, 0)) -> f
-    val finalState = ceAut.newState()
-    ceAut.setAccept(finalState, true)
-    res.acceptingStates.foreach { case s =>
-      ceAut.setAccept(resState2new(s), true)
-      ceAut.addTransition(
-        resState2new(s),
-        lbOps.sigmaLabel,
-        finalState,
-        Seq(0, 0) ++ noUpdate
-      )
-    }
-
-    // f -> (sigma, (0,0)) -> f to stand for tail string
-    ceAut.addTransition(
-      finalState,
-      lbOps.sigmaLabel,
-      finalState,
-      Seq(0, 0) ++ noUpdate
-    )
-
-    // registers : (r0, r1)
-    val registers = Seq.fill(2)(RegisterTerm())
-    ceAut.registers = registers ++ res.registers
-    ceAut.regsRelation = (
-      (registers(0) === beginIdx) & (registers(1) === length)
-    )
-
-    (
-      Iterator(
-        Seq(
-          ceAut,
-          BricsAutomatonWrapper.makeAnyString,
-          BricsAutomatonWrapper.makeAnyString
+    beginIdx match {
+      case LinearCombination.Constant(value) => {
+        if (res.isAccept(res.initialState)) {
+          val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
+          preimageOfEmp1.regsRelation = conj(
+            preimageOfEmp1.regsRelation,
+            length <= 0
+          )
+          val preimageOfEmp2 = automatonWithLenLessThan(value.intValueSafe)
+          for (r <- res.registers) {
+            // tansmit the empty string integer info
+            preimageOfEmp1.regsRelation =
+              conj(preimageOfEmp1.regsRelation, r === 0)
+            preimageOfEmp2.regsRelation =
+              conj(preimageOfEmp2.regsRelation, r === 0)
+          }
+          preimagesOfEmptyStr =
+            Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
+        }
+        preimages = preimagesOfConstBeginIdx(
+          value.intValueSafe,
+          length,
+          res
         )
-      ),
-      Seq()
-    )
+      }
+      case _ => {
+        if (res.isAccept(res.initialState)) {
+          val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
+          preimageOfEmp1.regsRelation = conj(
+            preimageOfEmp1.regsRelation,
+            length <= 0
+          )
+          val searchedStrLen = LenTerm()
+          val preimageOfEmp2 = LengthCEPreOp.lengthPreimage(searchedStrLen)
+          preimageOfEmp2.regsRelation = conj(
+            preimageOfEmp2.regsRelation,
+            searchedStrLen <= beginIdx
+          )
+          for (r <- res.registers) {
+            // tansmit the empty string integer info
+            preimageOfEmp1.regsRelation =
+              conj(preimageOfEmp1.regsRelation, r === 0)
+            preimageOfEmp2.regsRelation =
+              conj(preimageOfEmp2.regsRelation, r === 0)
+          }
+          preimagesOfEmptyStr =
+            Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
+        }
+
+        preimages = preimagesOfVarBeginIdx(beginIdx, length, res)
+      }
+    }
+    (preimagesOfEmptyStr ++ preimages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -115,4 +102,102 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     }
   }
 
+  private def preimagesOfConstBeginIdx(
+      beginIdx: Int,
+      length: Term,
+      resultConstraint: CostEnrichedAutomatonBase
+  ): Iterator[Seq[Automaton]] = {
+    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
+    val beginIdxPrefix = automatonWithLen(beginIdx)
+    length match {
+      case LinearCombination.Constant(value) => {
+        preimages = preimagesOfConstLen(
+          beginIdxPrefix,
+          value.intValueSafe,
+          resultConstraint
+        )
+      }
+      case _ => {
+        preimages = preimagesOfVarLen(beginIdxPrefix, length, resultConstraint)
+      }
+    }
+    preimages
+  }
+
+  private def preimagesOfVarBeginIdx(
+      beginIdx: Term,
+      length: Term,
+      resultConstraint: Automaton
+  ): Iterator[Seq[Automaton]] = {
+    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
+    val beginIdxPrefix = LengthCEPreOp.lengthPreimage(beginIdx)
+    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    length match {
+      case LinearCombination.Constant(value) => {
+        preimages = preimagesOfConstLen(beginIdxPrefix, value.intValueSafe, res)
+      }
+      case _ => {
+        preimages = preimagesOfVarLen(beginIdxPrefix, length, res)
+      }
+    }
+    preimages
+  }
+
+  def preimagesOfConstLen(
+      beginIdxPrefix: CostEnrichedAutomatonBase,
+      length: Int,
+      resultConstraint: CostEnrichedAutomatonBase
+  ): Iterator[Seq[CostEnrichedAutomatonBase]] = {
+    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
+    val anyStringSuffix = BricsAutomatonWrapper.makeAnyString
+    val middleSubStr = intersection(
+      automatonWithLen(length),
+      resultConstraint
+    )
+    val preimage1 = concatenate(
+      Seq(beginIdxPrefix, middleSubStr, anyStringSuffix)
+    )
+    val smallLenSuffix = intersection(
+      automatonWithLenLessThan(length),
+      resultConstraint
+    )
+    val preimage2 = concatenate(Seq(beginIdxPrefix, smallLenSuffix))
+
+    preimages = Iterator(
+      Seq(preimage1),
+      Seq(preimage2)
+    )
+    preimages
+  }
+
+  def preimagesOfVarLen(
+      beginIdxPrefix: CostEnrichedAutomatonBase,
+      length: Term,
+      resultConstraint: CostEnrichedAutomatonBase
+  ): Iterator[Seq[CostEnrichedAutomatonBase]] = {
+    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
+    val anyStringSuffix = BricsAutomatonWrapper.makeAnyString
+    val middleSubStr = intersection(
+      LengthCEPreOp.lengthPreimage(length),
+      resultConstraint
+    )
+    val preimage1 = concatenate(
+      Seq(beginIdxPrefix, middleSubStr, anyStringSuffix)
+    )
+    val smallLen = LenTerm()
+    val smallLenSuffix = intersection(
+      LengthCEPreOp.lengthPreimage(smallLen),
+      resultConstraint
+    )
+    smallLenSuffix.regsRelation = conj(
+      smallLenSuffix.regsRelation,
+      smallLen < length
+    )
+    val preimage2 = concatenate(Seq(beginIdxPrefix, smallLenSuffix))
+    preimages = Iterator(
+      Seq(preimage1),
+      Seq(preimage2)
+    )
+    preimages
+  }
 }

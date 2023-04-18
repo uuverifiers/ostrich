@@ -98,7 +98,7 @@ class ParikhStore(t: Term) extends ConstraintStore {
     None
   }
   def assertConstraint(aut: Automaton): Option[ConflictSet] = {
-    Console.err.println("assert")
+    // Console.err.println("assert")
 
     if (!constraints.contains(aut)) {
       // check if the stored automata is consistent after adding the aut
@@ -107,7 +107,8 @@ class ParikhStore(t: Term) extends ConstraintStore {
       // We return the conflictSet directly if current constraints with aut belongs to
       // one confilctSet in **inconsistentAutomata**.
       directlyConflictSet(aut) match {
-        case Some(confilctSet) => return Some(confilctSet);
+        case Some(confilctSet) => 
+          return Some(confilctSet);
         case None              => // do nothing
       }
 

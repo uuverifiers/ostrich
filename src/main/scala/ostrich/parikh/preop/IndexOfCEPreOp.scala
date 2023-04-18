@@ -5,7 +5,6 @@ import ostrich.automata.Automaton
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import scala.collection.mutable.ArrayBuffer
-import ostrich.parikh.LenTerm
 import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ostrich.parikh.automata.BricsAutomatonWrapper.{
@@ -13,8 +12,15 @@ import ostrich.parikh.automata.BricsAutomatonWrapper.{
   fromString,
   makeEmpty
 }
+import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
 import ostrich.parikh.automata.BricsAutomatonWrapper
 import LengthCEPreOp.lengthPreimage
+import ostrich.parikh.LenTerm
+import ostrich.parikh.automata.CEBasicOperations.{
+  concatenate,
+  complement,
+  intersection
+}
 
 object IndexOfCEPreOp {
   def apply(startPos: Term, index: Term) =
@@ -66,11 +72,7 @@ class IndexOfCEPreOp(startPos: Term, index: Term) extends CEPreOp {
       startPos: Int,
       index: Term
   ): Iterator[Seq[CostEnrichedAutomatonBase]] = {
-    import ostrich.parikh.automata.CEBasicOperations.{
-      concatenate,
-      complement,
-      intersection
-    }
+
     var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
     val matchStr = matchString.map(_.toChar).mkString
     val startPosPrefix = automatonWithLen(startPos)
@@ -148,32 +150,82 @@ class IndexOfCEPreOp(startPos: Term, index: Term) extends CEPreOp {
       startPos: Term,
       index: Term
   ): Iterator[Seq[CostEnrichedAutomatonBase]] = {
-    Iterator()
+    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
+    val matchStr = matchString.map(_.toChar).mkString
+    val notMatched = complement(
+      concatenate(Seq(makeAnyString, fromString(matchStr), makeAnyString))
+    )
+    val startPosPrefix = lengthPreimage(startPos)
+    val matchedSuffix = concatenate(
+      Seq(fromString(matchStr), makeAnyString())
+    )
+    index match {
+      case LinearCombination.Constant(value) => {
+        // index is constant
+        val index = value.intValueSafe
+        if (index == -1) {
+          // startPos > len(searched_string)
+          val searchedStrLen = LenTerm()
+          val preimage1 = lengthPreimage(searchedStrLen)
+          preimage1.regsRelation =
+            conj(preimage1.regsRelation, searchedStrLen < startPos)
+
+          // startPos <= len(searched_string) but searched_string do not contains matchString after startPos
+          val preimage2 = concatenate(
+            Seq(startPosPrefix, notMatched)
+          )
+          preimages = Iterator(
+            Seq(preimage1),
+            Seq(preimage2)
+          )
+        } else {
+          val notMatchedPrefix = intersection(
+            automatonWithLen(index),
+            concatenate(Seq(startPosPrefix, notMatched))
+          )
+
+          val preimage = concatenate(
+            Seq(notMatchedPrefix, matchedSuffix)
+          )
+          preimages = Iterator(Seq(preimage))
+        }
+      }
+
+      case _ => {
+        // index is a variable
+
+        // index = -1
+        // startPos > len(searched_string)
+        val searchedStrLen = LenTerm()
+        val preimage1 = lengthPreimage(searchedStrLen)
+        preimage1.regsRelation =
+          conj(preimage1.regsRelation, searchedStrLen < startPos, index === -1)
+
+        // startPos <= len(searched_string) but searched_string do not contains matchString after startPos
+        val preimage2 = concatenate(
+          Seq(startPosPrefix, notMatched)
+        )
+        preimage2.regsRelation = conj(preimage2.regsRelation, index === -1)
+
+        // index >= 0
+        val notMatchedPrefix = intersection(
+          lengthPreimage(index),
+          concatenate(Seq(startPosPrefix, notMatched))
+        )
+        val preimage3 = concatenate(
+          Seq(notMatchedPrefix, matchedSuffix)
+        )
+        preimage3.regsRelation = conj(preimage3.regsRelation, index >= 0)
+        preimages = Iterator(
+          Seq(preimage1),
+          Seq(preimage2),
+          Seq(preimage3)
+        )
+
+      }
+    }
+    preimages
   }
 
-  private def automatonWithLen(len: Int): CostEnrichedAutomatonBase = {
-    val automaton = new CostEnrichedAutomatonBase
-    val sigma = automaton.LabelOps.sigmaLabel
-    val states =
-      automaton.initialState +: (for (_ <- 0 to len) yield automaton.newState())
-    for (i <- 0 until len) {
-      automaton.addTransition(states(i), sigma, states(i + 1), Seq())
-    }
-    automaton.setAccept(states(len), true)
-    automaton
-  }
 
-  private def automatonWithLenLessThan(len: Int): CostEnrichedAutomatonBase = {
-    if (len <= 0) return makeEmpty()
-    val automaton = new CostEnrichedAutomatonBase
-    val sigma = automaton.LabelOps.sigmaLabel
-    val states =
-      automaton.initialState +: (for (_ <- 0 to len) yield automaton.newState())
-    for (i <- 0 until len - 1) {
-      automaton.setAccept(states(i), true)
-      automaton.addTransition(states(i), sigma, states(i + 1), Seq())
-    }
-    automaton.setAccept(states(len - 1), true)
-    automaton
-  }
 }

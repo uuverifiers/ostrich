@@ -28,6 +28,8 @@ import ostrich.parikh.core.BaselineSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
 import ostrich.{OFlags, Catra, Baseline, Unary}
+import ostrich.parikh.{IntTerm}
+import ostrich.parikh.core.FinalConstraints
 
 object ParikhExploration {
   private def isStringResult(op: PreOp): Boolean = op match {
@@ -93,30 +95,50 @@ class ParikhExploration(
 
   // topological sorting of the function applications
   // divide integer term and string term
+  private val freshIntTerm2orgin = new MHashMap[Term, Term]
   private val (integerTerms, strTerms, sortedFunApps, ignoredApps) = {
-    val integerTerms = MHashSet[Term]()
     val strTerms = MHashSet[Term]()
     for ((t, _) <- initialConstraints)
       strTerms += t
-    funApps.foreach {
-      case (_: LengthCEPreOp, Seq(str), length) =>
-        integerTerms += length; strTerms += str
-      case (_: SubStringCEPreOp, Seq(str, start, length), subStr) =>
-        integerTerms += start; integerTerms += length; strTerms += str;
+    val newFunApps = funApps.map {
+      case (op: LengthCEPreOp, Seq(str), length) => {
+        val frashInt = IntTerm()
+        freshIntTerm2orgin += (frashInt -> length)
+        (op, Seq(str), frashInt)
+      }
+      case (op: SubStringCEPreOp, Seq(str, start, length), subStr) => {
+        val frashInt1 = IntTerm()
+        val frashInt2 = IntTerm()
+        freshIntTerm2orgin += (frashInt1 -> start)
+        freshIntTerm2orgin += (frashInt2 -> length)
+        strTerms += str
         strTerms += subStr
-      case (_: IndexOfCEPreOp, Seq(str, subStr, start), index) =>
-        integerTerms += start; strTerms += str; strTerms += subStr;
-        integerTerms += index
-      case (_, strs, resstr) => strTerms ++= strs; strTerms += resstr
+        (op, Seq(str, frashInt1, frashInt2), subStr)
+      }
+      case (op: IndexOfCEPreOp, Seq(str, subStr, start), index) => {
+        val frashInt1 = IntTerm()
+        val frashInt2 = IntTerm()
+        freshIntTerm2orgin += (frashInt1 -> start)
+        freshIntTerm2orgin += (frashInt2 -> index)
+        strTerms += str
+        strTerms += subStr
+        (op, Seq(str, subStr, frashInt1), frashInt2)
+      }
+      case (op, strs, resstr) => {
+        strTerms ++= strs
+        strTerms += resstr
+        (op, strs, resstr)
+      }
     }
+    val integerTerms = freshIntTerm2orgin.keySet
 
     val sortedApps = new ArrayBuffer[(Seq[(PreOp, Seq[Term])], Term)]
     var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
-    var remFunApps = funApps
-    var topSortedFunApps = funApps
+    var remFunApps = newFunApps
+    var topSortedFunApps = newFunApps
 
     val termCout = new MHashMap[Term, Int]
-    for ((op, args, res) <- funApps) {
+    for ((op, args, res) <- newFunApps) {
       termCout(res) = termCout.getOrElse(res, 0)
       for (arg <- args) termCout(arg) = termCout.getOrElse(arg, 0) + 1
     }
@@ -159,7 +181,9 @@ class ParikhExploration(
             case Some(str) => "\"" + str + "\""
             case None      => t.toString()
           }
-        } else t.toString()
+        } else {
+          freshIntTerm2orgin(t).toString()
+        }
 
       println("   " + term2String(res) + " =")
       for ((op, args) <- apps)
@@ -178,7 +202,7 @@ class ParikhExploration(
   val leafTerms =
     allTerms filter { case t => !(resultTerms contains t) }
 
-  lazy val trivalConflict: ConflictSet = {
+  private def trivalConflict: ConflictSet = {
     for (
       t <- leafTerms.toSeq;
       aut <- constraintStores(t).getContents
@@ -243,7 +267,7 @@ class ParikhExploration(
           flags.backend match {
             case Catra()    => new CatraBasedSolver
             case Baseline() => new BaselineSolver
-            case Unary()    => new UnaryBasedSolver(flags)
+            case Unary()    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
@@ -344,9 +368,7 @@ class ParikhExploration(
             ) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-              // println("backjump " + (conflict map {
-              //   case TermConstraint(t, aut) => (t, aut)
-              // }))
+              // println("backjump " + conflict)
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
@@ -359,12 +381,12 @@ class ParikhExploration(
       }
 
       // generate conflict set
-      if (needCompleteContentsForConflicts)
-        collectedConflicts ++=
-          (for (aut <- constraintStores(res).getCompleteContents)
-            yield TermConstraint(res, aut))
-      else
-        collectedConflicts += TermConstraint(res, resAut)
+      // if (needCompleteContentsForConflicts)
+      //   collectedConflicts ++=
+      //     (for (aut <- constraintStores(res).getCompleteContents)
+      //       yield TermConstraint(res, aut))
+      // else
+      collectedConflicts += TermConstraint(res, resAut)
 
       collectedConflicts ++=
         (for (
@@ -372,7 +394,6 @@ class ParikhExploration(
           aut <- auts.iterator
         )
           yield TermConstraint(t, aut))
-
       collectedConflicts.toSeq
     }
   }

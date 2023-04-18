@@ -1,7 +1,6 @@
 package ostrich.parikh.preop
 
 import ostrich.automata.Automaton
-import ap.terfor.TerForConvenience
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
@@ -25,7 +24,7 @@ object LengthCEPreOp {
     // registers: (r0)
     preimage.registers = Seq(RegisterTerm())
     // intFormula : r0 === `length`
-    import TerForConvenience._
+    import ap.terfor.TerForConvenience._ 
     import ostrich.parikh.TermGeneratorOrder._
     preimage.regsRelation = length === preimage.registers(0)
     preimage

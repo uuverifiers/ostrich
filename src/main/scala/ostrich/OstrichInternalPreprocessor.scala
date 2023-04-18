@@ -58,7 +58,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     // As a heuristic, we generate length predicate whenever the
     // problem already contained length constraints from the
     // beginning, or if the problem contains string concatenation
-    val useLength = theory.lengthNeeded(f) || (f.predicates contains _str_++)
+    val useLength = !flags.useCostEnriched && (theory.lengthNeeded(f) || (f.predicates contains _str_++))
 
     if (!useLength)
       return f

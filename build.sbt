@@ -52,7 +52,9 @@ lazy val commonSettings = Seq(
 //  scalacOptions         += "-deprecation",
   scalacOptions         += "-Ywarn-unused",
   run / fork           := true,
-  // Test / parallelExecution := false,
+  // we have used some global objects, 
+  // so that the test shound be taken serially.
+  Test / parallelExecution := false,
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
   cancelable in Global  := true,

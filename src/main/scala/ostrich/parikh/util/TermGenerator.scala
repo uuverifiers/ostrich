@@ -59,3 +59,13 @@ object LenTerm {
     lenTerm
   }
 }
+
+object IntTerm {
+  var count = 0
+  def apply(): Term = {
+    count += 1
+    val lenTerm = new ConstantTerm(s"Int$count")
+    TermGeneratorOrder.extend(lenTerm)
+    lenTerm
+  }
+}

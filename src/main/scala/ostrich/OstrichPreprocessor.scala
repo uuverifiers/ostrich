@@ -187,7 +187,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           Seq(bigStr : ITerm,
               Const(begin),
               Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(end))))
-        if bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
+        if !theory.getflags.useCostEnriched && bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
       str_trim(bigStr, begin, end - begin)
 
       // TODO: need proper condition for length
@@ -251,7 +251,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
     case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) 
-          => {
+      if !theory.getflags.useCostEnriched    => {
       // we need one epsilon and 5 quantifiers, so shift by 6
       val shift = 6
 

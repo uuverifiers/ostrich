@@ -59,8 +59,28 @@ object DenghangTests extends Properties("DenghangTests") {
       )
     }
 
-  property("indexof_sat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_sat.smt2", "sat")
-  property("indexof_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_unsat.smt2", "unsat")
+  property("indexof_const_index_sat.smt2") =
+    checkFile("tests/hu-benchmarks/indexof_const_index_sat.smt2", "sat")
+  property("indexof_const_index_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/indexof_const_index_unsat.smt2", "unsat")
+  property("indexof_const_startpos_sat.smt2") =
+    checkFile("tests/hu-benchmarks/indexof_const_startpos_sat.smt2", "sat")
+  property("indexof_const_startpos_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/indexof_const_startpos_unsat.smt2", "unsat")
+  property("indexof_var_sat.smt2") =
+    checkFile("tests/hu-benchmarks/indexof_var_sat.smt2", "sat")
+  property("indexof_var_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/indexof_var_unsat.smt2", "unsat")
+  property("substr_const_begin_sat.smt2") =
+    checkFile("tests/hu-benchmarks/substr_const_begin_sat.smt2", "sat")
+  property("substr_const_begin_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/substr_const_begin_unsat.smt2", "unsat")
+  property("substr_const_len_sat.smt2") =
+    checkFile("tests/hu-benchmarks/substr_const_len_sat.smt2", "sat")
+  property("substr_const_len_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/substr_const_len_unsat.smt2", "unsat")
+  property("substr_var_sat.smt2") =
+    checkFile("tests/hu-benchmarks/substr_var_sat.smt2", "sat")
+  property("substr_var_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/substr_var_unsat.smt2", "unsat")
 }

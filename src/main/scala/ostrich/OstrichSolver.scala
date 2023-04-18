@@ -56,6 +56,8 @@ import ostrich.parikh.core.FinalConstraintsSolver
 import ostrich.parikh.ParikhExploration
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.BricsAutomatonWrapper
+import ostrich.parikh.preop.SubStringCEPreOp
+import ostrich.parikh.preop.IndexOfCEPreOp
 
 object OstrichSolver {
 
@@ -236,12 +238,24 @@ val rexOps : Set[IFunction] =
       import TerForConvenience._
       implicit val o = order
 
+      val strCostsInFun = ArrayBuffer[Term]()
+      funApps.foreach{
+        case (_: SubStringCEPreOp, args, res) => {
+          strCostsInFun ++= args(0).constants ++ res.constants
+        }
+        case (_: IndexOfCEPreOp, args, _) => {
+          strCostsInFun ++=  args(0).constants ++ args(1).constants 
+        }
+        case (_, args, res) => {
+          for (t <- args.iterator ++ Iterator(res)) 
+            strCostsInFun ++= t.constants
+        }
+      }
+
       val stringConstants =
         ((for ((t, _) <- regexes.iterator;
                c <- t.constants.iterator) yield c) ++
-         (for ((_, args, res) <- funApps.iterator;
-               t <- args.iterator ++ Iterator(res);
-               c <- t.constants.iterator) yield c) ++
+         strCostsInFun.iterator ++
          (for (a <- (atoms positiveLitsWithPred p(str_len)).iterator;
                c <- a(0).constants.iterator) yield c)).toSet
       val lengthConstants =
@@ -310,7 +324,7 @@ val rexOps : Set[IFunction] =
     // Start the actual OSTRICH solver
     TermGeneratorOrder.reset
     FinalConstraints.reset
-    TermGeneratorOrder.order = goal.facts.arithConj.order
+    TermGeneratorOrder.order = goal.order
     FinalConstraints.conjFormula(goal.facts.arithConj)
     
     SimpleAPI.withProver { lengthProver =>
