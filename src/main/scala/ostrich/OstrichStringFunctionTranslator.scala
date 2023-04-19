@@ -45,6 +45,7 @@ import ap.basetypes.IdealInt
 import ostrich.parikh.preop.ConcatCEPreOp
 import ostrich.parikh.preop.SubStringCEPreOp
 import ostrich.parikh.preop.IndexOfCEPreOp
+import ostrich.parikh.preop.LengthCEPreOp
 
 /**
  * Class for mapping string constraints to string functions.
@@ -56,7 +57,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere,
                  str_replaceallcg, str_replacecg, str_extract,
-                 str_substr, str_indexof}
+                 str_substr_cea, str_indexof_cea, str_len_cea, str_concate_cea}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
   private val cgTranslator   = new Regex2PFA(theory,
@@ -77,12 +78,17 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_++`) if theory.getflags.useCostEnriched =>
+    case FunPred(`str_len_cea`) => 
+      
+      Some((() => LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
+    case FunPred(`str_concate_cea`) =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
-    case FunPred(`str_substr`) if theory.getflags.useCostEnriched =>
+    case FunPred(`str_substr_cea`) =>
       Some((() => SubStringCEPreOp(a(1), a(2)), Seq(a(0), a(1), a(2)), a(3)))
-    case FunPred(`str_indexof`) if theory.getflags.useCostEnriched =>
-      Some((() => IndexOfCEPreOp(a(2), a(3)), Seq(a(0), a(1), a(2)), a(3)))
+    case FunPred(`str_indexof_cea`) if strDatabase isConcrete a(1) =>
+      val matchStr = strDatabase term2ListGet a(1)
+      Some((() => IndexOfCEPreOp(a(2), a(3), matchStr.map(_.toChar).mkString), Seq(a(0), a(1), a(2)), a(3)))
+    
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) if strDatabase isConcrete a(1) => {

@@ -159,6 +159,29 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_replaceallcg =
     new MonoSortedIFunction("str.replace_cg_all",
                             List(SSo, RSo, RSo), SSo, true, false)
+
+  // Cost-enriched based 
+  val str_len_cea = 
+    new MonoSortedIFunction("str.len_cea",
+                            List(SSo), Integer, true, false)
+
+  val str_concate_cea = 
+    new MonoSortedIFunction("str.concate_cea",
+                            List(SSo, SSo), SSo, true, false)
+
+  val str_indexof_cea = 
+    new MonoSortedIFunction("str.indexof_cea",
+                            List(SSo, SSo, Integer), Integer, true, false)
+  val str_substr_cea = 
+    new MonoSortedIFunction("str.substr_cea",
+                            List(SSo, Integer, Integer), SSo, true, false)
+
+  val str_replace_cea =
+    new MonoSortedIFunction("str.replace_cea",
+                            List(SSo, RSo, RSo), SSo, true, false)
+  val str_replaceall_cea = 
+    new MonoSortedIFunction("str.replace_cea_all",
+                            List(SSo, RSo, RSo), SSo, true, false)
                             
   // string theory mixed with integer theory
   // val str_replacece = 
@@ -209,6 +232,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          re_case_insensitive,
          str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
+         str_len_cea, str_concate_cea, str_indexof_cea, str_substr_cea, str_replace_cea, str_replaceall_cea,
          re_*?, re_+?, re_opt_?)
 
   val extraIndexedFunctions =
@@ -307,7 +331,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
-                   str_indexof, str_substr,
+                   str_indexof, str_substr, str_len_cea, str_indexof_cea, str_substr_cea,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,

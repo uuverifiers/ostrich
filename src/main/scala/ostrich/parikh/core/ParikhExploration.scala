@@ -105,6 +105,7 @@ class ParikhExploration(
       case (op: LengthCEPreOp, Seq(str), length) => {
         val frashInt = IntTerm()
         freshIntTerm2orgin += (frashInt -> length)
+        strTerms += str
         (op, Seq(str), frashInt)
       }
       case (op: SubStringCEPreOp, Seq(str, start, length), subStr) => {

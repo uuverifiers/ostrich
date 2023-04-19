@@ -23,8 +23,8 @@ import ostrich.parikh.automata.CEBasicOperations.{
 }
 
 object IndexOfCEPreOp {
-  def apply(startPos: Term, index: Term) =
-    new IndexOfCEPreOp(startPos, index)
+  def apply(startPos: Term, index: Term, matchStr: String) =
+    new IndexOfCEPreOp(startPos, index, matchStr)
 }
 
 /** argumentConstraints(0) is the automaton of the string term to search.
@@ -35,14 +35,12 @@ object IndexOfCEPreOp {
   * @param index
   *   the index of the first occurrence of the substring
   */
-class IndexOfCEPreOp(startPos: Term, index: Term) extends CEPreOp {
+class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String) extends CEPreOp {
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     var preimages = Iterator[Seq[Automaton]]()
-    val matchString =
-      argumentConstraints(1)(0).getAcceptedWord.get.map(_.toChar).mkString
 
     val startPosPrefix = startPos match {
       case LinearCombination.Constant(value) => {

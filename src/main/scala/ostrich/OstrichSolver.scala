@@ -181,10 +181,6 @@ val rexOps : Set[IFunction] =
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
-      case FunPred(`str_len`)
-          if flags.useCostEnriched => {
-          funApps += ((LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
-      }
       case FunPred(`str_len`) => {
           lengthVars.put(a(0), a(1))
         // Optimization below can be delete because it has been down at OstrichReducer.scala?

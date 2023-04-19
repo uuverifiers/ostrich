@@ -59,6 +59,16 @@ object DenghangTests extends Properties("DenghangTests") {
       )
     }
 
+  // integration tests for length
+  property("length_sat.smt2") =
+    checkFile("tests/hu-benchmarks/length_sat.smt2", "sat")
+
+  // integration tests for concatenate
+  property("concat_sat.smt2") =
+    checkFile("tests/hu-benchmarks/concat_sat.smt2", "sat")
+  property("concat_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/concat_unsat.smt2", "unsat")
+
   // integration tests for indexof
   property("indexof_const_index_sat.smt2") =
     checkFile("tests/hu-benchmarks/indexof_const_index_sat.smt2", "sat")
