@@ -34,6 +34,9 @@ object BricsAutomatonWrapper {
   def makeEmpty(): BricsAutomatonWrapper =
     BricsAutomatonWrapper(BAutomaton.makeEmpty)
 
+  def makeEmptyString(): BricsAutomatonWrapper = 
+    BricsAutomatonWrapper(BAutomaton.makeEmptyString())
+
   /** Check whether we should avoid ever minimising the given automaton.
     */
   def neverMinimize(aut: BAutomaton): Boolean =

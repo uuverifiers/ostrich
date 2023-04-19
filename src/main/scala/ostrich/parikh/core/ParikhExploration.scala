@@ -30,6 +30,7 @@ import ostrich.parikh.util.TimeoutException
 import ostrich.{OFlags, Catra, Baseline, Unary}
 import ostrich.parikh.{IntTerm}
 import ostrich.parikh.core.FinalConstraints
+import ap.terfor.linearcombination.LinearCombination
 
 object ParikhExploration {
   private def isStringResult(op: PreOp): Boolean = op match {
@@ -171,6 +172,7 @@ class ParikhExploration(
     (integerTerms, strTerms, sortedApps, ignoredApps)
   }
 
+
   for ((apps, res) <- sortedFunApps) {
     Console.withOut(Console.err) {
 
@@ -285,6 +287,13 @@ class ParikhExploration(
               v match {
                 case IntValue(i)    => model.put(t, Left(i))
                 case StringValue(s) => model.put(t, Right(s))
+              }
+            }
+            for ((fresh, orign) <- freshIntTerm2orgin){
+              orign match {
+                case LinearCombination.Constant(_) => //do nothing
+                case _ => 
+                  model.put(orign, model(fresh))
               }
             }
 

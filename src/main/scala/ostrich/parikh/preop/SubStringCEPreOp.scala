@@ -36,58 +36,95 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     var preimages = Iterator[Seq[Automaton]]()
     var preimagesOfEmptyStr = Iterator[Seq[Automaton]]()
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    beginIdx match {
-      case LinearCombination.Constant(value) => {
-        if (res.isAccept(res.initialState)) {
-          val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
-          preimageOfEmp1.regsRelation = conj(
-            preimageOfEmp1.regsRelation,
-            length <= 0
-          )
-          val preimageOfEmp2 = automatonWithLenLessThan(value.intValueSafe)
-          for (r <- res.registers) {
-            // tansmit the empty string integer info
-            preimageOfEmp1.regsRelation =
-              conj(preimageOfEmp1.regsRelation, r === 0)
-            preimageOfEmp2.regsRelation =
-              conj(preimageOfEmp2.regsRelation, r === 0)
-          }
-          preimagesOfEmptyStr =
-            Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
+    if (res.isAccept(res.initialState)) {
+      // empty string result
+      val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
+      preimageOfEmp1.regsRelation = conj(
+        preimageOfEmp1.regsRelation,
+        length <= 0
+      )
+      val preimageOfEmp2 = beginIdx match {
+        case  LinearCombination.Constant(value) => {
+          automatonWithLenLessThan(value.intValueSafe)
         }
-        preimages = preimagesOfConstBeginIdx(
-          value.intValueSafe,
-          length,
+        case _ => {
+          val searchedStrLen = LenTerm()
+          val preimage = LengthCEPreOp.lengthPreimage(searchedStrLen)
+          preimage.regsRelation = conj(
+            preimage.regsRelation,
+            searchedStrLen <= beginIdx
+          )
+          preimage
+        }
+      }
+      for (r <- res.registers) {
+        // tansmit the empty string integer info
+        preimageOfEmp1.regsRelation =
+          conj(preimageOfEmp1.regsRelation, r === 0)
+        preimageOfEmp2.regsRelation =
+          conj(preimageOfEmp2.regsRelation, r === 0)
+      }
+      preimagesOfEmptyStr =
+        Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
+    }
+    val beginIdxPrefix = beginIdx match {
+      case LinearCombination.Constant(value) => {
+        automatonWithLen(value.intValueSafe)
+      }
+      case _ => {
+        LengthCEPreOp.lengthPreimage(beginIdx)
+      }
+    }
+
+    val middleSubStr = length match {
+      case LinearCombination.Constant(value) => {
+        intersection(
+          automatonWithLen(value.intValueSafe),
           res
         )
       }
       case _ => {
-        if (res.isAccept(res.initialState)) {
-          val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
-          preimageOfEmp1.regsRelation = conj(
-            preimageOfEmp1.regsRelation,
-            length <= 0
-          )
-          val searchedStrLen = LenTerm()
-          val preimageOfEmp2 = LengthCEPreOp.lengthPreimage(searchedStrLen)
-          preimageOfEmp2.regsRelation = conj(
-            preimageOfEmp2.regsRelation,
-            searchedStrLen <= beginIdx
-          )
-          for (r <- res.registers) {
-            // tansmit the empty string integer info
-            preimageOfEmp1.regsRelation =
-              conj(preimageOfEmp1.regsRelation, r === 0)
-            preimageOfEmp2.regsRelation =
-              conj(preimageOfEmp2.regsRelation, r === 0)
-          }
-          preimagesOfEmptyStr =
-            Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
-        }
-
-        preimages = preimagesOfVarBeginIdx(beginIdx, length, res)
+        intersection(
+          LengthCEPreOp.lengthPreimage(length),
+          res
+        )
       }
     }
+
+    val smallLenSuffix = length match {
+      case LinearCombination.Constant(value) => {
+        intersection(
+          automatonWithLenLessThan(value.intValueSafe),
+          res
+        )
+      }
+      case _ => {
+        val smallLen = LenTerm()
+        val smallLenSuffix = intersection(
+          LengthCEPreOp.lengthPreimage(smallLen),
+          res
+        )
+        smallLenSuffix.regsRelation = conj(
+          smallLenSuffix.regsRelation,
+          smallLen <= length
+        )
+        smallLenSuffix
+      }
+    }
+    val anyStrSuffix = BricsAutomatonWrapper.makeAnyString
+
+    val preimage1 = concatenate(Seq(
+      beginIdxPrefix,
+      middleSubStr,
+      anyStrSuffix
+    ))
+
+    val preimage2 = concatenate(
+      Seq(beginIdxPrefix, smallLenSuffix)
+    )
+
+    preimages = Iterator(Seq(preimage1), Seq(preimage2))
+
     (preimagesOfEmptyStr ++ preimages, Seq())
   }
 
@@ -102,102 +139,4 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     }
   }
 
-  private def preimagesOfConstBeginIdx(
-      beginIdx: Int,
-      length: Term,
-      resultConstraint: CostEnrichedAutomatonBase
-  ): Iterator[Seq[Automaton]] = {
-    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
-    val beginIdxPrefix = automatonWithLen(beginIdx)
-    length match {
-      case LinearCombination.Constant(value) => {
-        preimages = preimagesOfConstLen(
-          beginIdxPrefix,
-          value.intValueSafe,
-          resultConstraint
-        )
-      }
-      case _ => {
-        preimages = preimagesOfVarLen(beginIdxPrefix, length, resultConstraint)
-      }
-    }
-    preimages
-  }
-
-  private def preimagesOfVarBeginIdx(
-      beginIdx: Term,
-      length: Term,
-      resultConstraint: Automaton
-  ): Iterator[Seq[Automaton]] = {
-    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
-    val beginIdxPrefix = LengthCEPreOp.lengthPreimage(beginIdx)
-    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    length match {
-      case LinearCombination.Constant(value) => {
-        preimages = preimagesOfConstLen(beginIdxPrefix, value.intValueSafe, res)
-      }
-      case _ => {
-        preimages = preimagesOfVarLen(beginIdxPrefix, length, res)
-      }
-    }
-    preimages
-  }
-
-  def preimagesOfConstLen(
-      beginIdxPrefix: CostEnrichedAutomatonBase,
-      length: Int,
-      resultConstraint: CostEnrichedAutomatonBase
-  ): Iterator[Seq[CostEnrichedAutomatonBase]] = {
-    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
-    val anyStringSuffix = BricsAutomatonWrapper.makeAnyString
-    val middleSubStr = intersection(
-      automatonWithLen(length),
-      resultConstraint
-    )
-    val preimage1 = concatenate(
-      Seq(beginIdxPrefix, middleSubStr, anyStringSuffix)
-    )
-    val smallLenSuffix = intersection(
-      automatonWithLenLessThan(length),
-      resultConstraint
-    )
-    val preimage2 = concatenate(Seq(beginIdxPrefix, smallLenSuffix))
-
-    preimages = Iterator(
-      Seq(preimage1),
-      Seq(preimage2)
-    )
-    preimages
-  }
-
-  def preimagesOfVarLen(
-      beginIdxPrefix: CostEnrichedAutomatonBase,
-      length: Term,
-      resultConstraint: CostEnrichedAutomatonBase
-  ): Iterator[Seq[CostEnrichedAutomatonBase]] = {
-    var preimages = Iterator[Seq[CostEnrichedAutomatonBase]]()
-    val anyStringSuffix = BricsAutomatonWrapper.makeAnyString
-    val middleSubStr = intersection(
-      LengthCEPreOp.lengthPreimage(length),
-      resultConstraint
-    )
-    val preimage1 = concatenate(
-      Seq(beginIdxPrefix, middleSubStr, anyStringSuffix)
-    )
-    val smallLen = LenTerm()
-    val smallLenSuffix = intersection(
-      LengthCEPreOp.lengthPreimage(smallLen),
-      resultConstraint
-    )
-    smallLenSuffix.regsRelation = conj(
-      smallLenSuffix.regsRelation,
-      smallLen < length
-    )
-    val preimage2 = concatenate(Seq(beginIdxPrefix, smallLenSuffix))
-    preimages = Iterator(
-      Seq(preimage1),
-      Seq(preimage2)
-    )
-    preimages
-  }
 }
