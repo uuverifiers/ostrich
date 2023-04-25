@@ -26,6 +26,7 @@ object LengthCEPreOp {
     // intFormula : r0 === `length`
     import ap.terfor.TerForConvenience._ 
     import ostrich.parikh.TermGeneratorOrder._
+    println(preimage.registers)
     preimage.regsRelation = length === preimage.registers(0)
     preimage
   }

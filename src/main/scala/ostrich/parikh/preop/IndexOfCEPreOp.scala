@@ -35,7 +35,8 @@ object IndexOfCEPreOp {
   * @param index
   *   the index of the first occurrence of the substring
   */
-class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String) extends CEPreOp {
+class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
+    extends CEPreOp {
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
@@ -59,25 +60,56 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String) extends C
 
     val notMatchedPrefix = index match {
       case LinearCombination.Constant(value) => {
-        intersection(
-          automatonWithLen(value.intValueSafe),
-          concatenate(Seq(startPosPrefix, notMatched))
+        concatenate(
+          Seq(
+            intersection(
+              automatonWithLen(value.intValueSafe + matchString.size - 1),
+              concatenate(Seq(startPosPrefix, notMatched))
+            ),
+            makeAnyString
+          )
         )
       }
       case _ => {
-        intersection(
-          lengthPreimage(index),
-          concatenate(Seq(startPosPrefix, notMatched))
+        concatenate(
+          Seq(
+            intersection(
+              lengthPreimage(index + matchString.size - 1),
+              concatenate(Seq(startPosPrefix, notMatched))
+            ),
+            makeAnyString
+          )
         )
       }
     }
 
-    val matchedSuffix = concatenate(
-      Seq(fromString(matchString), makeAnyString())
-    )
+    val matchedSuffix = index match {
+      case LinearCombination.Constant(value) => {
+        concatenate(
+          Seq(
+            automatonWithLen(value.intValueSafe),
+            fromString(matchString),
+            makeAnyString()
+          )
+        )
+      }
+      case _ => {
+        concatenate(
+          Seq(
+            lengthPreimage(index),
+            fromString(matchString),
+            makeAnyString()
+          )
+        )
+      }
+    }
+
+    // concatenate(
+    // Seq(fromString(matchString), makeAnyString())
+    // )
 
     // index >= 0
-    val preimage1 = concatenate(Seq(notMatchedPrefix, matchedSuffix))
+    val preimage1 = intersection(notMatchedPrefix, matchedSuffix)
 
     // index = -1
     // len(searchedStr) < startPos

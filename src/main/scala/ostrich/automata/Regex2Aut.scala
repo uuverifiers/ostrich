@@ -556,8 +556,12 @@ class Regex2Aut(theory : OstrichStringTheory) {
     toBAutomaton(t, true)
 
   def buildAut(t : ITerm,
-               minimize : Boolean = true) : Automaton =
-    new BricsAutomaton(toBAutomaton(t, minimize))
+               minimize : Boolean = true) : Automaton = {
+    val res = new BricsAutomaton(toBAutomaton(t, minimize))
+    println(res.states.size)
+    println(res.transitions.size)
+    res
+               }
 
   def buildAutBeComplemented(t : ITerm,
                minimize : Boolean = true) : Automaton =

@@ -40,7 +40,9 @@ class UnaryFinalConstraints(
         productAut
       )
     )
+    println("product" + productAut.registers)
     ceAut.removeDuplicatedReg()
+    println("ceAut" + ceAut.registers)
     ceAut
   }
     
@@ -70,6 +72,8 @@ class UnaryFinalConstraints(
     import ap.terfor.TerForConvenience._
     import ostrich.parikh.TermGeneratorOrder.order
 
+    println(order)
+    println(registers)
     val r1Formula = disjFor(
       for (
         j <- lowerBound until globalS.size;
