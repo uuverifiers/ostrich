@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,9 @@
 
 package ostrich
 
+import ap.ParallelFileProver
+import ap.parameters.Param
+
 /**
  * Wrapper around <code>ap.CmdlMain</code>, adding the option
  * <code>-stringSolver=ostrich.OstrichStringTheory</code>.
@@ -46,6 +49,36 @@ object OstrichMain {
    * string solver options on the command line.
    */
   val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
+
+  ParallelFileProver.addPortfolio(
+    "strings", arguments => {
+                 import arguments._
+                 val strategies =
+                   List(ParallelFileProver.Configuration(
+                          baseSettings,
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC(baseSettings),
+                          1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  Param.STRING_THEORY_DESC.defau),
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC.defau,
+                          1000000000,
+                          2000))
+                 ParallelFileProver(createReader,
+                                    timeout,
+                                    true,
+                                    userDefStoppingCond(),
+                                    strategies,
+                                    1,
+                                    2,
+                                    runUntilProof,
+                                    prelResultPrinter,
+                                    threadNum)
+               })
 
   def main(args: Array[String]) : Unit =
     ap.CmdlMain.main((options ++ args).toArray)
