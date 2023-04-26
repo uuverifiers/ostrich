@@ -104,25 +104,26 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
       }
     }
 
-    // concatenate(
-    // Seq(fromString(matchString), makeAnyString())
-    // )
 
     // index >= 0
     val preimage1 = intersection(notMatchedPrefix, matchedSuffix)
+    preimage1.regsRelation = conj(preimage1.regsRelation, index >= startPos)
 
     // index = -1
     // len(searchedStr) < startPos
     val preimage2 = startPos match {
       case LinearCombination.Constant(value) => {
-        automatonWithLenLessThan(value.intValueSafe)
+        if (value.intValueSafe < 0) {
+          makeAnyString()
+        } else
+          automatonWithLenLessThan(value.intValueSafe)
       }
       case _ => {
         val searchedStrLen = LenTerm()
         val smallerThanStartPos = lengthPreimage(searchedStrLen)
         smallerThanStartPos.regsRelation = conj(
           smallerThanStartPos.regsRelation,
-          searchedStrLen < startPos
+          searchedStrLen < startPos | startPos < 0
         )
         smallerThanStartPos
       }
@@ -188,7 +189,10 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
     val searchedStr = arguments(0).map(_.toChar).mkString
     val matchStr = arguments(1).map(_.toChar).mkString
     val startPos = arguments(2)(0)
-
+    if (startPos < 0) {
+      // the semantic of smtlb 2.6
+      return Some(Seq(-1))
+    }
     Some(Seq(searchedStr.indexOfSlice(matchStr, startPos)))
 
   }

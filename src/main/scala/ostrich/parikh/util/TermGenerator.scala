@@ -9,14 +9,18 @@ object TermGeneratorOrder {
     order = TermOrder.EMPTY
   }
   implicit var order: TermOrder = TermOrder.EMPTY
+
   def apply(): TermOrder = order
+
   def extend(t: ConstantTerm): Unit = {
     if(!order.orderedConstants.contains(t))
       order = order.extend(t)
   }
-  def extend(t: Seq[ConstantTerm]): Unit = {
-    val newConsts = t.toSet &~ order.orderedConstants  
-    order = order.extend(newConsts.toSeq)
+  def extend(otherOrder: TermOrder): Unit = {
+    val newConsts = otherOrder.orderedConstants &~ order.orderedConstants 
+    val newPreds = otherOrder.orderedPredicates &~ order.orderedPredicates 
+    order = order.extend(otherOrder.sort(newConsts))
+    order = order.extendPred(otherOrder.sortPreds(newPreds))
   }
 }
 

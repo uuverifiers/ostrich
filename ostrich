@@ -71,6 +71,10 @@ for p; do
 done
 
 
+echo $JAVA $JAVA_OPTS -cp $TARGET \
+    ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+    "${princessParams[@]}"
+
 exec $JAVA $JAVA_OPTS -cp $TARGET \
     ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
     "${princessParams[@]}"

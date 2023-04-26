@@ -558,8 +558,6 @@ class Regex2Aut(theory : OstrichStringTheory) {
   def buildAut(t : ITerm,
                minimize : Boolean = true) : Automaton = {
     val res = new BricsAutomaton(toBAutomaton(t, minimize))
-    println(res.states.size)
-    println(res.transitions.size)
     res
                }
 

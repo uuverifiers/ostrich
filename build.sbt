@@ -54,6 +54,7 @@ lazy val commonSettings = Seq(
   run / fork           := true,
   // we have used some global objects, 
   // so that the test shound be taken serially.
+  // Test / fork := true,
   Test / parallelExecution := false,
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,

@@ -107,11 +107,9 @@ trait FinalConstraints {
     for (term <- interestTerms)
       interestTermsModel += (term -> evalTerm(term, partialModel))
 
-  def setInterestTermModel(termModel: Map[ConstantTerm, IdealInt]): Unit =
+  def setInterestTermModel(termModel: Map[Term, IdealInt]): Unit =
     for (term <- interestTerms)
-      interestTermsModel = interestTermsModel + (term -> termModel(
-        term.asInstanceOf[ConstantTerm]
-      ))
+      interestTermsModel = interestTermsModel + (term -> termModel(term))
 
   lazy val getCompleteLIA: Formula = getCompleteLIA(auts.reduce(_ product _))
 

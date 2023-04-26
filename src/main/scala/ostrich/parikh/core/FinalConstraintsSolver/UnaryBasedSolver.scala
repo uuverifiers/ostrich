@@ -13,6 +13,7 @@ import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.OFlags
+import ostrich.parikh.ParikhUtil
 
 class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[Term, Term])
     extends FinalConstraintsSolver[UnaryFinalConstraints] {

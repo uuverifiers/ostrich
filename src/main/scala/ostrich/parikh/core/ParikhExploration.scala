@@ -268,7 +268,7 @@ class ParikhExploration(
 
         val backendSolver =
           flags.backend match {
-            case Catra()    => new CatraBasedSolver
+            case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
             case Baseline() => new BaselineSolver
             case Unary()    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap)
           }
@@ -307,7 +307,6 @@ class ParikhExploration(
                 yield (op, args, res)) ++
                 ignoredApps.iterator
             model ++= generateResultModel(allFunApps, model)
-
             throw FoundModel(model.toMap)
           }
           case _ => return trivalConflict

@@ -32,8 +32,11 @@ import ostrich.parikh.util.TimeoutException
 import ostrich.OFlags
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import uuverifiers.catra.ChooseNuxmv
+import ostrich.parikh.ParikhUtil
+import scala.collection.mutable.{HashMap => MHashMap}
 
-class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
+class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(catraACs(t, auts))
@@ -157,10 +160,9 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
     res match {
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
-        val name2Term = (strIntersted ++ integerTerms)
-          .filter(_.isInstanceOf[ConstantTerm])
-          .map { case t: ConstantTerm =>
-            (t.name, t)
+        val name2Term = (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values)
+          .map { case t =>
+            (t.toString(), t)
           }
           .toMap
         val termModel =
@@ -179,8 +181,10 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
             case None    => throw UnknownException("Cannot find string model")
           }
         }
-        for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
-          result.updateModel(t, IdealInt(v))
+
+        // update integer model
+        for ((fresh, origin) <- freshIntTerm2orgin) {
+          result.updateModel(fresh, termModel(origin))
         }
         result.setStatus(ProverStatus.Sat)
       }
@@ -194,6 +198,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
   }
 
   def solve: Result = {
+    ParikhUtil.debugPrintln("catra")
     if (constraints.isEmpty) {
       val result = new Result
       result.setStatus(ProverStatus.Sat)
@@ -211,7 +216,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
       dumpSMTDir = None,
       dumpGraphvizDir = None,
       runMode = SolveSatisfy,
-      backend = ChooseLazy,
+      backend = ChooseNuxmv,
       checkTermSat = true,
       checkIntermediateSat = true,
       eliminateQuantifiers = true,

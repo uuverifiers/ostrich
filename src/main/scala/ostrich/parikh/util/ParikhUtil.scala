@@ -304,4 +304,12 @@ object ParikhUtil {
     findAcceptedWordByRegistersComplete(aut, registersModel)
 
   }
+
+  def debugPrintln(s: Any) = {
+    println("Debug: " + s)
+  }
+
+  def todo(s:Any) = {
+    println("TODO:" + s)
+  }
 }

@@ -58,6 +58,7 @@ import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.BricsAutomatonWrapper
 import ostrich.parikh.preop.SubStringCEPreOp
 import ostrich.parikh.preop.IndexOfCEPreOp
+import ostrich.parikh.ParikhUtil
 
 object OstrichSolver {
 
@@ -318,11 +319,7 @@ val rexOps : Set[IFunction] =
 
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
-    TermGeneratorOrder.reset
-    FinalConstraints.reset
-    TermGeneratorOrder.order = goal.order
-    FinalConstraints.conjFormula(goal.facts.arithConj)
-    
+
     SimpleAPI.withProver { lengthProver =>
       val lProver =
         if (useLength) {

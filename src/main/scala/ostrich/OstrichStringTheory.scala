@@ -53,6 +53,9 @@ import ap.util.Seqs
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
 import ostrich.parikh.OstrichCostEnrichEncoder
+import ostrich.parikh.TermGeneratorOrder
+import ostrich.parikh.core.FinalConstraints
+import ostrich.parikh.ParikhUtil
 
 object OstrichStringTheory {
 
@@ -375,6 +378,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = {
+      // set global order and input linear integer arithmetic
+      // ParikhUtil.todo("TermGeneratorOrder.order should be extended with goal's order. But we can not do it now because constantsSeq in TermOrder is unaccessible.")
+      val arithOrder = goal.facts.arithConj.order
+      TermGeneratorOrder.extend(arithOrder)
+      FinalConstraints.conjFormula(goal.facts.arithConj)
+      
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
 

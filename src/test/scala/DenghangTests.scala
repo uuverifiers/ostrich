@@ -106,4 +106,6 @@ object DenghangTests extends Properties("DenghangTests") {
     checkFile("tests/hu-benchmarks/substr_empty_sat.smt2", "sat")
   property("substr_empty_unsat.smt2") =
     checkFile("tests/hu-benchmarks/substr_empty_unsat.smt2", "unsat")
+  property("regex_counting_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/regex_counting_unsat.smt2", "unsat")
 }
