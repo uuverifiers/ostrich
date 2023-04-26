@@ -5,6 +5,7 @@ import ap.terfor.ConstantTerm
 import ap.terfor.TermOrder
 
 object TermGeneratorOrder {
+  ParikhUtil.todo("no global variable")
   def reset() = {
     order = TermOrder.EMPTY
   }
