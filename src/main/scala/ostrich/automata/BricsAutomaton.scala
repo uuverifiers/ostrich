@@ -363,27 +363,31 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
   }
 
   private def calculateDisjointLabelsComplete() : List[(Char, Char)] = {
-    val labelsComp = disjointLabels.foldRight(List[(Char, Char)]()) {
-      case ((min, max), Nil) => {
-        // using Char.MaxValue since we include internal chars
-        if (max < Char.MaxValue)
-          List((min,max), ((max + 1).toChar, Char.MaxValue))
-        else
-          List((min, max))
-      }
-      case ((min, max), (minLast, maxLast)::lbls) => {
-        val minLastPrev = (minLast - 1).toChar
-        if (max < minLastPrev)
-          (min, max)::((max + 1).toChar, minLastPrev)::(minLast, maxLast)::lbls
-        else
-          (min, max)::(minLast, maxLast)::lbls
-      }
-    }
-    if (Char.MinValue < labelsComp.head._1) {
-      val nextMin = (labelsComp.head._1 - 1).toChar
-      (Char.MinValue, nextMin)::labelsComp
+    if (disjointLabels.isEmpty) {
+      List((Char.MinValue, Char.MaxValue))
     } else {
-      labelsComp
+      val labelsComp = disjointLabels.foldRight(List[(Char, Char)]()) {
+        case ((min, max), Nil) => {
+          // using Char.MaxValue since we include internal chars
+          if (max < Char.MaxValue)
+            List((min,max), ((max + 1).toChar, Char.MaxValue))
+          else
+            List((min, max))
+        }
+        case ((min, max), (minLast, maxLast)::lbls) => {
+          val minLastPrev = (minLast - 1).toChar
+          if (max < minLastPrev)
+            (min, max)::((max + 1).toChar, minLastPrev)::(minLast, maxLast)::lbls
+          else
+            (min, max)::(minLast, maxLast)::lbls
+        }
+      }
+      if (Char.MinValue < labelsComp.head._1) {
+        val nextMin = (labelsComp.head._1 - 1).toChar
+        (Char.MinValue, nextMin)::labelsComp
+      } else {
+        labelsComp
+      }
     }
   }
 }
