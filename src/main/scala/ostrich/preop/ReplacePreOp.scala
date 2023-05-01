@@ -264,11 +264,11 @@ object ReplacePreOpRegEx {
         }
         case EndMatch(frontier) => {
           for (lbl <- labels) {
-            val initImg = aut.getImage(autInit, lbl)
             val frontImg = aut.getImage(frontier, lbl)
             val noreachImg = aut.getImage(noreach, lbl)
 
-            val noMatch = getState(CopyRest, initImg ++ frontImg ++ noreachImg)
+            val noMatch = getState(CopyRest, frontImg ++ noreachImg)
+
             builder.addTransition(ts, lbl, copy, noMatch)
           }
         }
