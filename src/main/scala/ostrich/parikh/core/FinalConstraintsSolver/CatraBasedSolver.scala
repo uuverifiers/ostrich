@@ -80,13 +80,15 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
 
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
-    sb.append("counter int ")
     val lia = conj(FinalConstraints() +: constraints.map(_.getRegsRelation))
     val allIntTerms = (integerTerms ++ constraints.flatMap(
       _.interestTerms
-    ) ++ integerTerms ++ SymbolCollector.constants(lia))
+    ) ++ SymbolCollector.constants(lia))
       .filterNot(_.isInstanceOf[LinearCombination])
       .toSet
+    if (allIntTerms.isEmpty) return ""
+    
+    sb.append("counter int ")
     sb.append(allIntTerms.mkString(", "))
     sb.append(";\n")
     sb.toString()
@@ -148,8 +150,9 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
 
   def toCatraInputLIA: String = {
     val sb = new StringBuilder
-    sb.append("constraint ")
     val lia = conj(FinalConstraints() +: constraints.map(_.getRegsRelation))
+    if (lia.isTrue) return ""
+    sb.append("constraint ")
     sb.append(lia.toString.replaceAll("&", "&&"))
     sb.append(";\n")
     sb.toString()
@@ -198,13 +201,13 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
   }
 
   def solve: Result = {
-    ParikhUtil.debugPrintln("catra")
+    // ParikhUtil.todo("bug exists in catra")
     if (constraints.isEmpty) {
       val result = new Result
       result.setStatus(ProverStatus.Sat)
       return result
     }
-    val interFlie = os.temp(dir = os.pwd, suffix = "hhh")
+    val interFlie = os.temp(dir = os.pwd, suffix = "jjj", deleteOnExit = true)
     val writer = new CatraWriter(interFlie.toString())
     writer.write(toCatraInput)
     writer.close()

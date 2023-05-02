@@ -51,6 +51,6 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument("database")
 args = argparser.parse_args()
 db = storage.sqlitedb.DB(args.database)
-unsolved_num = unsolved(db, "Z3str3RE")
+unsolved_num = unsolved(db, "ostrich-catra")
 
 # unique(db)
