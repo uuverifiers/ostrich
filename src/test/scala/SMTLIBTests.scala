@@ -429,5 +429,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/concat-empty.smt2", "unsat")
   property("replace-bug.smt2") =
     checkFile("tests/replace-bug.smt2", "unsat")
-
+  property("bug-56-replace-bug2.smt2") =
+    checkFile("tests/bug-56-replace-bug2.smt2", "sat")
+  property("bug-58-replace-re") =
+    checkFile("tests/bug-58-replace-re.smt2", "sat")
 }
