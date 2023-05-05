@@ -35,6 +35,7 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import uuverifiers.catra.ChooseNuxmv
 import ostrich.parikh.ParikhUtil
 import scala.collection.mutable.{HashMap => MHashMap}
+import scala.util.Random
 
 class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends FinalConstraintsSolver[CatraFinalConstraints] {
 
@@ -207,6 +208,9 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
       result.setStatus(ProverStatus.Sat)
       return result
     }
+    // for (c <- constraints; aut <- c.auts) {
+    //   aut.toDot("catra" + c.strId + Random.nextInt())
+    // }
     val interFlie = os.temp(dir = os.pwd, suffix = "jjj", deleteOnExit = true)
     val writer = new CatraWriter(interFlie.toString())
     writer.write(toCatraInput)
@@ -214,19 +218,22 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
     val arguments = CommandLineOptions(
       inputFiles = Seq(interFlie.toString()),
       timeout_ms = Some(OFlags.timeout),
-      trace = false,
-      printDecisions = false,
       dumpSMTDir = None,
       dumpGraphvizDir = None,
+      printDecisions = false,
       runMode = SolveSatisfy,
       backend = ChooseNuxmv,
       checkTermSat = true,
       checkIntermediateSat = true,
       eliminateQuantifiers = true,
       dumpEquationDir = None,
-      nrUnknownToMaterialiseProduct = 2,
+      nrUnknownToMaterialiseProduct = 6,
       enableClauseLearning = true,
-      enableRestarts = true
+      enableRestarts = true,
+      restartTimeoutFactor = 500L,
+      crossValidate = false,
+      randomSeed = 1234567,
+      printProof = false,
     )
     val catraRes = measure(
       s"${this.getClass().getSimpleName()}::findIntegerModel"

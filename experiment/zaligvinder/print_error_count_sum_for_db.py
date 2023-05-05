@@ -29,7 +29,7 @@ def unsolved(db, solver):
     track_db = storage.sqlitedb.TrackRepository(db, trackinstance_db)
     result_db = storage.sqlitedb.ResultRepository(
         db, track_db, trackinstance_db)
-    unsolved_files = result_db.getAllUnsolvedFilesForSolver(solver)
+    unsolved_files = result_db.getAllErrorFilesForSolver(solver)
     for file in unsolved_files:
         regexesCount(file)
     return len(unsolved_files)
