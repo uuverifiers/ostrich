@@ -36,8 +36,10 @@ import uuverifiers.catra.ChooseNuxmv
 import ostrich.parikh.ParikhUtil
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.util.Random
+import java.io.File
 
-class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends FinalConstraintsSolver[CatraFinalConstraints] {
+class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term])
+    extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(catraACs(t, auts))
@@ -88,7 +90,7 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
       .filterNot(_.isInstanceOf[LinearCombination])
       .toSet
     if (allIntTerms.isEmpty) return ""
-    
+
     sb.append("counter int ")
     sb.append(allIntTerms.mkString(", "))
     sb.append(";\n")
@@ -142,7 +144,7 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
     val sb = new StringBuilder
     sb.append("{")
     val updateStringSeq =
-      for ((v, i) <- update.zipWithIndex; if v > 0)
+      for ((v, i) <- update.zipWithIndex)
         yield s"${aut.registers(i)} += $v"
     sb.append(updateStringSeq.mkString(", "))
     sb.append("}")
@@ -164,11 +166,11 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
     res match {
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
-        val name2Term = (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values)
-          .map { case t =>
-            (t.toString(), t)
-          }
-          .toMap
+        val name2Term =
+          (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values).map {
+            case t =>
+              (t.toString(), t)
+          }.toMap
         val termModel =
           for (
             (k, v) <- assignments;
@@ -208,42 +210,48 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends 
       result.setStatus(ProverStatus.Sat)
       return result
     }
-    // for (c <- constraints; aut <- c.auts) {
-    //   aut.toDot("catra" + c.strId + Random.nextInt())
-    // }
-    val interFlie = os.temp(dir = os.pwd, suffix = "jjj", deleteOnExit = true)
-    val writer = new CatraWriter(interFlie.toString())
-    writer.write(toCatraInput)
-    writer.close()
-    val arguments = CommandLineOptions(
-      inputFiles = Seq(interFlie.toString()),
-      timeout_ms = Some(OFlags.timeout),
-      dumpSMTDir = None,
-      dumpGraphvizDir = None,
-      printDecisions = false,
-      runMode = SolveSatisfy,
-      backend = ChooseNuxmv,
-      checkTermSat = true,
-      checkIntermediateSat = true,
-      eliminateQuantifiers = true,
-      dumpEquationDir = None,
-      nrUnknownToMaterialiseProduct = 6,
-      enableClauseLearning = true,
-      enableRestarts = true,
-      restartTimeoutFactor = 500L,
-      crossValidate = false,
-      randomSeed = 1234567,
-      printProof = false,
-    )
-    val catraRes = measure(
-      s"${this.getClass().getSimpleName()}::findIntegerModel"
-    )(runInstances(arguments))
-    var result = new Result
-    catraRes match {
-      case Success(_catraRes) =>
-        result = decodeCatraResult(_catraRes)
-      case Failure(e) => throw e
+    for (c <- constraints) {
+      val productAut = c.auts.reduceLeft(_ & _)
+      productAut.toDot("catra" + c.strId)
     }
-    result
+    var result = new Result
+    val interFlie = File.createTempFile("catra", "jjj")
+    try {
+      val writer = new CatraWriter(interFlie.toString())
+      writer.write(toCatraInput)
+      writer.close()
+      val arguments = CommandLineOptions(
+        inputFiles = Seq(interFlie.toString()),
+        timeout_ms = Some(OFlags.timeout),
+        dumpSMTDir = None,
+        dumpGraphvizDir = None,
+        printDecisions = false,
+        runMode = SolveSatisfy,
+        backend = ChooseNuxmv,
+        checkTermSat = true,
+        checkIntermediateSat = true,
+        eliminateQuantifiers = true,
+        dumpEquationDir = None,
+        nrUnknownToMaterialiseProduct = 6,
+        enableClauseLearning = true,
+        enableRestarts = true,
+        restartTimeoutFactor = 500L,
+        crossValidate = false,
+        randomSeed = 1234567,
+        printProof = false
+      )
+      val catraRes = measure(
+        s"${this.getClass().getSimpleName()}::findIntegerModel"
+      )(runInstances(arguments))
+      catraRes match {
+        case Success(_catraRes) =>
+          result = decodeCatraResult(_catraRes)
+          result
+        case Failure(e) => throw e
+      }
+    } finally {
+      // delete temp file
+      interFlie.delete()
+    }
   }
 }

@@ -34,6 +34,8 @@ def run(eq, timeout, ploc, wd):
                     "+quiet",
                     "+incremental",
                     "-inputFormat=smtlib",
+                    "+costenriched",
+                    "-backend=catra"
                     "-timeout=" + str(timeout) + "000",
                     smtfile,
                 ],

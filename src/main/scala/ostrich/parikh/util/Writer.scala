@@ -26,7 +26,7 @@ trait Writer {
 
 class TmpWriter extends Writer {
 
-  val filename: String = (os.pwd / "tmp.txt").toString()
+  val filename: String = "tmp.txt"
 
   val file = new File(filename)
 
@@ -34,7 +34,7 @@ class TmpWriter extends Writer {
 }
 
 class Logger extends TmpWriter {
-  override val filename: String = (os.pwd / "log.txt").toString()
+  override val filename: String = "log.txt"
 
   def log(s: String) = {
     write(s)
