@@ -227,7 +227,6 @@ class ReplaceCEPreOp(tran: BricsTransducer) extends CEPreOp {
       if (tran.isAccept(tranState) && res.isAccept(resAutState))
         preimage.setAccept(preimageState, true)
     }
-    preimage.toDot("replace")
     (Iterator(Seq(preimage)), Seq())
   }
 

@@ -328,9 +328,9 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   def toDot(suffix: String) = {
     states.zipWithIndex.toMap
-    val outdir = os.pwd / "dot" / LocalDate.now().toString
-    os.makeDir.all(outdir)
-    val dotfile = outdir / s"${suffix}.dot"
+    val outdir = "dot" + File.separator + LocalDate.now().toString
+    new File(outdir).mkdirs()
+    val dotfile = outdir + File.separator +  s"${suffix}.dot"
     val writer = new DotWriter(dotfile.toString)
     def toDotStr = {
       s"""
