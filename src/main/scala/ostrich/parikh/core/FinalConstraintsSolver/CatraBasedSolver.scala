@@ -196,7 +196,7 @@ class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term])
       }
       case OutOfMemory => throw new Exception("Out of memory")
       case Timeout(timeout_ms) =>
-        throw new TimeoutException(timeout_ms / 1_000)
+        throw new TimeoutException(timeout_ms / 1000)
       case Unsat => result.setStatus(ProverStatus.Unsat)
       case _     => throw new Exception("Unknown result of catra")
     }

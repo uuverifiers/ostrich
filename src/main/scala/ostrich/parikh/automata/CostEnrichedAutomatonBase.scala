@@ -333,22 +333,23 @@ class CostEnrichedAutomatonBase extends Automaton {
     val dotfile = outdir + File.separator +  s"${suffix}.dot"
     val writer = new DotWriter(dotfile.toString)
     def toDotStr = {
-      s"""
-      digraph G {
-        rankdir=LR;
-        init [shape=point];
-        node [shape = doublecircle];
-        ${acceptingStates.mkString(" ")}
-        node [shape = circle];
-        init -> ${initialState};
-        ${transitionsWithVec.toSeq
-          .sortBy(_._1)
-          .map { case (s, (left, right), t, vec) =>
-            s"${s} -> ${t} [label = \"${left.toInt}, ${right.toInt}:(${vec.mkString(",")})\"]"
-          }
-          .mkString(";\n")}
-      }
-      """
+      // s"""
+      // digraph G {
+      //   rankdir=LR;
+      //   init [shape=point];
+      //   node [shape = doublecircle];
+      //   ${acceptingStates.mkString(" ")}
+      //   node [shape = circle];
+      //   init -> ${initialState};
+      //   ${transitionsWithVec.toSeq
+      //     .sortBy(_._1)
+      //     .map { case (s, (left, right), t, vec) =>
+      //       s"${s} -> ${t} [label = \"${left.toInt}, ${right.toInt}:(${vec.mkString(",")})\"]"
+      //     }
+      //     .mkString(";\n")}
+      // }
+      // """
+      "to be implemented in scala 2.11.12"
     }
     writer.closeAfterWrite(toDotStr)
   }
