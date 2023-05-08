@@ -39,17 +39,13 @@ import ecma2020regex._
 import ecma2020regex.Absyn._
 import ecma2020regex.Absyn.{Quantifier => ECMAQuantifier}
 
-import scala.collection.JavaConverters.asScala
+import scala.collection.JavaConversions.{asScalaBuffer, asScalaIterator}
 
 object ECMARegexParser {
 
   val OctalEscape = """[0-7]{1,3}""".r
 
-  implicit def impToScalaList[A](l : java.util.List[A]) : Seq[A] =
-    asScala(l).toSeq
-
-  implicit def impToScalaIterator[A](l : java.util.Iterator[A]) : Iterator[A] =
-    asScala(l)
+  val UnsupportedFlag = """[^ius]""".r
 
 }
 
@@ -61,9 +57,9 @@ class ECMARegexParser(theory : OstrichStringTheory,
   import IExpression._
   import ECMARegexParser._
 
-  // for (flag <- UnsupportedFlag.findAllMatchIn(flags))
-  //   Console.err.println("Warning: ignoring unsupported regex flag " +
-  //                         flag.matched)
+  for (flag <- UnsupportedFlag.findAllMatchIn(flags))
+    Console.err.println("Warning: ignoring unsupported regex flag " +
+                          flag.matched)
 
   val printer = new PrettyPrinterNonStatic
 
@@ -94,7 +90,6 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
     p.pPatternC.asInstanceOf[Pattern]
   }
-
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -347,29 +342,29 @@ class ECMARegexParser(theory : OstrichStringTheory,
                        arg : VisitorArg) =
       charComplement(word)
 
-    // override def visit(p : ecma2020regex.Absyn.CharacterClassEscapep,
-    //                    arg : VisitorArg) = {
-    //   val str = printer print p.unicodepropertyvalueexpressionc_
-    //   if (flags contains "u")
-    //     translateUnicodeProperty(str)
-    //   else
-    //     // If the Unicode flag is not set, the escape sequence should
-    //     // be interpreted literally
-    //     // TODO: this will not correctly model interaction with quantifiers
-    //     str_to_re(theory.string2Term("p{" + str + "}"))
-    // }
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapep,
+                       arg : VisitorArg) = {
+      val str = printer print p.unicodepropertyvalueexpressionc_
+      if (flags contains "u")
+        translateUnicodeProperty(str)
+      else
+        // If the Unicode flag is not set, the escape sequence should
+        // be interpreted literally
+        // TODO: this will not correctly model interaction with quantifiers
+        str_to_re(theory.string2Term("p{" + str + "}"))
+    }
 
-    // override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeP,
-    //                    arg : VisitorArg) = {
-    //   val str = printer print p.unicodepropertyvalueexpressionc_
-    //   if (flags contains "u")
-    //     re_comp(translateUnicodeProperty(str))
-    //   else
-    //     // If the Unicode flag is not set, the escape sequence should
-    //     // be interpreted literally.
-    //     // TODO: this will not correctly model interaction with quantifiers
-    //     str_to_re(theory.string2Term("P{" + str + "}"))
-    // }
+    override def visit(p : ecma2020regex.Absyn.CharacterClassEscapeP,
+                       arg : VisitorArg) = {
+      val str = printer print p.unicodepropertyvalueexpressionc_
+      if (flags contains "u")
+        re_comp(translateUnicodeProperty(str))
+      else
+        // If the Unicode flag is not set, the escape sequence should
+        // be interpreted literally.
+        // TODO: this will not correctly model interaction with quantifiers
+        str_to_re(theory.string2Term("P{" + str + "}"))
+    }
 
     override def visit(p : ecma2020regex.Absyn.AtomQuanTerm,
                        arg : VisitorArg) = {
