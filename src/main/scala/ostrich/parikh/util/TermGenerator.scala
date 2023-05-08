@@ -5,13 +5,23 @@ import ap.terfor.ConstantTerm
 import ap.terfor.TermOrder
 
 object TermGeneratorOrder {
-  implicit var order: TermOrder = TermOrder.EMPTY
-  def apply(): TermOrder = order
-  def extend(t: ConstantTerm): Unit = {
-    order = order.extend(t)
+  ParikhUtil.todo("no global variable")
+  def reset() = {
+    order = TermOrder.EMPTY
   }
-  def extend(t: Seq[ConstantTerm]): Unit = {
-    order = order.extend(t)
+  implicit var order: TermOrder = TermOrder.EMPTY
+
+  def apply(): TermOrder = order
+
+  def extend(t: ConstantTerm): Unit = {
+    if(!order.orderedConstants.contains(t))
+      order = order.extend(t)
+  }
+  def extend(otherOrder: TermOrder): Unit = {
+    val newConsts = otherOrder.orderedConstants &~ order.orderedConstants 
+    val newPreds = otherOrder.orderedPredicates &~ order.orderedPredicates 
+    order = order.extend(otherOrder.sort(newConsts))
+    order = order.extendPred(otherOrder.sortPreds(newPreds))
   }
 }
 
@@ -35,16 +45,6 @@ object TransitionTerm {
   }
 }
 
-object LabelTerm {
-  var count = 0
-  def apply(): Term = {
-    count += 1
-    val transTerm = new ConstantTerm(s"L$count")
-    TermGeneratorOrder.extend(transTerm)
-    transTerm
-  }
-}
-
 object ZTerm {
   var count = 0
   def apply(): Term = {
@@ -55,22 +55,22 @@ object ZTerm {
   }
 }
 
-object KTerm {
+object LenTerm {
   var count = 0
   def apply(): Term = {
     count += 1
-    val kTerm = new ConstantTerm(s"K$count")
-    TermGeneratorOrder.extend(kTerm)
-    kTerm
+    val lenTerm = new ConstantTerm(s"Len$count")
+    TermGeneratorOrder.extend(lenTerm)
+    lenTerm
   }
 }
 
-object LTerm {
+object IntTerm {
   var count = 0
   def apply(): Term = {
     count += 1
-    val lTerm = new ConstantTerm(s"L$count")
-    TermGeneratorOrder.extend(lTerm)
-    lTerm
+    val lenTerm = new ConstantTerm(s"Int$count")
+    TermGeneratorOrder.extend(lenTerm)
+    lenTerm
   }
 }

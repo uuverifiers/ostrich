@@ -122,7 +122,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   def setAccept(s: State, b: Boolean) = s.setAccept(b)
   /** Iterate over automaton states
     */
-  def states: Iterator[State] = {
+  lazy val states: Iterable[State] = {
     val seenlist = new MHashSet[State]
     val worklist = new MStack[State]
     worklist.push(initialState)
@@ -134,7 +134,7 @@ class CostEnrichedAutomatonBase extends Automaton {
         seenlist.add(to)
       }
     }
-    seenlist.iterator
+    seenlist.toSeq
   }
 
   /** Ask if state is accepting
@@ -143,34 +143,24 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   /** Given a state, iterate over all outgoing transitons with vector
     */
-  def outgoingTransitionsWithVec(s: State): Iterator[(State, (Char, Char), Seq[Int])] =
+  def outgoingTransitionsWithVec(s: State): Iterable[(State, (Char, Char), Seq[Int])] =
     _state2transtions.get(s) match {
-      case None => Iterator.empty
-      case Some(set) => set.iterator
+      case None => Iterable.empty
+      case Some(set) => set
     }
 
-  def incomingTransitionsWithVec(t: State): Iterator[(State, (Char, Char), Seq[Int])] = 
+  def incomingTransitionsWithVec(t: State): Iterable[(State, (Char, Char), Seq[Int])] = 
     _state2incomingTranstions.get(t) match {
-      case None => Iterator.empty
+      case None => Iterable.empty
       // incoming states may not be reachable from initial state, filter them out
-      case Some(set) => set.filter(trans => states.contains(trans._1)).iterator
+      case Some(set) => set.filter(trans => states.toSet.contains(trans._1))
     }
 
-  def transitionsWithVec: Iterator[(State, TLabel, State, Seq[Int])] = {
-    for ((from, set) <- _state2transtions.iterator;
-          if set.nonEmpty;  // outgoing transitions not empty
-          if (states contains from);  // reachable from initial state
-         (to, lbl, vec) <- set.iterator)
-    yield (from, lbl, to, vec)
+  def transitionsWithVec: Iterable[(State, TLabel, State, Seq[Int])] = {
+    for (from <- states; (to, lbl, vec) <- outgoingTransitionsWithVec(from))
+      yield (from, lbl, to, vec)
   }
 
-  // def vectors: Iterator[Seq[Int]] = {
-  //   for ((from, set) <- _state2transtions.iterator;
-  //         if set.nonEmpty;  // outgoing transitions not empty
-  //         if (states contains from);  // reachable from initial state
-  //        (to, lbl, vec) <- set.iterator)
-  //   yield vec
-  // }
 
   def addTransition(from: State, lbl: TLabel, to: State, vec: Seq[Int]): Unit = {
     _state2transtions.get(from) match {
@@ -237,7 +227,7 @@ class CostEnrichedAutomatonBase extends Automaton {
     val newTransitionWithVec = transitionsWithVec.map {
       case (from, lbl, to, vec) =>
         (from, lbl, to, removeIdxsValueOfSeq(vec, removeIdxs.toSet))
-    }
+    }.toSeq
     _state2transtions.clear()
     _state2incomingTranstions.clear()
     for ((from, lbl, to, vec) <- newTransitionWithVec) {
@@ -264,6 +254,29 @@ class CostEnrichedAutomatonBase extends Automaton {
     true
   }
 
+  def getAcceptedWord: Option[Seq[Int]] = {
+    if (regsRelation != Conjunction.TRUE | registers.nonEmpty) {
+      throw new UnsupportedOperationException
+    }
+    val seenlist = new MHashSet[State]
+    val worklist = new MStack[State]
+    var acceptedword = Seq[Int]()
+    worklist.push(initialState)
+    seenlist.add(initialState)
+    while (!worklist.isEmpty) {
+      val s = worklist.pop
+      if (isAccept(s)) {
+        return Some(acceptedword)
+      }
+      for ((to, (lbl, _), _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)) {
+        acceptedword = acceptedword :+ lbl
+        worklist.push(to)
+        seenlist.add(to)
+      }
+    }
+    None
+  }
+
   // not implement methods
   def unary_! = {
     if (registers.nonEmpty) throw new UnsupportedOperationException
@@ -271,7 +284,6 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
   def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
   // def isEmpty: Boolean = throw new UnsupportedOperationException
-  def getAcceptedWord: Option[Seq[Int]] = throw new UnsupportedOperationException
 
   def product(that: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     CEBasicOperations.intersection(this, that)
@@ -292,19 +304,24 @@ class CostEnrichedAutomatonBase extends Automaton {
   def regsRelation_=(f: Formula) = _regsRelation = f
   /////////////////////////////
   override def toString: String = {
+    val s2str = states.zipWithIndex.map{
+      case (state, int) => (state, s"s${int}")
+    }.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
       val (s, (left, right), t, vec) = transition
-      s"${s} -> ${t} [${left.toInt}, ${right.toInt}] $vec"
+      s"${s2str(s)} -> ${s2str(t)} [${left.toInt}, ${right.toInt}] $vec"
     }
 
+    val random = new scala.util.Random
+
     s"""
-    automaton a${states.size} {
-      init ${initialState};
+    automaton A${random.nextInt(10000)} {
+      init ${s2str(initialState)};
       ${transitionsWithVec.toSeq
         .sortBy(_._1)
         .map(transition2Str)
         .mkString("\n  ")}
-      accepting ${acceptingStates.map(s => s"${s}").mkString(", ")};
+      accepting ${acceptingStates.map(s => s"${s2str(s)}").mkString(", ")};
     };
     """
   }

@@ -6,7 +6,6 @@ import ap.DialogUtil.asString
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 
-// TODO: Some unit test failed and I have ignored them 
 object SMTLIBTests extends Properties("SMTLIBTests") {
 
   import System.lineSeparator

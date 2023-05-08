@@ -1,0 +1,6 @@
+(declare-const X String)
+(assert (str.in_re X ((_ re.loop 2 300) (re.diff re.allchar (str.to_re "a")))))
+(assert (str.in_re X (re.++ re.all (str.to_re "a") re.all)))
+(assert (< 20 (str.len X)))
+(check-sat)
+(get-model)

@@ -32,8 +32,12 @@ import ostrich.parikh.util.TimeoutException
 import ostrich.OFlags
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import uuverifiers.catra.ChooseNuxmv
+import ostrich.parikh.ParikhUtil
+import scala.collection.mutable.{HashMap => MHashMap}
+import scala.util.Random
 
-class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
+class CatraBasedSolver(private val freshIntTerm2orgin: Map[Term, Term]) extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(catraACs(t, auts))
@@ -77,13 +81,15 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
-    sb.append("counter int ")
     val lia = conj(FinalConstraints() +: constraints.map(_.getRegsRelation))
     val allIntTerms = (integerTerms ++ constraints.flatMap(
       _.interestTerms
-    ) ++ integerTerms ++ SymbolCollector.constants(lia))
+    ) ++ SymbolCollector.constants(lia))
       .filterNot(_.isInstanceOf[LinearCombination])
       .toSet
+    if (allIntTerms.isEmpty) return ""
+    
+    sb.append("counter int ")
     sb.append(allIntTerms.mkString(", "))
     sb.append(";\n")
     sb.toString()
@@ -94,7 +100,7 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
     for (constraint <- constraints) {
       sb.append("synchronised {\n")
       val autNamePrefix = constraint.strId.toString
-      for ((aut, i) <- constraint.getAutomata.zipWithIndex) {
+      for ((aut, i) <- constraint.auts.zipWithIndex) {
         sb.append(toCatraInputAutomaton(aut, autNamePrefix + i))
       }
       sb.append("};\n")
@@ -145,8 +151,9 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def toCatraInputLIA: String = {
     val sb = new StringBuilder
-    sb.append("constraint ")
     val lia = conj(FinalConstraints() +: constraints.map(_.getRegsRelation))
+    if (lia.isTrue) return ""
+    sb.append("constraint ")
     sb.append(lia.toString.replaceAll("&", "&&"))
     sb.append(";\n")
     sb.toString()
@@ -157,10 +164,9 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
     res match {
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
-        val name2Term = (strIntersted ++ integerTerms)
-          .filter(_.isInstanceOf[ConstantTerm])
-          .map { case t: ConstantTerm =>
-            (t.name, t)
+        val name2Term = (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values)
+          .map { case t =>
+            (t.toString(), t)
           }
           .toMap
         val termModel =
@@ -179,8 +185,10 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
             case None    => throw UnknownException("Cannot find string model")
           }
         }
-        for ((k, v) <- assignments; t <- name2Term.get(k.name)) {
-          result.updateModel(t, IdealInt(v))
+
+        // update integer model
+        for ((fresh, origin) <- freshIntTerm2orgin) {
+          result.updateModel(fresh, termModel(origin))
         }
         result.setStatus(ProverStatus.Sat)
       }
@@ -194,31 +202,38 @@ class CatraBasedSolver extends FinalConstraintsSolver[CatraFinalConstraints] {
   }
 
   def solve: Result = {
+    // ParikhUtil.todo("bug exists in catra")
     if (constraints.isEmpty) {
       val result = new Result
       result.setStatus(ProverStatus.Sat)
       return result
     }
-    val interFlie = os.temp(dir = os.pwd, suffix = "hhh")
+    // for (c <- constraints; aut <- c.auts) {
+    //   aut.toDot("catra" + c.strId + Random.nextInt())
+    // }
+    val interFlie = os.temp(dir = os.pwd, suffix = "jjj", deleteOnExit = true)
     val writer = new CatraWriter(interFlie.toString())
     writer.write(toCatraInput)
     writer.close()
     val arguments = CommandLineOptions(
       inputFiles = Seq(interFlie.toString()),
       timeout_ms = Some(OFlags.timeout),
-      trace = false,
-      printDecisions = false,
       dumpSMTDir = None,
       dumpGraphvizDir = None,
+      printDecisions = false,
       runMode = SolveSatisfy,
-      backend = ChooseLazy,
+      backend = ChooseNuxmv,
       checkTermSat = true,
       checkIntermediateSat = true,
       eliminateQuantifiers = true,
       dumpEquationDir = None,
-      nrUnknownToMaterialiseProduct = 2,
+      nrUnknownToMaterialiseProduct = 6,
       enableClauseLearning = true,
-      enableRestarts = true
+      enableRestarts = true,
+      restartTimeoutFactor = 500L,
+      crossValidate = false,
+      randomSeed = 1234567,
+      printProof = false,
     )
     val catraRes = measure(
       s"${this.getClass().getSimpleName()}::findIntegerModel"

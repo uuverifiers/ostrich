@@ -12,28 +12,30 @@ import ap.terfor.Formula
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
-import ostrich.parikh.OstrichConfig
+import ostrich.OFlags
+import ostrich.parikh.ParikhUtil
 
-class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
+class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[Term, Term])
+    extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    addConstraint(unaryHeuristicACs(t, auts))
+    addConstraint(unaryHeuristicACs(t, auts, flags))
   }
 
   def solve: Result = {
-    if(OstrichConfig.underApprox){
+    if (flags.underApprox) {
       val res = solveUnderApprox
-      if(res.isSat) return res
+      if (res.isSat) return res
     }
-    if(OstrichConfig.overApprox){
-      val res = solveOverApprox 
-      if(res.isUnsat) return res
-    }
+    // if(OstrichConfig.overApprox){
+    //   val res = solveOverApprox
+    //   if(res.isUnsat) return res
+    // }
     solveCompleteLIA
   }
 
   def solveUnderApprox: Result = {
     // add bound iterately
-    val maxBound = OstrichConfig.underApproxBound
+    val maxBound = flags.underApproxBound
     val step = 5
     var nowBound = 5
     var result = new Result
@@ -46,9 +48,9 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
     result
   }
 
-  def solveOverApprox: Result = solveFormula(
-    conj(constraints.map(_.getOverApprox)), false
-  )
+  // def solveOverApprox: Result = solveFormula(
+  //   conj(constraints.map(_.getOverApprox)), false
+  // )
 
   def solveCompleteLIA: Result = solveFormula(
     conj(constraints.map(_.getCompleteLIA))
@@ -59,18 +61,15 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
     val res = new Result
     SimpleAPI.withProver { p =>
       p setConstructProofs true
-      val regsRelation = conj(constraints.map(_.getRegsRelation))
       val inputAndGenerated = FinalConstraints()
-      val finalArith = conj(f, regsRelation, inputAndGenerated)
+      val finalArith = conj(f, inputAndGenerated)
 
       SymbolCollector.constants(finalArith) ++ integerTerms
 
       p addConstants order.orderedConstants
 
-      // We must treat TermGenerator.order carefully. 
-      // Note that finalArith.order == TermGenerator.order 
-      // The call addAssertion will fail some asserttion if the TermGenerator is extended with too many constants. 
-      // (run ostrich with +assert option)
+      // We must treat TermGenerator.order carefully.
+      // finalArith.order should equal to TermGenerator.order
       p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
@@ -94,7 +93,7 @@ class UnaryBasedSolver extends FinalConstraintsSolver[UnaryFinalConstraints] {
           }
           // update integer model
           for (term <- integerTerms) {
-            val value = evalTerm(term, partialModel)
+            val value = evalTerm(freshIntTerm2orgin(term), partialModel)
             res.updateModel(term, value)
           }
 

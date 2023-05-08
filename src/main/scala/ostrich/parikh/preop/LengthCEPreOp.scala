@@ -1,22 +1,41 @@
 package ostrich.parikh.preop
 
 import ostrich.automata.Automaton
-import ap.terfor.TerForConvenience
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
-import TerForConvenience._
-import ostrich.parikh.TermGeneratorOrder._
-import ap.terfor.linearcombination.LinearCombination
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ap.terfor.Term
 
 object LengthCEPreOp {
-  def apply(length: LinearCombination): LengthCEPreOp = new LengthCEPreOp(length)
+  def apply(length: Term): LengthCEPreOp = new LengthCEPreOp(length)
+
+  def lengthPreimage(length: Term) : CostEnrichedAutomatonBase = {
+    val preimage = new CostEnrichedAutomaton
+    val initalState = preimage.initialState
+
+    // 0 -> (sigma, 1) -> 0
+    preimage.addTransition(
+      initalState,
+      preimage.LabelOps.sigmaLabel,
+      initalState,
+      Seq(1)
+    )
+    preimage.setAccept(initalState, true)
+    // registers: (r0)
+    preimage.registers = Seq(RegisterTerm())
+    // intFormula : r0 === `length`
+    import ap.terfor.TerForConvenience._ 
+    import ostrich.parikh.TermGeneratorOrder._
+    preimage.regsRelation = length === preimage.registers(0)
+    preimage
+  }
 }
 
 /**
   * Pre-op for length constraints. 
   * @param length The length 
   */
-class LengthCEPreOp(length: LinearCombination) extends CEPreOp {
+class LengthCEPreOp(length: Term) extends CEPreOp {
 
   override def toString = "lengthCEPreOp"
 
@@ -24,22 +43,7 @@ class LengthCEPreOp(length: LinearCombination) extends CEPreOp {
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val ceAut = new CostEnrichedAutomaton
-    val initalState = ceAut.initialState
-
-    // 0 -> (sigma, 1) -> 0
-    ceAut.addTransition(
-      initalState,
-      ceAut.LabelOps.sigmaLabel,
-      initalState,
-      Seq(1)
-    )
-    ceAut.setAccept(initalState, true)
-    // registers: (r0)
-    ceAut.registers = Seq(RegisterTerm())
-    // intFormula : r0 === `length`
-    ceAut.regsRelation = length === ceAut.registers(0)
-    (Iterator(Seq(ceAut)), Seq())
+    (Iterator(Seq(LengthCEPreOp.lengthPreimage(length))), Seq())
   }
 
   /** Evaluate the described function; return <code>None</code> if the function

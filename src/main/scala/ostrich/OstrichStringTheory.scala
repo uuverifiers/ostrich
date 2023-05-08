@@ -53,7 +53,9 @@ import ap.util.Seqs
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
 import ostrich.parikh.OstrichCostEnrichEncoder
-import ostrich.parikh.OstrichConfig
+import ostrich.parikh.TermGeneratorOrder
+import ostrich.parikh.core.FinalConstraints
+import ostrich.parikh.ParikhUtil
 
 object OstrichStringTheory {
 
@@ -105,12 +107,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val SSo = StringSort
   private val RSo = RegexSort
 
+  
   def int2Char(t : ITerm) : ITerm =
     ModuloArithmetic.cast2Interval(IdealInt.ZERO, upperBound, t)
 
   def char2Int(t : ITerm) : ITerm = t
 
   //////////////////////////////////////////////////////////////////////////////
+
+  def getflags () = flags
 
   import Sort.Integer
 
@@ -156,6 +161,29 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                             List(SSo, RSo, RSo), SSo, true, false)
   val str_replaceallcg =
     new MonoSortedIFunction("str.replace_cg_all",
+                            List(SSo, RSo, RSo), SSo, true, false)
+
+  // Cost-enriched based 
+  val str_len_cea = 
+    new MonoSortedIFunction("str.len_cea",
+                            List(SSo), Integer, true, false)
+
+  val str_concate_cea = 
+    new MonoSortedIFunction("str.concate_cea",
+                            List(SSo, SSo), SSo, true, false)
+
+  val str_indexof_cea = 
+    new MonoSortedIFunction("str.indexof_cea",
+                            List(SSo, SSo, Integer), Integer, true, false)
+  val str_substr_cea = 
+    new MonoSortedIFunction("str.substr_cea",
+                            List(SSo, Integer, Integer), SSo, true, false)
+
+  val str_replace_cea =
+    new MonoSortedIFunction("str.replace_cea",
+                            List(SSo, RSo, RSo), SSo, true, false)
+  val str_replaceall_cea = 
+    new MonoSortedIFunction("str.replace_cea_all",
                             List(SSo, RSo, RSo), SSo, true, false)
                             
   // string theory mixed with integer theory
@@ -207,6 +235,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          re_case_insensitive,
          str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
+         str_len_cea, str_concate_cea, str_indexof_cea, str_substr_cea, str_replace_cea, str_replaceall_cea,
          re_*?, re_+?, re_opt_?)
 
   val extraIndexedFunctions =
@@ -305,6 +334,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
+                   str_indexof, str_substr, str_len_cea, str_indexof_cea, str_substr_cea,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
@@ -348,6 +378,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = {
+      // set global order and input linear integer arithmetic
+      // ParikhUtil.todo("TermGeneratorOrder.order should be extended with goal's order. But we can not do it now because constantsSeq in TermOrder is unaccessible.")
+      val arithOrder = goal.facts.arithConj.order
+      TermGeneratorOrder.extend(arithOrder)
+      FinalConstraints.conjFormula(goal.facts.arithConj)
+      
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
 
@@ -480,7 +516,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     val visitor2 = new OstrichRegexEncoder (this)
     // Added by Riccardo
     val visitor3 = new OstrichStringEncoder(this)
-
+    // Added by Denghang
     val visitor4 = new OstrichCostEnrichEncoder(this)
 
     try {
@@ -495,5 +531,4 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   TheoryRegistry register this
   StringTheory register this
-
 }

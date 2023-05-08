@@ -53,11 +53,12 @@ import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.CostEnrichedConvenience
 import ostrich.parikh.core.FinalConstraints
 import ostrich.parikh.core.FinalConstraintsSolver
-import ostrich.parikh.OstrichConfig
-import ostrich.parikh.ParikhExploration.Approx
 import ostrich.parikh.ParikhExploration
 import ostrich.parikh.automata.CEBasicOperations
 import ostrich.parikh.automata.BricsAutomatonWrapper
+import ostrich.parikh.preop.SubStringCEPreOp
+import ostrich.parikh.preop.IndexOfCEPreOp
+import ostrich.parikh.ParikhUtil
 
 object OstrichSolver {
 
@@ -94,7 +95,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  re_begin_anchor, re_end_anchor, FunPred, strDatabase
                 }
 
-  val rexOps : Set[IFunction] =
+val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
         re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps, str_to_re,
         re_from_str, re_capture, re_reference, re_begin_anchor, re_end_anchor,
@@ -110,8 +111,6 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     val atoms = goal.facts.predConj
     val order = goal.order
-
-    TermGeneratorOrder.extend(order.orderedConstants.toSeq)
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
@@ -183,10 +182,6 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
-      case FunPred(`str_len`)
-          if OstrichConfig.useCostEnriched => {
-          funApps += ((LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
-      }
       case FunPred(`str_len`) => {
           lengthVars.put(a(0), a(1))
         // Optimization below can be delete because it has been down at OstrichReducer.scala?
@@ -240,12 +235,24 @@ class OstrichSolver(theory : OstrichStringTheory,
       import TerForConvenience._
       implicit val o = order
 
+      val strCostsInFun = ArrayBuffer[Term]()
+      funApps.foreach{
+        case (_: SubStringCEPreOp, args, res) => {
+          strCostsInFun ++= args(0).constants ++ res.constants
+        }
+        case (_: IndexOfCEPreOp, args, _) => {
+          strCostsInFun ++=  args(0).constants ++ args(1).constants 
+        }
+        case (_, args, res) => {
+          for (t <- args.iterator ++ Iterator(res)) 
+            strCostsInFun ++= t.constants
+        }
+      }
+
       val stringConstants =
         ((for ((t, _) <- regexes.iterator;
                c <- t.constants.iterator) yield c) ++
-         (for ((_, args, res) <- funApps.iterator;
-               t <- args.iterator ++ Iterator(res);
-               c <- t.constants.iterator) yield c) ++
+         strCostsInFun.iterator ++
          (for (a <- (atoms positiveLitsWithPred p(str_len)).iterator;
                c <- a(0).constants.iterator) yield c)).toSet
       val lengthConstants =
@@ -258,7 +265,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         case Seq((IdealInt.ONE, c: ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
           val str = strDatabase id2Str 0
-          val negAut = if (OstrichConfig.useCostEnriched) !(BricsAutomatonWrapper fromString str)
+          val negAut = if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
               else !(BricsAutomaton fromString str)
           regexes += ((l(c), negAut))
         }
@@ -266,7 +273,7 @@ class OstrichSolver(theory : OstrichStringTheory,
             if (stringConstants contains c) &&
               (strDatabase containsId -coeff) => {
           val str = strDatabase id2Str -coeff
-          val negAut = if (OstrichConfig.useCostEnriched) !(BricsAutomatonWrapper fromString str)
+          val negAut = if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
               else !(BricsAutomaton fromString str)
           regexes += ((l(c), negAut))
         }
@@ -292,7 +299,7 @@ class OstrichSolver(theory : OstrichStringTheory,
         for ((t, _) <- regexes)
           regexCoveredTerms += t
 
-        val anyString = if (OstrichConfig.useCostEnriched) BricsAutomatonWrapper.makeAnyString()
+        val anyString = if (flags.useCostEnriched) BricsAutomatonWrapper.makeAnyString()
             else BricsAutomaton.makeAnyString()
         for ((c, d) <- negEqs) {
           if (regexCoveredTerms add c)
@@ -313,8 +320,6 @@ class OstrichSolver(theory : OstrichStringTheory,
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
-    FinalConstraints.conjFormula(goal.facts.arithConj)
-    
     SimpleAPI.withProver { lengthProver =>
       val lProver =
         if (useLength) {
@@ -335,8 +340,8 @@ class OstrichSolver(theory : OstrichStringTheory,
         } else
           None
 
-      val result = if(OstrichConfig.useCostEnriched){
-        val approxExp = new ParikhExploration(funApps.toSeq, regexes.toSeq, strDatabase)
+      val result = if (flags.useCostEnriched){
+        val approxExp = new ParikhExploration(funApps.toSeq, regexes.toSeq, strDatabase, flags)
         approxExp.findModel
       } else {
         val exploration =

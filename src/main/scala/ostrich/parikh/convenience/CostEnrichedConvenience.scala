@@ -30,19 +30,19 @@ object CostEnrichedConvenience {
   implicit def Internal2Input(t: Iterable[Term]): Iterable[ITerm] =
     t.map(Internal2InputAbsy(_))
 
-  implicit def term2ConstTerm(t: Seq[Term]): Seq[ConstantTerm] = {
-    t.map(t => term2ConstTerm(t))
-  }
+  // implicit def term2ConstTerm(t: Seq[Term]): Seq[ConstantTerm] = {
+  //   t.map(t => term2ConstTerm(t))
+  // }
 
-  implicit def term2ConstTerm(t: Term): ConstantTerm = {
-    if (t.isInstanceOf[ConstantTerm]) {
-      t.asInstanceOf[ConstantTerm]
-    } else {
-      val e = new Exception(s"Term $t is not a constant term")
-      e.printStackTrace()
-      throw e
-    }
-  }
+  // implicit def term2ConstTerm(t: Term): ConstantTerm = {
+  //   if (t.isInstanceOf[ConstantTerm]) {
+  //     t.asInstanceOf[ConstantTerm]
+  //   } else {
+  //     val e = new Exception(s"Term $t is not a constant term")
+  //     e.printStackTrace()
+  //     throw e
+  //   }
+  // }
 
   implicit def automaton2CostEnriched(
       auts: Seq[Automaton]

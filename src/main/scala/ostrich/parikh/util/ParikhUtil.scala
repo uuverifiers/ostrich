@@ -26,7 +26,7 @@ object ParikhUtil {
   def measure[A](
       op: String
   )(comp: => A)(implicit manualFlag: Boolean = true): A =
-    if (OstrichConfig.measureTime && manualFlag)
+    if (manualFlag)
       ap.util.Timer.measure(op)(comp)
     else
       comp
@@ -295,14 +295,21 @@ object ParikhUtil {
       registersModel: MMap[Term, IdealInt]
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
-    if (OstrichConfig.findStringHeu) {
-      findAcceptedWordByRegistersHeuristic(aut, registersModel) match {
-        case None => findAcceptedWordByRegistersComplete(aut, registersModel)
-        case Some(value) => Some(value)
-      }
-    } else
-    println("findString model")
+    // if (OstrichConfig.findStringHeu) {
+    //   findAcceptedWordByRegistersHeuristic(aut, registersModel) match {
+    //     case None => findAcceptedWordByRegistersComplete(aut, registersModel)
+    //     case Some(value) => Some(value)
+    //   }
+    // } else
     findAcceptedWordByRegistersComplete(aut, registersModel)
 
+  }
+
+  def debugPrintln(s: Any) = {
+    println("Debug: " + s)
+  }
+
+  def todo(s:Any) = {
+    println("TODO:" + s)
   }
 }

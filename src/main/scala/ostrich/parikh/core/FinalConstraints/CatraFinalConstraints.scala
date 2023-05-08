@@ -4,21 +4,22 @@ import ap.terfor.Formula
 import ap.terfor.Term
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
+import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 class CatraFinalConstraints(
     override val strId: Term,
-    override val atoms: Seq[AtomConstraint]
+    override val auts: Seq[CostEnrichedAutomatonBase]
 ) extends FinalConstraints {
 
-  // eagerly product, which means compute lia after producting
-  lazy val productAtom = new BaselineAC(getAutomata.reduceLeft(_ product _))
+  val interestTerms: Seq[Term] = auts.flatMap(_.registers)
 
-  def getRegsRelation: Formula = productAtom.getRegsRelation
-
-  val interestTerms: Seq[Term] = atoms.map(_.aut).flatMap(_.registers)
+  import ap.terfor.TerForConvenience._
+  import ostrich.parikh.TermGeneratorOrder.order
+  
+  def getRegsRelation: Formula = conj(auts.map(_.regsRelation))
 
   def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(Seq(productAtom.aut), registersModel)
+    ParikhUtil.findAcceptedWordByRegisters(auts, registersModel)
   }
 }

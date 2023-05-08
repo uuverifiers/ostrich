@@ -20,7 +20,7 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
   def computeReachableStates(
       initState: State,
       accStates: Set[State]
-  ): Iterator[State] = {
+  ): Iterable[State] = {
     val fwdReachable, bwdReachable = new MLinkedHashSet[State]
     fwdReachable += initState
 
@@ -52,7 +52,7 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
     if (bwdReachable.isEmpty)
       bwdReachable add initState
 
-    bwdReachable.toSet.iterator
+    bwdReachable
   }
 
   lazy val internalise: CostEnrichedAutomaton = {
@@ -114,14 +114,15 @@ object CostEnrichedInitFinalAutomaton {
 
 case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonBase](
     override val underlying: A,
-    val initialS: A#State,
+    val startState: A#State,
     val _acceptingStates: Set[A#State]
 ) extends CostEnrichedAutomatonAdapter[A](underlying) {
 
-  this.initialState = initialS
+  initialState = startState
 
   override lazy val states =
     computeReachableStates(_initialState, _acceptingStates)
+
 
   override lazy val acceptingStates: Set[State] =
     _acceptingStates & states.toSet
@@ -131,7 +132,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonBase](
   override def outgoingTransitionsWithVec(q: State) = {
     for (
       p @ (s, _, _) <- underlying.outgoingTransitionsWithVec(q);
-      if states contains s
+      if states.toSet.contains(s)
     )
       yield p
   }
@@ -141,7 +142,7 @@ case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonBase](
   ) = {
     for (
       p @ (s, _, _) <- underlying.incomingTransitionsWithVec(t);
-      if states contains s
+      if states.toSet.contains(s)
     )
       yield p
   }
