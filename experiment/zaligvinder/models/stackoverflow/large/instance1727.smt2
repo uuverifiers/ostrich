@@ -1,8 +1,0 @@
-;test regex $1,$2,$3,$4,$5,$6,$7,$8,$9,${10},${11},${12},${13},${14},${15},${16},${17},${18},${19},${20}
-(declare-const X String)
-(assert (str.in_re X (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (re.++ (str.to_re "") (str.to_re "1")) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "2"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "3"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "4"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "5"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "6"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "7"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "8"))) (str.to_re ",")) (re.++ (str.to_re "") (str.to_re "9"))) (str.to_re ",")) ((_ re.loop 10 10) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 11 11) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 12 12) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 13 13) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 14 14) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 15 15) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 16 16) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 17 17) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 18 18) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 19 19) (str.to_re ""))) (str.to_re ",")) ((_ re.loop 20 20) (str.to_re "")))))
-; sanitize danger characters:  < > ' " &
-(assert (not (str.in_re X (re.++ re.all (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{26}")) re.all))))
-(assert (< 50 (str.len X)))
-(check-sat)
-(get-model)

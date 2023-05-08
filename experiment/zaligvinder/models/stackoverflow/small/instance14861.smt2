@@ -1,8 +1,0 @@
-;test regex ^( (2|31|32|35|37|38|39|41|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60)+[0-9]* ){9}$
-(declare-const X String)
-(assert (str.in_re X (re.++ (re.++ (str.to_re "") ((_ re.loop 9 9) (re.++ (str.to_re " ") (re.++ (re.+ (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (str.to_re "2") (str.to_re "31")) (str.to_re "32")) (str.to_re "35")) (str.to_re "37")) (str.to_re "38")) (str.to_re "39")) (str.to_re "41")) (str.to_re "46")) (str.to_re "47")) (str.to_re "48")) (str.to_re "49")) (str.to_re "50")) (str.to_re "51")) (str.to_re "52")) (str.to_re "53")) (str.to_re "54")) (str.to_re "55")) (str.to_re "56")) (str.to_re "57")) (str.to_re "58")) (str.to_re "59")) (str.to_re "60"))) (re.++ (re.* (re.range "0" "9")) (str.to_re " ")))))) (str.to_re ""))))
-; sanitize danger characters:  < > ' " &
-(assert (not (str.in_re X (re.++ re.all (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{26}")) re.all))))
-(assert (< 20 (str.len X)))
-(check-sat)
-(get-model)

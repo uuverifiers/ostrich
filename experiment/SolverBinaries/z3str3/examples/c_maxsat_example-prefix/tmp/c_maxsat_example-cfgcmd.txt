@@ -1,1 +1,0 @@
-cmd='/usr/bin/cmake;-DZ3_DIR=/home/mku/tools/z3_59e9c87;-DCMAKE_BUILD_TYPE:STRING=Release;-GUnix Makefiles;<SOURCE_DIR><SOURCE_SUBDIR>'
