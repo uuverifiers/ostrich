@@ -115,5 +115,5 @@ object YanTests extends Properties("YanTests") {
     checkFile("tests/yan-benchmarks/replaceAll-024.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-025.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-025.smt2", "sat")
-// 
+
 }

@@ -1,38 +1,39 @@
-/** This file is part of Ostrich, an SMT solver for strings. Copyright (c)
-  * 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
-  *
-  * Redistribution and use in source and binary forms, with or without
-  * modification, are permitted provided that the following conditions are met:
-  *
-  * * Redistributions of source code must retain the above copyright notice,
-  * this list of conditions and the following disclaimer.
-  *
-  * * Redistributions in binary form must reproduce the above copyright notice,
-  * this list of conditions and the following disclaimer in the documentation
-  * and/or other materials provided with the distribution.
-  *
-  * * Neither the name of the authors nor the names of their contributors may be
-  * used to endorse or promote products derived from this software without
-  * specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  * POSSIBILITY OF SUCH DAMAGE.
-  */
+/**
+ * This file is part of Ostrich, an SMT solver for strings.
+ * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package ostrich
 
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{PreOp, ConcatPreOp}
-import ostrich.parikh.preop.{LengthCEPreOp}
 
 import ap.SimpleAPI
 import ap.parser.IFunction
@@ -47,18 +48,13 @@ import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
+import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
-import ostrich.parikh.TermGeneratorOrder
-import ostrich.parikh.CostEnrichedConvenience
-import ostrich.parikh.core.FinalConstraints
-import ostrich.parikh.core.FinalConstraintsSolver
-import ostrich.parikh.ParikhExploration
-import ostrich.parikh.automata.CEBasicOperations
+
+import ostrich.parikh.preop.{SubStringCEPreOp, IndexOfCEPreOp}
 import ostrich.parikh.automata.BricsAutomatonWrapper
-import ostrich.parikh.preop.SubStringCEPreOp
-import ostrich.parikh.preop.IndexOfCEPreOp
-import ostrich.parikh.ParikhUtil
+import ostrich.parikh.ParikhExploration
 
 object OstrichSolver {
 
@@ -92,10 +88,9 @@ class OstrichSolver(theory : OstrichStringTheory,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
                  re_comp, re_loop, re_loop_?, re_eps, re_capture, re_reference,
-                 re_begin_anchor, re_end_anchor, FunPred, strDatabase
-                }
+                 re_begin_anchor, re_end_anchor, FunPred, strDatabase}
 
-val rexOps : Set[IFunction] =
+  val rexOps : Set[IFunction] =
     Set(re_none, re_all, re_allchar, re_charrange, re_++, re_union, re_inter,
         re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps, str_to_re,
         re_from_str, re_capture, re_reference, re_begin_anchor, re_end_anchor,
@@ -105,10 +100,8 @@ val rexOps : Set[IFunction] =
 
   private val autDatabase = theory.autDatabase
 
-  def findStringModel(
-      goal: Goal
-  ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
-
+  def findStringModel(goal : Goal)
+                    : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
     val order = goal.order
 
@@ -117,22 +110,20 @@ val rexOps : Set[IFunction] =
 
     val useLength = flags.useLength match {
 
-      case OFlags.LengthOptions.Off => {
+      case OFlags.LengthOptions.Off  => {
         if (containsLength)
           Console.err.println(
-            "Warning: problem uses the string length operator, but -length=off"
-          )
+            "Warning: problem uses the string length operator, but -length=off")
         false
       }
 
-      case OFlags.LengthOptions.On =>
+      case OFlags.LengthOptions.On   =>
         true
 
       case OFlags.LengthOptions.Auto => {
         if (containsLength)
           Console.err.println(
-            "Warning: assuming -length=on to handle length constraints"
-          )
+            "Warning: assuming -length=on to handle length constraints")
         containsLength
       }
 
@@ -152,7 +143,7 @@ val rexOps : Set[IFunction] =
 
     ////////////////////////////////////////////////////////////////////////////
 
-    def decodeRegexId(a: Atom, complemented: Boolean): Unit = a(1) match {
+    def decodeRegexId(a : Atom, complemented : Boolean) : Unit = a(1) match {
       case LinearCombination.Constant(id) => {
         val autOption =
           if (complemented)
@@ -164,11 +155,11 @@ val rexOps : Set[IFunction] =
           case Some(aut) =>
             regexes += ((a.head, aut))
           case None =>
-            throw new Exception("Could not decode regex id " + a(1))
+            throw new Exception ("Could not decode regex id " + a(1))
         }
       }
       case lc =>
-        throw new Exception("Could not decode regex id " + lc)
+        throw new Exception ("Could not decode regex id " + lc)
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -183,8 +174,7 @@ val rexOps : Set[IFunction] =
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`) => {
-          lengthVars.put(a(0), a(1))
-        // Optimization below can be delete because it has been down at OstrichReducer.scala?
+        lengthVars.put(a(0), a(1))
         if (a(1).isZero)
           regexes += ((a(0), BricsAutomaton fromString ""))
       }
@@ -196,16 +186,16 @@ val rexOps : Set[IFunction] =
         funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
       }
       case FunPred(f) if rexOps contains f =>
-      // nothing
+        // nothing
       case p if (theory.predicates contains p) =>
         stringFunctionTranslator(a) match {
           case Some((op, args, res)) =>
             funApps += ((op(), args, res))
           case _ =>
-            throw new Exception("Cannot handle literal " + a)
+            throw new Exception ("Cannot handle literal " + a)
         }
       case _ =>
-      // nothing
+        // nothing
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -220,12 +210,12 @@ val rexOps : Set[IFunction] =
       case `str_in_re_id` =>
         decodeRegexId(a, true)
       case pred if theory.transducerPreOps contains pred =>
-        throw new Exception("Cannot handle negated transducer constraint " + a)
+        throw new Exception ("Cannot handle negated transducer constraint " + a)
       case p if (theory.predicates contains p) =>
         // Console.err.println("Warning: ignoring !" + a)
-        throw new Exception("Cannot handle negative literal " + a)
+        throw new Exception ("Cannot handle negative literal " + a)
       case _ =>
-      // nothing
+        // nothing
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -284,12 +274,10 @@ val rexOps : Set[IFunction] =
             if stringConstants(c) && stringConstants(d) =>
           negEqs += ((c, d))
         case lc if lc.constants exists stringConstants =>
-          throw new Exception(
-            "Cannot handle negative string equation " +
-              (lc =/= 0)
-          )
+          throw new Exception ("Cannot handle negative string equation " +
+                                 (lc =/= 0))
         case _ =>
-        // nothing
+          // nothing
       }
 
       if (!negEqs.isEmpty) {

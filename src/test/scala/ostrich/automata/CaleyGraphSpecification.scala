@@ -4,7 +4,7 @@ import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 import scala.collection.mutable.Set
-import scala.collection.JavaConverters.asScala
+import scala.collection.JavaConversions.iterableAsScalaIterable
 
 class PrintableState extends State {
   override def toString = "q" + hashCode
@@ -12,7 +12,7 @@ class PrintableState extends State {
 
 class IDState(val ident : Int) extends State {
   override def toString =
-    asScala(getTransitions).foldLeft("q" + ident + '\n') { (s, t) =>
+    getTransitions.foldLeft("q" + ident + '\n') { (s, t) =>
       val dest = t.getDest match {
         case d : IDState => "q" + d.ident
         case q => q.toString

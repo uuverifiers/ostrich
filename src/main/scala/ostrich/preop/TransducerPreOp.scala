@@ -35,6 +35,8 @@ package ostrich.preop
 import ostrich.automata.{Transducer, AtomicStateAutomaton, Automaton,
                          ProductAutomaton, PostImageAutomaton}
 
+import scala.collection.breakOut
+
 object TransducerPreOp {
   def apply(t : Transducer) = new TransducerPreOp(t)
 }

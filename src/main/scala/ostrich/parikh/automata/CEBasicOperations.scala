@@ -13,14 +13,14 @@ import ostrich.parikh.TermGeneratorOrder.order
 import ap.terfor.TerForConvenience._
 import ap.terfor.conjunctions.Conjunction
 import dk.brics.automaton.BasicAutomata
-import scala.jdk.CollectionConverters._
 import ap.terfor.Term
 import ap.terfor.Formula
 import ostrich.automata.BricsTLabelOps
 import ostrich.parikh.ParikhUtil
-
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import dk.brics.automaton.Transition
+import scala.collection.JavaConverters._
+
 object CEBasicOperations {
 
   def toBricsAutomaton(aut: CostEnrichedAutomatonBase):BAutomaton = aut match {

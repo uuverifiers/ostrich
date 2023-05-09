@@ -36,17 +36,8 @@ import ostrich.OFlags
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, Automaton => BAutomaton, State => BState}
 import ostrich.automata.AutomataUtils.buildEpsilons
 
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition,
-                           Automaton => BAutomaton, State => BState}
-
-import scala.collection.JavaConverters.asScala
-import scala.collection.mutable.{HashMap => MHashMap,
-                                 HashSet => MHashSet,
-                                 LinkedHashSet => MLinkedHashSet,
-                                 Stack => MStack,
-                                 TreeSet => MTreeSet,
-                                 MultiMap => MMultiMap,
-                                 Set => MSet}
+import scala.collection.JavaConversions.{asScalaIterator, iterableAsScalaIterable}
+import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, LinkedHashSet => MLinkedHashSet, MultiMap => MMultiMap, Set => MSet, Stack => MStack, TreeSet => MTreeSet}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -302,7 +293,7 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
   def enumDisjointLabels : Iterable[(Char, Char)] =
     disjointLabels.toIterable
 
-/**
+  /**
    * Enumerate all labels with overlaps removed such that the whole
    * alphabet is covered (including internal characters)
    * E.g. for min/max labels [1,3] [5,10] [8,15] would result in [1,3]
@@ -409,7 +400,6 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   import BricsAutomaton.toBAutomaton
   import OFlags.debug
 
-
   if (debug)
     Console.err.println("New automaton with " + underlying.getNumberOfStates +
                           " states")
@@ -494,7 +484,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
     val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
-    for (t <- asScala(from.getTransitions))
+    for (t <- from.getTransitions)
       dests.addBinding((t.getMin, t.getMax), t.getDest)
 
     val outgoing = new MLinkedHashSet[(State, TLabel)]
@@ -503,8 +493,9 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
       def sortingFn(s1 : State, s2 : State) : Boolean = {
         // sort by lowest outgoing transition
-        for ((t1, t2) <- asScala(s1.getSortedTransitions(false)) zip
-                         asScala(s2.getSortedTransitions(false))) {
+        for ((t1, t2) <- s1.getSortedTransitions(false)
+                         zip
+                         s2.getSortedTransitions(false)) {
           import scala.math.Ordering.Implicits._
           val lbl1 = (t1.getMin, t1.getMax)
           val lbl2 = (t2.getMin, t2.getMax)
@@ -608,7 +599,7 @@ class BricsAutomatonBuilder
 
   def outgoingTransitions(q : BricsAutomaton#State)
         : Iterator[(BricsAutomaton#State, BricsAutomaton#TLabel)] =
-    for (t <- asScala(q.getTransitions.iterator))
+    for (t <- q.getTransitions.iterator)
       yield (t.getDest, (t.getMin, t.getMax))
 
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =

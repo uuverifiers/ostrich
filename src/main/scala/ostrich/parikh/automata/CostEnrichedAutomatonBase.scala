@@ -20,6 +20,7 @@ import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import dk.brics.automaton.BasicOperations
 import CEBasicOperations.toBricsAutomaton
+import java.io.File
 
 /**
   * This is the implementation of cost-enriched finite automaton(CEFA). Each transition of 
@@ -269,7 +270,7 @@ class CostEnrichedAutomatonBase extends Automaton {
         return Some(acceptedword)
       }
       for ((to, (lbl, _), _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)) {
-        acceptedword = acceptedword :+ lbl
+        acceptedword = acceptedword :+ lbl.toInt
         worklist.push(to)
         seenlist.add(to)
       }

@@ -6,7 +6,8 @@ import dk.brics.automaton.{
   Automaton => BAutomaton
 }
 
-import scala.collection.JavaConverters.asScala
+// import scala.collection.JavaConverters.asScala
+import scala.collection.JavaConversions.{asScalaSet, asScalaIterator}
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 object BricsAutomatonWrapper {
@@ -56,8 +57,8 @@ class BricsAutomatonWrapper(val underlying: BAutomaton)
   override def initialState: State = underlying.getInitialState()
   
   // initialize
-  for (s <- asScala(underlying.getStates())){
-    for (t <- asScala(s.getTransitions()))
+  for (s <- underlying.getStates()){
+    for (t <- s.getTransitions())
       addTransition(s, (t.getMin(), t.getMax()), t.getDest(), Seq())
   }
 }

@@ -92,7 +92,7 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
   override def lengthApproximation(arguments : Seq[Term], result : Term,
                                    order : TermOrder) : Formula = {
     import TerForConvenience._
-    implicit val o = order
+    implicit val _ = order
     (arguments(1) === 1 & result === arguments(0)) |
     (arguments(1) < 1 & result <= arguments(0)) |
     (arguments(1) > 1 & result >= arguments(0))

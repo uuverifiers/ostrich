@@ -23,7 +23,7 @@ import ostrich.parikh.preop.SubStringCEPreOp
 import ostrich.parikh.core.UnaryBasedSolver
 import ostrich.parikh.core.Model.{IntValue, StringValue}
 import ostrich.parikh.preop.IndexOfCEPreOp
-import ostrich.parikh.core.CatraBasedSolver
+// import ostrich.parikh.core.CatraBasedSolver
 import ostrich.parikh.core.BaselineSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
@@ -33,6 +33,10 @@ import ostrich.parikh.core.FinalConstraints
 import ap.terfor.linearcombination.LinearCombination
 
 object ParikhExploration {
+  
+  case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
+          extends Exception
+
   private def isStringResult(op: PreOp): Boolean = op match {
     case _: LengthCEPreOp  => false
     case _: IndexOfCEPreOp => false
@@ -90,6 +94,7 @@ class ParikhExploration(
     flags: OFlags
 ) {
   import Exploration._
+  import ParikhExploration._
 
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
@@ -268,7 +273,7 @@ class ParikhExploration(
 
         val backendSolver =
           flags.backend match {
-            case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
+            // case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
             case Baseline() => new BaselineSolver
             case Unary()    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap)
           }

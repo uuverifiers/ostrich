@@ -1,96 +1,84 @@
-/** This file is part of Ostrich, an SMT solver for strings. Copyright (c)
-  * 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
-  *
-  * Redistribution and use in source and binary forms, with or without
-  * modification, are permitted provided that the following conditions are met:
-  *
-  * * Redistributions of source code must retain the above copyright notice,
-  * this list of conditions and the following disclaimer.
-  *
-  * * Redistributions in binary form must reproduce the above copyright notice,
-  * this list of conditions and the following disclaimer in the documentation
-  * and/or other materials provided with the distribution.
-  *
-  * * Neither the name of the authors nor the names of their contributors may be
-  * used to endorse or promote products derived from this software without
-  * specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  * POSSIBILITY OF SUCH DAMAGE.
-  */
+/**
+ * This file is part of Ostrich, an SMT solver for strings.
+ * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package ostrich.automata
 
 import ostrich.UnicodeData
 
-import scala.collection.mutable.{
-  HashSet => MHashSet,
-  ArrayStack,
-  Stack => MStack,
-  HashMap => MHashMap,
-  MultiMap,
-  ArrayBuffer,
-  Set => MSet,
-  Map => MMap
-}
-import ostrich.parikh.automata.BricsAutomatonWrapper
-import ap.basetypes.Node
-import ap.terfor.Term
+import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
+                                 Stack => MStack, HashMap => MHashMap,
+                                 MultiMap, ArrayBuffer, Set => MSet}
 
-/** Collection of useful functions for automata
-  */
+/**
+ * Collection of useful functions for automata
+ */
 object AutomataUtils {
 
-  /** The maximum number of automata to product simultaneously
-    */
+  /**
+   * The maximum number of automata to product simultaneously
+   */
   val MaxSimultaneousProduct = 5
 
-  /** Check whether there is some word accepted by all of the given automata.
-    * The automata are required to all have the same label type (though this is
-    * not checked statically)
-    */
-  def areConsistentAtomicAutomata(auts: Seq[AtomicStateAutomaton]): Boolean = {
+  /**
+   * Check whether there is some word accepted by all of the given automata.
+   * The automata are required to all have the same label type (though this is
+   * not checked statically)
+   */
+  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean = {
     val autsList = auts.toList
     val visitedStates = new MHashSet[List[Any]]
     val todo = new ArrayStack[List[Any]]
 
-    def isAccepting(states: List[Any]): Boolean =
-      (auts.iterator zip states.iterator) forall { case (aut, state) =>
-        aut.acceptingStates contains state.asInstanceOf[aut.State]
-      }
+    def isAccepting(states : List[Any]) : Boolean =
+          (auts.iterator zip states.iterator) forall {
+             case (aut, state) =>
+               aut.acceptingStates contains state.asInstanceOf[aut.State]
+          }
 
-    def enumNext(
-        auts: List[AtomicStateAutomaton],
-        states: List[Any],
-        intersectedLabels: Any
-    ): Iterator[List[Any]] =
+    def enumNext(auts : List[AtomicStateAutomaton],
+                 states : List[Any],
+                 intersectedLabels : Any) : Iterator[List[Any]] =
       auts match {
         case List() =>
           Iterator(List())
         case aut :: otherAuts => {
           val state :: otherStates = states
-          for (
-            (to, label) <- aut.outgoingTransitions(
-              state.asInstanceOf[aut.State]
-            );
-            newILabel <- aut.LabelOps
-              .intersectLabels(
-                intersectedLabels.asInstanceOf[aut.TLabel],
-                label
-              )
-              .toSeq;
-            tailNext <- enumNext(otherAuts, otherStates, newILabel)
-          )
-            yield (to :: tailNext)
+          for ((to, label) <- aut.outgoingTransitions(
+                                state.asInstanceOf[aut.State]);
+               newILabel <- aut.LabelOps.intersectLabels(
+                             intersectedLabels.asInstanceOf[aut.TLabel],
+                             label).toSeq;
+               tailNext <- enumNext(otherAuts, otherStates, newILabel))
+          yield (to :: tailNext)
         }
       }
 
@@ -115,9 +103,10 @@ object AutomataUtils {
     false
   }
 
-  /** Check whether there is some word accepted by all of the given automata.
-    */
-  def areConsistentAutomata(auts: Seq[Automaton]): Boolean =
+  /**
+   * Check whether there is some word accepted by all of the given automata.
+   */
+  def areConsistentAutomata(auts : Seq[Automaton]) : Boolean =
     if (auts.isEmpty) {
       true
     } else if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
@@ -128,25 +117,24 @@ object AutomataUtils {
       !(auts reduceLeft (_ & _)).isEmpty
     }
 
-  /** Check whether there is some word accepted by all of the given automata. If
-    * the intersection is empty, return an unsatisfiable core. The method makes
-    * the assumption that <code>oldAuts</code> are consistent, but the status of
-    * the combination with <code>newAut</code> is unknown.
-    */
-  def findUnsatCore(
-      oldAuts: Seq[Automaton],
-      newAut: Automaton
-  ): Option[Seq[Automaton]] = {
+  /**
+   * Check whether there is some word accepted by all of the given automata.
+   * If the intersection is empty, return an unsatisfiable core. The method
+   * makes the assumption that <code>oldAuts</code> are consistent, but the
+   * status of the combination with <code>newAut</code> is unknown.
+   */
+  def findUnsatCore(oldAuts : Seq[Automaton],
+                    newAut : Automaton) : Option[Seq[Automaton]] = {
 
     val consideredAuts = new ArrayBuffer[Automaton]
     consideredAuts += newAut
 
     // add automata until we encounter a conflict
-    var cont = areConsistentAutomata(consideredAuts.toSeq)
+    var cont = areConsistentAutomata(consideredAuts)
     val oldAutsIt = oldAuts.iterator
     while (cont && oldAutsIt.hasNext) {
       consideredAuts += oldAutsIt.next
-      cont = areConsistentAutomata(consideredAuts.toSeq)
+      cont = areConsistentAutomata(consideredAuts)
     }
 
     if (cont)
@@ -155,61 +143,49 @@ object AutomataUtils {
     // remove automata to get a small core
     for (i <- (consideredAuts.size - 2) to 1 by -1) {
       val removedAut = consideredAuts remove i
-      if (areConsistentAutomata(consideredAuts.toSeq))
+      if (areConsistentAutomata(consideredAuts))
         consideredAuts.insert(i, removedAut)
     }
 
-    Some(consideredAuts.toSeq)
+    Some(consideredAuts)
   }
 
-  /** Check whether there is some word of length <code>len</code> accepted by
-    * all of the given automata. The automata are required to all have the same
-    * label type (though this is not checked statically)
-    */
-  def findAcceptedWordAtomic(
-      auts: Seq[AtomicStateAutomaton],
-      len: Int
-  ): Option[Seq[Int]] = {
+  /**
+   * Check whether there is some word of length <code>len</code> accepted
+   * by all of the given automata.
+   * The automata are required to all have the same label type (though this is
+   * not checked statically)
+   */
+  def findAcceptedWordAtomic(auts : Seq[AtomicStateAutomaton],
+                             len : Int) : Option[Seq[Int]] = {
     val autsList = auts.toList
     val headAut = autsList.head
     val visitedStates = new MHashSet[(List[Any], Int)]
     val todo = new ArrayStack[(List[Any], List[Int])]
 
-    def isAccepting(states: List[Any]): Boolean =
-      (auts.iterator zip states.iterator) forall { case (aut, state) =>
-        aut.acceptingStates contains state.asInstanceOf[aut.State]
-      }
+    def isAccepting(states : List[Any]) : Boolean =
+          (auts.iterator zip states.iterator) forall {
+             case (aut, state) =>
+               aut.acceptingStates contains state.asInstanceOf[aut.State]
+          }
 
-    def enumNext(
-        auts: List[AtomicStateAutomaton],
-        states: List[Any],
-        intersectedLabels: Any
-    ): Iterator[(List[Any], Int)] =
+    def enumNext(auts : List[AtomicStateAutomaton],
+                 states : List[Any],
+                 intersectedLabels : Any) : Iterator[(List[Any], Int)] =
       auts match {
         case List() =>
-          Iterator(
-            (
-              List(),
-              headAut.LabelOps
-                .enumLetters(intersectedLabels.asInstanceOf[headAut.TLabel])
-                .next
-            )
-          )
+          Iterator((List(),
+                    headAut.LabelOps.enumLetters(
+                      intersectedLabels.asInstanceOf[headAut.TLabel]).next))
         case aut :: otherAuts => {
           val state :: otherStates = states
-          for (
-            (to, label) <- aut.outgoingTransitions(
-              state.asInstanceOf[aut.State]
-            );
-            newILabel <- aut.LabelOps
-              .intersectLabels(
-                intersectedLabels.asInstanceOf[aut.TLabel],
-                label
-              )
-              .toSeq;
-            (tailNext, let) <- enumNext(otherAuts, otherStates, newILabel)
-          )
-            yield (to :: tailNext, let)
+          for ((to, label) <- aut.outgoingTransitions(
+                                state.asInstanceOf[aut.State]);
+               newILabel <- aut.LabelOps.intersectLabels(
+                             intersectedLabels.asInstanceOf[aut.TLabel],
+                             label).toSeq;
+               (tailNext, let) <- enumNext(otherAuts, otherStates, newILabel))
+          yield (to :: tailNext, let)
         }
       }
 
@@ -224,74 +200,71 @@ object AutomataUtils {
     while (!todo.isEmpty) {
       val (next, w) = todo.pop
       val wSize = w.size
-      for (
-        (reached, let) <-
-          enumNext(autsList, next, auts.head.LabelOps.sigmaLabel)
-      )
+      for ((reached, let) <-
+            enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
         if (visitedStates.add((reached, wSize + 1))) {
           val newW = let :: w
           if (isAccepting(reached) && wSize + 1 == len)
             return Some(newW.reverse)
           if (wSize + 1 < len)
-            todo push ((reached, newW))
+            todo push (reached, newW)
         }
     }
 
     None
   }
 
-  /** Check whether there is some word of length <code>len</code> accepted by
-    * all of the given automata.
-    */
-  def findAcceptedWord(auts: Seq[Automaton], len: Int): Option[Seq[Int]] =
-    findAcceptedWordAtomic(
-      for (aut <- auts)
-        yield aut.asInstanceOf[AtomicStateAutomaton],
-      len
-    )
+  /**
+   * Check whether there is some word of length <code>len</code> accepted
+   * by all of the given automata.
+   */
+  def findAcceptedWord(auts : Seq[Automaton],
+                       len : Int) : Option[Seq[Int]] =
+    findAcceptedWordAtomic(for (aut <- auts)
+                             yield aut.asInstanceOf[AtomicStateAutomaton],
+                           len)
 
-
-  /** Product of a number of given automata The minimize argument enable
-    * minimization of the product automaton.
-    */
-  def product(auts: Seq[Automaton], minimize: Boolean = false): Automaton =
+  /**
+   * Product of a number of given automata
+   * The minimize argument enable minimization of the product automaton.
+   */
+  def product(auts : Seq[Automaton],
+              minimize : Boolean = false) : Automaton =
     if (auts forall { _.isInstanceOf[AtomicStateAutomaton] }) {
-      productWithMap(
-        auts map (_.asInstanceOf[AtomicStateAutomaton]),
-        minimize
-      )._1
+      productWithMap(auts map (_.asInstanceOf[AtomicStateAutomaton]),
+                     minimize)._1
     } else {
       // TODO: minimize?
       auts reduceLeft (_ & _)
     }
 
-  /** Product of a number of given automata. Returns new automaton. Returns map
-    * from new states of result to (q0, [q1, ..., qn]) giving states of this and
-    * auts respectively
-    *
-    * The minimize argument enable minimization of the product automaton, which
-    * should only be used if the returned maps are not used.
-    */
-  def productWithMap(
-      auts: Seq[AtomicStateAutomaton],
-      minimize: Boolean = false
-  ): (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+  /**
+   * Product of a number of given automata.  Returns
+   * new automaton.  Returns map from new states of result to (q0, [q1,
+   * ..., qn]) giving states of this and auts respectively
+   *
+   * The minimize argument enable minimization of the product automaton,
+   * which should only be used if the returned maps are not used.
+   */
+  def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
+    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
     productWithMaps(auts.map((_, idMap)), minimize)
   }
 
-  /** Takes the product of the list of automata and returns mapping from states
-    * of the new automaton to tuples of the original. auts may already be
-    * products and come with a similar map, these are composed for the result
-    * map
-    *
-    * The minimize argument enable minimization of the product automaton, which
-    * should only be used if the returned maps are not used.
-    */
-  private def productWithMaps(
-      auts: Seq[(AtomicStateAutomaton, Map[Any, Seq[Any]])],
-      minimize: Boolean = false
-  ): (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+  /**
+   * Takes the product of the list of automata and returns mapping from
+   * states of the new automaton to tuples of the original.  auts may
+   * already be products and come with a similar map, these are composed
+   * for the result map
+   *
+   * The minimize argument enable minimization of the product automaton,
+   * which should only be used if the returned maps are not used.
+   */
+  private def productWithMaps(auts : Seq[(AtomicStateAutomaton,
+                                         Map[Any, Seq[Any]])],
+                              minimize : Boolean = false) :
+    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
     if (auts.size == 0)
       return (BricsAutomaton.makeAnyString, Map.empty[Any, Seq[Any]])
@@ -299,10 +272,9 @@ object AutomataUtils {
     if (auts.size == 1)
       return auts.head
 
-    val firstSlice = auts
-      .grouped(MaxSimultaneousProduct)
-      .map(fullProductWithMaps(_, minimize))
-      .toSeq
+    val firstSlice = auts.grouped(MaxSimultaneousProduct)
+                         .map(fullProductWithMaps(_, minimize))
+                         .toSeq
 
     if (firstSlice.size == 1)
       return firstSlice(0)
@@ -310,29 +282,28 @@ object AutomataUtils {
       return productWithMaps(firstSlice, minimize)
   }
 
-  /** Takes the product of the list of automata and returns mapping from states
-    * of the new automaton to tuples of the original. auts may already be
-    * products and come with a similar map, these are composed for the result
-    * map The minimize argument enable minimization of the product automaton,
-    * which should only be used if the returned maps are not used.
-    */
-  private def fullProductWithMaps(
-      auts: Seq[(AtomicStateAutomaton, Map[Any, Seq[Any]])],
-      minimize: Boolean = false
-  ): (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+  /**
+   * Takes the product of the list of automata and returns mapping from
+   * states of the new automaton to tuples of the original.  auts may
+   * already be products and come with a similar map, these are composed
+   * for the result map
+   * The minimize argument enable minimization of the product automaton,
+   * which should only be used if the returned maps are not used.
+   */
+  private def fullProductWithMaps(auts : Seq[(AtomicStateAutomaton,
+                                             Map[Any, Seq[Any]])],
+                                  minimize : Boolean = false) :
+    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
     val (autsSeq, mapsSeq) = auts.unzip
 
     // get image of states under maps in mapsSeq
     // or just return ss if minimize is true
-    def mapsImage(ss: Seq[Any]): List[Any] = {
+    def mapsImage(ss: Seq[Any]) : List[Any] = {
       if (minimize)
         ss.toList
       else
-        ss.iterator
-          .zip(mapsSeq.iterator)
-          .flatMap({ case (s, sMap) => sMap(s) })
-          .toList
+        ss.iterator.zip(mapsSeq.iterator).flatMap({ case (s, sMap) => sMap(s) }).toList
     }
 
     val head = autsSeq.head
@@ -354,10 +325,8 @@ object AutomataUtils {
     val seenlist = MHashSet[List[Any]]()
     seenlist += initStates
 
-    builder.setAccept(
-      initState,
-      autsSeq forall { aut => aut.isAccept(aut.initialState) }
-    )
+    builder.setAccept(initState,
+                      autsSeq forall { aut => aut.isAccept(aut.initialState) })
 
     var checkCnt = 0
 
@@ -369,28 +338,26 @@ object AutomataUtils {
       // sp and ssp are s' and ss' (ss' is reversed for efficiency)
       // ss are elements of ss from which a transition is yet to be
       // searched
-      def addTransitions(
-          lbl: head.TLabel,
-          ssp: List[Any],
-          remAuts: List[AtomicStateAutomaton],
-          ss: List[Any]
-      ): Unit = {
+      def addTransitions(lbl : head.TLabel,
+                         ssp : List[Any],
+                         remAuts : List[AtomicStateAutomaton],
+                         ss : List[Any]) : Unit = {
         checkCnt = checkCnt + 1
         if (checkCnt % 1000 == 0)
           ap.util.Timeout.check
         ss match {
-          case Seq() => {
+          case Seq() =>  {
             val nextState = ssp.reverse
             if (!seenlist.contains(nextState)) {
-              val nextPState = builder.getNewState
-              val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
-                case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
-              }
-              builder.setAccept(nextPState, isAccept)
-              sMap += nextPState -> mapsImage(nextState)
-              sMapRev += nextState -> nextPState
-              worklist.push((nextPState, nextState))
-              seenlist += nextState
+                val nextPState = builder.getNewState
+                val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
+                  case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
+                }
+                builder.setAccept(nextPState, isAccept)
+                sMap += nextPState -> mapsImage(nextState)
+                sMapRev += nextState -> nextPState
+                worklist.push((nextPState, nextState))
+                seenlist += nextState
             }
             val nextPState = sMapRev(nextState)
             builder.addTransition(ps, lbl, nextPState)
@@ -402,12 +369,10 @@ object AutomataUtils {
             aut.outgoingTransitions(state) foreach {
               case (s, nextLbl) => {
                 val newLbl =
-                  builder.LabelOps.intersectLabels(
-                    lbl,
-                    nextLbl.asInstanceOf[head.TLabel]
-                  )
+                    builder.LabelOps.intersectLabels(lbl,
+                                                     nextLbl.asInstanceOf[head.TLabel])
                 for (l <- newLbl)
-                  addTransitions(l, s :: ssp, autsTail, ssTail)
+                  addTransitions(l, s::ssp, autsTail, ssTail)
               }
             }
           }
@@ -420,21 +385,23 @@ object AutomataUtils {
     (builder.getAutomaton, sMap.toMap)
   }
 
-  /** Form product of this automaton with given auts, returns a new automaton
-    */
-  def product(auts: Seq[AtomicStateAutomaton]): AtomicStateAutomaton =
+  /**
+   * Form product of this automaton with given auts, returns a new
+   * automaton
+   */
+  def product(auts : Seq[AtomicStateAutomaton]) : AtomicStateAutomaton =
     productWithMap(auts, true)._1
 
-  /** Replace a-transitions with new a-transitions between pairs of states
-    */
+  /**
+   * Replace a-transitions with new a-transitions between pairs of states
+   */
   def replaceTransitions[A <: AtomicStateAutomaton](
-      aut: A,
-      a: Char,
-      states: Iterable[(A#State, A#State)]
-  ): AtomicStateAutomaton = {
+        aut : A,
+        a : Char,
+        states : Iterable[(A#State, A#State)]) : AtomicStateAutomaton = {
     val builder = aut.getBuilder
     val smap : Map[A#State, aut.State] =
-      aut.states.view.map(s => (s -> builder.getNewState)).toMap
+      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
 
     for ((s1, lbl, s2) <- aut.transitions)
       for (newLbl <- aut.LabelOps.subtractLetter(a, lbl))
@@ -452,13 +419,14 @@ object AutomataUtils {
     res
   }
 
-  /** Build automaton accepting reverse language of given automaton
-    */
-  def reverse(aut: AtomicStateAutomaton): AtomicStateAutomaton = {
+  /**
+   * Build automaton accepting reverse language of given automaton
+   */
+  def reverse(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
     val builder = aut.getBuilder
 
     val smap : Map[aut.State, aut.State] =
-      aut.states.view.map(s => (s -> builder.getNewState)).toMap
+      aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
 
     val initState = builder.initialState
     builder.setAccept(smap(aut.initialState), true)
@@ -473,19 +441,18 @@ object AutomataUtils {
     builder.getAutomaton
   }
 
-  /** Build automaton accepting concat language of given automata aut1 and aut2
-    * must have compatible label types
-    */
-  def concat(
-      aut1: AtomicStateAutomaton,
-      aut2: AtomicStateAutomaton
-  ): AtomicStateAutomaton = {
+  /**
+   * Build automaton accepting concat language of given automata
+   * aut1 and aut2 must have compatible label types
+   */
+  def concat(aut1 : AtomicStateAutomaton,
+             aut2 : AtomicStateAutomaton) : AtomicStateAutomaton = {
     val builder = aut1.getBuilder
 
     val smap1 : Map[aut1.State, aut1.State] =
-      aut1.states.view.map(s => (s -> builder.getNewState)).toMap
+      aut1.states.map(s => (s -> builder.getNewState))(collection.breakOut)
     val smap2 : Map[aut2.State, aut1.State] =
-      aut2.states.view.map(s => (s -> builder.getNewState)).toMap
+      aut2.states.map(s => (s -> builder.getNewState))(collection.breakOut)
 
     builder.setInitialState(smap1(aut1.initialState))
     for (sf <- aut2.acceptingStates)
@@ -508,25 +475,26 @@ object AutomataUtils {
     builder.getAutomaton
   }
 
-  /** Inserts second automaton into the first replacing transitions over a give
-    * character. I.e. s1 --a--> s2 becomes s1 -->into aut / from final --> s2.
-    *
-    * Assumes autOuter and autInner have compatible label types
-    *
-    * This is approximate in that there is only a single copy of the inserted
-    * automaton, so ingoing and outgoing transitions are not mapped.
-    */
-  def nestAutomata(
-      autOuter: AtomicStateAutomaton,
-      toReplace: Char,
-      autInner: AtomicStateAutomaton
-  ): AtomicStateAutomaton = {
+  /**
+   * Inserts second automaton into the first replacing transitions over
+   * a give character.  I.e. s1 --a--> s2 becomes s1 -->into aut / from
+   * final --> s2.
+   *
+   * Assumes autOuter and autInner have compatible label types
+   *
+   * This is approximate in that there is only a single copy of the
+   * inserted automaton, so ingoing and outgoing transitions are not
+   * mapped.
+   */
+  def nestAutomata(autOuter : AtomicStateAutomaton,
+                   toReplace : Char,
+                   autInner : AtomicStateAutomaton) : AtomicStateAutomaton = {
     val builder = autOuter.getBuilder
 
     val smapOuter : Map[autOuter.State, autOuter.State] =
-      autOuter.states.view.map(s => (s -> builder.getNewState)).toMap
+      autOuter.states.map(s => (s -> builder.getNewState))(collection.breakOut)
     val smapInner : Map[autInner.State, autOuter.State] =
-      autInner.states.view.map(s => (s -> builder.getNewState)).toMap
+      autInner.states.map(s => (s -> builder.getNewState))(collection.breakOut)
 
     val innerInit = smapInner(autInner.initialState)
     val innerFinal = autInner.acceptingStates.map(smapInner)
@@ -536,7 +504,7 @@ object AutomataUtils {
       builder.setAccept(smapOuter(sf), true)
 
     val epsilons = new MHashMap[autOuter.State, MSet[autOuter.State]]
-      with MultiMap[autOuter.State, autOuter.State]
+                       with MultiMap[autOuter.State, autOuter.State]
 
     // copy outer
     for ((s1, lbl, s2) <- autOuter.transitions) {
@@ -567,22 +535,19 @@ object AutomataUtils {
     builder.getAutomaton
   }
 
-  /** Continue a build by providing epsilon transitions. Note, adding new
-    * transitions after calling this will invalidate the results of this
-    * function
-    *
-    * @param builder
-    *   the builder to add transitions to
-    * @param epsilons
-    *   epsilons(q) = set of q' where there is an e-transition from q to q'
-    */
-  def buildEpsilons[State, TLabel](
-      builder: AtomicStateAutomatonBuilder[State, TLabel],
-      epsilons: MultiMap[State, State]
-  ): Unit = {
+  /**
+   * Continue a build by providing epsilon transitions.
+   * Note, adding new transitions after calling this will invalidate the
+   * results of this function
+   *
+   * @param builder the builder to add transitions to
+   * @param epsilons epsilons(q) = set of q' where there is an e-transition from q to q'
+   */
+  def buildEpsilons[State, TLabel](builder : AtomicStateAutomatonBuilder[State, TLabel],
+                                   epsilons : MultiMap[State, State]) : Unit = {
     // transitive closes (modifies in place) the map representing a list
     // of pairs (x, y)
-    def tranClose[A](pairs: MultiMap[A, A]): MultiMap[A, A] = {
+    def tranClose[A](pairs : MultiMap[A, A]) : MultiMap[A, A] = {
       val worklist = new MStack[(A, A)]
       val closure = new MHashMap[A, MSet[A]] with MultiMap[A, A]
 
@@ -615,9 +580,10 @@ object AutomataUtils {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  /** Make an automaton case-insensitive.
-    */
-  def makeCaseInsensitive(aut: AtomicStateAutomaton): AtomicStateAutomaton = {
+  /**
+   * Make an automaton case-insensitive.
+   */
+  def makeCaseInsensitive(aut : AtomicStateAutomaton) : AtomicStateAutomaton = {
     val builder = new BricsAutomatonBuilder
 
     val stateMapping =
@@ -631,11 +597,9 @@ object AutomataUtils {
     for ((a, l, b) <- aut.transitions) {
       val (ll, lu) = l.asInstanceOf[(Char, Char)]
       for ((nl, nu) <- UnicodeData.upperLowerCaseClosure((ll.toInt, lu.toInt)))
-        builder.addTransition(
-          stateMapping(a),
-          (nl.toChar, nu.toChar),
-          stateMapping(b)
-        )
+        builder.addTransition(stateMapping(a),
+                              (nl.toChar, nu.toChar),
+                              stateMapping(b))
     }
 
     builder.getAutomaton
