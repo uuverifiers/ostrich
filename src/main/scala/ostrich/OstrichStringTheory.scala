@@ -373,10 +373,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = {
       // set global order and input linear integer arithmetic
-      // ParikhUtil.todo("TermGeneratorOrder.order should be extended with goal's order. But we can not do it now because constantsSeq in TermOrder is unaccessible.")
-      // val arithOrder = goal.facts.arithConj.order
-      // TermGeneratorOrder.extend(arithOrder)
-      // FinalConstraints.conjFormula(goal.facts.arithConj)
+      ParikhUtil.todo("TermGeneratorOrder.order should be extended with goal's order. But we can not do it now because constantsSeq in TermOrder is unaccessible.")
+      val arithOrder = goal.facts.arithConj.order
+      TermGeneratorOrder.extend(arithOrder)
+      FinalConstraints.conjFormula(goal.facts.arithConj)
       
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
@@ -513,7 +513,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     val visitor4 = new OstrichCostEnrichEncoder(this)
 
     try {
-    val preprocessedF = visitor4(visitor3(visitor2(visitor1(f))))
+    val preprocessedF = visitor3(visitor2(visitor1(visitor4(f))))
     (preprocessedF, signature)
     }catch {
       case e : Throwable => { e.printStackTrace; throw e }

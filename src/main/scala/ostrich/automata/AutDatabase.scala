@@ -37,6 +37,7 @@ import ostrich.OstrichStringTheory
 import ap.parser._
 
 import scala.collection.mutable.{HashMap => MHashMap}
+import ostrich.parikh.automata.Regex2CEAut
 
 object AutDatabase {
 
@@ -64,7 +65,11 @@ class AutDatabase(theory : OstrichStringTheory,
 
   import AutDatabase._
 
-  private val regex2Aut  = new Regex2Aut(theory)
+  private val regex2Aut  = 
+    if (theory.getflags().useCostEnriched)
+      new Regex2CEAut(theory)
+    else
+      new Regex2Aut(theory)
 
   private var nextId     = 0
 
