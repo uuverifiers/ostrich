@@ -676,7 +676,8 @@ class ResultRepository:
         crashquery = ''' SELECT COUNT(*) FROM Result WHERE Result.solver = ? AND Result.result IS NULL AND Result.output LIKE '%SIG%' ''' ### TODO ADD VERIFIED!!!
         crashs = self._db.executeRet (crashquery, (solver,))[0][0]
 
-        return {"smtcalls" : smtcalls, "timeout" : timeouted, "sat" : satis, "unsat" : nsatis, "unk" : unk, "error" : errors, "invalid": invalid, "crash" : crashs, "time" : round(time, 2), "total" : total, "totalWO" : totalWO, "timeWO" : round(timeWO,2)}
+        # return {"smtcalls" : smtcalls, "timeout" : timeouted, "sat" : satis, "unsat" : nsatis, "unk" : unk, "error" : errors, "invalid": invalid, "crash" : crashs, "time" : round(time, 2), "total" : total, "totalWO" : totalWO, "timeWO" : round(timeWO,2)}
+        return {"smtcalls" : smtcalls, "timeout" : timeouted, "sat" : satis, "unsat" : nsatis, "unk" : unk, "error" : errors, "invalid": invalid, "crash" : crashs, "time" : round(time/total/1000, 2), "total" : total, "totalWO" : totalWO, "timeWO" : round(timeWO/totalWO/1000,2)}
 
     def getSummaryForSolverGroupTable(self,solver,group):
         query = '''SELECT SUM(Result.smtcalls), SUM(Result.timeouted), SUM(Result.time),COUNT(*) FROM Result,TrackInstanceMap,Track WHERE Result.instanceid = TrackInstanceMap.instance  and TrackInstanceMap.track = Track.id and Track.bgroup = ? AND solver = ? '''

@@ -335,6 +335,7 @@ class CostEnrichedAutomatonBase extends Automaton {
     def toDotStr = {
       s"""
       digraph G {
+        label = "(${registers.mkString(",")})";
         rankdir=LR;
         init [shape=point];
         node [shape = doublecircle];

@@ -9,6 +9,8 @@ import models.automatark
 import models.redos
 import models.regexlib
 import models.stackoverflow
+import models.generated.stackoverflow1
+import models.generated.stackoverflow2
 import startwebserver
 
 import tools.ostrichHeuristics
@@ -17,11 +19,13 @@ import tools.ostrichHeuristics
 import summarygenerators
 
 tracks = (
-            models.automatark.getTrackData() +
-            models.redos.getTrackData() +
-            models.regexlib.getTrackData() +
-            models.stackoverflow.getTrackData()
-         + [])
+    models.generated.stackoverflow1.getTrackData() +
+    models.generated.stackoverflow2.getTrackData() +
+    # models.redos.getTrackData() +
+    # models.regexlib.getTrackData() +
+    # models.stackoverflow.getTrackData()
+    []
+)
 # tracks = testbench.getTrackData() + []
 solvers = {}
 for s in [

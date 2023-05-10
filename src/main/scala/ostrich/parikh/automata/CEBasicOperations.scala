@@ -23,7 +23,7 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import dk.brics.automaton.Transition
 object CEBasicOperations {
 
-  def toBricsAutomaton(aut: CostEnrichedAutomatonBase):BAutomaton = aut match {
+  def toBricsAutomaton(aut: CostEnrichedAutomatonBase): BAutomaton = aut match {
     case a: BricsAutomatonWrapper => a.underlying
     case _ => {
       val baut = new BAutomaton
@@ -72,21 +72,8 @@ object CEBasicOperations {
     val aut2newRegIdx = MHashMap[CostEnrichedAutomatonBase, Int]()
 
     for (aut <- auts) {
-      var f = Conjunction.FALSE
-      val initialStateOut =
-        aut.outgoingTransitionsWithVec(aut.initialState).map(_._3)
-      if (initialStateOut.forall(_.exists(_ > 0))) {
-        // all vectors of transitions from initialState have elements > 0
-        for (vec <- initialStateOut) {
-          val notZeroIdx = vec.indexWhere(_ > 0)
-          f = disj(f, aut.registers(notZeroIdx) >= 1)
-        }
-      }
-      if (f == Conjunction.FALSE) {
-        // all value of initialOutVecs are 0
-        newRegisters += RegisterTerm()
-        f = newRegisters.last >= 1
-      }
+      newRegisters += RegisterTerm()
+      val f = newRegisters.last >= 1
       aut2newRegIdx += (aut -> (newRegisters.size - 1))
       partitionFormula += (aut -> f)
     }
@@ -97,7 +84,7 @@ object CEBasicOperations {
         val preFill = Seq.fill(prefixlen)(0)
         val postFill = Seq.fill(oldRegsLen - prefixlen - v.size)(0)
         val newRegsUpdate = ArrayBuffer.fill(newRegisters.size)(0)
-        if(aut2newRegIdx(aut) >= 0)
+        if (aut2newRegIdx(aut) >= 0)
           newRegsUpdate(aut2newRegIdx(aut)) = 1
         val tailVec = newRegsUpdate.toSeq
         val newVec =
@@ -117,9 +104,9 @@ object CEBasicOperations {
       ceAut.addEpsilon(initialS, old2new(aut.initialState))
       finalDisjList += conj(partitionFormula(aut), aut.regsRelation)
     }
-    // forall i newRegisters(i) == 0 and disj(epsilonSatisfied)
+    // all register equal to 0 and disj(epsilonSatisfied)
     finalDisjList += conj(
-      (newRegisters.map(_ === 0)) :+ disjFor(epsilonSatisfied)
+      ((oldRegsiters ++ newRegisters).map(_ === 0)) :+ disjFor(epsilonSatisfied)
     )
 
     ceAut.regsRelation = disjFor(finalDisjList)
@@ -281,7 +268,7 @@ object CEBasicOperations {
     )
   }
 
-   def repeatUnwind(
+  def repeatUnwind(
       aut: CostEnrichedAutomatonBase,
       min: Int,
       max: Int
@@ -325,7 +312,7 @@ object CEBasicOperations {
       )
     // construct other updates
     for ((s, l, t, v) <- aut.transitionsWithVec; if s != aut.initialState)
-    ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
+      ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
     for (s <- aut.acceptingStates) {
       for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
         ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(1))
@@ -336,7 +323,7 @@ object CEBasicOperations {
     // accept empty string
     val newRegsRelation =
       if (aut.isAccept(aut.initialState))
-          newRegister <= max
+        newRegister <= max
       else
         conj(newRegister >= min, newRegister <= max)
     ceAut.registers = newRegisters
@@ -346,7 +333,8 @@ object CEBasicOperations {
 
   def optional(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     aut.setAccept(aut.initialState, true)
-    aut.regsRelation = disjFor(aut.regsRelation, conj(aut.registers.map(_ === 0)))
+    aut.regsRelation =
+      disjFor(aut.regsRelation, conj(aut.registers.map(_ === 0)))
     aut
   }
 

@@ -25,12 +25,12 @@ import tools.cvc5
 import summarygenerators
 
 tracks = (
-        automark.getTrackData() + 
-        #   redos.getTrackData() + 
-        #   regexlib.getTrackData() +
-        #   stackoverflow.getTrackData()
-        generated.getTrackData()
-        ) + []
+    automark.getTrackData() +
+    #   redos.getTrackData() +
+    #   regexlib.getTrackData() +
+    #   stackoverflow.getTrackData()
+    generated.getTrackData()
+) + []
 
 solvers = {}
 for s in [
@@ -52,7 +52,7 @@ store = storage.SQLiteDB("ATVA2023-allSolver-allBench")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5", "Z3str3RE", "ostrichCEA"]
 # verifiers = []
-testrunner(7).runTestSetup(
+testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )
 startwebserver.Server(store.getDB()).startServer()

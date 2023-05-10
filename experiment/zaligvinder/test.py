@@ -26,12 +26,8 @@ tracks = (test_bench.getTrackData()
 solvers = {}
 for s in [
     tools.cvc5,
-    tools.ostrichCEA,
     tools.ostrich,
-    tools.z3str3,
-    tools.z3seq,
     tools.regExSolver,
-    tools.trau
 ]:
     s.addRunner(solvers)
 
@@ -41,7 +37,7 @@ ploc = utils.JSONProgramConfig()
 
 store = storage.SQLiteDB("test")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = []
+verifiers = ["Cvc5", "Z3str3RE", "ostrichCEA"]
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )

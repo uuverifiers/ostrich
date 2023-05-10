@@ -72,10 +72,11 @@ def run(params, eq, timeout, ploc, wd):
 def addRunner(addto):
     from functools import partial
     params = {
-              "all":                     ["-over-approx"],
-              "no-under":                [ "-under-approx", "-over-approx"],
-              "no-simplify-aut":         [ "-over-approx", "-simplify-aut"],
-              "all-off":                 ["-under-approx", "-over-approx", "-simplify-aut"],
+              "all":                     ["-backend=unary"],
+              "no-under":                ["-under-approx"],
+              "no-simplify-aut":         ["-simplify-aut"],
+              "all-off":                 ["-under-approx", "-simplify-aut"],
+              "catra":                   ["-backend=catra"]
             }
     for i in params.keys():
         addto['ostrich-'+i] = partial(run, params[i])

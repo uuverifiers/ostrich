@@ -34,6 +34,7 @@ class UnaryFinalConstraints(
     ceAut
   }
 
+
   lazy val simplifyButRemainLabelAut = {
     val ceAut = CEBasicOperations.removeUselessTrans(
       CEBasicOperations.minimizeHopcroft(

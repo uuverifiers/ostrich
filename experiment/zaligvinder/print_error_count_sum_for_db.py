@@ -29,7 +29,7 @@ def unsolved(db, solver):
     track_db = storage.sqlitedb.TrackRepository(db, trackinstance_db)
     result_db = storage.sqlitedb.ResultRepository(
         db, track_db, trackinstance_db)
-    unsolved_files = result_db.getAllUnknownFilesForSolver(solver)
+    unsolved_files = result_db.getAllErrorFilesForSolver(solver)
     for file in unsolved_files:
         regexesCount(file)
     return len(unsolved_files)
@@ -51,6 +51,6 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument("database")
 args = argparser.parse_args()
 db = storage.sqlitedb.DB(args.database)
-unsolved_num = unsolved(db, "ostrich-catra")
+unsolved_num = unsolved(db, "ostrichCEA")
 
 # unique(db)
