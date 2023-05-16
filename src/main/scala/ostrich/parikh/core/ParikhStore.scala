@@ -1,14 +1,14 @@
 package ostrich.parikh
 
-import ostrich.Exploration
-import ap.terfor.Term
 import ostrich.automata.Automaton
 import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
-import Exploration._
+import ParikhExploration._
+import ostrich.Exploration.ConstraintStore
 import ap.util.Seqs
 import ostrich.parikh.automata.BricsAutomatonWrapper
+import ap.parser.ITerm
 
 object ParikhStore {
   sealed trait LIAStrategy // linear integer arithmetic generating strategy
@@ -16,7 +16,7 @@ object ParikhStore {
   case class ArithBeforeProduct(syncLen: Int) extends LIAStrategy
 }
 
-class ParikhStore(t: Term) extends ConstraintStore {
+class ParikhStore(t: ITerm) {
 
 
   // constraints in this store

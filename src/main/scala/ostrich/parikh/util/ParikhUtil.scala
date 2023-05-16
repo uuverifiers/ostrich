@@ -6,7 +6,6 @@ import scala.collection.mutable.{
   HashMap => MHashMap,
   ArrayStack
 }
-import ap.terfor.Term
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 
 import ap.basetypes.IdealInt
@@ -15,10 +14,12 @@ import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.core.FinalConstraints
+import ap.parser.ITerm
+import ap.parser.IExpression._
 
 object ParikhUtil {
-  private val CountingRegisters = new MHashSet[Term]()
-  def addCountingRegister(t: Term) = CountingRegisters += t
+  private val CountingRegisters = new MHashSet[ITerm]()
+  def addCountingRegister(t: ITerm) = CountingRegisters += t
 
   type State = CostEnrichedAutomatonBase#State
   type TLabel = CostEnrichedAutomatonBase#TLabel
@@ -127,7 +128,7 @@ object ParikhUtil {
 
   def findAcceptedWordByRegistersComplete(
       aut: CostEnrichedAutomatonBase,
-      registersModel: MMap[Term, IdealInt]
+      registersModel: MMap[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
 
     val registersValue = aut.registers.map(registersModel(_).intValue)
@@ -167,132 +168,131 @@ object ParikhUtil {
   // Note: A sound but not complete search for string. We can repidly update value of
   // counting register because it is be updated only by the same transition at most times.
   // Sometimes it may be updated by different transitions, so the search is not complete.
-  def findAcceptedWordByRegistersHeuristic(
-      aut: CostEnrichedAutomatonBase,
-      registersModel: MMap[Term, IdealInt]
-  ): Option[Seq[Int]] = {
-    // we only heuristically search for string with large register values (the sum is greater than 200)
-    if (registersModel.map(_._2.intValue).sum <= 200) return None
-    val s2scc = findAllSCC(aut)
-    val paths: ArrayBuffer[Seq[State]] = ArrayBuffer()
-    val worklist = ArrayStack[Seq[State]]()
-    val visited = MHashSet[Seq[State]]()
+  // def findAcceptedWordByRegistersHeuristic(
+  //     aut: CostEnrichedAutomatonBase,
+  //     registersModel: MMap[ITerm, IdealInt]
+  // ): Option[Seq[Int]] = {
+  //   // we only heuristically search for string with large register values (the sum is greater than 200)
+  //   if (registersModel.map(_._2.intValue).sum <= 200) return None
+  //   val s2scc = findAllSCC(aut)
+  //   val paths: ArrayBuffer[Seq[State]] = ArrayBuffer()
+  //   val worklist = ArrayStack[Seq[State]]()
+  //   val visited = MHashSet[Seq[State]]()
 
-    worklist.push(Seq(aut.initialState))
-    while (worklist.nonEmpty) {
-      val path = worklist.pop
-      val lastState = path.last
-      val lastStateScc = s2scc(lastState)
-      if (lastStateScc.find(aut.isAccept).isDefined)
-        paths += path
-      visited.add(path)
-      val tmpWorklist = ArrayStack[State]()
-      val tmpVisited = MHashSet[State]()
-      tmpWorklist.push(lastState)
-      while (tmpWorklist.nonEmpty) {
-        val s = tmpWorklist.pop
-        tmpVisited.add(s)
-        for ((t, _, _) <- aut.outgoingTransitionsWithVec(s)) {
-          if (!lastStateScc.contains(t)) {
-            val newPath = path :+ t
-            if (!visited(newPath)) {
-              worklist.push(newPath)
-            }
-          } else if (!tmpVisited(t)) {
-            tmpWorklist.push(t)
-          }
-        }
-      }
-    }
-    for (path <- paths) {
-      findAcceptedWordInPath(aut, registersModel, s2scc, path) match {
-        case Some(value) => return Some(value)
-        case _           =>
-      }
-    }
-    None
-  }
+  //   worklist.push(Seq(aut.initialState))
+  //   while (worklist.nonEmpty) {
+  //     val path = worklist.pop
+  //     val lastState = path.last
+  //     val lastStateScc = s2scc(lastState)
+  //     if (lastStateScc.find(aut.isAccept).isDefined)
+  //       paths += path
+  //     visited.add(path)
+  //     val tmpWorklist = ArrayStack[State]()
+  //     val tmpVisited = MHashSet[State]()
+  //     tmpWorklist.push(lastState)
+  //     while (tmpWorklist.nonEmpty) {
+  //       val s = tmpWorklist.pop
+  //       tmpVisited.add(s)
+  //       for ((t, _, _) <- aut.outgoingTransitionsWithVec(s)) {
+  //         if (!lastStateScc.contains(t)) {
+  //           val newPath = path :+ t
+  //           if (!visited(newPath)) {
+  //             worklist.push(newPath)
+  //           }
+  //         } else if (!tmpVisited(t)) {
+  //           tmpWorklist.push(t)
+  //         }
+  //       }
+  //     }
+  //   }
+  //   for (path <- paths) {
+  //     findAcceptedWordInPath(aut, registersModel, s2scc, path) match {
+  //       case Some(value) => return Some(value)
+  //       case _           =>
+  //     }
+  //   }
+  //   None
+  // }
 
-  def findAcceptedWordInPath(
-      aut: CostEnrichedAutomatonBase,
-      registersModel: MMap[Term, IdealInt],
-      s2scc: MMap[State, Set[State]],
-      path: Seq[State]
-  ): Option[Seq[Int]] = {
-    val trans2Word = MHashMap[(State, State), Seq[Char]]()
-    var constantUpdate = Seq.fill(aut.registers.length)(0)
-    val state2Word = MHashMap[State, Seq[Char]]()
-    val state2Update = MHashMap[State, Seq[Int]]()
-    val linearsT = ArrayBuffer[Seq[LinearCombination]]()
+  // def findAcceptedWordInPath(
+  //     aut: CostEnrichedAutomatonBase,
+  //     registersModel: MMap[ITerm, IdealInt],
+  //     s2scc: MMap[State, Set[State]],
+  //     path: Seq[State]
+  // ): Option[Seq[Int]] = {
+  //   val trans2Word = MHashMap[(State, State), Seq[Char]]()
+  //   var constantUpdate = Seq.fill(aut.registers.length)(0)
+  //   val state2Word = MHashMap[State, Seq[Char]]()
+  //   val state2Update = MHashMap[State, Seq[Int]]()
+  //   val linearsT = ArrayBuffer[Seq[LinearCombination]]()
 
-    val registersValue = aut.registers.map(registersModel(_).intValue)
+  //   val registersValue = aut.registers.map(registersModel(_).intValue)
 
-    SimpleAPI.withProver() { p =>
-      import p._
-      import ap.terfor.TerForConvenience._
+  //   SimpleAPI.withProver() { p =>
+  //     import p._
 
-      val state2term = path.map(s => s -> createConstantRaw(s"$s")).toMap
-      val pathpair = path.zip(path.tail :+ path.head)
-      for ((s, t) <- pathpair) {
-        val (cycleWord, cycleUpdate) = findCycleWordAndUpdate(aut, s, s2scc(s))
-        if (cycleUpdate.exists(_ > 0)) {
-          state2Word(s) = cycleWord
-          state2Update(s) = cycleUpdate
-        }
-        if (t != path.head) {
-          val (word, update) = findWordAndUpdate(aut, s, t)
-          trans2Word += ((s, t) -> word)
-          constantUpdate =
-            constantUpdate.zip(update).map { case (a, b) => a + b }
-        }
-      }
+  //     val state2term = path.map(s => s -> createConstantRaw(s"$s")).toMap
+  //     val pathpair = path.zip(path.tail :+ path.head)
+  //     for ((s, t) <- pathpair) {
+  //       val (cycleWord, cycleUpdate) = findCycleWordAndUpdate(aut, s, s2scc(s))
+  //       if (cycleUpdate.exists(_ > 0)) {
+  //         state2Word(s) = cycleWord
+  //         state2Update(s) = cycleUpdate
+  //       }
+  //       if (t != path.head) {
+  //         val (word, update) = findWordAndUpdate(aut, s, t)
+  //         trans2Word += ((s, t) -> word)
+  //         constantUpdate =
+  //           constantUpdate.zip(update).map { case (a, b) => a + b }
+  //       }
+  //     }
 
-      linearsT += constantUpdate.map(LinearCombination(_))
-      for ((s, update) <- state2Update) {
-        if (update.find(_ > 0).isDefined)
-          linearsT += update.map(i => {
-            if (i == 0)
-              l(0)
-            else
-              LinearCombination(i, state2term(s), order)
-          })
-      }
-      implicit val newOrder = order
-      val linears = linearsT.transpose.map(_.reduce(_ + _))
-      val geqZ = for ((s, t) <- state2term) yield (t >= 0)
-      val formula = conj(
-        linears.zip(registersValue).map { case (linear, value) =>
-          linear === value
-        } ++ geqZ
-      )
+  //     linearsT += constantUpdate.map(LinearCombination(_))
+  //     for ((s, update) <- state2Update) {
+  //       if (update.find(_ > 0).isDefined)
+  //         linearsT += update.map(i => {
+  //           if (i == 0)
+  //             l(0)
+  //           else
+  //             LinearCombination(i, state2term(s), order)
+  //         })
+  //     }
+  //     implicit val newOrder = order
+  //     val linears = linearsT.transpose.map(_.reduce(_ + _))
+  //     val geqZ = for ((s, t) <- state2term) yield (t >= 0)
+  //     val formula = and(
+  //       linears.zip(registersValue).map { case (linear, value) =>
+  //         linear === value
+  //       } ++ geqZ
+  //     )
 
-      p addAssertion formula
-      ??? match {
-        case ProverStatus.Sat =>
-          val state2Int = (for (
-            (s, t) <- state2term;
-            value <- FinalConstraints.evalTerm(t)(p.partialModel);
-            if value.intValue > 0
-          ) yield (s, value.intValue)).toMap
-          var acceptedWord = Seq[Char]()
-          for ((s, t) <- pathpair) {
-            if (state2Int.contains(s)) {
-              for (_ <- 0 until state2Int(s))
-                acceptedWord ++= state2Word(s)
-            }
-            if (t == path.head) return Some(acceptedWord.map(_.toInt))
-            acceptedWord ++= trans2Word((s, t))
-          }
-        case _ => // do nothing
-      }
+  //     p addAssertion formula
+  //     ??? match {
+  //       case ProverStatus.Sat =>
+  //         val state2Int = (for (
+  //           (s, t) <- state2term;
+  //           value <- FinalConstraints.evalTerm(t)(p.partialModel);
+  //           if value.intValue > 0
+  //         ) yield (s, value.intValue)).toMap
+  //         var acceptedWord = Seq[Char]()
+  //         for ((s, t) <- pathpair) {
+  //           if (state2Int.contains(s)) {
+  //             for (_ <- 0 until state2Int(s))
+  //               acceptedWord ++= state2Word(s)
+  //           }
+  //           if (t == path.head) return Some(acceptedWord.map(_.toInt))
+  //           acceptedWord ++= trans2Word((s, t))
+  //         }
+  //       case _ => // do nothing
+  //     }
 
-    }
-    None
-  }
+  //   }
+  //   None
+  // }
 
   def findAcceptedWordByRegisters(
       auts: Seq[CostEnrichedAutomatonBase],
-      registersModel: MMap[Term, IdealInt]
+      registersModel: MMap[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
     // if (OstrichConfig.findStringHeu) {

@@ -4,12 +4,12 @@ import ostrich.automata.Automaton
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
-import ap.terfor.Term
+import ap.parser.ITerm
 
 object LengthCEPreOp {
-  def apply(length: Term): LengthCEPreOp = new LengthCEPreOp(length)
+  def apply(length: ITerm): LengthCEPreOp = new LengthCEPreOp(length)
 
-  def lengthPreimage(length: Term) : CostEnrichedAutomatonBase = {
+  def lengthPreimage(length: ITerm) : CostEnrichedAutomatonBase = {
     val preimage = new CostEnrichedAutomaton
     val initalState = preimage.initialState
 
@@ -24,7 +24,6 @@ object LengthCEPreOp {
     // registers: (r0)
     preimage.registers = Seq(RegisterTerm())
     // intFormula : r0 === `length`
-    import ap.terfor.TerForConvenience._ 
     import ostrich.parikh.TermGeneratorOrder._
     preimage.regsRelation = length === preimage.registers(0)
     preimage
@@ -35,7 +34,7 @@ object LengthCEPreOp {
   * Pre-op for length constraints. 
   * @param length The length 
   */
-class LengthCEPreOp(length: Term) extends CEPreOp {
+class LengthCEPreOp(length: ITerm) extends CEPreOp {
 
   override def toString = "lengthCEPreOp"
 

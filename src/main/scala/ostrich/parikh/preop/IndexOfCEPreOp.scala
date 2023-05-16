@@ -1,11 +1,9 @@
 package ostrich.parikh.preop
 
-import ap.terfor.Term
 import ostrich.automata.Automaton
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import scala.collection.mutable.ArrayBuffer
-import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import ostrich.parikh.automata.BricsAutomatonWrapper.{
   makeAnyString,
@@ -21,9 +19,12 @@ import ostrich.parikh.automata.CEBasicOperations.{
   complement,
   intersection
 }
+import ap.parser.ITerm
+import ap.parser.IExpression._
+import ap.parser.IIntLit
 
 object IndexOfCEPreOp {
-  def apply(startPos: Term, index: Term, matchStr: String) =
+  def apply(startPos: ITerm, index: ITerm, matchStr: String) =
     new IndexOfCEPreOp(startPos, index, matchStr)
 }
 
@@ -35,7 +36,7 @@ object IndexOfCEPreOp {
   * @param index
   *   the index of the first occurrence of the substring
   */
-class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
+class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     extends CEPreOp {
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
@@ -44,7 +45,7 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
     var preimages = Iterator[Seq[Automaton]]()
 
     val startPosPrefix = startPos match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         automatonWithLen(value.intValueSafe)
       }
       case _ => {
@@ -59,7 +60,7 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
     )
 
     val notMatchedPrefix = index match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         concatenate(
           Seq(
             intersection(
@@ -84,7 +85,7 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
     }
 
     val matchedSuffix = index match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         concatenate(
           Seq(
             automatonWithLen(value.intValueSafe),
@@ -107,12 +108,12 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
 
     // index >= 0
     val preimage1 = intersection(notMatchedPrefix, matchedSuffix)
-    preimage1.regsRelation = conj(preimage1.regsRelation, index >= startPos)
+    preimage1.regsRelation = and(Seq(preimage1.regsRelation, index >= startPos))
 
     // index = -1
     // len(searchedStr) < startPos
     val preimage2 = startPos match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         if (value.intValueSafe < 0) {
           makeAnyString()
         } else
@@ -121,18 +122,18 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
       case _ => {
         val searchedStrLen = LenTerm()
         val smallerThanStartPos = lengthPreimage(searchedStrLen)
-        smallerThanStartPos.regsRelation = conj(
+        smallerThanStartPos.regsRelation = and(Seq(
           smallerThanStartPos.regsRelation,
           searchedStrLen < startPos | startPos < 0
-        )
+        ))
         smallerThanStartPos
       }
     }
-    preimage2.regsRelation = conj(preimage2.regsRelation, index === -1)
+    preimage2.regsRelation = and(Seq(preimage2.regsRelation, index === -1))
 
     // len(searchedStr) > startPos and no match after startPos
     val preimage3 = startPos match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         concatenate(
           Seq(automatonWithLen(value.intValueSafe), notMatched)
         )
@@ -141,23 +142,23 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
       case _ => {
         val searchedStrLen = LenTerm()
         val largerThanStartPos = lengthPreimage(searchedStrLen)
-        largerThanStartPos.regsRelation = conj(
+        largerThanStartPos.regsRelation = and(Seq(
           largerThanStartPos.regsRelation,
           searchedStrLen >= startPos
-        )
+        ))
         concatenate(
           Seq(largerThanStartPos, notMatched)
         )
       }
     }
-    preimage3.regsRelation = conj(preimage3.regsRelation, index === -1)
+    preimage3.regsRelation = and(Seq(preimage3.regsRelation, index === -1))
 
     // empty match string with index >= 0
     val preimage4 = concatenate(Seq(startPosPrefix, makeAnyString()))
-    preimage4.regsRelation = conj(preimage4.regsRelation, index === startPos)
+    preimage4.regsRelation = and(Seq(preimage4.regsRelation, index === startPos))
 
     index match {
-      case LinearCombination.Constant(value) if !matchString.isEmpty => {
+      case IIntLit(value) if !matchString.isEmpty => {
         if (value.intValueSafe == -1) {
           preimages = Iterator(Seq(preimage2), Seq(preimage3))
         } else {
@@ -165,7 +166,7 @@ class IndexOfCEPreOp(startPos: Term, index: Term, matchString: String)
         }
       }
 
-      case LinearCombination.Constant(value) if matchString.isEmpty => {
+      case IIntLit(value) if matchString.isEmpty => {
         if (value.intValueSafe == -1) {
           preimages = Iterator(Seq(preimage2), Seq(preimage3))
         } else {

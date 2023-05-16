@@ -3,21 +3,21 @@ package ostrich.parikh.core
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
-import ap.terfor.TerForConvenience._
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import FinalConstraints._
-import ap.terfor.Term
-import ap.terfor.Formula
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.OFlags
 import ostrich.parikh.ParikhUtil
+import ap.parser.ITerm
+import ap.parser.IFormula
+import ap.parser.IExpression._
 
-class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[Term, Term])
+class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[ITerm, ITerm])
     extends FinalConstraintsSolver[UnaryFinalConstraints] {
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
+  def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(unaryHeuristicACs(t, auts, flags))
   }
 
@@ -41,7 +41,7 @@ class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[Term, Term])
     var result = new Result
     while (nowBound <= maxBound && !result.isSat) {
       result = solveFormula(
-        conj(constraints.map(_.getUnderApprox(nowBound)))
+        and(constraints.map(_.getUnderApprox(nowBound)))
       )
       nowBound += step
     }
@@ -49,27 +49,25 @@ class UnaryBasedSolver(flags: OFlags, freshIntTerm2orgin: Map[Term, Term])
   }
 
   // def solveOverApprox: Result = solveFormula(
-  //   conj(constraints.map(_.getOverApprox)), false
+  //   and(constraints.map(_.getOverApprox)), false
   // )
 
   def solveCompleteLIA: Result = solveFormula(
-    conj(constraints.map(_.getCompleteLIA))
+    and(constraints.map(_.getCompleteLIA))
   )
 
-  def solveFormula(f: Formula, generateModel: Boolean = true): Result = {
+  def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {
     import FinalConstraints.evalTerm
     val res = new Result
     SimpleAPI.withProver { p =>
       p setConstructProofs true
       val inputAndGenerated = FinalConstraints()
-      val finalArith = conj(f, inputAndGenerated)
-
-      SymbolCollector.constants(finalArith) ++ integerTerms
-
-      p addConstants order.orderedConstants
+      val finalArith = and(Seq(f, inputAndGenerated))
 
       // We must treat TermGenerator.order carefully.
       // finalArith.order should equal to TermGenerator.order
+      p.addConstantsRaw(SymbolCollector.constants(finalArith))
+      p.addConstants(integerTerms)
       p !! finalArith
       val status = measure(
         s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

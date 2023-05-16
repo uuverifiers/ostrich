@@ -55,6 +55,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
 import ostrich.parikh.preop.{SubStringCEPreOp, IndexOfCEPreOp}
 import ostrich.parikh.automata.BricsAutomatonWrapper
 import ostrich.parikh.ParikhExploration
+import ap.parser.Internal2InputAbsy
+import ap.parser.ITerm
 
 object OstrichSolver {
 
@@ -329,7 +331,16 @@ class OstrichSolver(theory : OstrichStringTheory,
           None
 
       val result = if (flags.useCostEnriched){
-        val approxExp = new ParikhExploration(funApps.toSeq, regexes.toSeq, strDatabase, flags)
+        val inputFuns = funApps.map{
+          case (op, args, result) => 
+            (op, args.map(Internal2InputAbsy(_)), Internal2InputAbsy(result))
+        }
+        val inputRegexes = regexes.map{
+          case (t, aut) =>
+            (Internal2InputAbsy(t), aut)
+        }
+
+        val approxExp = new ParikhExploration(inputFuns, inputRegexes, strDatabase, flags)
         approxExp.findModel
       } else {
         val exploration =

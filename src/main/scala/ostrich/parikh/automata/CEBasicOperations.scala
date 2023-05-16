@@ -10,16 +10,17 @@ import scala.collection.mutable.{
 }
 import ostrich.parikh.RegisterTerm
 import ostrich.parikh.TermGeneratorOrder.order
-import ap.terfor.TerForConvenience._
 import ap.terfor.conjunctions.Conjunction
 import dk.brics.automaton.BasicAutomata
-import ap.terfor.Term
-import ap.terfor.Formula
+import ap.parser.ITerm
 import ostrich.automata.BricsTLabelOps
 import ostrich.parikh.ParikhUtil
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import dk.brics.automaton.Transition
 import scala.collection.JavaConverters._
+import ap.parser.IFormula
+import ap.parser.IExpression._
+import ap.parser.IExpression
 
 object CEBasicOperations {
 
@@ -57,7 +58,7 @@ object CEBasicOperations {
       return unionWithoutRegs(auts)
     val ceAut = new CostEnrichedAutomaton
     val initialS = ceAut.initialState
-    val newRegisters: ArrayBuffer[Term] = new ArrayBuffer
+    val newRegisters: ArrayBuffer[ITerm] = new ArrayBuffer
     val oldRegsiters = auts.flatMap(_.registers)
     val oldRegsLen = oldRegsiters.size
     var prefixlen = 0
@@ -65,21 +66,21 @@ object CEBasicOperations {
     val epsilonSatisfied =
       auts.filter(aut => aut.isAccept(aut.initialState)).map(_.regsRelation)
     // the list of disjunctive formula for the union of the automata
-    val finalDisjList = ArrayBuffer[Formula]()
+    val finalDisjList = ArrayBuffer[IFormula]()
     // map each automaton to the formula that is satisfied iff
     // the union of the automata chooses this automaton
-    val partitionFormula = MHashMap[CostEnrichedAutomatonBase, Formula]()
+    val partitionFormula = MHashMap[CostEnrichedAutomatonBase, IFormula]()
     val aut2newRegIdx = MHashMap[CostEnrichedAutomatonBase, Int]()
 
     for (aut <- auts) {
-      var f = Conjunction.FALSE
+      var f = IExpression.Boolean2IFormula(false)
       val initialStateOut =
         aut.outgoingTransitionsWithVec(aut.initialState).map(_._3)
       if (initialStateOut.forall(_.exists(_ > 0))) {
         // all vectors of transitions from initialState have elements > 0
         for (vec <- initialStateOut) {
           val notZeroIdx = vec.indexWhere(_ > 0)
-          f = disj(f, aut.registers(notZeroIdx) >= 1)
+          f = or(Seq(f, aut.registers(notZeroIdx) >= 1))
         }
       }
       if (f == Conjunction.FALSE) {
@@ -115,14 +116,14 @@ object CEBasicOperations {
       prefixlen += aut.registers.size
 
       ceAut.addEpsilon(initialS, old2new(aut.initialState))
-      finalDisjList += conj(partitionFormula(aut), aut.regsRelation)
+      finalDisjList += and(Seq(partitionFormula(aut), aut.regsRelation))
     }
     // forall i newRegisters(i) == 0 and disj(epsilonSatisfied)
-    finalDisjList += conj(
-      (newRegisters.map(_ === 0)) :+ disjFor(epsilonSatisfied)
+    finalDisjList += and(
+      (newRegisters.map(_ === 0)) :+ or(epsilonSatisfied)
     )
 
-    ceAut.regsRelation = disjFor(finalDisjList)
+    ceAut.regsRelation = or(finalDisjList)
     ceAut.registers = oldRegsiters ++ newRegisters
     ceAut
   }
@@ -198,7 +199,7 @@ object CEBasicOperations {
         }
       }
     }
-    ceAut.regsRelation = conj(aut1.regsRelation, aut2.regsRelation)
+    ceAut.regsRelation = and(Seq(aut1.regsRelation, aut2.regsRelation))
     ceAut.registers = aut1.registers ++ aut2.registers
     ceAut
   }
@@ -258,7 +259,7 @@ object CEBasicOperations {
     ) // Bug: should set accept first, add epsilon later
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    ceAut.regsRelation = conj(auts.map(_.regsRelation))
+    ceAut.regsRelation = and(auts.map(_.regsRelation))
     // val a = builder.getAutomaton
     ceAut
   }
@@ -338,7 +339,7 @@ object CEBasicOperations {
       if (aut.isAccept(aut.initialState))
           newRegister <= max
       else
-        conj(newRegister >= min, newRegister <= max)
+        and(Seq(newRegister >= min, newRegister <= max))
     ceAut.registers = newRegisters
     ceAut.regsRelation = newRegsRelation
     ceAut
@@ -346,7 +347,7 @@ object CEBasicOperations {
 
   def optional(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     aut.setAccept(aut.initialState, true)
-    aut.regsRelation = disjFor(aut.regsRelation, conj(aut.registers.map(_ === 0)))
+    aut.regsRelation = or(Seq(aut.regsRelation, and(aut.registers.map(_ === 0))))
     aut
   }
 

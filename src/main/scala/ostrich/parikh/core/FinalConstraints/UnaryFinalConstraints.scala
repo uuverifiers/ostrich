@@ -1,7 +1,5 @@
 package ostrich.parikh.core
 
-import ap.terfor.Formula
-import ap.terfor.Term
 import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.parikh.ParikhUtil
 import ostrich.parikh.automata.CEBasicOperations
@@ -9,9 +7,12 @@ import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ap.terfor.conjunctions.Conjunction
 import scala.collection.mutable.ArrayBuffer
 import ostrich.OFlags
+import ap.parser.ITerm
+import ap.parser.IFormula
+import ap.parser.IExpression._
 
 class UnaryFinalConstraints(
-    override val strId: Term,
+    override val strId: ITerm,
     override val auts: Seq[CostEnrichedAutomatonBase],
     flags : OFlags
 ) extends FinalConstraints {
@@ -57,38 +58,37 @@ class UnaryFinalConstraints(
     * @param bound
     * @return
     */
-  def getUnderApprox(bound: Int): Formula = {
+  def getUnderApprox(bound: Int): IFormula = {
     val aut = checkSatAut
     val lowerBound = globalS.size
     computeGlobalSWithRegsValue(bound)
     if (lowerBound == globalS.size) {
       // the globalS does not change
-      return Conjunction.FALSE
+      return Boolean2IFormula(false)
     }
     val registers = aut.registers
 
-    import ap.terfor.TerForConvenience._
     import ostrich.parikh.TermGeneratorOrder.order
 
-    val r1Formula = disjFor(
+    val r1Formula = or(
       for (
         j <- lowerBound until globalS.size;
         if !globalS(j).isEmpty;
         (s, regVal) <- globalS(j);
         if (aut.isAccept(s))
       ) yield {
-        conj(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
+        and(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
       }
     )
-    conj(r1Formula, getRegsRelation)
+    and(Seq(r1Formula, getRegsRelation))
   }
 
-  override lazy val getCompleteLIA: Formula = 
+  override lazy val getCompleteLIA: IFormula = 
     getCompleteLIA(checkSatAut)
 
-  def getRegsRelation: Formula = checkSatAut.regsRelation
+  def getRegsRelation: IFormula = checkSatAut.regsRelation
 
-  val interestTerms: Seq[Term] = productAut.registers
+  val interestTerms: Seq[ITerm] = productAut.registers
 
   def getModel: Option[Seq[Int]] = {
     val registersModel = MHashMap() ++ interestTermsModel

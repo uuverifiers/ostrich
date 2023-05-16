@@ -1,10 +1,10 @@
 package ostrich.parikh.core
 
 import ap.api.SimpleAPI.ProverStatus
-import ap.terfor.Term
 import ap.basetypes.IdealInt
 import ostrich.parikh.ParikhUtil.measure
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ap.parser.ITerm
 
 class Result {
   protected var status = ProverStatus.Unknown
@@ -19,9 +19,9 @@ class Result {
 
   def getStatus = status
 
-  def updateModel(t: Term, v: IdealInt): Unit = model.update(t, v)
+  def updateModel(t: ITerm, v: IdealInt): Unit = model.update(t, v)
 
-  def updateModel(t: Term, v: Seq[Int]): Unit = model.update(t, v)
+  def updateModel(t: ITerm, v: Seq[Int]): Unit = model.update(t, v)
 
   def getModel = model.getModel
 }
@@ -38,11 +38,11 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   protected var constraints: Seq[A] = Seq()
 
-  protected var integerTerms: Set[Term] = Set()
+  protected var integerTerms: Set[ITerm] = Set()
 
-  def setIntegerTerm(terms: Set[Term]): Unit = integerTerms = terms
+  def setIntegerTerm(terms: Set[ITerm]): Unit = integerTerms = terms
 
-  def addConstraint(t: Term, auts: Seq[CostEnrichedAutomatonBase]): Unit
+  def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit
 
   def addConstraint(c: A) = constraints = constraints :+ c
 

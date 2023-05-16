@@ -8,19 +8,20 @@ import scala.collection.mutable.{
   HashSet => MHashSet,
   ArrayBuffer
 }
-import ap.terfor.Term
-import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 import dk.brics.automaton.{State => BState}
-import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder.order
 import dk.brics.automaton.BasicOperations
 import CEBasicOperations.toBricsAutomaton
 import java.io.File
+import ap.parser.ITerm
+import ap.parser.IFormula
+import ap.parser.IExpression._
+import ap.parser.IExpression
 
 /**
   * This is the implementation of cost-enriched finite automaton(CEFA). Each transition of 
@@ -39,11 +40,11 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   /** The accepting condition
     */
-  protected var _regsRelation: Formula = Conjunction.TRUE
+  protected var _regsRelation: IFormula = IExpression.Boolean2IFormula(true)
 
   /** Registers storing count value for accepting state.
     */
-  protected var _registers: Seq[Term] = Seq()
+  protected var _registers: Seq[ITerm] = Seq()
 
   /** The unique initial state
     */
@@ -219,7 +220,7 @@ class CostEnrichedAutomatonBase extends Automaton {
       val baseidx = regidxs.head
       regidxs.tail.foreach { idx =>
         _regsRelation =
-          conj(_regsRelation, (_registers(baseidx) === _registers(idx)))
+          and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
       }
       removeIdxs ++= regidxs.tail
 
@@ -256,7 +257,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
 
   def getAcceptedWord: Option[Seq[Int]] = {
-    if (regsRelation != Conjunction.TRUE | registers.nonEmpty) {
+    if (!regsRelation.isTrue | registers.nonEmpty) {
       throw new UnsupportedOperationException
     }
     val seenlist = new MHashSet[State]
@@ -300,9 +301,9 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   def registers = _registers
 
-  def registers_=(registers: Seq[Term]) = _registers = registers
+  def registers_=(registers: Seq[ITerm]) = _registers = registers
 
-  def regsRelation_=(f: Formula) = _regsRelation = f
+  def regsRelation_=(f: IFormula) = _regsRelation = f
   /////////////////////////////
   override def toString: String = {
     val s2str = states.zipWithIndex.map{

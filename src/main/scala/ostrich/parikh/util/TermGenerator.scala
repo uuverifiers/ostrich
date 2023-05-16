@@ -1,8 +1,9 @@
 package ostrich.parikh
 
-import ap.terfor.Term
+import ap.parser.ITerm
 import ap.terfor.ConstantTerm
 import ap.terfor.TermOrder
+import ap.parser.IExpression._
 
 object TermGeneratorOrder {
   ParikhUtil.todo("no global variable")
@@ -27,9 +28,9 @@ object TermGeneratorOrder {
 
 object RegisterTerm {
   var count = 0
-  def apply(): Term = {
+  def apply(): ITerm = {
     count += 1
-    val regTerm = new ConstantTerm(s"R$count")
+    val regTerm = Sort.Integer.newConstant(s"R$count")
     TermGeneratorOrder.extend(regTerm)
     regTerm
   }
@@ -37,7 +38,7 @@ object RegisterTerm {
 
 object TransitionTerm {
   var count = 0
-  def apply(): Term = {
+  def apply(): ITerm = {
     count += 1
     val transTerm = new ConstantTerm(s"T$count")
     TermGeneratorOrder.extend(transTerm)
@@ -47,7 +48,7 @@ object TransitionTerm {
 
 object ZTerm {
   var count = 0
-  def apply(): Term = {
+  def apply(): ITerm = {
     count += 1
     val zTerm = new ConstantTerm(s"Z$count")
     TermGeneratorOrder.extend(zTerm)
@@ -57,7 +58,7 @@ object ZTerm {
 
 object LenTerm {
   var count = 0
-  def apply(): Term = {
+  def apply(): ITerm = {
     count += 1
     val lenTerm = new ConstantTerm(s"Len$count")
     TermGeneratorOrder.extend(lenTerm)
@@ -67,7 +68,7 @@ object LenTerm {
 
 object IntTerm {
   var count = 0
-  def apply(): Term = {
+  def apply(): ITerm = {
     count += 1
     val lenTerm = new ConstantTerm(s"Int$count")
     TermGeneratorOrder.extend(lenTerm)

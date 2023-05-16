@@ -48,6 +48,7 @@ import ostrich.parikh.preop.IndexOfCEPreOp
 import ostrich.parikh.preop.LengthCEPreOp
 import ostrich.parikh.preop.ReplaceCEPreOp
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ap.parser.Internal2InputAbsy
 
 /**
  * Class for mapping string constraints to string functions.
@@ -80,16 +81,16 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_len_cea`) => 
 
-      Some((() => LengthCEPreOp(a(1)), Seq(a(0)), a(1)))
+    case FunPred(`str_len_cea`) => 
+      Some((() => LengthCEPreOp(Internal2InputAbsy(a(1))), Seq(a(0)), a(1)))
     case FunPred(`str_concate_cea`) =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_substr_cea`) =>
-      Some((() => SubStringCEPreOp(a(1), a(2)), Seq(a(0), a(1), a(2)), a(3)))
+      Some((() => SubStringCEPreOp(Internal2InputAbsy(a(1)), Internal2InputAbsy(a(2))), Seq(a(0), a(1), a(2)), a(3)))
     case FunPred(`str_indexof_cea`) if strDatabase isConcrete a(1) =>
       val matchStr = strDatabase term2ListGet a(1)
-      Some((() => IndexOfCEPreOp(a(2), a(3), matchStr.map(_.toChar).mkString), Seq(a(0), a(1), a(2)), a(3)))
+      Some((() => IndexOfCEPreOp(Internal2InputAbsy(a(2)), Internal2InputAbsy(a(3)), matchStr.map(_.toChar).mkString), Seq(a(0), a(1), a(2)), a(3)))
     case FunPred(`str_replace_cea`) if strDatabase isConcrete a(2) =>
       val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
       if (strDatabase isConcrete a(1)){

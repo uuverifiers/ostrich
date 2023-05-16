@@ -3,9 +3,10 @@ package ostrich.parikh.preop
 import ostrich.automata.Automaton
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedInitFinalAutomaton
-import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ap.parser.IExpression._
+
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "concatCEPreOp"
 
@@ -17,12 +18,12 @@ object ConcatCEPreOp extends CEPreOp {
     val leftRegs = concatLeft.registers
     val rightRegs = concatRight.registers
     val resultRegs = result.registers
-    val derivedRegsRelation = conj(leftRegs.zipWithIndex.map { case (reg, i) =>
+    val derivedRegsRelation = and(leftRegs.zipWithIndex.map { case (reg, i) =>
       (reg + rightRegs(i)) === resultRegs(i)
     })
     val letfRegsRelation = concatLeft.regsRelation
     val resRegsRelation = result.regsRelation
-    concatLeft.regsRelation = conj(letfRegsRelation, derivedRegsRelation, resRegsRelation)
+    concatLeft.regsRelation = and(Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation))
   }
 
   def apply(

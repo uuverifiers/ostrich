@@ -1,21 +1,21 @@
 package ostrich.parikh.preop
 
-import ap.terfor.Term
 import ostrich.automata.Automaton
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.automata.BricsAutomatonWrapper
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ostrich.parikh.RegisterTerm
-import ap.terfor.TerForConvenience._
 import ostrich.parikh.TermGeneratorOrder._
 import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
-import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.automata.CEBasicOperations.{intersection, concatenate}
 import ostrich.parikh.LenTerm
 import ostrich.automata.BricsAutomaton
+import ap.parser.ITerm
+import ap.parser.IExpression._
+import ap.parser.IIntLit
 
 object SubStringCEPreOp {
-  def apply(beginIdx: Term, length: Term) =
+  def apply(beginIdx: ITerm, length: ITerm) =
     new SubStringCEPreOp(beginIdx, length)
 }
 
@@ -25,7 +25,7 @@ object SubStringCEPreOp {
   * @param length
   *   the max length of subtring
   */
-class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
+class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   override def toString(): String =
     "subStringCEPreOp"
 
@@ -39,36 +39,36 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     if (res.isAccept(res.initialState)) {
       // empty string result
       val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
-      preimageOfEmp1.regsRelation = conj(
+      preimageOfEmp1.regsRelation = and(Seq(
         preimageOfEmp1.regsRelation,
         length <= 0
-      )
+      ))
       val preimageOfEmp2 = beginIdx match {
-        case  LinearCombination.Constant(value) => {
+        case  IIntLit(value) => {
           automatonWithLenLessThan(value.intValueSafe)
         }
         case _ => {
           val searchedStrLen = LenTerm()
           val preimage = LengthCEPreOp.lengthPreimage(searchedStrLen)
-          preimage.regsRelation = conj(
+          preimage.regsRelation = and(Seq(
             preimage.regsRelation,
             searchedStrLen <= beginIdx
-          )
+          ))
           preimage
         }
       }
       for (r <- res.registers) {
         // tansmit the empty string integer info
         preimageOfEmp1.regsRelation =
-          conj(preimageOfEmp1.regsRelation, r === 0)
+          and(Seq(preimageOfEmp1.regsRelation, r === 0))
         preimageOfEmp2.regsRelation =
-          conj(preimageOfEmp2.regsRelation, r === 0)
+          and(Seq(preimageOfEmp2.regsRelation, r === 0))
       }
       preimagesOfEmptyStr =
         Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
     }
     val beginIdxPrefix = beginIdx match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         automatonWithLen(value.intValueSafe)
       }
       case _ => {
@@ -77,7 +77,7 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     }
 
     val middleSubStr = length match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         intersection(
           automatonWithLen(value.intValueSafe),
           res
@@ -92,7 +92,7 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
     }
 
     val smallLenSuffix = length match {
-      case LinearCombination.Constant(value) => {
+      case IIntLit(value) => {
         intersection(
           automatonWithLenLessThan(value.intValueSafe),
           res
@@ -104,10 +104,10 @@ class SubStringCEPreOp(beginIdx: Term, length: Term) extends CEPreOp {
           LengthCEPreOp.lengthPreimage(smallLen),
           res
         )
-        smallLenSuffix.regsRelation = conj(
+        smallLenSuffix.regsRelation = and(Seq(
           smallLenSuffix.regsRelation,
           smallLen <= length
-        )
+        ))
         smallLenSuffix
       }
     }

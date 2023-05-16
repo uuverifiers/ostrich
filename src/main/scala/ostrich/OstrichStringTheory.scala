@@ -56,6 +56,7 @@ import ostrich.parikh.OstrichCostEnrichEncoder
 import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.core.FinalConstraints
 import ostrich.parikh.ParikhUtil
+import ap.parser.Internal2InputAbsy
 
 object OstrichStringTheory {
 
@@ -376,7 +377,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       // ParikhUtil.todo("TermGenratorOrder.order should be extended with goal's order. But we can not do it now because constantsSeq in TermOrder is unaccessible.")
       val arithOrder = goal.facts.arithConj.order
       TermGeneratorOrder.extend(arithOrder)
-      FinalConstraints.conjFormula(goal.facts.arithConj)
+      FinalConstraints.conjFormula(Internal2InputAbsy(goal.facts.arithConj))
       
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)

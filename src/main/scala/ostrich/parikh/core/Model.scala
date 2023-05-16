@@ -1,8 +1,8 @@
 package ostrich.parikh.core
 
 
-import ap.terfor.Term
 import ap.basetypes.IdealInt
+import ap.parser.ITerm
 
 object Model {
   sealed trait Value 
@@ -15,9 +15,9 @@ trait Model {
 
   val name : String
 
-  protected var model : Map[Term, Value] = Map.empty
+  protected var model : Map[ITerm, Value] = Map.empty
 
-  def update(term: Term, value: Value): Unit = model += (term -> value)
+  def update(term: ITerm, value: Value): Unit = model += (term -> value)
   
   def clear: Unit = model = Map.empty
 
@@ -31,7 +31,7 @@ trait Model {
 class OstrichModel extends Model {
   val name = "Ostrich Model"
 
-  def update(term: Term, value: IdealInt): Unit = super.update(term, IntValue(value))
+  def update(term: ITerm, value: IdealInt): Unit = super.update(term, IntValue(value))
 
-  def update(term: Term, value: Seq[Int]): Unit = super.update(term, StringValue(value))
+  def update(term: ITerm, value: Seq[Int]): Unit = super.update(term, StringValue(value))
 }
