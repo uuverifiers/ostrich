@@ -5,12 +5,8 @@ import utils
 import storage
 import voting.majority as voting
 
-import models.automatark
-import models.redos
-import models.regexlib
-import models.stackoverflow
-import models.generated.stackoverflow1
-import models.generated.stackoverflow2
+import models.automatark_len_9
+import models.generated_len_9
 import startwebserver
 
 import tools.ostrichHeuristics
@@ -19,14 +15,9 @@ import tools.ostrichHeuristics
 import summarygenerators
 
 tracks = (
-    models.generated.stackoverflow1.getTrackData() +
-    models.generated.stackoverflow2.getTrackData() +
-    # models.redos.getTrackData() +
-    # models.regexlib.getTrackData() +
-    # models.stackoverflow.getTrackData()
-    []
-)
-# tracks = testbench.getTrackData() + []
+    models.automatark_len_9.getTrackData() + 
+    models.generated_len_9.getTrackData()
+) + []
 solvers = {}
 for s in [
     tools.ostrichHeuristics,

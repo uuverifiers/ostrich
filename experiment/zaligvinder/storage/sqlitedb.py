@@ -709,7 +709,7 @@ class ResultRepository:
         crashquery = ''' SELECT COUNT(*) FROM Result ,TrackInstanceMap,Track WHERE Result.instanceid = TrackInstanceMap.instance  and TrackInstanceMap.track = Track.id and Track.bgroup = ? AND Result.solver = ? AND Result.result IS NULL AND Result.output LIKE '%SIG%' ''' ### TODO ADD VERIFIED!!!
         crashs = self._db.executeRet (crashquery, (group,solver,))[0][0]
 
-        return {"smtcalls" : smtcalls, "timeout" : timeouted, "sat" : satis, "unsat" : nsatis, "unk" : unk, "error" : errors, "invalid": invalid, "crash" : crashs, "time" : time, "total" : total, "totalWO" : totalWO, "timeWO" : timeWO}
+        return {"smtcalls" : smtcalls, "timeout" : timeouted, "sat" : satis, "unsat" : nsatis, "unk" : unk, "error" : errors, "invalid": invalid, "crash" : crashs, "time" : round(time/total/1000,2), "total" : total, "totalWO" : totalWO, "timeWO" : round(timeWO/total/1000, 2)}
 
 
 
