@@ -27,8 +27,9 @@ class BaselineSolver(val lProver: SimpleAPI)
     val regsRelation = and(constraints.map(_.getRegsRelation))
     val finalArith = and(Seq(f, regsRelation))
 
-    // p addConstantsRaw initialConstTerms
     lProver.push
+    val newConsts = SymbolCollector.constants(finalArith) &~ lProver.order.orderedConstants 
+    lProver.addConstantsRaw(newConsts)
     lProver !! finalArith
     val status = measure(
       s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

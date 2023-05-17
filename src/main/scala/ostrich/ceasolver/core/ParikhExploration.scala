@@ -20,7 +20,6 @@ import ap.util.Seqs
 import ostrich.ceasolver.preop.SubStringCEPreOp
 import ostrich.ceasolver.core.Model.{IntValue, StringValue}
 import ostrich.ceasolver.preop.IndexOfCEPreOp
-// import ostrich.parikh.core.CatraBasedSolver
 import ostrich.ceasolver.util.UnknownException
 import ostrich.ceasolver.util.TimeoutException
 import ostrich.{OFlags, Catra, Baseline, Unary}

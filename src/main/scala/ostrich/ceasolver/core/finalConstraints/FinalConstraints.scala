@@ -40,13 +40,6 @@ object FinalConstraints {
     new BaselineFinalConstraints(t, auts)
   }
 
-  def catraACs(
-      t: ITerm,
-      auts: Seq[CostEnrichedAutomatonBase]
-  ): CatraFinalConstraints = {
-    new CatraFinalConstraints(t, auts)
-  }
-
   def evalTerm(t: ITerm, model: PartialModel): IdealInt = {
     var value = evalTerm(t)(model)
     if (!value.isDefined) {
@@ -61,23 +54,6 @@ object FinalConstraints {
     case _: ITerm =>
       ParikhUtil.todo("implement eval term")
       model eval t
-    //   case c: IConstant =>
-    //     model eval c
-    //   case  =>
-    //     Some(IdealInt.ONE)
-    //   case lc: IExpression => {
-    //     val terms = for ((coeff, t) <- lc) yield (coeff, evalTerm(t)(model))
-    //     if (
-    //       terms forall {
-    //         case (_, None) => false
-    //         case _         => true
-    //       }
-    //     )
-    //       Some((for ((coeff, Some(v)) <- terms) yield (coeff * v)).sum)
-    //     else
-    //       None
-    //   }
-    // }
   }
 }
 

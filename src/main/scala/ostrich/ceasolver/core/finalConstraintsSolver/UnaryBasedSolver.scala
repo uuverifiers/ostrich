@@ -28,10 +28,6 @@ class UnaryBasedSolver(
       val res = solveUnderApprox
       if (res.isSat) return res
     }
-    // if(OstrichConfig.overApprox){
-    //   val res = solveOverApprox
-    //   if(res.isUnsat) return res
-    // }
     solveCompleteLIA
   }
 
@@ -50,10 +46,6 @@ class UnaryBasedSolver(
     result
   }
 
-  // def solveOverApprox: Result = solveFormula(
-  //   and(constraints.map(_.getOverApprox)), false
-  // )
-
   def solveCompleteLIA: Result = solveFormula(
     and(constraints.map(_.getCompleteLIA))
   )
@@ -64,8 +56,6 @@ class UnaryBasedSolver(
 
     val finalArith = f
 
-    // We must treat TermGenerator.order carefully.
-    // finalArith.order should equal to TermGenerator.order
     lProver.push
     val newConsts = SymbolCollector.constants(finalArith) &~ lProver.order.orderedConstants  
     lProver.addConstantsRaw(newConsts)
