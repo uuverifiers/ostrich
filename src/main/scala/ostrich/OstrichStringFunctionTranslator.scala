@@ -42,12 +42,12 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
-import ostrich.parikh.preop.ConcatCEPreOp
-import ostrich.parikh.preop.SubStringCEPreOp
-import ostrich.parikh.preop.IndexOfCEPreOp
-import ostrich.parikh.preop.LengthCEPreOp
-import ostrich.parikh.preop.ReplaceCEPreOp
-import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ostrich.ceasolver.preop.ConcatCEPreOp
+import ostrich.ceasolver.preop.SubStringCEPreOp
+import ostrich.ceasolver.preop.IndexOfCEPreOp
+import ostrich.ceasolver.preop.LengthCEPreOp
+import ostrich.ceasolver.preop.ReplaceCEPreOp
+import ostrich.ceasolver.automata.CostEnrichedAutomatonBase
 import ap.parser.Internal2InputAbsy
 
 /**

@@ -52,9 +52,9 @@ import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 
-import ostrich.parikh.preop.{SubStringCEPreOp, IndexOfCEPreOp}
-import ostrich.parikh.automata.BricsAutomatonWrapper
-import ostrich.parikh.ParikhExploration
+import ostrich.ceasolver.preop.{SubStringCEPreOp, IndexOfCEPreOp}
+import ostrich.ceasolver.automata.BricsAutomatonWrapper
+import ostrich.ceasolver.core.ParikhExploration
 import ap.parser.Internal2InputAbsy
 import ap.parser.ITerm
 

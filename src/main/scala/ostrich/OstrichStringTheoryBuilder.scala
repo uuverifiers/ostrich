@@ -39,7 +39,7 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
-import ostrich.parikh.core.FinalConstraints
+import ostrich.ceasolver.core.FinalConstraints
 
 /** The entry class of the Ostrich string solver.
   */

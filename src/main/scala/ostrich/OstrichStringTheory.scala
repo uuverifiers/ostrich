@@ -52,9 +52,9 @@ import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
-import ostrich.parikh.OstrichCostEnrichEncoder
-import ostrich.parikh.core.FinalConstraints
-import ostrich.parikh.ParikhUtil
+import ostrich.ceasolver.preprocess.OstrichCostEnrichEncoder
+import ostrich.ceasolver.core.FinalConstraints
+import ostrich.ceasolver.util.ParikhUtil
 import ap.parser.Internal2InputAbsy
 
 object OstrichStringTheory {

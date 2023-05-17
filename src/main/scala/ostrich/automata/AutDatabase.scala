@@ -37,7 +37,7 @@ import ostrich.OstrichStringTheory
 import ap.parser._
 
 import scala.collection.mutable.{HashMap => MHashMap}
-import ostrich.parikh.automata.Regex2CEAut
+import ostrich.ceasolver.automata.Regex2CEAut
 
 object AutDatabase {
 
