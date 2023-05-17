@@ -1,0 +1,6 @@
+/.bloop/
+/.metals/
+/target/
+*.swo
+*.swp
+/.bsp
