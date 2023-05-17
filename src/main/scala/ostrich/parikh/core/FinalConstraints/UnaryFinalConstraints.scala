@@ -68,8 +68,6 @@ class UnaryFinalConstraints(
     }
     val registers = aut.registers
 
-    import ostrich.parikh.TermGeneratorOrder.order
-
     val r1Formula = or(
       for (
         j <- lowerBound until globalS.size;

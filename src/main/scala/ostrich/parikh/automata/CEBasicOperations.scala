@@ -8,8 +8,6 @@ import scala.collection.mutable.{
   ArrayBuffer,
   ArrayStack
 }
-import ostrich.parikh.RegisterTerm
-import ostrich.parikh.TermGeneratorOrder.order
 import ap.terfor.conjunctions.Conjunction
 import dk.brics.automaton.BasicAutomata
 import ap.parser.ITerm
@@ -21,8 +19,11 @@ import scala.collection.JavaConverters._
 import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IExpression
+import ostrich.parikh.TermGenerator
 
 object CEBasicOperations {
+
+  private val termGen = TermGenerator(hashCode())
 
   def toBricsAutomaton(aut: CostEnrichedAutomatonBase):BAutomaton = aut match {
     case a: BricsAutomatonWrapper => a.underlying
@@ -85,7 +86,7 @@ object CEBasicOperations {
       }
       if (f == Conjunction.FALSE) {
         // all value of initialOutVecs are 0
-        newRegisters += RegisterTerm()
+        newRegisters += termGen.registerTerm
         f = newRegisters.last >= 1
       }
       aut2newRegIdx += (aut -> (newRegisters.size - 1))
@@ -310,7 +311,7 @@ object CEBasicOperations {
     if (max == 0)
       return new BricsAutomatonWrapper(BasicAutomata.makeEmptyString())
     val ceAut = new CostEnrichedAutomaton
-    val newRegister = RegisterTerm()
+    val newRegister = termGen.registerTerm
     ParikhUtil.addCountingRegister(newRegister)
     val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
     ceAut.initialState = old2new(aut.initialState)

@@ -1,6 +1,5 @@
 package ostrich.parikh.core
 
-import ostrich.parikh.TermGeneratorOrder.order
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
 import ap.terfor.ConstantTerm
@@ -8,37 +7,22 @@ import ap.terfor.OneTerm
 import ap.terfor.conjunctions.Conjunction
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression
-import ostrich.parikh.TransitionTerm
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
   HashSet => MHashSet
 }
-import ostrich.parikh.ZTerm
 import ostrich.OFlags
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IConstant
 import ostrich.parikh.ParikhUtil
+import ostrich.parikh.TermGenerator
 
 object FinalConstraints {
 
-  private var finalLIA = IExpression.Boolean2IFormula(true)
-
-  private var str2IntList = Seq[(IExpression, IExpression, Int)]()
-
-  def apply() = finalLIA
-
-  def reset() = {
-    finalLIA = IExpression.Boolean2IFormula(true)
-    str2IntList = Seq[(IExpression, IExpression, Int)]()
-  }
-
-  def conjFormula(f: IFormula) = finalLIA = and(Seq(finalLIA, f))
-
-  def addStr2IntPred(str: IExpression, int: IExpression, strlen: Int) =
-    str2IntList = str2IntList :+ (str, int, strlen)
+  private val termGen = TermGenerator(hashCode())
 
   def unaryHeuristicACs(
       t: ITerm,
@@ -124,7 +108,7 @@ trait FinalConstraints {
 
   def getCompleteLIA(aut: CostEnrichedAutomatonBase): IFormula = {
     lazy val transtion2Term =
-      aut.transitionsWithVec.map(t => (t, TransitionTerm())).toMap
+      aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
     def outFlowTerms(from: State): Seq[ITerm] = {
       val outFlowTerms: ArrayBuffer[ITerm] = new ArrayBuffer
       aut.outgoingTransitionsWithVec(from).foreach { case (to, lbl, vec) =>
@@ -141,7 +125,7 @@ trait FinalConstraints {
       inFlowTerms.toSeq
     }
 
-    val zTerm = aut.states.map((_, ZTerm())).toMap
+    val zTerm = aut.states.map((_, termGen.zTerm)).toMap
 
     val preStatesWithTTerm = new MHashMap[State, MHashSet[(State, ITerm)]]
     for ((from, lbl, to, vec) <- aut.transitionsWithVec) {

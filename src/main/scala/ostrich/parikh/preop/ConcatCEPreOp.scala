@@ -3,7 +3,6 @@ package ostrich.parikh.preop
 import ostrich.automata.Automaton
 import ostrich.parikh.CostEnrichedConvenience._
 import ostrich.parikh.automata.CostEnrichedInitFinalAutomaton
-import ostrich.parikh.TermGeneratorOrder._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression._
 

@@ -4,7 +4,6 @@ import ostrich.automata.Automaton
 import ap.terfor.linearcombination.LinearCombination
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import scala.collection.mutable.ArrayBuffer
-import ostrich.parikh.TermGeneratorOrder.order
 import ostrich.parikh.automata.BricsAutomatonWrapper.{
   makeAnyString,
   fromString,
@@ -13,7 +12,6 @@ import ostrich.parikh.automata.BricsAutomatonWrapper.{
 import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
 import ostrich.parikh.automata.BricsAutomatonWrapper
 import LengthCEPreOp.lengthPreimage
-import ostrich.parikh.LenTerm
 import ostrich.parikh.automata.CEBasicOperations.{
   concatenate,
   complement,
@@ -22,6 +20,7 @@ import ostrich.parikh.automata.CEBasicOperations.{
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IIntLit
+import ostrich.parikh.TermGenerator
 
 object IndexOfCEPreOp {
   def apply(startPos: ITerm, index: ITerm, matchStr: String) =
@@ -38,6 +37,8 @@ object IndexOfCEPreOp {
   */
 class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     extends CEPreOp {
+
+  private val termGen = TermGenerator(hashCode())
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
@@ -120,7 +121,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
           automatonWithLenLessThan(value.intValueSafe)
       }
       case _ => {
-        val searchedStrLen = LenTerm()
+        val searchedStrLen = termGen.lenTerm
         val smallerThanStartPos = lengthPreimage(searchedStrLen)
         smallerThanStartPos.regsRelation = and(Seq(
           smallerThanStartPos.regsRelation,
@@ -140,7 +141,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       }
 
       case _ => {
-        val searchedStrLen = LenTerm()
+        val searchedStrLen = termGen.lenTerm
         val largerThanStartPos = lengthPreimage(searchedStrLen)
         largerThanStartPos.regsRelation = and(Seq(
           largerThanStartPos.regsRelation,

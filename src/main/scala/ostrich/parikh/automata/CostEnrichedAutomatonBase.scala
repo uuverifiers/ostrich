@@ -14,7 +14,6 @@ import scala.collection.mutable.ArrayStack
 import java.time.LocalDate
 import ostrich.parikh.writer.DotWriter
 import dk.brics.automaton.{State => BState}
-import ostrich.parikh.TermGeneratorOrder.order
 import dk.brics.automaton.BasicOperations
 import CEBasicOperations.toBricsAutomaton
 import java.io.File

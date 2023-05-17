@@ -1,6 +1,5 @@
 package ostrich.parikh.automata
 
-import ostrich.parikh.RegisterTerm
 import scala.collection.mutable.{
   HashMap => MHashMap,
   ArrayStack,
@@ -9,13 +8,16 @@ import scala.collection.mutable.{
 }
 
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
+import ostrich.parikh.TermGenerator
 
 abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
     val underlying: A
 ) extends CostEnrichedAutomatonBase {
 
+  val termGen = TermGenerator(hashCode())
+
   // initialize registers
-  this.registers = Seq.fill(underlying.registers.size)(RegisterTerm())
+  this.registers = Seq.fill(underlying.registers.size)(termGen.registerTerm)
 
   def computeReachableStates(
       initState: State,

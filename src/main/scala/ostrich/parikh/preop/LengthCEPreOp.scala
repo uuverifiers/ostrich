@@ -5,8 +5,12 @@ import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh._
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
+import ostrich.parikh.TermGenerator
 
 object LengthCEPreOp {
+
+  private val termGen = TermGenerator(hashCode())
+
   def apply(length: ITerm): LengthCEPreOp = new LengthCEPreOp(length)
 
   def lengthPreimage(length: ITerm) : CostEnrichedAutomatonBase = {
@@ -22,9 +26,8 @@ object LengthCEPreOp {
     )
     preimage.setAccept(initalState, true)
     // registers: (r0)
-    preimage.registers = Seq(RegisterTerm())
+    preimage.registers = Seq(termGen.registerTerm)
     // intFormula : r0 === `length`
-    import ostrich.parikh.TermGeneratorOrder._
     preimage.regsRelation = length === preimage.registers(0)
     preimage
   }

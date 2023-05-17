@@ -4,15 +4,13 @@ import ostrich.automata.Automaton
 import ostrich.parikh.automata.CostEnrichedAutomaton
 import ostrich.parikh.automata.BricsAutomatonWrapper
 import ostrich.parikh.automata.CostEnrichedAutomatonBase
-import ostrich.parikh.RegisterTerm
-import ostrich.parikh.TermGeneratorOrder._
 import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
 import ostrich.parikh.automata.CEBasicOperations.{intersection, concatenate}
-import ostrich.parikh.LenTerm
 import ostrich.automata.BricsAutomaton
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IIntLit
+import ostrich.parikh.TermGenerator
 
 object SubStringCEPreOp {
   def apply(beginIdx: ITerm, length: ITerm) =
@@ -26,6 +24,9 @@ object SubStringCEPreOp {
   *   the max length of subtring
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
+
+  private val termGen = TermGenerator(hashCode())
+
   override def toString(): String =
     "subStringCEPreOp"
 
@@ -48,7 +49,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
           automatonWithLenLessThan(value.intValueSafe)
         }
         case _ => {
-          val searchedStrLen = LenTerm()
+          val searchedStrLen = termGen.lenTerm
           val preimage = LengthCEPreOp.lengthPreimage(searchedStrLen)
           preimage.regsRelation = and(Seq(
             preimage.regsRelation,
@@ -99,7 +100,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         )
       }
       case _ => {
-        val smallLen = LenTerm()
+        val smallLen = termGen.lenTerm
         val smallLenSuffix = intersection(
           LengthCEPreOp.lengthPreimage(smallLen),
           res

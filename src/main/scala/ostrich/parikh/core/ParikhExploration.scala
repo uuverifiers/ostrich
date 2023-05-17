@@ -26,13 +26,13 @@ import ostrich.parikh.core.BaselineSolver
 import ostrich.parikh.util.UnknownException
 import ostrich.parikh.util.TimeoutException
 import ostrich.{OFlags, Catra, Baseline, Unary}
-import ostrich.parikh.{IntTerm}
 import ostrich.parikh.core.FinalConstraints
 import ap.terfor.linearcombination.LinearCombination
 import ap.parser.ITerm
 import ap.parser.InputAbsy2Internal
 import ap.terfor.Term
 import ap.terfor.TermOrder
+import ostrich.parikh.TermGenerator
 
 object ParikhExploration {
 
@@ -97,9 +97,13 @@ class ParikhExploration(
     funApps: Seq[(PreOp, Seq[ITerm], ITerm)],
     initialConstraints: Seq[(ITerm, Automaton)],
     strDatabase: StrDatabase,
-    flags: OFlags
+    flags: OFlags,
+    lProver: SimpleAPI
 ) {
+
   import ParikhExploration._
+
+  private val termGen = TermGenerator(hashCode())
 
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
@@ -114,14 +118,14 @@ class ParikhExploration(
       strTerms += t
     val newFunApps = funApps.map {
       case (op: LengthCEPreOp, Seq(str), length) => {
-        val frashInt = IntTerm()
+        val frashInt = termGen.intTerm
         freshIntTerm2orgin += (frashInt -> length)
         strTerms += str
         (op, Seq(str), frashInt)
       }
       case (op: SubStringCEPreOp, Seq(str, start, length), subStr) => {
-        val frashInt1 = IntTerm()
-        val frashInt2 = IntTerm()
+        val frashInt1 = termGen.intTerm
+        val frashInt2 = termGen.intTerm
         freshIntTerm2orgin += (frashInt1 -> start)
         freshIntTerm2orgin += (frashInt2 -> length)
         strTerms += str
@@ -129,8 +133,8 @@ class ParikhExploration(
         (op, Seq(str, frashInt1, frashInt2), subStr)
       }
       case (op: IndexOfCEPreOp, Seq(str, subStr, start), index) => {
-        val frashInt1 = IntTerm()
-        val frashInt2 = IntTerm()
+        val frashInt1 = termGen.intTerm
+        val frashInt2 = termGen.intTerm
         freshIntTerm2orgin += (frashInt1 -> start)
         freshIntTerm2orgin += (frashInt2 -> index)
         strTerms += str
@@ -280,8 +284,8 @@ class ParikhExploration(
         val backendSolver =
           flags.backend match {
             // case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
-            case Baseline() => new BaselineSolver
-            case Unary()    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap)
+            case Baseline() => new BaselineSolver(lProver)
+            case Unary()    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)

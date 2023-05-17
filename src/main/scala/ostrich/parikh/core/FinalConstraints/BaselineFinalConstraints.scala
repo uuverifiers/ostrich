@@ -14,7 +14,6 @@ class BaselineFinalConstraints(
 
   val interestTerms: Seq[ITerm] = auts.flatMap(_.registers)
 
-  import ostrich.parikh.TermGeneratorOrder.order
   def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
 
   def getModel: Option[Seq[Int]] = {

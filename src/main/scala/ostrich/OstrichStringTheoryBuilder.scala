@@ -39,7 +39,6 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
-import ostrich.parikh.TermGeneratorOrder
 import ostrich.parikh.core.FinalConstraints
 
 /** The entry class of the Ostrich string solver.
@@ -49,10 +48,6 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   val name = "OSTRICH"
   val version = "1.2.1"
   
-  // reset global variable
-  TermGeneratorOrder.reset
-  FinalConstraints.reset
-
   Console.withOut(Console.err) {
     println
     println(

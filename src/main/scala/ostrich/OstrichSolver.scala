@@ -312,7 +312,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
-        if (useLength) {
+        if (useLength || flags.useCostEnriched) {
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
@@ -340,7 +340,7 @@ class OstrichSolver(theory : OstrichStringTheory,
             (Internal2InputAbsy(t), aut)
         }
 
-        val approxExp = new ParikhExploration(inputFuns, inputRegexes, strDatabase, flags)
+        val approxExp = new ParikhExploration(inputFuns, inputRegexes, strDatabase, flags, lProver.get)
         approxExp.findModel
       } else {
         val exploration =
