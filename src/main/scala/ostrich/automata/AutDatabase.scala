@@ -65,7 +65,7 @@ class AutDatabase(theory : OstrichStringTheory,
 
   import AutDatabase._
 
-  private val regex2Aut  = new Regex2Aut(theory)
+  val regex2Aut  = new Regex2Aut(theory)
 
   private var nextId     = 0
 

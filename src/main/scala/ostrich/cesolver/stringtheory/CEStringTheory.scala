@@ -26,6 +26,8 @@ import ostrich.cesolver.util.ParikhUtil
 import ap.parser.Internal2InputAbsy
 import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
 import ostrich.OstrichEqualityPropagator
+import ostrich.automata.AutDatabase
+import ostrich.cesolver.automata.CEAutDatabase
 
 object CEStringTheory {
   val alphabetSize = 0x10000
@@ -35,11 +37,13 @@ object CEStringTheory {
 
 /** The entry class of the Ostrich string solver.
   */
-class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags) extends OstrichStringTheory(transducers, flags) {
-  StringSort setTheory this
+class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
+    extends OstrichStringTheory(transducers, flags) {
 
   private val ceSolver = new CESolver(this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
+
+  lazy val ceAutDatabase = new CEAutDatabase(this, flags.minimizeAutomata)
 
   override def plugin = Some(new Plugin {
 
@@ -72,11 +76,11 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags) exte
           try { //  Console.withOut(Console.err)
             // nielsenSplitter.splitEquation elseDo
             //   predToEq.lazyEnumeration elseDo
-              callBackwardProp(goal)
+            callBackwardProp(goal)
 
           } catch {
             case t: ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
+            case t: Throwable       => { t.printStackTrace; throw t }
           }
 
       }

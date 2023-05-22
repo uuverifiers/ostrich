@@ -111,7 +111,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
 
   private val p = theory.functionPredicateMap
 
-  private val autDatabase = theory.autDatabase
+  private val autDatabase = theory.ceAutDatabase
 
   def findStringModel(
       goal: Goal
