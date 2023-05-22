@@ -30,7 +30,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.cesolver.stringtheory
 
 import ostrich.automata.{Regex2PFA, JavascriptPrioAutomatonBuilder,
                          AtomicStateAutomaton, BricsTransducer}
@@ -42,17 +42,25 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
+import ostrich.cesolver.preop.ConcatCEPreOp
+import ostrich.cesolver.preop.SubStringCEPreOp
+import ostrich.cesolver.preop.IndexOfCEPreOp
+import ostrich.cesolver.preop.LengthCEPreOp
+import ostrich.cesolver.preop.ReplaceCEPreOp
+import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ap.parser.Internal2InputAbsy
 
 /**
  * Class for mapping string constraints to string functions.
  */
-class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
+class CEStringFunctionTranslator(theory : CEStringTheory,
                                       facts : Conjunction) {
   import theory.{FunPred, strDatabase, autDatabase,
                  str_++, str_at, str_at_right, str_trim,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere,
-                 str_replaceallcg, str_replacecg, str_extract}
+                 str_replaceallcg, str_replacecg, str_extract,
+                 str_substr_cea, str_indexof_cea, str_len_cea, str_concate_cea, str_replace_cea}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
   private val cgTranslator   = new Regex2PFA(theory,
@@ -73,69 +81,30 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
      yield FunPred(f)) ++ theory.transducerPreOps.keys
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
-    case FunPred(`str_++`) =>
-      Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
-    case FunPred(`str_replaceall`) if strDatabase isConcrete a(1) => {
-      val op = () => {
-        val b = strDatabase term2ListGet a(1)
-        ReplaceAllPreOp(b map (_.toChar))
-      }
-      Some((op, List(a(0), a(2)), a(3)))
-    }
-    case FunPred(`str_replace`) if strDatabase isConcrete a(1) => {
-      val op = () => {
-        val b = strDatabase term2ListGet a(1)
-        ReplacePreOp(b map (_.toChar))
-      }
-      Some((op, List(a(0), a(2)), a(3)))
-    }
-    case FunPred(`str_replaceallre`) =>
-      for (regex <- regexAsTerm(a(1))) yield {
-        val op = () => {
-          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-          ReplaceAllPreOp(aut)
-        }
-        (op, List(a(0), a(2)), a(3))
-      }
-    case FunPred(`str_replacere`) =>
-      for (regex <- regexAsTerm(a(1))) yield {
-        val op = () => {
-          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-          ReplacePreOp(aut)
-        }
-        (op, List(a(0), a(2)), a(3))
-      }
-    case FunPred(`str_replaceallcg`) =>
-      for (pat <- regexAsTerm(a(1));
-           rep <- regexAsTerm(a(2))) yield {
-        val op = () => {
-          val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
-          ReplaceAllCGPreOp(info, repStr)
-        }
-        (op, List(a(0)), a(3))
-      }
-    case FunPred(`str_replacecg`) =>
-      for (pat <- regexAsTerm(a(1));
-           rep <- regexAsTerm(a(2))) yield {
-        val op = () => {
-          val (info, repStr) = cgTranslator.buildReplaceInfo(pat, rep)
-          ReplaceCGPreOp(info, repStr)
-        }
-        (op, List(a(0)), a(3))
-      }
-    case FunPred(`str_extract`) =>
-      for (regex <- regexAsTerm(a(2))) yield {
-        val op = () => {
-          val index = a(0) match {
-            case LinearCombination.Constant(IdealInt(v)) => v
-            case _ => throw new IllegalArgumentException("Not an integer")
-          }
-          val (newindex, info) = cgTranslator.buildExtractInfo(index, regex)
-          ExtractPreOp(newindex, info)
-        }
-        (op, List(a(1)), a(3))
-      }
 
+    case FunPred(`str_len_cea`) => 
+      Some((() => LengthCEPreOp(Internal2InputAbsy(a(1))), Seq(a(0)), a(1)))
+    case FunPred(`str_concate_cea`) =>
+      Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
+    case FunPred(`str_substr_cea`) =>
+      Some((() => SubStringCEPreOp(Internal2InputAbsy(a(1)), Internal2InputAbsy(a(2))), Seq(a(0), a(1), a(2)), a(3)))
+    case FunPred(`str_indexof_cea`) if strDatabase isConcrete a(1) =>
+      val matchStr = strDatabase term2ListGet a(1)
+      Some((() => IndexOfCEPreOp(Internal2InputAbsy(a(2)), Internal2InputAbsy(a(3)), matchStr.map(_.toChar).mkString), Seq(a(0), a(1), a(2)), a(3)))
+    case FunPred(`str_replace_cea`) if strDatabase isConcrete a(2) =>
+      val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
+      if (strDatabase isConcrete a(1)){
+        val patternStr = strDatabase term2ListGet a(1) map(_.toChar)
+        Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0), a(1), a(2)), a(3)))
+      } else {
+        for (regex <- regexAsTerm(a(1))) yield {
+          val op = () => {
+            val aut = autDatabase.regex2Automaton(regex).asInstanceOf[CostEnrichedAutomatonBase]
+            ReplaceCEPreOp(aut, matchStr)
+          }
+          (op, List(a(0), a(1), a(2)), a(3))
+        }
+      }
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)

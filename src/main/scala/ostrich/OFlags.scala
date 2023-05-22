@@ -49,7 +49,6 @@ object OFlags {
 sealed trait Backend
 case class Baseline() extends Backend
 case class Unary() extends Backend
-case class Catra() extends Backend
 
 case class OFlags(
     // Pre-image specific options

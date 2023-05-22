@@ -38,40 +38,31 @@ import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
-import ap.theories.TheoryBuilder
-import ostrich.ceasolver.core.FinalConstraints
 
-/** The entry class of the Ostrich string solver.
-  */
+/**
+ * The entry class of the Ostrich string solver.
+ */
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
   val version = "1.2.1"
-  
+
   Console.withOut(Console.err) {
     println
-    println(
-      "Loading " + name + " " + version +
-        ", a solver for string constraints"
-    )
-    println("(c)Denghang Hu, Matthew Hague, Philipp Rümmer, 2018-2023")
-    println(
-      "With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf."
-    )
+    println("Loading " + name + " " + version +
+              ", a solver for string constraints")
+    println("(c) Matthew Hague, Philipp Rümmer, 2018-2022")
+    println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
   }
 
-  def setAlphabetSize(w: Int): Unit = ()
+  def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug = false
-  private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
-  private var backend: Backend = Unary()
-  private var underApprox, simplifyAut = true
-  private var underApproxBound = 15
+  private var eager, forward, minimizeAuts, useParikh = false
+  private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
-  // TODO: add more command line arguments
-  override def parseParameter(str: String): Unit = str match {
+  override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
       eager = value
     case CmdlParser.Opt("minimizeAutomata", value) =>
@@ -86,40 +77,20 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forward = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
-
-    // Options for cost-enriched-automata based solver
-    case CmdlParser.Opt("simplify-aut", value) =>
-      simplifyAut = value
-    case CmdlParser.Opt("costenriched", value) =>
-      useCostEnriched = value
-    case CmdlParser.Opt("under-approx", value) =>
-      underApprox = value
-    case CmdlParser.Opt("debug", value) => 
-      debug = value
-    case CmdlParser.ValueOpt("backend", "baseline") =>
-      backend = Baseline()
-    case CmdlParser.ValueOpt("backend", "unary") =>
-      backend = Unary()
-    case CmdlParser.ValueOpt("backend", "catra") =>
-      backend = Catra()
-    case CmdlParser.ValueOpt("under-approx-bound", value) =>
-      underApproxBound = value.toInt
-    // ignore")
     case str =>
-      println("Parameter " + str + " is not supported by theory " + name + "\n")
-      System.exit(1)
+      super.parseParameter(str)
   }
 
   import StringTheoryBuilder._
   import ap.parser._
   import IExpression._
 
-  lazy val getTransducerTheory: Option[StringTheory] =
+  lazy val getTransducerTheory : Option[StringTheory] =
     Some(SeqStringTheory(OstrichStringTheory.alphabetSize))
 
   private val transducers = new ArrayBuffer[(String, SymTransducer)]
 
-  def addTransducer(name: String, transducer: SymTransducer): Unit = {
+  def addTransducer(name : String, transducer : SymTransducer) : Unit = {
     assert(!createdTheory)
     transducers += ((name, transducer))
   }
@@ -133,29 +104,17 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       for ((name, transducer) <- transducers) yield {
         Console.err.println("Translating transducer " + name + " ...")
         val aut = TransducerTranslator.toBricsTransducer(
-          transducer,
-          OstrichStringTheory.alphabetSize,
-          getTransducerTheory.get
-        )
+                    transducer, OstrichStringTheory.alphabetSize,
+                    getTransducerTheory.get)
         (name, aut)
       }
 
-    new OstrichStringTheory(
-      symTransducers.toSeq,
-      OFlags(
-        eagerAutomataOperations = eager,
-        useLength = useLen,
-        useParikhConstraints = useParikh,
-        forwardApprox = forward,
-        minimizeAutomata = minimizeAuts,
-        backend = backend,
-        useCostEnriched = useCostEnriched,
-        debug = debug,
-        underApprox = underApprox,
-        underApproxBound = underApproxBound,
-        simplifyAut = simplifyAut
-      )
-    )
+    new OstrichStringTheory (symTransducers,
+                             OFlags(eagerAutomataOperations = eager,
+                                    useLength               = useLen,
+                                    useParikhConstraints    = useParikh,
+                                    forwardApprox           = forward,
+                                    minimizeAutomata        = minimizeAuts))
   }
 
 }
