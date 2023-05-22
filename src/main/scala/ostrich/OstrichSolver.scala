@@ -52,12 +52,6 @@ import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 
-import ostrich.cesolver.preop.{SubStringCEPreOp, IndexOfCEPreOp}
-import ostrich.cesolver.automata.BricsAutomatonWrapper
-import ostrich.cesolver.core.ParikhExploration
-import ap.parser.Internal2InputAbsy
-import ap.parser.ITerm
-
 object OstrichSolver {
 
   /**
@@ -227,47 +221,29 @@ class OstrichSolver(theory : OstrichStringTheory,
       import TerForConvenience._
       implicit val o = order
 
-      val strCostsInFun = ArrayBuffer[Term]()
-      funApps.foreach{
-        case (_: SubStringCEPreOp, args, res) => {
-          strCostsInFun ++= args(0).constants ++ res.constants
-        }
-        case (_: IndexOfCEPreOp, args, _) => {
-          strCostsInFun ++=  args(0).constants ++ args(1).constants 
-        }
-        case (_, args, res) => {
-          for (t <- args.iterator ++ Iterator(res)) 
-            strCostsInFun ++= t.constants
-        }
-      }
-
       val stringConstants =
         ((for ((t, _) <- regexes.iterator;
                c <- t.constants.iterator) yield c) ++
-         strCostsInFun.iterator ++
+         (for ((_, args, res) <- funApps.iterator;
+               t <- args.iterator ++ Iterator(res);
+               c <- t.constants.iterator) yield c) ++
          (for (a <- (atoms positiveLitsWithPred p(str_len)).iterator;
                c <- a(0).constants.iterator) yield c)).toSet
       val lengthConstants =
-        (for (
-          t <- lengthVars.values.iterator;
-          c <- t.constants.iterator
-        ) yield c).toSet
+        (for (t <- lengthVars.values.iterator;
+              c <- t.constants.iterator) yield c).toSet
 
       for (lc <- goal.facts.arithConj.negativeEqs) lc match {
-        case Seq((IdealInt.ONE, c: ConstantTerm))
+        case Seq((IdealInt.ONE, c : ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
           val str = strDatabase id2Str 0
-          val negAut = if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
-              else !(BricsAutomaton fromString str)
-          regexes += ((l(c), negAut))
+          regexes += ((l(c), !(BricsAutomaton fromString str)))
         }
-        case Seq((IdealInt.ONE, c: ConstantTerm), (IdealInt(coeff), OneTerm))
+        case Seq((IdealInt.ONE, c : ConstantTerm), (IdealInt(coeff), OneTerm))
             if (stringConstants contains c) &&
-              (strDatabase containsId -coeff) => {
+               (strDatabase containsId -coeff) => {
           val str = strDatabase id2Str -coeff
-          val negAut = if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
-              else !(BricsAutomaton fromString str)
-          regexes += ((l(c), negAut))
+          regexes += ((l(c), !(BricsAutomaton fromString str)))
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>
           // nothing
@@ -289,30 +265,26 @@ class OstrichSolver(theory : OstrichStringTheory,
         for ((t, _) <- regexes)
           regexCoveredTerms += t
 
-        val anyString = if (flags.useCostEnriched) BricsAutomatonWrapper.makeAnyString()
-            else BricsAutomaton.makeAnyString()
         for ((c, d) <- negEqs) {
           if (regexCoveredTerms add c)
-            regexes += ((l(c), anyString))
+            regexes += ((l(c), BricsAutomaton.makeAnyString()))
           if (regexCoveredTerms add d)
-            regexes += ((l(d), anyString))
+            regexes += ((l(d), BricsAutomaton.makeAnyString()))
         }
       }
     }
 
     val interestingTerms =
       ((for ((t, _) <- regexes.iterator) yield t) ++
-        (for (
-          (_, args, res) <- funApps.iterator;
-          t <- args.iterator ++ Iterator(res)
-        ) yield t)).toSet
+       (for ((_, args, res) <- funApps.iterator;
+             t <- args.iterator ++ Iterator(res)) yield t)).toSet
 
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
 
     SimpleAPI.withProver { lengthProver =>
       val lProver =
-        if (useLength || flags.useCostEnriched) {
+        if (useLength) {
           lengthProver setConstructProofs true
           lengthProver.addConstantsRaw(order sort order.orderedConstants)
 
@@ -320,45 +292,25 @@ class OstrichSolver(theory : OstrichStringTheory,
 
           for (t <- interestingTerms)
             lengthVars.getOrElseUpdate(
-              t,
-              lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
-            )
+              t, lengthProver.createConstantRaw("" + t + "_len", Sort.Nat))
 
           import TerForConvenience._
           implicit val o = lengthProver.order
+
           Some(lengthProver)
-        } else
+        } else {
           None
-
-      val result = if (flags.useCostEnriched){
-        val inputFuns = funApps.map{
-          case (op, args, result) => 
-            (op, args.map(Internal2InputAbsy(_)), Internal2InputAbsy(result))
-        }
-        val inputRegexes = regexes.map{
-          case (t, aut) =>
-            (Internal2InputAbsy(t), aut)
         }
 
-        val approxExp = new ParikhExploration(inputFuns, inputRegexes, strDatabase, flags, lProver.get)
-        approxExp.findModel
-      } else {
-        val exploration =
+      val exploration =
         if (eagerMode)
-          Exploration.eagerExp(
-            funApps.toSeq,
-            regexes.toSeq,
-            strDatabase,
-            lProver,
-            lengthVars.toMap,
-            useLength,
-            flags
-          )
+          Exploration.eagerExp(funApps, regexes, strDatabase,
+                               lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
+          Exploration.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
-        exploration.findModel
-      }
+
+      val result = exploration.findModel
 
       ////////////////////////////////////////////////////////////////////////////
       // Verify that the result satisfies all constraints that could

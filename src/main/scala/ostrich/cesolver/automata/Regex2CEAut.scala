@@ -142,18 +142,4 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     }
   }
 
-  override def buildAutBeComplemented(t: ITerm, minimize: Boolean): Automaton = {
-    /// We can not complement a cost-enriched automaton. So we unwind it to be a NFA
-    try {
-      val a = toCEAutomaton(t, true)
-      a
-    } catch {
-      case e: Exception => {
-        println("Error in building automaton for " + t)
-        e.printStackTrace()
-        throw e
-      }
-    }
-  }
-
 }

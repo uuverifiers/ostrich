@@ -86,3 +86,4 @@ lazy val root = (project in file(".")).
     libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
   )
 
+

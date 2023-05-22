@@ -83,6 +83,4 @@ object OstrichMain {
   def main(args: Array[String]) : Unit =
     ap.CmdlMain.main((options ++ args).toArray)
 
-  ap.CmdlMain.stackTraces = true          
-  
 }
