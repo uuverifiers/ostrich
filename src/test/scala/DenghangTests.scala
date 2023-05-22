@@ -1,6 +1,7 @@
 import ap.CmdlMain
 import ap.DialogUtil.asString
 import org.scalacheck.Properties
+import ostrich.cesolver.CEMain
 
 object DenghangTests extends Properties("DenghangTests") {
 
@@ -29,35 +30,15 @@ object DenghangTests extends Properties("DenghangTests") {
       extractOpts: String*
   ): Boolean =
     expectResult(result) {
-      CmdlMain.doMain(
+      CEMain.main(
         (List(
           "+assert",
           "-timeout=" + timeout,
-          "-stringSolver=ostrich.OstrichStringTheory:+costenriched,-backend=unary",
           filename
-        ) ++ extractOpts).toArray,
-        false
+        ) ++ extractOpts).toArray
       )
     }
 
-  def checkFileOpts(
-      filename: String,
-      result: String,
-      ostrichOpts: String,
-      extractOpts: String*
-  ): Boolean =
-    expectResult(result) {
-      CmdlMain.doMain(
-        (List(
-          "+assert",
-          "-timeout=" + timeout,
-          "-stringSolver=ostrich.OstrichStringTheory:+costenriched,-backend=unary" +
-            ostrichOpts,
-          filename
-        ) ++ extractOpts).toArray,
-        false
-      )
-    }
 
   // integration tests for length
   property("length_sat.smt2") =
