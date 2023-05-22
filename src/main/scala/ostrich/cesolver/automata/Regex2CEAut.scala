@@ -125,7 +125,6 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
         repeatUnwind(toCEAutomaton(t, true), 1)
 
       case _ => BricsAutomatonWrapper(toBAutomaton(t, true))
-
     }
 
   override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
