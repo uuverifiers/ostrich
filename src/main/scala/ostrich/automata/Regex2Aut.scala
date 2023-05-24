@@ -239,7 +239,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.strDatabase.EncodedString
 
-  private def toBAutomaton(t : ITerm,
+  protected def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
                  Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
@@ -556,7 +556,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     toBAutomaton(t, true)
 
   def buildAut(t : ITerm,
-               minimize : Boolean = true) : AtomicStateAutomaton =
+               minimize : Boolean = true) : Automaton =
     new BricsAutomaton(toBAutomaton(t, minimize))
 
   private def numToUnicode(num : Int) : String =

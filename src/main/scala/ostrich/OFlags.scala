@@ -38,23 +38,30 @@ object OFlags {
     val Off, On, Auto = Value
   }
 
-  /**
-   * Compile-time flag that can be used to switch on debugging output
-   * throughout the theory.
-   */
+  /** Compile-time flag that can be used to switch on debugging output
+    * throughout the theory.
+    */
   protected[ostrich] val debug = false
 
+  val timeout = 60000
 }
 
+sealed trait Backend
+case class Baseline() extends Backend
+case class Unary() extends Backend
+
 case class OFlags(
-
-  // Pre-image specific options
-  eagerAutomataOperations : Boolean = false,
-  measureTimes            : Boolean = false,
-  useLength               : OFlags.LengthOptions.Value =
-                              OFlags.LengthOptions.Auto,
-  useParikhConstraints    : Boolean = true,
-  forwardApprox           : Boolean = false,
-  minimizeAutomata        : Boolean = false  
-
+    // Pre-image specific options
+    eagerAutomataOperations: Boolean = false,
+    measureTimes: Boolean = false,
+    useLength: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto,
+    useParikhConstraints: Boolean = true,
+    forwardApprox: Boolean = false,
+    minimizeAutomata: Boolean = false,
+    backend: Backend = Unary(),
+    useCostEnriched: Boolean = false,
+    debug: Boolean = false,
+    underApprox: Boolean = true,
+    underApproxBound: Int = 15,
+    simplifyAut: Boolean = true
 )

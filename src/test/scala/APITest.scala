@@ -108,4 +108,15 @@ object APITest extends Properties("APITest") {
       ??? == ProverStatus.Sat
     }}
 
+  property("integer") = 
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+          import p._
+          val i = createConstant("i")
+          val j = createConstant("j")
+          !! (i === j)
+          ??? == ProverStatus.Sat
+      }
+    }
+
 }

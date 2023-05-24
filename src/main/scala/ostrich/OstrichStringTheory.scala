@@ -181,6 +181,22 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_extract =
     new MonoSortedIFunction("str.extract", List(Integer, SSo, RSo), SSo,
                             true, false)
+  
+  // cesolver functions
+  val str_len_cea =
+    new MonoSortedIFunction("str.len_cea", List(SSo), Integer, true, false)
+
+  val str_concate_cea =
+    new MonoSortedIFunction("str.concate_cea", List(SSo, SSo), SSo, true, false)
+
+  val str_indexof_cea =
+    new MonoSortedIFunction("str.indexof_cea", List(SSo, SSo, Integer), Integer, true, false)
+  val str_substr_cea =
+    new MonoSortedIFunction("str.substr_cea", List(SSo, Integer, Integer), SSo, true, false)
+  val str_replace_cea =
+    new MonoSortedIFunction("str.replace_cea", List(SSo, RSo, RSo), SSo, true, false)
+  val str_replaceall_cea =
+    new MonoSortedIFunction("str.replace_cea_all", List(SSo, RSo, RSo), SSo, true, false)
 
   // List of user-defined functions on strings that can be extended
   val extraStringFunctions : Seq[(String, IFunction, PreOp,
@@ -194,7 +210,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          re_case_insensitive,
          str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
-         re_*?, re_+?, re_opt_?)
+         re_*?, re_+?, re_opt_?,
+         str_len_cea, str_concate_cea, str_indexof_cea, str_substr_cea, str_replace_cea, str_replaceall_cea)
 
   val extraIndexedFunctions =
     List((re_capture, 1),
