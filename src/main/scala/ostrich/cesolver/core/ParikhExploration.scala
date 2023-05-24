@@ -22,7 +22,8 @@ import ostrich.cesolver.core.Model.{IntValue, StringValue}
 import ostrich.cesolver.preop.IndexOfCEPreOp
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
-import ostrich.{OFlags, Baseline, Unary}
+import ostrich.OFlags
+import OFlags.CEABackend.{Baseline, Unary}
 import ap.terfor.linearcombination.LinearCombination
 import ap.parser.ITerm
 import ap.parser.InputAbsy2Internal
@@ -281,8 +282,8 @@ class ParikhExploration(
         val backendSolver =
           flags.backend match {
             // case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
-            case Baseline() => new BaselineSolver(lProver)
-            case Unary()    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)
+            case Baseline => new BaselineSolver(lProver)
+            case Unary    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)

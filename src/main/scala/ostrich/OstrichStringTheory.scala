@@ -190,13 +190,17 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     new MonoSortedIFunction("str.concate_cea", List(SSo, SSo), SSo, true, false)
 
   val str_indexof_cea =
-    new MonoSortedIFunction("str.indexof_cea", List(SSo, SSo, Integer), Integer, true, false)
+    new MonoSortedIFunction("str.indexof_cea", List(SSo, SSo, Integer),
+                            Integer, true, false)
   val str_substr_cea =
-    new MonoSortedIFunction("str.substr_cea", List(SSo, Integer, Integer), SSo, true, false)
+    new MonoSortedIFunction("str.substr_cea", List(SSo, Integer, Integer),
+                            SSo, true, false)
   val str_replace_cea =
-    new MonoSortedIFunction("str.replace_cea", List(SSo, RSo, RSo), SSo, true, false)
+    new MonoSortedIFunction("str.replace_cea", List(SSo, RSo, RSo),
+                            SSo, true, false)
   val str_replaceall_cea =
-    new MonoSortedIFunction("str.replace_cea_all", List(SSo, RSo, RSo), SSo, true, false)
+    new MonoSortedIFunction("str.replace_cea_all", List(SSo, RSo, RSo),
+                            SSo, true, false)
 
   // List of user-defined functions on strings that can be extended
   val extraStringFunctions : Seq[(String, IFunction, PreOp,
@@ -211,7 +215,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          str_at_right, str_trim,
          str_replacecg, str_replaceallcg,
          re_*?, re_+?, re_opt_?,
-         str_len_cea, str_concate_cea, str_indexof_cea, str_substr_cea, str_replace_cea, str_replaceall_cea)
+         str_len_cea, str_concate_cea, str_indexof_cea, str_substr_cea,
+         str_replace_cea, str_replaceall_cea)
 
   val extraIndexedFunctions =
     List((re_capture, 1),
@@ -308,7 +313,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
-                   re_comp, re_loop, re_loop_?, re_from_str, re_capture, re_reference,
+                   re_comp, re_loop, re_loop_?, re_from_str, re_capture,
+                   re_reference,
                    re_begin_anchor, re_end_anchor,
                    re_from_ecma2020, re_from_ecma2020_flags,
                    re_case_insensitive))

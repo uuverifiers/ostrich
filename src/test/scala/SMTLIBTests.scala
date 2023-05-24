@@ -81,7 +81,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/word-equation-6.smt2", "sat")
 
   property("parikh-constraints.smt2") =
-    checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh", "")
+    checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh")
 
   property("replace-special.smt2") =
     checkFile("tests/replace-special.smt2", "unsat")
@@ -96,7 +96,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("replace-length.smt2") =
     checkFile("tests/replace-length.smt2", "sat")
   property("replace-length-2.smt2") =
-    checkFileOpts("tests/replace-length-2.smt2", "sat", "+parikh", "")
+    checkFileOpts("tests/replace-length-2.smt2", "sat", "+parikh")
 
   property("model-bug.smt2") =
     checkFileOpts("tests/model-bug.smt2", "sat", "", "+model")

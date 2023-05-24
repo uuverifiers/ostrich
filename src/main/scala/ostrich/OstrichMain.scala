@@ -43,12 +43,17 @@ object OstrichMain {
 
   val version = "unstable build (Princess: " + ap.CmdlMain.version + ")"
 
+  private val ostrichStringTheory =
+    "ostrich.OstrichStringTheory"
+  private val ceaStringTheory     =
+    "ostrich.cesolver.stringtheory.CEStringTheory"
+
   /**
    * The options forwarded to Princess. They will be overwritten by options
    * specified on the command line, so it is possible to provide more specific
    * string solver options on the command line.
    */
-  val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
+  val options = List("-stringSolver=" + ostrichStringTheory, "-logo")
 
   ParallelFileProver.addPortfolio(
     "strings", arguments => {
@@ -67,6 +72,14 @@ object OstrichMain {
                           "-stringSolver=" +
                             Param.STRING_THEORY_DESC.defau,
                           1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  ceaStringTheory),
+                          "-stringSolver=" +
+                            ceaStringTheory,
+                          20000,
                           2000))
                  ParallelFileProver(createReader,
                                     timeout,
@@ -74,7 +87,7 @@ object OstrichMain {
                                     userDefStoppingCond(),
                                     strategies,
                                     1,
-                                    2,
+                                    3,
                                     runUntilProof,
                                     prelResultPrinter,
                                     threadNum)

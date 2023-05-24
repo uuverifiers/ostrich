@@ -38,6 +38,10 @@ object OFlags {
     val Off, On, Auto = Value
   }
 
+  object CEABackend extends Enumeration {
+    val Baseline, Unary = Value
+  }
+
   /** Compile-time flag that can be used to switch on debugging output
     * throughout the theory.
     */
@@ -45,10 +49,6 @@ object OFlags {
 
   val timeout = 60000
 }
-
-sealed trait Backend
-case class Baseline() extends Backend
-case class Unary() extends Backend
 
 case class OFlags(
     // Pre-image specific options
@@ -58,7 +58,8 @@ case class OFlags(
     useParikhConstraints: Boolean = true,
     forwardApprox: Boolean = false,
     minimizeAutomata: Boolean = false,
-    backend: Backend = Unary(),
+
+    backend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
     useCostEnriched: Boolean = false,
     debug: Boolean = false,
     underApprox: Boolean = true,
