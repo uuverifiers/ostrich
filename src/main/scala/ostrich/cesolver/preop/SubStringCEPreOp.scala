@@ -25,8 +25,6 @@ object SubStringCEPreOp {
   *   the max length of subtring
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
-  ParikhUtil.todo("Bug exists in SubStringCEPreOp, have not consider the register of resultAut")
-
   private val termGen = TermGenerator(hashCode())
 
   override def toString(): String =

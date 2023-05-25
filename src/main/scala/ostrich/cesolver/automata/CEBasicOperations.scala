@@ -311,7 +311,6 @@ object CEBasicOperations {
       return new BricsAutomatonWrapper(BasicAutomata.makeEmptyString())
     val ceAut = new CostEnrichedAutomaton
     val newRegister = termGen.registerTerm
-    ParikhUtil.addCountingRegister(newRegister)
     val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
     ceAut.initialState = old2new(aut.initialState)
     if (min == 0)

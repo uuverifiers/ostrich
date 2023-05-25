@@ -12,7 +12,6 @@ import ostrich.automata.BricsTransducer
 import ostrich.automata.BricsTransducerBuilder
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import Transducer._
-import dk.brics.automaton.State
 import scala.collection.mutable.Stack
 import scala.collection.mutable.ArrayBuffer
 import ostrich.cesolver.util.ParikhUtil.TLabel
@@ -20,15 +19,16 @@ import ostrich.cesolver.automata.CETransducer
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.automata.BricsTLabelOps
 import ostrich.automata.BricsTLabelEnumerator
+import ostrich.cesolver.util.ParikhUtil.{partition, State, getImage}
 
 object ReplaceCEPreOp {
-  // pre-images of replace(x, e, u)
+  // pre-images of x = replace(y, e, u)
   def apply(pattern: CostEnrichedAutomatonBase, replacement: Seq[Char]) = {
     val transducer = buildTransducer(pattern)
     new ReplaceCEPreOp(transducer, replacement)
   }
 
-  // pre-images of replace(x, u1, u2)
+  // pre-images of x = replace(y, u1, u2)
   def apply(pattern: Seq[Char], replacement: Seq[Char]) = {
     val transducer = buildTransducer(pattern)
     new ReplaceCEPreOp(transducer, replacement)
@@ -94,18 +94,6 @@ object ReplaceCEPreOp {
           s
         }
       )
-    }
-
-    def getImage(
-        aut: CostEnrichedAutomatonBase,
-        states: Set[State],
-        lbl: TLabel
-    ): Set[State] = {
-      (for (
-        s <- states; (t, lblAut, _) <- aut.outgoingTransitionsWithVec(s);
-        if aut.LabelOps.labelsOverlap(lbl, lblAut)
-      )
-        yield t).toSet
     }
 
     val autInit = aut.initialState
@@ -225,34 +213,6 @@ object ReplaceCEPreOp {
 
 class ReplaceCEPreOp(tran: CETransducer, replacement: Seq[Char])
     extends CEPreOp {
-
-  /** find all states pair (s, t, vec) that s ---str--> t and vec is the sum of
-    * updates on the transitions
-    */
-  private def partition(
-      aut: CostEnrichedAutomatonBase,
-      str: Seq[Char]
-  ): Iterable[(State, State, Seq[Int])] = {
-
-    val labelOps = BricsTLabelOps
-
-    var pairs: Iterable[(State, State, Seq[Int])] =
-      aut.states.map(s => (s, s, Seq.fill(aut.registers.size)(0)))
-
-    var strStack = str
-    while (strStack.nonEmpty) {
-      val currentChar = strStack.head
-      strStack = strStack.tail
-      pairs =
-        for (
-          (s, t, vec) <- pairs;
-          (tNext, lNext, vecNext) <- aut.outgoingTransitionsWithVec(t);
-          if labelOps.labelContains(currentChar, lNext)
-        ) yield (s, tNext, sum(vec, vecNext))
-    }
-    pairs
-  }
-
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
@@ -271,9 +231,5 @@ class ReplaceCEPreOp(tran: CETransducer, replacement: Seq[Char])
   }
 
   override def toString(): String = "ReplaceCEPreOp"
-
-  private def sum(v1: Seq[Int], v2: Seq[Int]): Seq[Int] = {
-    v1.zip(v2).map { case (x, y) => x + y }
-  }
 
 }

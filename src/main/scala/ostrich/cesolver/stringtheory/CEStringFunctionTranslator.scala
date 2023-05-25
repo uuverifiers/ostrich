@@ -47,6 +47,7 @@ import ostrich.cesolver.preop.SubStringCEPreOp
 import ostrich.cesolver.preop.IndexOfCEPreOp
 import ostrich.cesolver.preop.LengthCEPreOp
 import ostrich.cesolver.preop.ReplaceCEPreOp
+import ostrich.cesolver.preop.ReplaceAllCEPreOp
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.Internal2InputAbsy
 
@@ -106,6 +107,20 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
           val op = () => {
             val aut = ceAutDatabase.regex2Automaton(regex).asInstanceOf[CostEnrichedAutomatonBase]
             ReplaceCEPreOp(aut, matchStr)
+          }
+          (op, List(a(0)), a(3))
+        }
+    case FunPred(`str_replaceall`) if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) => 
+      val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
+      val patternStr = strDatabase term2ListGet a(1) map(_.toChar)
+      Some((() => ReplaceAllCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
+
+    case FunPred(`str_replaceallre`) if (strDatabase isConcrete a(2)) => 
+      val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
+      for (regex <- regexAsTerm(a(1))) yield {
+          val op = () => {
+            val aut = ceAutDatabase.regex2Automaton(regex).asInstanceOf[CostEnrichedAutomatonBase]
+            ReplaceAllCEPreOp(aut, matchStr)
           }
           (op, List(a(0)), a(3))
         }

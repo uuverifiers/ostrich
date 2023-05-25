@@ -16,11 +16,9 @@ import ap.terfor.linearcombination.LinearCombination
 import ostrich.cesolver.core.FinalConstraints
 import ap.parser.ITerm
 import ap.parser.IExpression._
+import ostrich.automata.BricsTLabelOps
 
 object ParikhUtil {
-  private val CountingRegisters = new MHashSet[ITerm]()
-  def addCountingRegister(t: ITerm) = CountingRegisters += t
-
   type State = CostEnrichedAutomatonBase#State
   type TLabel = CostEnrichedAutomatonBase#TLabel
 
@@ -79,6 +77,51 @@ object ParikhUtil {
     findAcceptedWordByRegistersComplete(aut, registersModel)
 
   }
+
+   /** find all states pair (s, t, vec) that s ---str--> t and vec is the sum of
+    * updates on the transitions
+    */
+  def partition(
+      aut: CostEnrichedAutomatonBase,
+      str: Seq[Char]
+  ): Iterable[(State, State, Seq[Int])] = {
+
+    val labelOps = BricsTLabelOps
+
+    var pairs: Iterable[(State, State, Seq[Int])] =
+      aut.states.map(s => (s, s, Seq.fill(aut.registers.size)(0)))
+
+    var strStack = str
+    while (strStack.nonEmpty) {
+      val currentChar = strStack.head
+      strStack = strStack.tail
+      pairs =
+        for (
+          (s, t, vec) <- pairs;
+          (tNext, lNext, vecNext) <- aut.outgoingTransitionsWithVec(t);
+          if labelOps.labelContains(currentChar, lNext)
+        ) yield (s, tNext, sum(vec, vecNext))
+    }
+    pairs
+  }
+
+  // sum of two Seq
+   def sum(v1: Seq[Int], v2: Seq[Int]): Seq[Int] = {
+    v1.zip(v2).map { case (x, y) => x + y }
+  }
+
+  def getImage(
+        aut: CostEnrichedAutomatonBase,
+        states: Set[State],
+        lbl: TLabel
+    ): Set[State] = {
+      (for (
+        s <- states; (t, lblAut, _) <- aut.outgoingTransitionsWithVec(s);
+        if aut.LabelOps.labelsOverlap(lbl, lblAut)
+      )
+        yield t).toSet
+    }
+
 
   def debugPrintln(s: Any) = {
     println("Debug: " + s)
