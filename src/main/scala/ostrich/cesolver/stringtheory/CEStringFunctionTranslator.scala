@@ -124,39 +124,7 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
           }
           (op, List(a(0)), a(3))
         }
-    case FunPred(`str_at`) => {
-      val op = () => {
-        val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        new TransducerPreOp(BricsTransducer.getStrAtTransducer(ind)) {
-          override def toString = "str.at[" + ind + "]"
-          override def lengthApproximation(arguments : Seq[Term], result : Term,
-                                           order : TermOrder) : Formula = {
-            import TerForConvenience._
-            implicit val _ = order
-            result >= 0 & result <= 1 &
-            ((arguments(0)) <= ind <=> (result === 0))
-          }
-        }
-      }
-      Some((op, List(a(0)), a(2)))
-    }
 
-    case FunPred(`str_at_right`) => {
-      val op = () => {
-        val LinearCombination.Constant(IdealInt(ind)) = a(1)
-        new TransducerPreOp(BricsTransducer.getStrAtRightTransducer(ind)) {
-          override def toString = "str.at-right[" + ind + "]"
-          override def lengthApproximation(arguments : Seq[Term], result : Term,
-                                           order : TermOrder) : Formula = {
-            import TerForConvenience._
-            implicit val _ = order
-            result >= 0 & result <= 1 &
-            ((arguments(0)) <= ind <=> (result === 0))
-          }
-        }
-      }
-      Some((op, List(a(0)), a(2)))
-    }
 
     case FunPred(`str_trim`) => {
       val op = () => {
