@@ -1,6 +1,10 @@
 package ostrich.cesolver.preop
 
-import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet}
+import scala.collection.mutable.{
+  HashMap => MHashMap,
+  HashSet => MHashSet,
+  Stack => MStack
+}
 
 import ostrich.automata.Automaton
 import ostrich.automata.Transducer
@@ -12,256 +16,261 @@ import dk.brics.automaton.State
 import scala.collection.mutable.Stack
 import scala.collection.mutable.ArrayBuffer
 import ostrich.cesolver.util.ParikhUtil.TLabel
+import ostrich.cesolver.automata.CETransducer
+import ostrich.cesolver.util.ParikhUtil
+import ostrich.automata.BricsTLabelOps
+import ostrich.automata.BricsTLabelEnumerator
 
 object ReplaceCEPreOp {
   // pre-images of replace(x, e, u)
   def apply(pattern: CostEnrichedAutomatonBase, replacement: Seq[Char]) = {
-    val transducer = buildTransducer(pattern, replacement)
-    new ReplaceCEPreOp(transducer)
+    val transducer = buildTransducer(pattern)
+    new ReplaceCEPreOp(transducer, replacement)
   }
 
   // pre-images of replace(x, u1, u2)
   def apply(pattern: Seq[Char], replacement: Seq[Char]) = {
-    val transducer = buildTransducer(pattern, replacement)
-    new ReplaceCEPreOp(transducer)
+    val transducer = buildTransducer(pattern)
+    new ReplaceCEPreOp(transducer, replacement)
   }
 
   private def buildTransducer(
-      pattern: CostEnrichedAutomatonBase,
-      replacement: Seq[Char]
-  ): BricsTransducer = {
-    val builder = new BricsTransducerBuilder
-    builder.getTransducer
-  }
+      aut: CostEnrichedAutomatonBase
+  ): CETransducer = {
+    ParikhUtil.todo("ReplaceCEPreOp: not handle empty match in pattern")
+    abstract class Mode
+    // not matching
+    case object NotMatching extends Mode
+    // matching, word read so far could reach any state in frontier
+    case class Matching(val frontier: Set[State]) extends Mode
+    // last transition finished a match and reached frontier
+    case class EndMatch(val frontier: Set[State]) extends Mode
+    // copy the rest of the word after first match
+    case object CopyRest extends Mode
 
-  private def buildTransducer(
-      pattern: Seq[Char],
-      replacement: Seq[Char]
-  ): BricsTransducer = {
-    val builder = BricsTransducer.getBuilder
-
-    val initState = builder.initialState
-    val states = initState :: (List.fill(pattern.size - 1)(builder.getNewState))
-    val finstates = List.fill(pattern.size)(builder.getNewState)
-    val copyRest = builder.getNewState
+    val labelEnumerator = new BricsTLabelEnumerator(
+      aut.transitionsWithVec.map(_._2).toIterator
+    )
+    val labels = labelEnumerator.enumDisjointLabelsComplete
+    val ceTran = new CETransducer
     val nop = OutputOp("", NOP, "")
-    val internal = OutputOp(replacement, Internal, "")
     val copy = OutputOp("", Plus(0), "")
-    val end = pattern.size - 1
+    val internal = OutputOp("", Internal, "")
 
-    builder.setAccept(initState, true)
-    finstates.foreach(builder.setAccept(_, true))
-    builder.setAccept(copyRest, true)
+    // TODO: encapsulate this worklist automaton construction
+
+    // states of transducer have current mode and a set of states that
+    // should never reach a final state (if they do, a match has been
+    // missed)
+    val sMap = new MHashMap[State, (Mode, Set[State])]
+    val sMapRev = new MHashMap[(Mode, Set[State]), State]
+
+    // states of new transducer to be constructed
+    val worklist = new MStack[State]
+
+    def mapState(s: State, q: (Mode, Set[State])) = {
+      sMap += (s -> q)
+      sMapRev += (q -> s)
+    }
+
+    // creates and adds to worklist any new states if needed
+    def getState(m: Mode, noreach: Set[State]): State = {
+      sMapRev.getOrElse(
+        (m, noreach), {
+          val s = ceTran.newState()
+          mapState(s, (m, noreach))
+          val goodNoreach = !noreach.exists(aut.isAccept(_))
+          ceTran.setAccept(
+            s,
+            m match {
+              case NotMatching => goodNoreach
+              case EndMatch(_) => goodNoreach
+              case Matching(_) => false
+              case CopyRest    => goodNoreach
+            }
+          )
+          if (goodNoreach)
+            worklist.push(s)
+          s
+        }
+      )
+    }
+
+    def getImage(
+        aut: CostEnrichedAutomatonBase,
+        states: Set[State],
+        lbl: TLabel
+    ): Set[State] = {
+      (for (
+        s <- states; (t, lblAut, _) <- aut.outgoingTransitionsWithVec(s);
+        if aut.LabelOps.labelsOverlap(lbl, lblAut)
+      )
+        yield t).toSet
+    }
+
+    val autInit = aut.initialState
+    val tranInit = ceTran.initialState
+
+    mapState(tranInit, (NotMatching, Set.empty[State]))
+    ceTran.setAccept(tranInit, true)
+    worklist.push(tranInit)
+
+    while (!worklist.isEmpty) {
+      val ts = worklist.pop()
+      val (mode, noreach) = sMap(ts)
+
+      mode match {
+        case NotMatching => {
+          for (lbl <- labels) {
+            val initImg = getImage(aut, Set(autInit), lbl)
+            val noreachImg = getImage(aut, noreach, lbl)
+
+            val dontMatch = getState(NotMatching, noreachImg ++ initImg)
+            ceTran.addTransition(ts, lbl, copy, dontMatch)
+
+            if (!initImg.isEmpty) {
+              val newMatch = getState(Matching(initImg), noreachImg)
+              ceTran.addTransition(ts, lbl, nop, newMatch)
+            }
+
+            if (initImg.exists(aut.isAccept(_))) {
+              val oneCharMatch = getState(EndMatch(initImg), noreachImg)
+              ceTran.addTransition(ts, lbl, internal, oneCharMatch)
+            }
+          }
+        }
+        case Matching(frontier) => {
+          for (lbl <- labels) {
+            val frontImg = getImage(aut, frontier, lbl)
+            val noreachImg = getImage(aut, noreach, lbl)
+
+            if (!frontImg.isEmpty) {
+              val contMatch = getState(Matching(frontImg), noreachImg)
+              ceTran.addTransition(ts, lbl, nop, contMatch)
+            }
+
+            if (frontImg.exists(aut.isAccept(_))) {
+              val stopMatch = getState(EndMatch(frontImg), noreachImg)
+              ceTran.addTransition(ts, lbl, internal, stopMatch)
+            }
+          }
+        }
+        case EndMatch(frontier) => {
+          for (lbl <- labels) {
+            val frontImg = getImage(aut, frontier, lbl)
+            val noreachImg = getImage(aut, noreach, lbl)
+
+            val noMatch = getState(CopyRest, frontImg ++ noreachImg)
+
+            ceTran.addTransition(ts, lbl, copy, noMatch)
+          }
+        }
+        case CopyRest => {
+          for (lbl <- labels) {
+            val noreachImg = getImage(aut, noreach, lbl)
+            val copyRest = getState(CopyRest, noreachImg)
+            ceTran.addTransition(ts, lbl, copy, copyRest)
+          }
+        }
+      }
+    }
+
+    ceTran
+  }
+
+  private def buildTransducer(
+      w: Seq[Char]
+  ): CETransducer = {
+    val ceTran = new CETransducer
+
+    val initState = ceTran.initialState
+    val states = initState :: (List.fill(w.size - 1)(ceTran.newState()))
+    val finstates = List.fill(w.size)(ceTran.newState())
+    val copyRest = ceTran.newState()
+    val nop = OutputOp("", NOP, "")
+    // TODO: internal
+    val internal = OutputOp("", Internal, "")
+    val copy = OutputOp("", Plus(0), "")
+    val end = w.size - 1
+
+    ceTran.setAccept(initState, true)
+    finstates.foreach(ceTran.setAccept(_, true))
+    ceTran.setAccept(copyRest, true)
 
     // recognise word
-    for (i <- 0 until pattern.size - 1) {
-      builder.addTransition(
-        states(i),
-        (pattern(i), pattern(i)),
-        nop,
-        states(i + 1)
-      )
+    // deliberately miss last element
+    for (i <- 0 until w.size - 1) {
+      ceTran.addTransition(states(i), (w(i), w(i)), nop, states(i + 1))
     }
-    builder.addTransition(
-      states(end),
-      (pattern(end), pattern(end)),
-      internal,
-      copyRest
-    )
-    // copy rest after the first match
-    builder.addTransition(copyRest, builder.LabelOps.sigmaLabel, copy, copyRest)
+    ceTran.addTransition(states(end), (w(end), w(end)), internal, copyRest)
 
-    // handle word ending in middle of match
-    for (i <- 0 until pattern.size - 1) {
-      val output = OutputOp(pattern.slice(0, i), Plus(0), "")
-      builder.addTransition(
-        states(i),
-        (pattern(i), pattern(i)),
-        output,
-        finstates(i)
-      )
-    }
+    // copy rest after first match
+    ceTran.addTransition(copyRest, ceTran.LabelOps.sigmaLabel, copy, copyRest)
 
-    // handle the mismatch cases
-    for (i <- 0 until pattern.size) {
-      val output = OutputOp(pattern.slice(0, i), Plus(0), "")
+    for (i <- 0 until w.size) {
+      val output = OutputOp(w.slice(0, i), Plus(0), "")
 
       // begin again if mismatch
-      val anyLbl = builder.LabelOps.sigmaLabel
-      for (lbl <- builder.LabelOps.subtractLetter(pattern(i), anyLbl))
-        builder.addTransition(states(i), lbl, output, states(0))
-    }
+      val anyLbl = ceTran.LabelOps.sigmaLabel
+      for (lbl <- ceTran.LabelOps.subtractLetter(w(i), anyLbl))
+        ceTran.addTransition(states(i), lbl, output, states(0))
 
-    builder.getTransducer
+      // handle word ending in middle of match
+      val outop = if (i == w.size - 1) internal else output
+      ceTran.addTransition(states(i), (w(i), w(i)), outop, finstates(i))
+    }
+    ceTran
   }
 }
 
-class ReplaceCEPreOp(tran: BricsTransducer) extends CEPreOp {
+class ReplaceCEPreOp(tran: CETransducer, replacement: Seq[Char])
+    extends CEPreOp {
+
+  /** find all states pair (s, t, vec) that s ---str--> t and vec is the sum of
+    * updates on the transitions
+    */
+  private def partition(
+      aut: CostEnrichedAutomatonBase,
+      str: Seq[Char]
+  ): Iterable[(State, State, Seq[Int])] = {
+
+    val labelOps = BricsTLabelOps
+
+    var pairs: Iterable[(State, State, Seq[Int])] =
+      aut.states.map(s => (s, s, Seq.fill(aut.registers.size)(0)))
+
+    var strStack = str
+    while (strStack.nonEmpty) {
+      val currentChar = strStack.head
+      strStack = strStack.tail
+      pairs =
+        for (
+          (s, t, vec) <- pairs;
+          (tNext, lNext, vecNext) <- aut.outgoingTransitionsWithVec(t);
+          if labelOps.labelContains(currentChar, lNext)
+        ) yield (s, tNext, sum(vec, vecNext))
+    }
+    pairs
+  }
+
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val preimage = new CostEnrichedAutomatonBase
-    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    val emptyUpdate = Seq.fill(preimage.registers.length)(0)
-    val old2new = MHashMap[(State, State), State]()
-    old2new.put((tran.initialState, res.initialState), preimage.initialState)
-    val seenlist = MHashSet[(State, State)]()
-    val worklist = Stack[(State, State)]()
-    worklist.push((tran.initialState, res.initialState))
-    seenlist.add((tran.initialState, res.initialState))
-
-    while (worklist.nonEmpty) {
-      val (tranCurr, resAutCurr) = worklist.pop()
-      for (
-        outTrans <- tran.lblTrans.get(tranCurr);
-        (tranLbl, op, tranSucc) <- outTrans
-      ) {
-        op match {
-          // noop
-          case OutputOp(_, NOP, _) => {
-            val preimageSucc = old2new.getOrElseUpdate(
-              (tranSucc, resAutCurr),
-              preimage.newState()
-            )
-            preimage.addTransition(
-              old2new((tranCurr, resAutCurr)),
-              tranLbl,
-              preimageSucc,
-              emptyUpdate
-            )
-            if (!seenlist((tranSucc, resAutCurr))) {
-              seenlist.add((tranSucc, resAutCurr))
-              worklist.push((tranSucc, resAutCurr))
-            }
-          }
-
-          // copy mismatched char and current char
-          case OutputOp(prefix, Plus(0), _) => {
-            // copy mismatched char
-            var resAutCurrs = Set(resAutCurr)
-            var old2newTmp = res.states.map(s => (s, preimage.newState())).toMap
-            old2newTmp += (resAutCurr -> old2new((tranCurr, resAutCurr)))
-            val prefixStack = Stack[Char]()
-            for (c <- prefix.reverse) prefixStack.push(c)
-            var findC = true   // flag to indicate if we have found the current char in res
-            while (prefixStack.nonEmpty) {
-              findC = false
-              val c = prefixStack.pop()
-              val resAutNext =
-                for (
-                  resAutCurr <- resAutCurrs;
-                  (next, lbl, vec) <- res.outgoingTransitionsWithVec(
-                    resAutCurr
-                  );
-                  interLbl <- res.LabelOps.intersectLabels((c, c), lbl)
-                ) yield {
-                  preimage.addTransition(
-                    old2newTmp(resAutCurr),
-                    interLbl,
-                    old2newTmp(next),
-                    vec
-                  )
-                  findC = true
-                  next
-                }
-              resAutCurrs = resAutNext
-            }
-            // copy current lbl
-            if (prefixStack.isEmpty && findC) {
-              for (
-                resAutCurr <- resAutCurrs;
-                (next, lbl, vec) <- res.outgoingTransitionsWithVec(resAutCurr);
-                interLbl <- res.LabelOps.intersectLabels(tranLbl, lbl)
-              ) {
-                preimage.addTransition(
-                  old2newTmp(resAutCurr),
-                  interLbl,
-                  old2new.getOrElseUpdate(
-                    (tranSucc, next),
-                    preimage.newState()
-                  ),
-                  vec
-                )
-                if (!seenlist((tranSucc, next))) {
-                  seenlist.add((tranSucc, next))
-                  worklist.push((tranSucc, next))
-                }
-              }
-
-            }
-          }
-
-          // replace pattern to replacement
-          case OutputOp(replacement, Internal, _) => {
-            for (
-              (resAutSucc, vec) <- succOfString(
-                res,
-                resAutCurr,
-                replacement.map(c => (c, c))
-              )
-            ) {
-              val preimageSucc = old2new.getOrElseUpdate(
-                (tranSucc, resAutSucc),
-                preimage.newState()
-              )
-              preimage.addTransition(
-                old2new((tranCurr, resAutCurr)),
-                tranLbl,
-                preimageSucc,
-                vec
-              )
-              if (!seenlist((tranSucc, resAutSucc))) {
-                seenlist.add((tranSucc, resAutSucc))
-                worklist.push((tranSucc, resAutSucc))
-              }
-            }
-          }
-
-        }
-      }
-    }
-    preimage.regsRelation = res.regsRelation
-    preimage.registers = res.registers
-    for (((tranState, resAutState), preimageState) <- old2new) {
-      if (tran.isAccept(tranState) && res.isAccept(resAutState))
-        preimage.setAccept(preimageState, true)
-    }
-    (Iterator(Seq(preimage)), Seq())
+    // x = replace(y, pattern, replacement)
+    val rc = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    val internals = partition(rc, replacement)
+    val newYCon = tran.preImage(rc, internals)
+    (Iterator(Seq(newYCon)), argumentConstraints)
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
-    val replacedStr = arguments(0).map(_.toChar).mkString
-    val pattern = arguments(1).map(_.toChar).mkString
-    val replacement = arguments(2).map(_.toChar).mkString
-    Some(replacedStr.replace(pattern, replacement).toCharArray().map(_.toInt))
+     for (s <- tran(arguments(0).map(_.toChar).mkString,
+                   replacement.mkString))
+    yield s.toSeq.map(_.toInt)
   }
 
   override def toString(): String = "ReplaceCEPreOp"
-
-  // use bread-first search to find the states reachable from start by
-  // consuming str and the corresponding update vectors
-  private def succOfString(
-      aut: CostEnrichedAutomatonBase,
-      start: State,
-      str: Seq[TLabel]
-  ): Iterator[(State, Seq[Int])] = {
-    var bfsnow = Set((start, Seq.fill(aut.registers.length)(0)))
-    val strStack = Stack[TLabel]()
-    for (c <- str.reverse) strStack.push(c)
-    while (strStack.nonEmpty && bfsnow.nonEmpty) {
-      val c = strStack.pop()
-      val next = (for (
-        (state, vec) <- bfsnow;
-        (succ, lbl, succVec) <- aut.outgoingTransitionsWithVec(state);
-        _ <- aut.LabelOps.intersectLabels(c, lbl)
-      ) yield (succ, sum(vec, succVec))).toSet
-      bfsnow = next
-    }
-
-    if (strStack.nonEmpty) Iterator()
-    else bfsnow.iterator
-  }
 
   private def sum(v1: Seq[Int], v2: Seq[Int]): Seq[Int] = {
     v1.zip(v2).map { case (x, y) => x + y }

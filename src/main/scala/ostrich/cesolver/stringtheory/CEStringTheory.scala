@@ -20,7 +20,7 @@ import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
-import ostrich.cesolver.preprocess.OstrichCostEnrichEncoder
+import ostrich.cesolver.preprocess.CEPreprocessor
 import ostrich.cesolver.core.FinalConstraints
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.Internal2InputAbsy
@@ -28,6 +28,9 @@ import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
 import ostrich.OstrichEqualityPropagator
 import ostrich.automata.AutDatabase
 import ostrich.cesolver.automata.CEAutDatabase
+import ostrich.OstrichInternalPreprocessor
+import java.security.Identity
+import ap.terfor.conjunctions.IdentityReducerPluginFactory
 
 object CEStringTheory {
   val alphabetSize = 0x10000
@@ -44,6 +47,34 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   lazy val ceAutDatabase = new CEAutDatabase(this, flags.minimizeAutomata)
+
+  // Set of the predicates that are fully supported at this point
+  private val supportedPreds : Set[Predicate] =
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
+    (for (f <- Set(str_empty, str_cons, str_at,
+                   str_++, str_replace, str_replaceall,
+                   str_replacere, str_replaceallre, str_replaceallcg, 
+                   str_replacecg, str_to_re,
+                   str_extract,
+                   str_to_int, int_to_str,
+                   re_none, re_eps, re_all, re_allchar, re_charrange,
+                   re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+                   re_opt, re_opt_?,
+                   re_comp, re_loop, re_loop_?, re_from_str, re_capture, re_reference,
+                   re_begin_anchor, re_end_anchor,
+                   re_from_ecma2020, re_from_ecma2020_flags,
+                   re_case_insensitive,
+                   str_substr, str_indexof))
+     yield functionPredicateMap(f)) ++
+    (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
+     yield functionPredicateMap(f)) ++
+    (for ((_, e) <- extraOps.iterator) yield e match {
+       case Left(f) => functionPredicateMap(f)
+       case Right(p) => p
+     })
+
+  private val unsupportedPreds = predicates.toSet -- supportedPreds
+
 
   override def plugin = Some(new Plugin {
 
@@ -147,9 +178,17 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
       f: IFormula,
       signature: Signature
   ): (IFormula, Signature) = {
-    val visitor1 = new OstrichCostEnrichEncoder(this)
-
+    val visitor1 = new CEPreprocessor(this)
     (visitor1(f), signature)
+  }
+
+  override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
+    if (!Seqs.disjoint(f.predicates, unsupportedPreds))
+      Incompleteness.set
+
+    // val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    // preprocessor.preprocess(f, order)
+    f
   }
 
 }

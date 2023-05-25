@@ -1,7 +1,8 @@
+package ostrich.cesolver
+
 import ap.CmdlMain
 import ap.DialogUtil.asString
 import org.scalacheck.Properties
-import ostrich.cesolver.CEMain
 
 object DenghangTests extends Properties("DenghangTests") {
 
@@ -89,4 +90,15 @@ object DenghangTests extends Properties("DenghangTests") {
     checkFile("tests/hu-benchmarks/substr_empty_unsat.smt2", "unsat")
   property("regex_counting_unsat.smt2") =
     checkFile("tests/hu-benchmarks/regex_counting_unsat.smt2", "unsat")
+
+  // integration tests for replace
+  property("replace-length.smt2") =
+    checkFile("tests/replace-length.smt2", "sat")
+  property("replace-length-2.smt2") =
+    checkFile("tests/replace-length-2.smt2", "sat")
+  property("bug-56-replace-bug2.smt2") =
+    checkFile("tests/bug-56-replace-bug2.smt2", "sat")
+  property("bug-58-replace-re") =
+    checkFile("tests/bug-58-replace-re.smt2", "sat")
+
 }

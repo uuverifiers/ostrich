@@ -55,12 +55,12 @@ import ap.parser.Internal2InputAbsy
  */
 class CEStringFunctionTranslator(theory : CEStringTheory,
                                       facts : Conjunction) {
-  import theory.{FunPred, strDatabase, autDatabase,
+  import theory.{FunPred, strDatabase, ceAutDatabase,
                  str_++, str_at, str_at_right, str_trim,
+                 str_len, str_substr, str_indexof,
                  str_replaceall, str_replace,
                  str_replaceallre, str_replacere,
-                 str_replaceallcg, str_replacecg, str_extract,
-                 str_substr_cea, str_indexof_cea, str_len_cea, str_concate_cea, str_replace_cea}
+                 str_replaceallcg, str_replacecg, str_extract}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
   private val cgTranslator   = new Regex2PFA(theory,
@@ -82,29 +82,33 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
   
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
 
-    case FunPred(`str_len_cea`) => 
+    case FunPred(`str_len`) => 
       Some((() => LengthCEPreOp(Internal2InputAbsy(a(1))), Seq(a(0)), a(1)))
-    case FunPred(`str_concate_cea`) =>
+
+    case FunPred(`str_++`) =>
       Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
-    case FunPred(`str_substr_cea`) =>
+
+    case FunPred(`str_substr`) =>
       Some((() => SubStringCEPreOp(Internal2InputAbsy(a(1)), Internal2InputAbsy(a(2))), Seq(a(0), a(1), a(2)), a(3)))
-    case FunPred(`str_indexof_cea`) if strDatabase isConcrete a(1) =>
+
+    case FunPred(`str_indexof`) if strDatabase isConcrete a(1) =>
       val matchStr = strDatabase term2ListGet a(1)
       Some((() => IndexOfCEPreOp(Internal2InputAbsy(a(2)), Internal2InputAbsy(a(3)), matchStr.map(_.toChar).mkString), Seq(a(0), a(1), a(2)), a(3)))
-    case FunPred(`str_replace_cea`) if strDatabase isConcrete a(2) =>
+
+    case FunPred(`str_replace`) if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
       val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
-      if (strDatabase isConcrete a(1)){
-        val patternStr = strDatabase term2ListGet a(1) map(_.toChar)
-        Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0), a(1), a(2)), a(3)))
-      } else {
-        for (regex <- regexAsTerm(a(1))) yield {
+      val patternStr = strDatabase term2ListGet a(1) map(_.toChar)
+      Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
+      
+    case FunPred(`str_replacere`) if (strDatabase isConcrete a(2)) =>
+      val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
+      for (regex <- regexAsTerm(a(1))) yield {
           val op = () => {
-            val aut = autDatabase.regex2Automaton(regex).asInstanceOf[CostEnrichedAutomatonBase]
+            val aut = ceAutDatabase.regex2Automaton(regex).asInstanceOf[CostEnrichedAutomatonBase]
             ReplaceCEPreOp(aut, matchStr)
           }
-          (op, List(a(0), a(1), a(2)), a(3))
+          (op, List(a(0)), a(3))
         }
-      }
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)

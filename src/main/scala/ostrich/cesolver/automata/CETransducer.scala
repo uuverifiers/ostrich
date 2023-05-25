@@ -44,7 +44,7 @@ class CETransducer {
 
   def preImage(
       aut: CostEnrichedAutomatonBase,
-      internal: Iterable[(State, State)] = Iterable()
+      internals: Iterable[(State, State, Seq[Int])] = Iterable()
   ): CostEnrichedAutomatonBase =
     /* Exploration.measure("transducer pre-op") */ {
 
@@ -56,22 +56,22 @@ class CETransducer {
       val epsilonPairs = new MHashSet[(State, State, Seq[Int])]
 
       val internalMap =
-        new MHashMap[aut.State, MSet[aut.State]]
-          with MMultiMap[aut.State, aut.State] {
-          override def default(q: aut.State): MSet[aut.State] =
-            MLinkedHashSet.empty[aut.State]
+        new MHashMap[State, MSet[(State, Seq[Int])]]
+          with MMultiMap[State, (State, Seq[Int])] {
+          override def default(q: State): MSet[(State, Seq[Int])] =
+            MLinkedHashSet()
         }
 
-      for ((s1, s2) <- internal)
+      for ((s1, s2, vec) <- internals)
         internalMap.addBinding(
-          s1.asInstanceOf[aut.State],
-          s2.asInstanceOf[aut.State]
+          s1.asInstanceOf[State],
+          (s2.asInstanceOf[State], vec)
         )
 
       // map states of pre-image aut to state of transducer and state of
       // aut
-      val sMap = new MHashMap[aut.State, (State, aut.State)]
-      val sMapRev = new MHashMap[(State, aut.State), aut.State]
+      val sMap = new MHashMap[State, (State, State)]
+      val sMapRev = new MHashMap[(State, State), State]
 
       val initAutState = aut.initialState
       val newInitState = ceAut.initialState
@@ -81,14 +81,14 @@ class CETransducer {
 
       // collect silent transitions during main loop and eliminate them
       // after (TODO: think of more efficient solution)
-      val silentTransitions = new MHashMap[aut.State, MSet[aut.State]]
-        with MMultiMap[aut.State, aut.State]
+      val silentTransitions = new MHashMap[State, MSet[State]]
+        with MMultiMap[State, State]
 
       def sumVec(v1: Seq[Int], v2: Seq[Int]) =
         (v1 zip v2).map { case (x, y) => x + y }
 
       // transducer state, automaton state
-      def getState(ts: State, as: aut.State) = {
+      def getState(ts: State, as: State) = {
         sMapRev.getOrElse(
           (ts, as), {
             val ps = ceAut.newState()
@@ -119,30 +119,30 @@ class CETransducer {
       // mode as above
       val worklist = new MStack[
         (
-            aut.State,
+            State,
             State,
             Either[TTransition, TETransition],
-            aut.State,
+            State,
             Seq[Int],
             Mode
         )
       ]
       val seenlist = new MHashSet[
         (
-            aut.State,
+            State,
             State,
             Either[TTransition, TETransition],
-            aut.State,
+            State,
             Seq[Int],
             Mode
         )
       ]
 
       def addWork(
-          ps: aut.State,
+          ps: State,
           ts: State,
           t: Either[TTransition, TETransition],
-          as: aut.State,
+          as: State,
           vec: Seq[Int],
           m: Mode
       ) {
@@ -152,7 +152,7 @@ class CETransducer {
         }
       }
 
-      def reachStates(ts: State, as: aut.State) {
+      def reachStates(ts: State, as: State) {
         val ps = getState(ts, as)
         if (isAccept(ts) && aut.isAccept(as))
           ceAut.setAccept(ps, true)
@@ -211,8 +211,8 @@ class CETransducer {
                     addWork(ps, ts, t, as, vec, Post(tOp.postW, tlbl))
                   }
                   case Internal => {
-                    for (asNext <- internalMap(as))
-                      addWork(ps, ts, t, asNext, vec, Post(tOp.postW, tlbl))
+                    for ((asNext, asVec) <- internalMap(as))
+                      addWork(ps, ts, t, asNext, sumVec(vec, asVec), Post(tOp.postW, tlbl))
                   }
                   case Plus(n) => {
                     for (
@@ -248,8 +248,8 @@ class CETransducer {
                     addWork(ps, ts, t, as, vec, EPost(tOp.postW))
                   }
                   case Internal => {
-                    for (asNext <- internalMap(as))
-                      addWork(ps, ts, t, asNext, vec, EPost(tOp.postW))
+                    for ((asNext, asVec) <- internalMap(as))
+                      addWork(ps, ts, t, asNext, sumVec(vec, asVec), EPost(tOp.postW))
                   }
                   case Plus(_) => {
                     // treat as delete -- can't shift e-tran
@@ -379,8 +379,9 @@ class CETransducer {
     }
   }
 
-  def setAccept(s: State) = _acceptingStates += s
+  def setAccept(s: State, isAccept: Boolean) = if (isAccept) _acceptingStates += s
   def initialState_=(s: State) = _initialState = s
+  def initialState = _initialState
 
   def addTransition(from: State, lbl: TLabel, op: OutputOp, to: State) = {
     _lblTrans.get(from) match {
