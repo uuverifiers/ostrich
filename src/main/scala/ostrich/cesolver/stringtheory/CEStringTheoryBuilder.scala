@@ -8,7 +8,8 @@ import ap.util.CmdlParser
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
 import ostrich.cesolver.core.FinalConstraints
-import ostrich.{OFlags, Backend, Unary, Baseline}
+import ostrich.OFlags
+import OFlags.CEABackend.{Unary, Baseline}
 
 /** The entry class of the Ostrich string solver.
   */
@@ -23,7 +24,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       "Loading " + name + " " + version +
         ", a solver for string constraints"
     )
-    println("(c)Denghang Hu, Matthew Hague, Philipp Rümmer, 2018-2023")
+    println("(c) Denghang Hu, Matthew Hague, Philipp Rümmer, 2018-2023")
     println(
       "With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf."
     )
@@ -35,7 +36,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug = false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
-  private var backend: Backend = Unary()
+  private var backend: OFlags.CEABackend.Value = Unary
   private var underApprox, simplifyAut = true
   private var underApproxBound = 15
 
@@ -66,15 +67,13 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.Opt("debug", value) => 
       debug = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
-      backend = Baseline()
+      backend = Baseline
     case CmdlParser.ValueOpt("backend", "unary") =>
-      backend = Unary()
+      backend = Unary
     case CmdlParser.ValueOpt("under-approx-bound", value) =>
       underApproxBound = value.toInt
-    // ignore")
     case str =>
-      println("Parameter " + str + " is not supported by theory " + name + "\n")
-      System.exit(1)
+      super.parseParameter(str)
   }
 
   import StringTheoryBuilder._
