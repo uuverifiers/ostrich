@@ -31,63 +31,24 @@ import ap.terfor.Term
 import ap.terfor.TermOrder
 import ostrich.cesolver.util.{TermGenerator, ParikhUtil}
 import ap.parser.IIntLit
+import ap.terfor.SortedWithOrder
+import ostrich.OstrichSolver
+import ap.proof.theoryPlugins.Plugin
+import ap.parser.Internal2InputAbsy
 
 object ParikhExploration {
 
-  case class TermConstraint(t : ITerm, aut : Automaton)
+  case class TermConstraint(t: ITerm, aut: Automaton)
 
   type ConflictSet = Seq[TermConstraint]
-  
-  case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
-          extends Exception
+
+  case class FoundModel(model: Map[Term, Either[IdealInt, Seq[Int]]])
+      extends Exception
 
   private def isStringResult(op: PreOp): Boolean = op match {
     case _: LengthCEPreOp  => false
     case _: IndexOfCEPreOp => false
     case _                 => true
-  }
-
-  def generateResultModel(
-      apps: Iterator[(PreOp, Seq[ITerm], ITerm)],
-      model: MHashMap[ITerm, Either[IdealInt, Seq[Int]]]
-  ): MHashMap[ITerm, Either[IdealInt, Seq[Int]]] = {
-    for (
-      (op, args, res) <- apps;
-      argValues = args map model
-    ) {
-
-      val args: Seq[Seq[Int]] = argValues map {
-        case Left(value)   => Seq(value.intValueSafe)
-        case Right(values) => values
-      }
-
-      val resValue =
-        op.eval(args) match {
-          case Some(v) => v
-          case None =>
-            throw new Exception(
-              "Model extraction failed: " + op + " is not defined for " +
-                args.mkString(", ")
-            )
-        }
-
-      // check the consistence of old result values and computed result values
-      for (oldValue <- model get res) {
-        var _oldValue: Seq[Int] = Seq()
-        oldValue match {
-          case Left(value)  => _oldValue = Seq(value.intValueSafe)
-          case Right(value) => _oldValue = value
-        }
-        if (_oldValue != resValue)
-          throw new Exception(
-            "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
-          )
-      }
-
-      if (isStringResult(op))
-        model += (res -> Right(resValue))
-    }
-    model
   }
 }
 
@@ -105,7 +66,6 @@ class ParikhExploration(
 
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
-
 
   // topological sorting of the function applications
   // divide integer term and string term
@@ -186,7 +146,6 @@ class ParikhExploration(
     (integerTerms, strTerms, sortedApps, ignoredApps)
   }
 
-
   for ((apps, res) <- sortedFunApps) {
     Console.withOut(Console.err) {
 
@@ -209,6 +168,20 @@ class ParikhExploration(
         )
     }
   }
+
+  val nonTreeLikeApps =
+    sortedFunApps exists { case (ops, t) =>
+      ops.size > 1 && !(strDatabase isConcrete InputAbsy2Internal(
+        t,
+        TermOrder.EMPTY
+      ))
+    }
+
+  if (nonTreeLikeApps)
+    Console.err.println(
+      "Warning: input is not straightline, some variables have multiple " +
+        "definitions"
+    )
 
   private val allTerms = integerTerms ++ strTerms
 
@@ -260,12 +233,67 @@ class ParikhExploration(
         println(s"--Timeout: $time s")
         System.exit(0)
         None
-      case e: Exception =>
-        println("--Exception: " + e)
-        e.printStackTrace()
-        System.exit(0)
-        None
     }
+  }
+
+  private def generateResultModel(
+      apps: Iterator[(PreOp, Seq[ITerm], ITerm)],
+      model: MHashMap[ITerm, Either[IdealInt, Seq[Int]]]
+  ): MHashMap[ITerm, Either[IdealInt, Seq[Int]]] = {
+    for (
+      (op, args, res) <- apps;
+      argValues = args map model
+    ) {
+
+      val args: Seq[Seq[Int]] = argValues map {
+        case Left(value)   => Seq(value.intValueSafe)
+        case Right(values) => values
+      }
+
+      val resValue =
+        op.eval(args) match {
+          case Some(v) => v
+          case None =>
+            throw new Exception(
+              "Model extraction failed: " + op + " is not defined for " +
+                args.mkString(", ")
+            )
+        }
+      def throwResultCutException: Unit = {
+        import ap.terfor.TerForConvenience._
+        implicit val o = lProver.order
+
+        val resEq =
+          res === strDatabase.list2Id(resValue)
+
+        Console.err.println("   ... adding cut over result for " + res)
+
+        throw new OstrichSolver.BlockingActions(
+          List(
+            Plugin.CutSplit(conj(InputAbsy2Internal(resEq, o)), List(), List())
+          )
+        )
+      }
+      // check the consistence of old result values and computed result values
+      for (oldValue <- model get res) {
+        var _oldValue: Seq[Int] = Seq()
+        oldValue match {
+          case Left(value)  => _oldValue = Seq(value.intValueSafe)
+          case Right(value) => _oldValue = value
+        }
+        if (_oldValue != resValue)
+          if (nonTreeLikeApps)
+            throwResultCutException
+          else
+            throw new Exception(
+              "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
+            )
+      }
+
+      if (isStringResult(op))
+        model += (res -> Right(resValue))
+    }
+    model
   }
 
   def dfExplore(apps: List[(PreOp, Seq[ITerm], ITerm)]): ConflictSet =
@@ -282,7 +310,8 @@ class ParikhExploration(
           flags.backend match {
             // case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
             case Baseline => new BaselineSolver(lProver)
-            case Unary    => new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)
+            case Unary =>
+              new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
@@ -294,7 +323,6 @@ class ParikhExploration(
 
         res.getStatus match {
           case ProverStatus.Sat => {
-            import ParikhExploration.generateResultModel
             // model of leaf term
             for ((t, v) <- res.getModel) {
               v match {
@@ -302,10 +330,10 @@ class ParikhExploration(
                 case StringValue(s) => model.put(t, Right(s))
               }
             }
-            for ((fresh, orign) <- freshIntTerm2orgin){
+            for ((fresh, orign) <- freshIntTerm2orgin) {
               orign match {
-                case IIntLit(_) => //do nothing
-                case _ => 
+                case IIntLit(_) => // do nothing
+                case _ =>
                   model.put(orign, model(fresh))
               }
             }
@@ -320,8 +348,8 @@ class ParikhExploration(
                 ignoredApps.iterator
             model ++= generateResultModel(allFunApps, model)
             throw FoundModel(
-              model.map{
-                case (term, value) => InputAbsy2Internal(term, lProver.order) -> value
+              model.map { case (term, value) =>
+                InputAbsy2Internal(term, lProver.order) -> value
               }.toMap
             )
           }

@@ -52,7 +52,6 @@ object FinalConstraints {
 
   def evalTerm(t: ITerm)(model: PartialModel): Option[IdealInt] = t match {
     case _: ITerm =>
-      ParikhUtil.todo("implement eval term")
       model eval t
   }
 }
