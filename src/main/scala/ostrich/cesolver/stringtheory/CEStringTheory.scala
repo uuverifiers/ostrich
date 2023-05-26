@@ -186,9 +186,9 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
 
-    // val preprocessor = new OstrichInternalPreprocessor(this, flags)
-    // preprocessor.preprocess(f, order)
-    f
+    val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    preprocessor.preprocess(f, order)
+    // f
   }
 
 }
