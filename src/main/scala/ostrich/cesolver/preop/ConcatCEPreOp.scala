@@ -34,9 +34,7 @@ object ConcatCEPreOp extends CEPreOp {
       for (argAuts <- argumentConstraints) yield {
         (for (
           aut <- argAuts;
-          lengths <- aut
-            .asInstanceOf[CostEnrichedAutomatonBase]
-            .uniqueAcceptedWordLengths
+          lengths <- aut.uniqueAcceptedWordLengths
         )
           yield (aut, lengths)).toSeq.headOption
       }

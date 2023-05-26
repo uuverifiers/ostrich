@@ -166,19 +166,18 @@ class CostEnrichedAutomatonBase extends Automaton {
   def addTransition(from: State, lbl: TLabel, to: State, vec: Seq[Int]): Unit = {
     _state2transtions.get(from) match {
       case Some(set) => set.add((to, lbl, vec))
-      case None => {
-        val set = new MHashSet[(State, TLabel, Seq[Int])]
-        set.add((to, lbl, vec))
-        _state2transtions.put(from, set)
-      }
+      case None => _state2transtions.put(from, MHashSet((to, lbl, vec)))
     }
     _state2incomingTranstions.get(to) match {
       case Some(set) => set.add((from, lbl, vec))
-      case None => {
-        val set = new MHashSet[(State, TLabel, Seq[Int])]
-        set.add((from, lbl, vec))
-        _state2incomingTranstions.put(to, set)
-      }
+      case None => _state2incomingTranstions.put(to, MHashSet((from, lbl, vec)))
+    }
+  }
+
+  def addEpsilon(s: State, t: State): Unit = {
+    if(isAccept(t)) setAccept(s, true)
+    for ((to, lbl, vec) <- outgoingTransitionsWithVec(t)) {
+      addTransition(s, lbl, to, vec)
     }
   }
 

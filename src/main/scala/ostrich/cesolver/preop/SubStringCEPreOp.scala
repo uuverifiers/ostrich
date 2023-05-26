@@ -11,6 +11,7 @@ import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IIntLit
 import ostrich.cesolver.util.TermGenerator
+import ostrich.cesolver.util.ParikhUtil
 
 object SubStringCEPreOp {
   def apply(beginIdx: ITerm, length: ITerm) =
@@ -24,7 +25,6 @@ object SubStringCEPreOp {
   *   the max length of subtring
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
-
   private val termGen = TermGenerator(hashCode())
 
   override def toString(): String =

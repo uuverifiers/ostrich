@@ -9,20 +9,6 @@ import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 object CostEnrichedConvenience {
-
-  def brics2CostEnriched(aut: Automaton): Automaton = {
-    if (aut.isInstanceOf[BricsAutomaton])
-      BricsAutomatonWrapper(aut.asInstanceOf[BricsAutomaton].underlying)
-    else {
-      val e = new Exception(
-        s"Automaton $aut is not a bricsAutomaton or a costEnrichedAutomaton"
-      )
-      e.printStackTrace()
-      throw e
-    }
-  }
-
-
   implicit def automaton2CostEnriched(
       auts: Seq[Automaton]
   ): Seq[CostEnrichedAutomatonBase] =
@@ -33,6 +19,8 @@ object CostEnrichedConvenience {
       aut.isInstanceOf[CostEnrichedAutomatonBase]
     ) {
       aut.asInstanceOf[CostEnrichedAutomatonBase]
+    } else if (aut.isInstanceOf[BricsAutomaton]) {
+      BricsAutomatonWrapper(aut.asInstanceOf[BricsAutomaton].underlying)
     } else {
       val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
       e.printStackTrace()

@@ -29,6 +29,7 @@ import ostrich.cesolver.core.ParikhExploration
 import ap.parser.Internal2InputAbsy
 import ap.parser.ITerm
 import ostrich.{OFlags, OstrichSolver}
+import ostrich.cesolver.preop.ConcatCEPreOp
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
@@ -189,17 +190,12 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
-      case FunPred(`str_len`) => {
-        lengthVars.put(a(0), a(1))
-        if (a(1).isZero)
-          regexes += ((a(0), BricsAutomaton fromString ""))
-      }
       case FunPred(`str_char_count`) => {
         // ignore
       }
       case `str_prefixof` => {
         val rightVar = theory.StringSort.newConstant("rhs")
-        funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
+        funApps += ((ConcatCEPreOp, List(a(0), rightVar), a(1)))
       }
       case FunPred(f) if rexOps contains f =>
       // nothing

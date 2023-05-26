@@ -5,6 +5,7 @@ import ap.DialogUtil.asString
 
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
+import ostrich.cesolver.util.ParikhUtil
 
 object SMTLIBTests extends Properties("SMTLIBTests") {
 

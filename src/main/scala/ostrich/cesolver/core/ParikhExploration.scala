@@ -268,7 +268,6 @@ class ParikhExploration(
     }
   }
 
-  // override the model generation function
   def dfExplore(apps: List[(PreOp, Seq[ITerm], ITerm)]): ConflictSet =
     apps match {
 
@@ -322,7 +321,7 @@ class ParikhExploration(
             model ++= generateResultModel(allFunApps, model)
             throw FoundModel(
               model.map{
-                case (term, value) => InputAbsy2Internal(term, TermOrder.EMPTY) -> value
+                case (term, value) => InputAbsy2Internal(term, lProver.order) -> value
               }.toMap
             )
           }
