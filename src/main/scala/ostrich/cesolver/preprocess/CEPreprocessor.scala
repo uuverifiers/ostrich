@@ -4,6 +4,7 @@ import ap.parser._
 import IExpression._
 import ap.theories.strings.StringTheory.ConcreteString
 import ostrich.cesolver.stringtheory.CEStringTheory
+import ostrich.cesolver.util.ParikhUtil
 
 class CEPreprocessor(theory: CEStringTheory)
     extends ContextAwareVisitor[Unit, IExpression] {
@@ -68,36 +69,18 @@ class CEPreprocessor(theory: CEStringTheory)
         StringSort.ex(str_++(v(0, StringSort), s) === t)
       }
 
-      case (
-            IFunApp(`str_at`, _),
-            Seq(
-              bigStr: ITerm,
-              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))
-            )
-          ) if bigStr == bigStr2 && offset >= 1 =>
-        str_at_right(bigStr, offset - 1)
+      // case (
+      //       IFunApp(`str_at`, _),
+      //       Seq(
+      //         bigStr: ITerm,
+      //         Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))
+      //       )
+      //     ) if bigStr == bigStr2 && offset >= 1 =>
+        // str_at_right(bigStr, offset - 1)
 
       case (IFunApp(`str_at`, _), Seq(bigStr: ITerm, index: ITerm)) => {
-        val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
-        val shIndex3 = VariableShiftVisitor(index, 0, 3)
-
-        StringSort.eps(
-          StringSort.ex(
-            StringSort.ex(
-              ite(
-                shIndex3 < 0 | shIndex3 >= str_len(shBigStr3),
-                v(2, StringSort) === "",
-                strCat(
-                  v(1, StringSort),
-                  v(2, StringSort),
-                  v(0, StringSort)
-                ) === shBigStr3 &
-                  str_len(v(1, StringSort)) === shIndex3 &
-                  str_in_re(v(2, StringSort), re_allchar())
-              )
-            )
-          )
-        )
+        ParikhUtil.todo("optimize str.at right")
+        str_substr(bigStr, index, 1)
       }
       case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
       case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
