@@ -18,35 +18,35 @@ object CEMain {
    */
   val options = List("-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory", "-logo")
 
-  ParallelFileProver.addPortfolio(
-    "strings", arguments => {
-                 import arguments._
-                 val strategies =
-                   List(ParallelFileProver.Configuration(
-                          baseSettings,
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC(baseSettings),
-                          1000000000,
-                          2000),
-                        ParallelFileProver.Configuration(
-                          Param.STRING_THEORY_DESC.set(
-                                  baseSettings,
-                                  Param.STRING_THEORY_DESC.defau),
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC.defau,
-                          1000000000,
-                          2000))
-                 ParallelFileProver(createReader,
-                                    timeout,
-                                    true,
-                                    userDefStoppingCond(),
-                                    strategies,
-                                    1,
-                                    2,
-                                    runUntilProof,
-                                    prelResultPrinter,
-                                    threadNum)
-               })
+  // ParallelFileProver.addPortfolio(
+  //   "strings", arguments => {
+  //                import arguments._
+  //                val strategies =
+  //                  List(ParallelFileProver.Configuration(
+  //                         baseSettings,
+  //                         "-stringSolver=" +
+  //                           Param.STRING_THEORY_DESC(baseSettings),
+  //                         1000000000,
+  //                         2000),
+  //                       ParallelFileProver.Configuration(
+  //                         Param.STRING_THEORY_DESC.set(
+  //                                 baseSettings,
+  //                                 Param.STRING_THEORY_DESC.defau),
+  //                         "-stringSolver=" +
+  //                           Param.STRING_THEORY_DESC.defau,
+  //                         1000000000,
+  //                         2000))
+  //                ParallelFileProver(createReader,
+  //                                   timeout,
+  //                                   true,
+  //                                   userDefStoppingCond(),
+  //                                   strategies,
+  //                                   1,
+  //                                   2,
+  //                                   runUntilProof,
+  //                                   prelResultPrinter,
+  //                                   threadNum)
+  //              })
 
   def main(args: Array[String]) : Unit =
     ap.CmdlMain.main((options ++ args).toArray)

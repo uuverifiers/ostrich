@@ -8,7 +8,6 @@ import scala.collection.mutable.{
   ArrayBuffer,
   ArrayStack
 }
-import ap.terfor.conjunctions.Conjunction
 import dk.brics.automaton.BasicAutomata
 import ap.parser.ITerm
 import ostrich.automata.BricsTLabelOps
@@ -83,7 +82,7 @@ object CEBasicOperations {
           f = or(Seq(f, aut.registers(notZeroIdx) >= 1))
         }
       }
-      if (f == Conjunction.FALSE) {
+      if (f == IExpression.Boolean2IFormula(false)) {
         // all value of initialOutVecs are 0
         newRegisters += termGen.registerTerm
         f = newRegisters.last >= 1

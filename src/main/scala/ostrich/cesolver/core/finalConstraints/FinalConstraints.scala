@@ -5,7 +5,6 @@ import ap.api.PartialModel
 import ap.basetypes.IdealInt
 import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
-import ap.terfor.conjunctions.Conjunction
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression
 import scala.collection.mutable.{

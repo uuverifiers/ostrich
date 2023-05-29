@@ -4,7 +4,6 @@ import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.automata.CEBasicOperations
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ap.terfor.conjunctions.Conjunction
 import scala.collection.mutable.ArrayBuffer
 import ostrich.OFlags
 import ap.parser.ITerm
