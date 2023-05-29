@@ -9,15 +9,87 @@ import scala.collection.mutable.{
 }
 import ostrich.automata.TLabelOps
 import ostrich.automata.BricsTLabelOps
+import ostrich.automata.Transducer._
 
 object CETransducer {
   type State = CostEnrichedAutomatonBase#State
   type TLabel = CostEnrichedAutomatonBase#TLabel
+
+  private val strAtRightTransducer =
+    new MHashMap[Int, CETransducer]
+
+  /**
+   * Transducer that eats every input and produces no output.
+   */
+  lazy val SilentTransducer : CETransducer = {
+    
+
+    val ceTran = new CETransducer
+
+    ceTran.setAccept(ceTran.initialState, true)
+
+    ceTran.addTransition(ceTran.initialState,
+                          ceTran.LabelOps.sigmaLabel,
+                          OutputOp("", NOP, ""),
+                          ceTran.initialState)
+
+    ceTran
+  }
+
+
+   /**
+   * Construct a transducer that extracts the <code>n</code>th-last character
+   * of a string.
+   */
+  def getStrAtRightTransducer(n : Int) : CETransducer =
+    synchronized {
+      strAtRightTransducer.getOrElseUpdate(
+        n, 
+        if (n < 0) {
+          SilentTransducer
+        } else {
+          
+
+          val ceTran = new CETransducer
+
+          val initState      = ceTran.initialState
+          val repeatState    = ceTran.newState()
+          val tailStates     = for (i <- 0 to n)    yield ceTran.newState()
+          val shortStrStates = for (i <- 1 until n) yield ceTran.newState()
+
+          for (Seq(s1, s2) <- (tailStates sliding 2) ++
+                              ((List(initState) ++ shortStrStates) sliding 2) ++
+                              Iterator(List(repeatState, repeatState),
+                                       List(initState, repeatState)))
+            ceTran.addTransition(s1,
+                                  ceTran.LabelOps.sigmaLabel,
+                                  OutputOp("", NOP, ""),
+                                  s2)
+
+          ceTran.addTransition(initState,
+                                ceTran.LabelOps.sigmaLabel,
+                                OutputOp("", Plus(0), ""),
+                                tailStates.head)
+          ceTran.addTransition(repeatState,
+                                ceTran.LabelOps.sigmaLabel,
+                                OutputOp("", Plus(0), ""),
+                                tailStates.head)
+
+          ceTran.setAccept(initState, true)
+          ceTran.setAccept(tailStates.last, true)
+
+          for (s <- shortStrStates)
+            ceTran.setAccept(s, true)
+
+          ceTran
+        })
+    }
+
 }
 
 class CETransducer {
   import CETransducer._
-  import ostrich.automata.Transducer._
+  
 
   type TTransition = (TLabel, OutputOp, State)
   type TETransition = (OutputOp, State)
@@ -41,6 +113,9 @@ class CETransducer {
   val LabelOps: TLabelOps[TLabel] = BricsTLabelOps
 
   def isAccept(s: State) = _acceptingStates.contains(s)
+
+  def preImage(aut : CostEnrichedAutomatonBase) : CostEnrichedAutomatonBase =
+    preImage(aut, Iterable())
 
   def preImage(
       aut: CostEnrichedAutomatonBase,

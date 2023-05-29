@@ -69,17 +69,18 @@ class CEPreprocessor(theory: CEStringTheory)
         StringSort.ex(str_++(v(0, StringSort), s) === t)
       }
 
-      // case (
-      //       IFunApp(`str_at`, _),
-      //       Seq(
-      //         bigStr: ITerm,
-      //         Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))
-      //       )
-      //     ) if bigStr == bigStr2 && offset >= 1 =>
-        // str_at_right(bigStr, offset - 1)
+      case (
+            IFunApp(`str_at`, _),
+            Seq(
+              bigStr: ITerm,
+              index@Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))
+            )
+          ) if bigStr == bigStr2 && offset >= 1 =>
+        ParikhUtil.todo("optimise str_at_right")
+        str_substr(bigStr, index, 1)
+      // str_at_right(bigStr, offset - 1)
 
       case (IFunApp(`str_at`, _), Seq(bigStr: ITerm, index: ITerm)) => {
-        ParikhUtil.todo("optimize str.at right")
         str_substr(bigStr, index, 1)
       }
       case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
@@ -107,11 +108,15 @@ class CEPreprocessor(theory: CEStringTheory)
       case (IFunApp(`str_from_char`, _), Seq(c: ITerm)) =>
         str_cons(c, str_empty())
 
-      case (IFunApp(`re_range`, _),
-          Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
-              IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
-      re_charrange(lower, upper)
-      
+      case (
+            IFunApp(`re_range`, _),
+            Seq(
+              IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
+              IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _)))
+            )
+          ) =>
+        re_charrange(lower, upper)
+
       case _ => // do nothing now
         t update subres
     }

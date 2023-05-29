@@ -55,43 +55,43 @@ object OstrichMain {
    */
   val options = List("-stringSolver=" + ostrichStringTheory, "-logo")
 
-  // ParallelFileProver.addPortfolio(
-  //   "strings", arguments => {
-  //                import arguments._
-  //                val strategies =
-  //                  List(ParallelFileProver.Configuration(
-  //                         baseSettings,
-  //                         "-stringSolver=" +
-  //                           Param.STRING_THEORY_DESC(baseSettings),
-  //                         1000000000,
-  //                         2000),
-  //                       ParallelFileProver.Configuration(
-  //                         Param.STRING_THEORY_DESC.set(
-  //                                 baseSettings,
-  //                                 Param.STRING_THEORY_DESC.defau),
-  //                         "-stringSolver=" +
-  //                           Param.STRING_THEORY_DESC.defau,
-  //                         1000000000,
-  //                         2000),
-  //                       ParallelFileProver.Configuration(
-  //                         Param.STRING_THEORY_DESC.set(
-  //                                 baseSettings,
-  //                                 ceaStringTheory),
-  //                         "-stringSolver=" +
-  //                           ceaStringTheory,
-  //                         20000,
-  //                         2000))
-  //                ParallelFileProver(createReader,
-  //                                   timeout,
-  //                                   true,
-  //                                   userDefStoppingCond(),
-  //                                   strategies,
-  //                                   1,
-  //                                   3,
-  //                                   runUntilProof,
-  //                                   prelResultPrinter,
-  //                                   threadNum)
-  //              })
+  ParallelFileProver.addPortfolio(
+    "strings", arguments => {
+                 import arguments._
+                 val strategies =
+                   List(ParallelFileProver.Configuration(
+                          baseSettings,
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC(baseSettings),
+                          1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  Param.STRING_THEORY_DESC.defau),
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC.defau,
+                          1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  ceaStringTheory),
+                          "-stringSolver=" +
+                            ceaStringTheory,
+                          20000,
+                          2000))
+                 ParallelFileProver(createReader,
+                                    timeout,
+                                    true,
+                                    userDefStoppingCond(),
+                                    strategies,
+                                    1,
+                                    3,
+                                    runUntilProof,
+                                    prelResultPrinter,
+                                    threadNum)
+               })
 
   def main(args: Array[String]) : Unit =
     ap.CmdlMain.main((options ++ args).toArray)

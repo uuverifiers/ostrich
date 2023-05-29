@@ -20,7 +20,6 @@ class BaselineSolver(val lProver: SimpleAPI)
   }
 
   def solve: Result = {
-    ParikhUtil.todo("include goal.facts.arithconj")
     val f = and(constraints.map(_.getCompleteLIA))
     import FinalConstraints.evalTerm
     val res = new Result
