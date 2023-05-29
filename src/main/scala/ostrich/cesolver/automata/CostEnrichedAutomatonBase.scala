@@ -8,7 +8,6 @@ import scala.collection.mutable.{
   HashSet => MHashSet,
   ArrayBuffer
 }
-import ap.terfor.conjunctions.Conjunction
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
 import java.time.LocalDate

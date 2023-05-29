@@ -68,10 +68,10 @@ class AutDatabase(theory : OstrichStringTheory,
 
   private var nextId     = 0
 
-  private val regexes    = new MHashMap[ITerm, Int]
-  private val id2Regex   = new MHashMap[Int, ITerm]
-  private val id2Aut     = new MHashMap[Int, Automaton]
-  private val id2CompAut = new MHashMap[Int, Automaton]
+  val regexes    = new MHashMap[ITerm, Int]
+  val id2Regex   = new MHashMap[Int, ITerm]
+  val id2Aut     = new MHashMap[Int, Automaton]
+  val id2CompAut = new MHashMap[Int, Automaton]
 
   private val subsetRel  =
     new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]

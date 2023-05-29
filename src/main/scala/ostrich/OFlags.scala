@@ -63,6 +63,6 @@ case class OFlags(
     useCostEnriched: Boolean = false,
     debug: Boolean = false,
     underApprox: Boolean = true,
-    underApproxBound: Int = 15,
+    underApproxBound: Int = 11,
     simplifyAut: Boolean = true
 )

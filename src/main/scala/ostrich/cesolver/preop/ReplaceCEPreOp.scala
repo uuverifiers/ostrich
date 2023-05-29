@@ -20,6 +20,7 @@ import ostrich.cesolver.util.ParikhUtil
 import ostrich.automata.BricsTLabelOps
 import ostrich.automata.BricsTLabelEnumerator
 import ostrich.cesolver.util.ParikhUtil.{partition, State, getImage}
+import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
 object ReplaceCEPreOp {
   // pre-images of x = replace(y, e, u)
@@ -218,7 +219,7 @@ class ReplaceCEPreOp(tran: CETransducer, replacement: Seq[Char])
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     // x = replace(y, pattern, replacement)
-    val rc = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    val rc = automaton2CostEnriched(resultConstraint)
     val internals = partition(rc, replacement)
     val newYCon = tran.preImage(rc, internals)
     (Iterator(Seq(newYCon)), argumentConstraints)
