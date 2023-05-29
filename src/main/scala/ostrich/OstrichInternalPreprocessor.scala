@@ -87,9 +87,9 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
             VariableShiftSubst(0, (args.size + 1) * coeff, order)
           val shiftedA =
             shifter(a)
-          val lenAtoms = Seq()
-            // for ((t, n) <- (args ++ List(result)).zipWithIndex)
-            // yield _str_len(List(shifter(l(t)), lenVar(n)))
+          val lenAtoms =
+            for ((t, n) <- (args ++ List(result)).zipWithIndex)
+            yield _str_len(List(shifter(l(t)), lenVar(n)))
           val charCountAtoms =
             for ((t, n) <- (args ++ List(result)).zipWithIndex;
                  (c, m) <- characters.zipWithIndex)
