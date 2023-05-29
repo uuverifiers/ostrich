@@ -134,7 +134,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
   def buildComplementAut(t: ITerm): Automaton = {
     // minimize always, not use the parameter `minimize`
-    toCEAutomaton(t, true)
+    complement(toCEAutomaton(t, true))
   }
 
 }

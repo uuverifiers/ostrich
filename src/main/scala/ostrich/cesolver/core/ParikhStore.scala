@@ -86,7 +86,7 @@ class ParikhStore(t: ITerm) {
     *   new added aut
     * @return
     *   None if constraints are still consistent; Some(unsatCore) otherwise.
-    */
+  */
   private def checkConsistency(aut: Automaton): Option[Seq[Automaton]] = {
     val consideredAuts = new ArrayBuffer[Automaton]
     for (aut2 <- constraints :+ aut) {
