@@ -4,6 +4,7 @@ import scala.collection.breakOut
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.automata.CETransducer
 import ostrich.automata.Automaton
+import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
 object CETransducerPreOp {
   def apply(t : CETransducer) = new CETransducerPreOp(t)
@@ -25,7 +26,7 @@ class CETransducerPreOp(t : CETransducer) extends CEPreOp {
   def apply(argumentConstraints : Seq[Seq[Automaton]],
             resultConstraint : Automaton)
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val rc = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    val rc = automaton2CostEnriched(resultConstraint)
     (Iterator(Seq(t.preImage(rc))), List())
   }
 
