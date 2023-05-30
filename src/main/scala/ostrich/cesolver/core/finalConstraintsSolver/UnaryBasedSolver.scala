@@ -92,6 +92,7 @@ class UnaryBasedSolver(
         res.setStatus(ProverStatus.Sat)
       case _ => res.setStatus(_)
     }
+
     lProver.pop
     res
   }

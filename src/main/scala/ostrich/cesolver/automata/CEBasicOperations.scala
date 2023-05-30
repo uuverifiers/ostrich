@@ -147,7 +147,6 @@ object CEBasicOperations {
       aut1: A,
       aut2: A
   ): CostEnrichedAutomatonBase = {
-    ap.util.Timeout.check
     val ceAut = new CostEnrichedAutomaton
     // begin intersection
     val initialState1 = aut1.initialState
@@ -168,7 +167,6 @@ object CEBasicOperations {
 
     while (!worklist.isEmpty) {
       ap.util.Timeout.check
-
       val (from1, from2) = worklist.pop()
       val from = pair2state(from1, from2)
       for (
@@ -489,6 +487,7 @@ object CEBasicOperations {
           (t2, l2, v2) <- aut.outgoingTransitionsWithVec(s2);
           if v1 == v2
         ) {
+          ap.util.Timeout.check
           if (t1 != t2)
             pairs2depends((t1, t2)).add((s1, s2))
         }
@@ -571,6 +570,7 @@ object CEBasicOperations {
           (t2, l2, v2) <- aut.outgoingTransitionsWithVec(s2);
           if l1 == l2 && v1 == v2
         ) {
+          ap.util.Timeout.check
           if (t1 != t2)
             pairs2depends((t1, t2)).add((s1, s2))
         }

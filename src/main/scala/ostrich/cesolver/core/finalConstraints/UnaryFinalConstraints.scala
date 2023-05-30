@@ -19,8 +19,10 @@ class UnaryFinalConstraints(
   // to avoid repeated exploration
   private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
 
+  ParikhUtil.debugPrintln("begin")
   // eagerly product
   lazy val productAut = auts.reduce(_ product _)
+  ParikhUtil.debugPrintln("middle")
 
   lazy val mostlySimplifiedAut = {
     val ceAut = CEBasicOperations.minimizeHopcroftByVec(
@@ -49,6 +51,8 @@ class UnaryFinalConstraints(
     if (flags.simplifyAut) mostlySimplifiedAut else productAut
   lazy val findModelAut =
     if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
+
+  ParikhUtil.debugPrintln("stop")
 
   /**
     * Like Bounded Model Checking(BMC), we find all runs of length less and equal to 
