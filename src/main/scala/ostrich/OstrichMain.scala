@@ -71,7 +71,7 @@ object OstrichMain {
                                   Param.STRING_THEORY_DESC.defau),
                           "-stringSolver=" +
                             Param.STRING_THEORY_DESC.defau,
-                          60000,
+                          10000000,
                           2000),
                         ParallelFileProver.Configuration(
                           Param.STRING_THEORY_DESC.set(
@@ -79,7 +79,7 @@ object OstrichMain {
                                   ceaStringTheory),
                           "-stringSolver=" +
                             ceaStringTheory,
-                          60000,
+                          10000000,
                           2000),
                         ParallelFileProver.Configuration(
                           Param.STRING_THEORY_DESC.set(
@@ -95,7 +95,7 @@ object OstrichMain {
                                     userDefStoppingCond(),
                                     strategies,
                                     1,
-                                    2,
+                                    3,
                                     runUntilProof,
                                     prelResultPrinter,
                                     threadNum)
