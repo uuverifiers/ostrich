@@ -226,12 +226,10 @@ class ParikhExploration(
     } catch {
       case FoundModel(model) => Some(model)
       case UnknownException(info) =>
-        println("--Unknown: " + info)
-        System.exit(0)
+        throw new Exception("--Unknown: " + info)
         None
       case TimeoutException(time) =>
-        println(s"--Timeout: $time s")
-        System.exit(0)
+        throw new Exception(s"--Timeout: $time s")
         None
     }
   }
