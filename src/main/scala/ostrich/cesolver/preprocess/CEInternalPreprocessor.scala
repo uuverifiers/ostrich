@@ -27,7 +27,7 @@ class CEInternalPreprocessor(theory: CEStringTheory, flags: OFlags) {
     autDatabase
   }
   def preprocess(f: Conjunction, order: TermOrder): Conjunction = {
-    ParikhUtil.todo("CEInternalPreprocessor")
+    // ParikhUtil.todo("CEInternalPreprocessor")
     f
   }
 }
