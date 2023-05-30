@@ -22,7 +22,7 @@ class CEAutDatabase(theory: OstrichStringTheory, minimizeAutomata: Boolean)
             case Some(regex) => {
               val aut =
                 regex2Aut.buildComplementAut(regex)
-              id2Aut.put(id, aut)
+              id2CompAut.put(id, aut)
               Some(aut)
             }
             case None =>

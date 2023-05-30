@@ -29,8 +29,8 @@ import ostrich.OstrichEqualityPropagator
 import ostrich.automata.AutDatabase
 import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.OstrichInternalPreprocessor
-import java.security.Identity
 import ap.terfor.conjunctions.IdentityReducerPluginFactory
+import ostrich.cesolver.preprocess.CEInternalPreprocessor
 
 object CEStringTheory {
   val alphabetSize = 0x10000
@@ -186,9 +186,8 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
 
-    val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    val preprocessor = new CEInternalPreprocessor(this, flags)
     preprocessor.preprocess(f, order)
-    // f
   }
 
 }

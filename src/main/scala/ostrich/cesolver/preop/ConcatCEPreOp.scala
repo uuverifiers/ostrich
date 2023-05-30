@@ -40,7 +40,7 @@ object ConcatCEPreOp extends CEPreOp {
       }
     ).toSeq
 
-    argLengths(0) match {
+    val res = argLengths(0) match {
       case Some((lenAut, lengths)) =>
         // the prefix needs to be of a certain length
         val preImage =
@@ -102,6 +102,7 @@ object ConcatCEPreOp extends CEPreOp {
             (preImage.iterator, List())
         }
     }
+    res
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] =
