@@ -23,7 +23,7 @@ object CEBasicOperations {
 
   private val termGen = TermGenerator(hashCode())
 
-  def toBricsAutomaton(aut: CostEnrichedAutomatonBase):BAutomaton = aut match {
+  def toBricsAutomaton(aut: CostEnrichedAutomatonBase): BAutomaton = aut match {
     case a: BricsAutomatonWrapper => a.underlying
     case _ => {
       val baut = new BAutomaton
@@ -97,7 +97,7 @@ object CEBasicOperations {
         val preFill = Seq.fill(prefixlen)(0)
         val postFill = Seq.fill(oldRegsLen - prefixlen - v.size)(0)
         val newRegsUpdate = ArrayBuffer.fill(newRegisters.size)(0)
-        if(aut2newRegIdx(aut) >= 0)
+        if (aut2newRegIdx(aut) >= 0)
           newRegsUpdate(aut2newRegIdx(aut)) = 1
         val tailVec = newRegsUpdate.toSeq
         val newVec =
@@ -147,6 +147,7 @@ object CEBasicOperations {
       aut1: A,
       aut2: A
   ): CostEnrichedAutomatonBase = {
+    ap.util.Timeout.check
     val ceAut = new CostEnrichedAutomaton
     // begin intersection
     val initialState1 = aut1.initialState
@@ -166,6 +167,8 @@ object CEBasicOperations {
     worklist.push((initialState1, initialState2))
 
     while (!worklist.isEmpty) {
+      ap.util.Timeout.check
+
       val (from1, from2) = worklist.pop()
       val from = pair2state(from1, from2)
       for (
@@ -281,7 +284,7 @@ object CEBasicOperations {
     )
   }
 
-   def repeatUnwind(
+  def repeatUnwind(
       aut: CostEnrichedAutomatonBase,
       min: Int,
       max: Int
@@ -324,7 +327,7 @@ object CEBasicOperations {
       )
     // construct other updates
     for ((s, l, t, v) <- aut.transitionsWithVec; if s != aut.initialState)
-    ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
+      ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(0))
     for (s <- aut.acceptingStates) {
       for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
         ceAut.addTransition(old2new(s), l, old2new(t), v ++ Seq(1))
@@ -335,7 +338,7 @@ object CEBasicOperations {
     // accept empty string
     val newRegsRelation =
       if (aut.isAccept(aut.initialState))
-          newRegister <= max
+        newRegister <= max
       else
         and(Seq(newRegister >= min, newRegister <= max))
     ceAut.registers = newRegisters
@@ -345,7 +348,9 @@ object CEBasicOperations {
 
   def optional(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     aut.setAccept(aut.initialState, true)
-    aut.regsRelation = or(Seq(aut.regsRelation, and(aut.registers.map(_ === 0))))
+    aut.regsRelation = or(
+      Seq(aut.regsRelation, and(aut.registers.map(_ === 0)))
+    )
     aut
   }
 
@@ -432,6 +437,8 @@ object CEBasicOperations {
     workstack.push(Set(aut.initialState))
 
     while (workstack.nonEmpty) {
+      ap.util.Timeout.check
+
       val curSeq = workstack.pop()
       val curState = seq2new(curSeq)
       val curTrans = new MHashMap[Seq[Int], Set[State]]
@@ -505,6 +512,8 @@ object CEBasicOperations {
     }
     // partition the depend pairs
     while (worklist.nonEmpty) {
+      ap.util.Timeout.check
+
       val (s1, s2) = worklist.pop()
       if (!seenPairs((s1, s2))) {
         seenPairs.add((s1, s2))
@@ -591,6 +600,8 @@ object CEBasicOperations {
     }
     // partition the depend pairs
     while (worklist.nonEmpty) {
+      ap.util.Timeout.check
+
       val (s1, s2) = worklist.pop()
       if (!seenPairs((s1, s2))) {
         seenPairs.add((s1, s2))

@@ -18,7 +18,6 @@ object ParikhStore {
 
 class ParikhStore(t: ITerm) {
 
-
   // constraints in this store
   private val constraints = new ArrayBuffer[Automaton]
   // the stack is used to push and pop constraints
@@ -73,10 +72,11 @@ class ParikhStore(t: ITerm) {
   private def isConsistency(
       auts: Seq[CostEnrichedAutomatonBase]
   ): Boolean = {
-    var productAut : CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
+    var productAut: CostEnrichedAutomatonBase =
+      BricsAutomatonWrapper.makeAnyString
     auts.sortBy(_.states.size).foreach { aut =>
       productAut = productAut & aut
-      if(productAut.isEmpty) return false
+      if (productAut.isEmpty) return false
     }
     true
   }
@@ -86,12 +86,12 @@ class ParikhStore(t: ITerm) {
     *   new added aut
     * @return
     *   None if constraints are still consistent; Some(unsatCore) otherwise.
-  */
+    */
   private def checkConsistency(aut: Automaton): Option[Seq[Automaton]] = {
     val consideredAuts = new ArrayBuffer[Automaton]
     for (aut2 <- constraints :+ aut) {
       consideredAuts += aut2
-      if (!isConsistency(consideredAuts.toSeq)){
+      if (!isConsistency(consideredAuts.toSeq)) {
         return Some(consideredAuts.toSeq)
       }
     }
@@ -107,9 +107,9 @@ class ParikhStore(t: ITerm) {
       // We return the conflictSet directly if current constraints with aut belongs to
       // one confilctSet in **inconsistentAutomata**.
       directlyConflictSet(aut) match {
-        case Some(confilctSet) => 
+        case Some(confilctSet) =>
           return Some(confilctSet);
-        case None              => // do nothing
+        case None => // do nothing
       }
 
       // 2. check if the stored automata are consistent after adding the aut:
@@ -138,7 +138,7 @@ class ParikhStore(t: ITerm) {
           None
         }
       }
-    } 
+    }
     None
   }
 

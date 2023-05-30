@@ -38,6 +38,7 @@ class UnaryBasedSolver(
     var nowBound = 5
     var result = new Result
     while (nowBound <= maxBound && !result.isSat) {
+      ap.util.Timeout.check
       result = solveFormula(
         and(constraints.map(_.getUnderApprox(nowBound)))
       )
@@ -57,7 +58,8 @@ class UnaryBasedSolver(
     val finalArith = f
 
     lProver.push
-    val newConsts = SymbolCollector.constants(finalArith) &~ lProver.order.orderedConstants  
+    val newConsts =
+      SymbolCollector.constants(finalArith) &~ lProver.order.orderedConstants
     lProver.addConstantsRaw(newConsts)
     lProver.addConstants(integerTerms)
     lProver !! finalArith

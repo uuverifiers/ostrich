@@ -76,7 +76,7 @@ class CEPreprocessor(theory: CEStringTheory)
               index@Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))
             )
           ) if bigStr == bigStr2 && offset >= 1 =>
-        ParikhUtil.todo("optimise str_at_right")
+        // ParikhUtil.todo("optimise str_at_right")
         str_substr(bigStr, index, 1)
       // str_at_right(bigStr, offset - 1)
 

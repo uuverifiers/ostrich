@@ -19,9 +19,6 @@ class UnaryFinalConstraints(
   // to avoid repeated exploration
   private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
 
-  ParikhUtil.debugPrintln(strId)
-  ParikhUtil.debugPrintln(auts)
-
   // eagerly product
   lazy val productAut = auts.reduce(_ product _)
 
