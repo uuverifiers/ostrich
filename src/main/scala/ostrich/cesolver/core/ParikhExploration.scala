@@ -260,7 +260,7 @@ class ParikhExploration(
       def throwResultCutException: Unit = {
         import ap.terfor.TerForConvenience._
         implicit val o = lProver.order
-
+        ap.util.Timeout.check
         val resEq =
           res === strDatabase.list2Id(resValue)
 
@@ -280,9 +280,9 @@ class ParikhExploration(
           case Right(value) => _oldValue = value
         }
         if (_oldValue != resValue)
-          if (nonTreeLikeApps)
-            throwResultCutException
-          else
+          // if (nonTreeLikeApps)
+          //   throwResultCutException
+          // else
             throw new Exception(
               "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
             )
