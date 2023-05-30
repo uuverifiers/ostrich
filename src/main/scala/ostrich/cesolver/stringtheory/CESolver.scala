@@ -30,6 +30,7 @@ import ap.parser.Internal2InputAbsy
 import ap.parser.ITerm
 import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
+import ostrich.cesolver.util.ParikhUtil
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
@@ -119,6 +120,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
   ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
     val order = goal.order
+
+    ParikhUtil.debugPrintln(atoms)
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
