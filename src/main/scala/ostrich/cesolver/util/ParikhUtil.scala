@@ -49,6 +49,7 @@ object ParikhUtil {
       (aut.initialState, Seq.fill(aut.registers.size)(0))
     )
     while (!todoList.isEmpty) {
+      ap.util.Timeout.check
       val (state, regsVal, word) = todoList.pop
       if (aut.isAccept(state) && regsVal == registersValue) {
         return Some(word.map(_.toInt))
@@ -73,6 +74,7 @@ object ParikhUtil {
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: MMap[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
+    
     val aut = auts.reduce(_ product _)
     findAcceptedWordByRegistersComplete(aut, registersModel)
 
