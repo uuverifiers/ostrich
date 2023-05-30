@@ -121,8 +121,6 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
     val atoms = goal.facts.predConj
     val order = goal.order
 
-    ParikhUtil.debugPrintln(atoms)
-
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
     val eagerMode = flags.eagerAutomataOperations
 
