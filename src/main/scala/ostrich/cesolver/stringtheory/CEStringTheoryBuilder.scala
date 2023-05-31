@@ -10,6 +10,7 @@ import ap.theories.TheoryBuilder
 import ostrich.cesolver.core.FinalConstraints
 import ostrich.OFlags
 import OFlags.CEABackend.{Unary, Baseline}
+import ostrich.cesolver.util.ParikhUtil
 
 /** The entry class of the Ostrich string solver.
   */
@@ -66,6 +67,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       underApprox = value
     case CmdlParser.Opt("debug", value) => 
       debug = value
+      ParikhUtil.debug = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("backend", "unary") =>

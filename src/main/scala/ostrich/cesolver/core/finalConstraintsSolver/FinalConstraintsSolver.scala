@@ -5,6 +5,7 @@ import ap.basetypes.IdealInt
 import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
+import ostrich.cesolver.util.ParikhUtil
 
 class Result {
   protected var status = ProverStatus.Unknown
@@ -33,7 +34,10 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def measureTimeSolve: Result =
     measure(s"${this.getClass.getSimpleName}::solve") {
-      solve
+      ParikhUtil.debugPrintln("begin solve")
+      val res = solve
+      ParikhUtil.debugPrintln("end solve")
+      res
     }
 
   protected var constraints: Seq[A] = Seq()

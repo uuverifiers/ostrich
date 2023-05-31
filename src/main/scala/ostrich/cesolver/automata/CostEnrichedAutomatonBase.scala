@@ -21,13 +21,13 @@ import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IExpression
 
-/**
-  * This is the implementation of cost-enriched finite automaton(CEFA). Each transition of 
-  * CEFA contains a vector of integers, which is used to record the cost of the transition.
-  * The cost of a word is the sum of the costs of its transitions. 
-  * A linear arithmetic constrait is used to restrict the cost of the word. For example, 
-  * the accepting condition can be r < 10, where r is the register storing the cost and if
-  * r is length of the word, we get a automation accepting words of length less than 10.
+/** This is the implementation of cost-enriched finite automaton(CEFA). Each
+  * transition of CEFA contains a vector of integers, which is used to record
+  * the cost of the transition. The cost of a word is the sum of the costs of
+  * its transitions. A linear arithmetic constrait is used to restrict the cost
+  * of the word. For example, the accepting condition can be r < 10, where r is
+  * the register storing the cost and if r is length of the word, we get a
+  * automation accepting words of length less than 10.
   */
 class CostEnrichedAutomatonBase extends Automaton {
   type State = BState
@@ -108,7 +108,7 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   def newState(): State = {
     stateidx += 1
-    new State(){
+    new State() {
       val idx = stateidx
       override def toString(): String = {
         s"s${idx}"
@@ -118,8 +118,10 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   /** The set of accepting states
     */
-  def acceptingStates: Set[State] = (for (s <- states; if isAccept(s)) yield s).toSet
+  def acceptingStates: Set[State] =
+    (for (s <- states; if isAccept(s)) yield s).toSet
   def setAccept(s: State, b: Boolean) = s.setAccept(b)
+
   /** Iterate over automaton states
     */
   lazy val states: Iterable[State] = {
@@ -129,7 +131,9 @@ class CostEnrichedAutomatonBase extends Automaton {
     seenlist.add(initialState)
     while (!worklist.isEmpty) {
       val s = worklist.pop
-      for ((to, _, _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)) {
+      for (
+        (to, _, _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)
+      ) {
         worklist.push(to)
         seenlist.add(to)
       }
@@ -143,13 +147,17 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   /** Given a state, iterate over all outgoing transitons with vector
     */
-  def outgoingTransitionsWithVec(s: State): Iterable[(State, (Char, Char), Seq[Int])] =
+  def outgoingTransitionsWithVec(
+      s: State
+  ): Iterable[(State, (Char, Char), Seq[Int])] =
     _state2transtions.get(s) match {
-      case None => Iterable.empty
+      case None      => Iterable.empty
       case Some(set) => set
     }
 
-  def incomingTransitionsWithVec(t: State): Iterable[(State, (Char, Char), Seq[Int])] = 
+  def incomingTransitionsWithVec(
+      t: State
+  ): Iterable[(State, (Char, Char), Seq[Int])] =
     _state2incomingTranstions.get(t) match {
       case None => Iterable.empty
       // incoming states may not be reachable from initial state, filter them out
@@ -161,11 +169,15 @@ class CostEnrichedAutomatonBase extends Automaton {
       yield (from, lbl, to, vec)
   }
 
-
-  def addTransition(from: State, lbl: TLabel, to: State, vec: Seq[Int]): Unit = {
+  def addTransition(
+      from: State,
+      lbl: TLabel,
+      to: State,
+      vec: Seq[Int]
+  ): Unit = {
     _state2transtions.get(from) match {
       case Some(set) => set.add((to, lbl, vec))
-      case None => _state2transtions.put(from, MHashSet((to, lbl, vec)))
+      case None      => _state2transtions.put(from, MHashSet((to, lbl, vec)))
     }
     _state2incomingTranstions.get(to) match {
       case Some(set) => set.add((from, lbl, vec))
@@ -174,7 +186,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
 
   def addEpsilon(s: State, t: State): Unit = {
-    if(isAccept(t)) setAccept(s, true)
+    if (isAccept(t)) setAccept(s, true)
     for ((to, lbl, vec) <- outgoingTransitionsWithVec(t)) {
       addTransition(s, lbl, to, vec)
     }
@@ -200,37 +212,46 @@ class CostEnrichedAutomatonBase extends Automaton {
       }
       res.toSeq
     }
+    // transpose the vectors, so that each vector is a column containing all updates of a register
     val vectorsT =
-      transitionsWithVec.map { case (_, _, _, v) => v }.toSeq.transpose.zipWithIndex
+      transitionsWithVec
+        .map { case (_, _, _, v) => v }
+        .toSeq
+        .transpose
+        .zipWithIndex
     val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
+    // map the transposed vectors to their updated register
     for ((v, i) <- vectorsT) {
-      val seqv = v.toSeq
-      if (!vectors2Idxs.contains(seqv)) {
-        vectors2Idxs += (seqv -> Set[Int]())
+      if (!vectors2Idxs.contains(v)) {
+        vectors2Idxs += (v -> Set[Int]())
       }
-      vectors2Idxs(seqv) += i
+      vectors2Idxs(v) += i
     }
+    // if a transposed vector map to more than one register, then these registers are duplicated
     val duplicatedRegs =
       vectors2Idxs.map { case (_, idxs) => idxs }.filter(_.size > 1)
-    val removeIdxs = new MHashSet[Int]()
-    duplicatedRegs.foreach { regidxs =>
-      val baseidx = regidxs.head
-      regidxs.tail.foreach { idx =>
-        _regsRelation =
-          and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
-      }
-      removeIdxs ++= regidxs.tail
+    if (duplicatedRegs.nonEmpty) {
+      // remove the duplicated registers and add lia constraints to ensure they are equal
+      val removeIdxs = new MHashSet[Int]()
+      duplicatedRegs.foreach { regidxs =>
+        val baseidx = regidxs.head
+        regidxs.tail.foreach { idx =>
+          _regsRelation =
+            and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
+        }
+        removeIdxs ++= regidxs.tail
 
-    }
-    _registers = removeIdxsValueOfSeq(_registers, removeIdxs.toSet)
-    val newTransitionWithVec = transitionsWithVec.map {
-      case (from, lbl, to, vec) =>
-        (from, lbl, to, removeIdxsValueOfSeq(vec, removeIdxs.toSet))
-    }.toSeq
-    _state2transtions.clear()
-    _state2incomingTranstions.clear()
-    for ((from, lbl, to, vec) <- newTransitionWithVec) {
-      addTransition(from, lbl, to, vec)
+      }
+      _registers = removeIdxsValueOfSeq(_registers, removeIdxs.toSet)
+      val newTransitionWithVec = transitionsWithVec.map {
+        case (from, lbl, to, vec) =>
+          (from, lbl, to, removeIdxsValueOfSeq(vec, removeIdxs.toSet))
+      }.toSeq
+      _state2transtions.clear()
+      _state2incomingTranstions.clear()
+      for ((from, lbl, to, vec) <- newTransitionWithVec) {
+        addTransition(from, lbl, to, vec)
+      }
     }
   }
 
@@ -245,7 +266,9 @@ class CostEnrichedAutomatonBase extends Automaton {
       if (isAccept(s)) {
         return false
       }
-      for ((to, _, _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)) {
+      for (
+        (to, _, _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)
+      ) {
         worklist.push(to)
         seenlist.add(to)
       }
@@ -267,7 +290,10 @@ class CostEnrichedAutomatonBase extends Automaton {
       if (isAccept(s)) {
         return Some(acceptedword)
       }
-      for ((to, (lbl, _), _) <- outgoingTransitionsWithVec(s) if !seenlist.contains(to)) {
+      for (
+        (to, (lbl, _), _) <- outgoingTransitionsWithVec(s)
+        if !seenlist.contains(to)
+      ) {
         acceptedword = acceptedword :+ lbl.toInt
         worklist.push(to)
         seenlist.add(to)
@@ -292,7 +318,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   // Accessors and Mutators ////
   def initialState = _initialState
 
-  def initialState_= (s: State) = _initialState = s
+  def initialState_=(s: State) = _initialState = s
 
   def regsRelation = _regsRelation
 
@@ -303,8 +329,8 @@ class CostEnrichedAutomatonBase extends Automaton {
   def regsRelation_=(f: IFormula) = _regsRelation = f
   /////////////////////////////
   override def toString: String = {
-    val s2str = states.zipWithIndex.map{
-      case (state, int) => (state, s"s${int}")
+    val s2str = states.zipWithIndex.map { case (state, int) =>
+      (state, s"s${int}")
     }.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
       val (s, (left, right), t, vec) = transition
@@ -329,7 +355,7 @@ class CostEnrichedAutomatonBase extends Automaton {
     states.zipWithIndex.toMap
     val outdir = "dot" + File.separator + LocalDate.now().toString
     new File(outdir).mkdirs()
-    val dotfile = outdir + File.separator +  s"${suffix}.dot"
+    val dotfile = outdir + File.separator + s"${suffix}.dot"
     val writer = new DotWriter(dotfile.toString)
     val strbuilder = new StringBuilder
     strbuilder.append(s"""
@@ -343,7 +369,9 @@ class CostEnrichedAutomatonBase extends Automaton {
 
     for ((s, (left, right), t, vec) <- transitionsWithVec.toSeq.sortBy(_._1)) {
       strbuilder.append(s"""
-        ${s} -> ${t} [label = \"${left.toInt},${right.toInt}:(${vec.mkString(",")})\"]""")
+        ${s} -> ${t} [label = \"${left.toInt},${right.toInt}:(${vec.mkString(
+          ","
+        )})\"]""")
     }
     strbuilder.append("}")
     writer.closeAfterWrite(strbuilder.toString())

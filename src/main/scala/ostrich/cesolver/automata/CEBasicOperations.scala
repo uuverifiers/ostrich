@@ -147,6 +147,7 @@ object CEBasicOperations {
       aut1: A,
       aut2: A
   ): CostEnrichedAutomatonBase = {
+    ParikhUtil.debugPrintln("begin intersection")
     val ceAut = new CostEnrichedAutomaton
     // begin intersection
     val initialState1 = aut1.initialState
@@ -201,6 +202,7 @@ object CEBasicOperations {
     }
     ceAut.regsRelation = and(Seq(aut1.regsRelation, aut2.regsRelation))
     ceAut.registers = aut1.registers ++ aut2.registers
+    ParikhUtil.debugPrintln("end intersection")
     ceAut
   }
 

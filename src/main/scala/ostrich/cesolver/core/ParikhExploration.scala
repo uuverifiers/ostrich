@@ -280,9 +280,9 @@ class ParikhExploration(
           case Right(value) => _oldValue = value
         }
         if (_oldValue != resValue)
-          // if (nonTreeLikeApps)
-          //   throwResultCutException
-          // else
+          if (nonTreeLikeApps)
+            throwResultCutException
+          else
             throw new Exception(
               "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
             )
