@@ -1,14 +1,14 @@
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
 import ap.parser.Internal2InputAbsy._
 import ostrich.cesolver.convenience.CostEnrichedConvenience._
-import FinalConstraints._
 import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ostrich.cesolver.core.finalConstraints.{FinalConstraints, BaselineFinalConstraints}
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ostrich.cesolver.util.ParikhUtil
@@ -16,7 +16,7 @@ import ostrich.cesolver.util.ParikhUtil
 class BaselineSolver(val lProver: SimpleAPI)
     extends FinalConstraintsSolver[BaselineFinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    addConstraint(baselineACs(t, auts))
+    addConstraint(FinalConstraints.baselineACs(t, auts))
   }
 
   def solve: Result = {

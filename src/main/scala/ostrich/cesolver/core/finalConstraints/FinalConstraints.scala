@@ -1,4 +1,4 @@
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraints
 
 
 import ap.api.PartialModel
@@ -37,6 +37,13 @@ object FinalConstraints {
       auts: Seq[CostEnrichedAutomatonBase]
   ): BaselineFinalConstraints = {
     new BaselineFinalConstraints(t, auts)
+  }
+
+  def catraACs(
+      t: ITerm,
+      auts: Seq[CostEnrichedAutomatonBase]
+  ): CatraFinalConstraints = {
+    new CatraFinalConstraints(t, auts)
   }
 
   def evalTerm(t: ITerm, model: PartialModel): IdealInt = {

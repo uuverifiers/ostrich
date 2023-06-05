@@ -1,18 +1,19 @@
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
 import ostrich.cesolver.convenience.CostEnrichedConvenience._
-import FinalConstraints._
 import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ostrich.cesolver.core.finalConstraints.{FinalConstraints, UnaryFinalConstraints}
 import ostrich.OFlags
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
+
 
 class UnaryBasedSolver(
     flags: OFlags,
@@ -21,7 +22,7 @@ class UnaryBasedSolver(
 ) extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     ParikhUtil.debugPrintln("add atom constraints begin")
-    addConstraint(unaryHeuristicACs(t, auts, flags))
+    addConstraint(FinalConstraints.unaryHeuristicACs(t, auts, flags))
   }
 
   def solve: Result = {
@@ -55,7 +56,6 @@ class UnaryBasedSolver(
 
   def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {
     ParikhUtil.debugPrintln("begin solveFormula")
-    import FinalConstraints.evalTerm
     val res = new Result
 
     val finalArith = f
@@ -88,7 +88,7 @@ class UnaryBasedSolver(
         }
         // update integer model
         for (term <- integerTerms) {
-          val value = evalTerm(freshIntTerm2orgin(term), partialModel)
+          val value = FinalConstraints.evalTerm(freshIntTerm2orgin(term), partialModel)
           res.updateModel(term, value)
         }
 

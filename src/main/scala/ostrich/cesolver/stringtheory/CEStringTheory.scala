@@ -21,7 +21,7 @@ import ap.util.Seqs
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.collection.{Map => GMap}
 import ostrich.cesolver.preprocess.CEPreprocessor
-import ostrich.cesolver.core.FinalConstraints
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.Internal2InputAbsy
 import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}

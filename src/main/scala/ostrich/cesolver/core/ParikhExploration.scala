@@ -22,8 +22,9 @@ import ostrich.cesolver.core.Model.{IntValue, StringValue}
 import ostrich.cesolver.preop.IndexOfCEPreOp
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
+import ostrich.cesolver.core.finalConstraintsSolver.{BaselineSolver, CatraBasedSolver, UnaryBasedSolver}
 import ostrich.OFlags
-import OFlags.CEABackend.{Baseline, Unary}
+import OFlags.CEABackend.{Baseline, Unary, Catra}
 import ap.terfor.linearcombination.LinearCombination
 import ap.parser.ITerm
 import ap.parser.InputAbsy2Internal
@@ -303,10 +304,9 @@ class ParikhExploration(
         val model = new MHashMap[ITerm, Either[IdealInt, Seq[Int]]]
 
         // check linear arith consistency of final automata
-
         val backendSolver =
           flags.backend match {
-            // case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
+            case Catra    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
             case Baseline => new BaselineSolver(lProver)
             case Unary =>
               new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)

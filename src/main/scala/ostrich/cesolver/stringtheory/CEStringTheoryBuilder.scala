@@ -7,7 +7,7 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
-import ostrich.cesolver.core.FinalConstraints
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ostrich.OFlags
 import OFlags.CEABackend.{Unary, Baseline}
 import ostrich.cesolver.util.ParikhUtil

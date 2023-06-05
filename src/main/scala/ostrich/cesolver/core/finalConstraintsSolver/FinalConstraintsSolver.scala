@@ -1,4 +1,4 @@
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
@@ -6,6 +6,8 @@ import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
 import ostrich.cesolver.util.ParikhUtil
+import ostrich.cesolver.core.OstrichModel
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
 
 class Result {
   protected var status = ProverStatus.Unknown

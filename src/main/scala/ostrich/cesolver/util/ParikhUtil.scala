@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.terfor.linearcombination.LinearCombination
-import ostrich.cesolver.core.FinalConstraints
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ostrich.automata.BricsTLabelOps
