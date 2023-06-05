@@ -35,7 +35,7 @@ class ParikhStore(t: ITerm) {
 
   def pop: Unit = {
     val oldSize = constraintStack.pop
-    constraints reduceToSize oldSize
+    Seqs.reduceToSize(constraints, oldSize)
   }
 
   /** Check if there is directly confilct

@@ -1,6 +1,5 @@
 package ostrich.cesolver.preop
 
-import scala.collection.breakOut
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.automata.CETransducer
 import ostrich.automata.Automaton

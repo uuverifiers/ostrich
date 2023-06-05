@@ -35,8 +35,6 @@ package ostrich.automata
 import java.util.Objects
 
 import scala.collection.mutable.{HashMap, HashSet, Set, Stack, MultiMap}
-import scala.collection.JavaConversions._
-import scala.collection.IterableView
 
 object Box {
   /**
@@ -174,14 +172,14 @@ object CaleyGraph {
       : Map[Box[A], Iterable[A#TLabel]] = {
     val ae = aut.labelEnumerator
     val boxes : Map[A#TLabel,Box[A]] =
-      ae.enumDisjointLabelsComplete.map(i => i -> new Box[A])(collection.breakOut)
+      ae.enumDisjointLabelsComplete.map(i => i -> new Box[A]).toMap
 
     for ((q1, i, q2) <- aut.transitions;
          i2 <- ae.enumLabelOverlap(i))
       boxes(i2).addEdge(q1, q2)
 
     // reverse map
-    boxes.groupBy(_._2).mapValues(_.keys)
+    boxes.groupBy(_._2).mapValues(_.keys).toMap
   }
 
   /**

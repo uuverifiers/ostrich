@@ -137,7 +137,7 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
           override def lengthApproximation(arguments : Seq[Term], result : Term,
                                            order : TermOrder) : Formula = {
             import TerForConvenience._
-            implicit val _ = order
+            implicit val o = order
             ((arguments(0) >= trimLeft + trimRight) &
                result === arguments(0) - (trimLeft + trimRight)) |
             ((arguments(0) < trimLeft + trimRight) &

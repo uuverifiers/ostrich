@@ -46,7 +46,7 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
                            Transition => BTransition}
 
-import scala.collection.JavaConversions.{iterableAsScalaIterable,asJavaCollection}
+import scala.collection.JavaConverters.asScala
 
 import java.lang.StringBuilder
 
@@ -845,8 +845,8 @@ class BricsTransducerBuilder
     minimize()
     // TODO: restrict to live reachable states
     new BricsTransducer(initialState,
-                        lblTrans.toMap.mapValues(_.toSet),
-                        eTrans.toMap.mapValues(_.toSet),
+                        lblTrans.toMap.mapValues(_.toSet).toMap,
+                        eTrans.toMap.mapValues(_.toSet).toMap,
                         acceptingStates.toSet)
   }
 

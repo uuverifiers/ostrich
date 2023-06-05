@@ -43,8 +43,7 @@ lazy val commonSettings = Seq(
                              )
                           ),
 //
-  scalaVersion          := "2.11.12",
-  crossScalaVersions    := Seq("2.11.12", "2.12.17"),
+  scalaVersion          := "2.13.7",
   scalacOptions         += "-deprecation",
   fork in run           := true,
   cancelable in Global  := true,
@@ -85,6 +84,7 @@ lazy val root = (project in file(".")).
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
+    libraryDependencies += "uuverifiers" % "uuverifiers-catra_2.13" % "0.1.0-SNAPSHOT"
   )
 
 
