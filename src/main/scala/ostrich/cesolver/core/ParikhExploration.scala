@@ -36,6 +36,8 @@ import ap.terfor.SortedWithOrder
 import ostrich.OstrichSolver
 import ap.proof.theoryPlugins.Plugin
 import ap.parser.Internal2InputAbsy
+import ap.terfor.Formula
+import ap.parser.IFormula
 
 object ParikhExploration {
 
@@ -58,7 +60,8 @@ class ParikhExploration(
     initialConstraints: Seq[(ITerm, Automaton)],
     strDatabase: StrDatabase,
     flags: OFlags,
-    lProver: SimpleAPI
+    lProver: SimpleAPI,
+    inputFormula: IFormula
 ) {
 
   import ParikhExploration._
@@ -306,7 +309,7 @@ class ParikhExploration(
         // check linear arith consistency of final automata
         val backendSolver =
           flags.backend match {
-            case Catra    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
+            case Catra    => new CatraBasedSolver(inputFormula, freshIntTerm2orgin.toMap)
             case Baseline => new BaselineSolver(lProver)
             case Unary =>
               new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)

@@ -361,7 +361,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
           inputRegexes.toSeq,
           strDatabase,
           flags,
-          lProver
+          lProver,
+          Internal2InputAbsy(goal.facts.arithConj)
         )
         approxExp.findModel
       }

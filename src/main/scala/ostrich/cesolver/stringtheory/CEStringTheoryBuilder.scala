@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ostrich.OFlags
-import OFlags.CEABackend.{Unary, Baseline}
+import OFlags.CEABackend.{Unary, Baseline, Catra}
 import ostrich.cesolver.util.ParikhUtil
 
 /** The entry class of the Ostrich string solver.
@@ -18,7 +18,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
   val version = "1.2.1"
-  
+
   Console.withOut(Console.err) {
     println
     println(
@@ -35,7 +35,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug = false
+  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug =
+    false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   private var backend: OFlags.CEABackend.Value = Unary
   private var underApprox, simplifyAut = true
@@ -65,13 +66,15 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       useCostEnriched = value
     case CmdlParser.Opt("under-approx", value) =>
       underApprox = value
-    case CmdlParser.Opt("debug", value) => 
+    case CmdlParser.Opt("debug", value) =>
       debug = value
       ParikhUtil.debug = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("backend", "unary") =>
       backend = Unary
+    case CmdlParser.ValueOpt("backend", "catra") =>
+      backend = Catra
     case CmdlParser.ValueOpt("under-approx-bound", value) =>
       underApproxBound = value.toInt
     case str =>

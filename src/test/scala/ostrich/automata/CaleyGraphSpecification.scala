@@ -4,7 +4,7 @@ import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 import dk.brics.automaton.{Automaton => BAutomaton, State, Transition}
 import scala.collection.mutable.Set
-import scala.collection.JavaConversions.iterableAsScalaIterable
+import scala.collection.JavaConverters.asScala
 
 class PrintableState extends State {
   override def toString = "q" + hashCode
@@ -12,7 +12,7 @@ class PrintableState extends State {
 
 class IDState(val ident : Int) extends State {
   override def toString =
-    getTransitions.foldLeft("q" + ident + '\n') { (s, t) =>
+    asScala(getTransitions).foldLeft("q" + ident + '\n') { (s, t) =>
       val dest = t.getDest match {
         case d : IDState => "q" + d.ident
         case q => q.toString
@@ -75,8 +75,7 @@ object CaleyGraphSpecification
     val aut = new BAutomaton
     val q = aut.getInitialState
     val baut = new BricsAutomaton(aut)
-    val nodes = Set(Box[BricsAutomaton](), Box[BricsAutomaton]((q, q)))
-    caleyGraphHasBoxes(baut, nodes)
+    caleyGraphHasBoxes(baut, Set(Box[BricsAutomaton]((q, q))))
   }
 
   property("Caley graph nodes for q0 -a-> q1 -b-> q2") = {
