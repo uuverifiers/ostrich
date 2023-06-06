@@ -354,6 +354,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
          (op, args) <- apps) {
       val arguments = for (a <- args) yield constraintStores(a).getCompleteContents
       val resultConstraint = op.forwardApprox(arguments)
+      println("Forward Constraint added: " + resultConstraint + "op " + op + " args " + args + "apps " + apps + " res " + res)
       constraintStores(res).assertConstraint(resultConstraint)
     }
   }
@@ -492,6 +493,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     case (op, args, res) :: otherApps => {
       if (debug)
         Console.err.println("dfExplore, depth " + apps.size)
+      println("ops: " + op + " args: " + args + " res: " + res)
       dfExploreOp(op, args, res, constraintStores(res).getContents,
                   otherApps)
     }
