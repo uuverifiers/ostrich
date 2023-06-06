@@ -22,6 +22,10 @@ class ParikhStore(t: ITerm) {
   private val constraints = new ArrayBuffer[Automaton]
   // the stack is used to push and pop constraints
   private val constraintStack = new ArrayStack[Int]
+  private val productAutStack = new ArrayStack[Automaton]
+
+  // the intermidiate product automaton
+  private var productAut: Automaton = BricsAutomatonWrapper.makeAnyString
 
   // Combinations of automata that are known to have empty intersection
   private val inconsistentAutomata = new ArrayBuffer[Seq[Automaton]]
@@ -30,10 +34,12 @@ class ParikhStore(t: ITerm) {
   private val watchedAutomata = new MHashMap[Automaton, List[Int]]
 
   def push: Unit = {
+    productAutStack push productAut
     constraintStack push constraints.size
   }
 
   def pop: Unit = {
+    productAut = productAutStack.pop
     val oldSize = constraintStack.pop
     Seqs.reduceToSize(constraints, oldSize)
   }
@@ -63,24 +69,6 @@ class ParikhStore(t: ITerm) {
     None
   }
 
-  /** Check if there is conflict among auts
-    * @param auts
-    *   the automata to check
-    * @return
-    *   ture if not conflict; false otherwise
-    */
-  private def isConsistency(
-      auts: Seq[CostEnrichedAutomatonBase]
-  ): Boolean = {
-    var productAut: CostEnrichedAutomatonBase =
-      BricsAutomatonWrapper.makeAnyString
-    auts.sortBy(_.states.size).foreach { aut =>
-      productAut = productAut & aut
-      if (productAut.isEmpty) return false
-    }
-    true
-  }
-
   /** Check if constraints are still consistent after adding `aut`
     * @param aut
     *   new added aut
@@ -88,11 +76,14 @@ class ParikhStore(t: ITerm) {
     *   None if constraints are still consistent; Some(unsatCore) otherwise.
     */
   private def checkConsistency(aut: Automaton): Option[Seq[Automaton]] = {
-    val consideredAuts = new ArrayBuffer[Automaton]
-    for (aut2 <- constraints :+ aut) {
-      consideredAuts += aut2
-      if (!isConsistency(consideredAuts.toSeq)) {
-        return Some(consideredAuts.toSeq)
+    productAut = productAut & automaton2CostEnriched(aut)
+    if (productAut.isEmpty) {
+      val consideredAuts = ArrayBuffer(aut)
+      var tmpAut = aut
+      for (aut2 <- constraints) {
+        if (tmpAut.isEmpty) return Some(consideredAuts.toSeq)
+        tmpAut = tmpAut & automaton2CostEnriched(aut2)
+        consideredAuts += aut2
       }
     }
     None
@@ -142,8 +133,10 @@ class ParikhStore(t: ITerm) {
     None
   }
 
-  def getContents: List[Automaton] = constraints.toList
+  // used to get the product automaton
+  def getContents: List[Automaton] = Seq(productAut).toList
 
+  // used to cut off the searching tree
   def getCompleteContents: List[Automaton] = constraints.toList
 
   def ensureCompleteLengthConstraints: Unit = None // no need

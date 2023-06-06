@@ -202,59 +202,6 @@ class CostEnrichedAutomatonBase extends Automaton {
     that.asInstanceOf[CostEnrichedAutomatonBase]
   )
 
-  def removeDuplicatedReg(): Unit = {
-    def removeIdxsValueOfSeq[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
-      val res = ArrayBuffer[A]()
-      for (i <- 0 until s.size) {
-        if (!idxs.contains(i)) {
-          res += s(i)
-        }
-      }
-      res.toSeq
-    }
-    // transpose the vectors, so that each vector is a column containing all updates of a register
-    val vectorsT =
-      transitionsWithVec
-        .map { case (_, _, _, v) => v }
-        .toSeq
-        .transpose
-        .zipWithIndex
-    val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
-    // map the transposed vectors to their updated register
-    for ((v, i) <- vectorsT) {
-      if (!vectors2Idxs.contains(v)) {
-        vectors2Idxs += (v -> Set[Int]())
-      }
-      vectors2Idxs(v) += i
-    }
-    // if a transposed vector map to more than one register, then these registers are duplicated
-    val duplicatedRegs =
-      vectors2Idxs.map { case (_, idxs) => idxs }.filter(_.size > 1)
-    if (duplicatedRegs.nonEmpty) {
-      // remove the duplicated registers and add lia constraints to ensure they are equal
-      val removeIdxs = new MHashSet[Int]()
-      duplicatedRegs.foreach { regidxs =>
-        val baseidx = regidxs.head
-        regidxs.tail.foreach { idx =>
-          _regsRelation =
-            and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
-        }
-        removeIdxs ++= regidxs.tail
-
-      }
-      _registers = removeIdxsValueOfSeq(_registers, removeIdxs.toSet)
-      val newTransitionWithVec = transitionsWithVec.map {
-        case (from, lbl, to, vec) =>
-          (from, lbl, to, removeIdxsValueOfSeq(vec, removeIdxs.toSet))
-      }.toSeq
-      _state2transtions.clear()
-      _state2incomingTranstions.clear()
-      for ((from, lbl, to, vec) <- newTransitionWithVec) {
-        addTransition(from, lbl, to, vec)
-      }
-    }
-  }
-
   // check whether the NFA form of this automaton is empty
   def isEmpty: Boolean = {
     val seenlist = new MHashSet[State]
@@ -328,6 +275,62 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   def regsRelation_=(f: IFormula) = _regsRelation = f
   /////////////////////////////
+
+  // optimization and minimization ////
+  def removeDuplicatedReg(): Unit = {
+    def removeValuesInIdxs[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
+      val res = ArrayBuffer[A]()
+      for (i <- 0 until s.size) {
+        if (!idxs.contains(i)) {
+          res += s(i)
+        }
+      }
+      res.toSeq
+    }
+    // transpose the vectors, so that each vector is a column containing all updates of a register
+    val vectorsT =
+      transitionsWithVec
+        .map { case (_, _, _, v) => v }
+        .toSeq
+        .transpose
+        .zipWithIndex
+    val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
+    // map the transposed vectors to their updated register
+    for ((v, i) <- vectorsT) {
+      if (!vectors2Idxs.contains(v)) {
+        vectors2Idxs += (v -> Set[Int]())
+      }
+      vectors2Idxs(v) += i
+    }
+    // if a transposed vector map to more than one register, then these registers are duplicated
+    val duplicatedRegs =
+      vectors2Idxs.map { case (_, idxs) => idxs }.filter(_.size > 1)
+    if (duplicatedRegs.nonEmpty) {
+      // remove the duplicated registers and add lia constraints to ensure they are equal
+      val removeIdxs = new MHashSet[Int]()
+      duplicatedRegs.foreach { regidxs =>
+        val baseidx = regidxs.head
+        regidxs.tail.foreach { idx =>
+          _regsRelation =
+            and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
+        }
+        removeIdxs ++= regidxs.tail
+
+      }
+      _registers = removeValuesInIdxs(_registers, removeIdxs.toSet)
+      val newTransitionWithVec = transitionsWithVec.map {
+        case (from, lbl, to, vec) =>
+          (from, lbl, to, removeValuesInIdxs(vec, removeIdxs.toSet))
+      }.toSeq
+      _state2transtions.clear()
+      _state2incomingTranstions.clear()
+      for ((from, lbl, to, vec) <- newTransitionWithVec) {
+        addTransition(from, lbl, to, vec)
+      }
+    }
+  }
+  /////////////////////////////////////
+
   override def toString: String = {
     val s2str = states.zipWithIndex.map { case (state, int) =>
       (state, s"s${int}")

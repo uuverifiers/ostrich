@@ -198,7 +198,7 @@ class ParikhExploration(
   private def trivalConflict: ConflictSet = {
     for (
       t <- leafTerms.toSeq;
-      aut <- constraintStores(t).getContents
+      aut <- constraintStores(t).getCompleteContents
     ) yield TermConstraint(t, aut)
   }
 
