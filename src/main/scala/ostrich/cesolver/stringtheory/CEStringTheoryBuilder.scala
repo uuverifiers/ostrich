@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 import ap.theories.TheoryBuilder
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ostrich.OFlags
-import OFlags.CEABackend.{Unary, Baseline, Catra}
+import OFlags.CEABackend.{Unary, Baseline, Catra, Nuxmv}
 import ostrich.cesolver.util.ParikhUtil
 
 /** The entry class of the Ostrich string solver.
@@ -75,6 +75,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       backend = Unary
     case CmdlParser.ValueOpt("backend", "catra") =>
       backend = Catra
+    case CmdlParser.ValueOpt("backend", "nuxmv") =>
+      backend = Nuxmv
     case CmdlParser.ValueOpt("under-approx-bound", value) =>
       underApproxBound = value.toInt
     case str =>

@@ -24,7 +24,7 @@ import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.core.finalConstraintsSolver.{BaselineSolver, CatraBasedSolver, UnaryBasedSolver}
 import ostrich.OFlags
-import OFlags.CEABackend.{Baseline, Unary, Catra}
+import OFlags.CEABackend.{Baseline, Unary, Catra, Nuxmv}
 import ap.terfor.linearcombination.LinearCombination
 import ap.parser.ITerm
 import ap.parser.InputAbsy2Internal
@@ -38,6 +38,7 @@ import ap.proof.theoryPlugins.Plugin
 import ap.parser.Internal2InputAbsy
 import ap.terfor.Formula
 import ap.parser.IFormula
+import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
 
 object ParikhExploration {
 
@@ -309,6 +310,7 @@ class ParikhExploration(
         // check linear arith consistency of final automata
         val backendSolver =
           flags.backend match {
+            case Nuxmv    => new NuxmvBasedSolver(inputFormula, freshIntTerm2orgin.toMap)
             case Catra    => new CatraBasedSolver(inputFormula, freshIntTerm2orgin.toMap)
             case Baseline => new BaselineSolver(lProver)
             case Unary =>

@@ -39,7 +39,7 @@ object OFlags {
   }
 
   object CEABackend extends Enumeration {
-    val Baseline, Unary, Catra = Value
+    val Baseline, Unary, Catra, Nuxmv = Value
   }
 
   /** Compile-time flag that can be used to switch on debugging output
