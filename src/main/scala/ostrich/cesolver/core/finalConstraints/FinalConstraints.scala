@@ -82,6 +82,7 @@ trait FinalConstraints {
   lazy val getCompleteLIA: IFormula = getCompleteLIA(auts.reduce(_ product _))
 
   def getCompleteLIA(aut: CostEnrichedAutomatonBase): IFormula = {
+    ParikhUtil.debugPrintln("getCompleteLIA")
     lazy val transtion2Term =
       aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
     def outFlowTerms(from: State): Seq[ITerm] = {

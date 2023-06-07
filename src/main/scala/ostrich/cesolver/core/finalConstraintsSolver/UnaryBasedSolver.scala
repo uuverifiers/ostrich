@@ -20,6 +20,7 @@ class UnaryBasedSolver(
     lProver: SimpleAPI
 ) extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
+    ParikhUtil.debugPrintln("add atom constraints begin")
     addConstraint(unaryHeuristicACs(t, auts, flags))
   }
 
@@ -33,6 +34,7 @@ class UnaryBasedSolver(
 
   def solveUnderApprox: Result = {
     // add bound iterately
+    ParikhUtil.debugPrintln("under begin")
     val maxBound = flags.underApproxBound
     val step = 5
     var nowBound = 5
@@ -52,6 +54,7 @@ class UnaryBasedSolver(
   )
 
   def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {
+    ParikhUtil.debugPrintln("begin solveFormula")
     import FinalConstraints.evalTerm
     val res = new Result
 
@@ -94,6 +97,7 @@ class UnaryBasedSolver(
     }
 
     lProver.pop
+    ParikhUtil.debugPrintln("end solveFormula")
     res
   }
 

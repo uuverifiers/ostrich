@@ -22,6 +22,8 @@ object ParikhUtil {
   type State = CostEnrichedAutomatonBase#State
   type TLabel = CostEnrichedAutomatonBase#TLabel
 
+  var debug = false
+
   def measure[A](
       op: String
   )(comp: => A)(implicit manualFlag: Boolean = true): A =
@@ -126,10 +128,12 @@ object ParikhUtil {
 
 
   def debugPrintln(s: Any) = {
-    println("Debug: " + s)
+    if(debug)
+      println("Debug: " + s)
   }
 
   def todo(s:Any) = {
-    println("TODO:" + s)
+    if(debug)
+      println("TODO:" + s)
   }
 }

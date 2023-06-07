@@ -23,7 +23,7 @@ object CostEnrichedConvenience {
       BricsAutomatonWrapper(aut.asInstanceOf[BricsAutomaton].underlying)
     } else {
       val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
-      e.printStackTrace()
+      // e.printStackTrace()
       throw e
     }
   }

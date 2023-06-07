@@ -147,6 +147,7 @@ object CEBasicOperations {
       aut1: A,
       aut2: A
   ): CostEnrichedAutomatonBase = {
+    ParikhUtil.debugPrintln("begin intersection")
     val ceAut = new CostEnrichedAutomaton
     // begin intersection
     val initialState1 = aut1.initialState
@@ -201,7 +202,8 @@ object CEBasicOperations {
     }
     ceAut.regsRelation = and(Seq(aut1.regsRelation, aut2.regsRelation))
     ceAut.registers = aut1.registers ++ aut2.registers
-    ceAut
+    ParikhUtil.debugPrintln("end intersection")
+    removeDeadState(ceAut)
   }
 
   def diffWithoutRegs(
@@ -352,15 +354,9 @@ object CEBasicOperations {
     aut
   }
 
-  // We want to simplify the final automaton before generating lia by three steps:
-  // remove all transitions with same state and update function
-  def simplify(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
-    aut.removeDuplicatedReg()
-    removeUselessTrans(aut)
-  }
-
-  // When two transition contains same (s, t, v), we can remove one of them
-  def removeUselessTrans(
+  // For final intersected automaton, when more than one transitions contain same (s, t, v), 
+  // we can only reserve one of them 
+  def removeDuplicatedTrans(
       aut: CostEnrichedAutomatonBase
   ): CostEnrichedAutomatonBase = {
     if (aut.registers.isEmpty) return aut

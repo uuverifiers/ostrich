@@ -19,10 +19,8 @@ class UnaryFinalConstraints(
   // to avoid repeated exploration
   private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
 
-  ParikhUtil.debugPrintln("begin")
   // eagerly product
   lazy val productAut = auts.reduce(_ product _)
-  ParikhUtil.debugPrintln("middle")
 
   lazy val mostlySimplifiedAut = {
     val ceAut = CEBasicOperations.minimizeHopcroftByVec(
@@ -37,7 +35,7 @@ class UnaryFinalConstraints(
   }
 
   lazy val simplifyButRemainLabelAut = {
-    val ceAut = CEBasicOperations.removeUselessTrans(
+    val ceAut = CEBasicOperations.removeDuplicatedTrans(
       CEBasicOperations.minimizeHopcroft(
         productAut
       )
@@ -52,8 +50,6 @@ class UnaryFinalConstraints(
   lazy val findModelAut =
     if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
 
-  ParikhUtil.debugPrintln("stop")
-
   /**
     * Like Bounded Model Checking(BMC), we find all runs of length less and equal to 
     * bound. If the end state of the run is an accepting state, we compute the registers updates
@@ -62,6 +58,7 @@ class UnaryFinalConstraints(
     * @return
     */
   def getUnderApprox(bound: Int): IFormula = {
+    ParikhUtil.debugPrintln("getUnderApprox")
     val aut = checkSatAut
     val lowerBound = globalS.size
     computeGlobalSWithRegsValue(bound)
