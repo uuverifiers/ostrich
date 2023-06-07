@@ -50,13 +50,14 @@ object BricsAutomatonWrapper {
 class BricsAutomatonWrapper(val underlying: BAutomaton)
     extends CostEnrichedAutomatonBase {
 
-  override def initialState_= (s: State) = underlying.setInitialState(s)
-
-  override def initialState: State = underlying.getInitialState()
+  private val old2new = asScala(underlying.getStates()).map(s => (s, newState())).toMap
   
   // initialize
+  initialState = old2new(underlying.getInitialState())
   for (s <- asScala(underlying.getStates())){
     for (t <- asScala(s.getTransitions()))
-      addTransition(s, (t.getMin(), t.getMax()), t.getDest(), Seq())
+      addTransition(old2new(s), (t.getMin(), t.getMax()), old2new(t.getDest()), Seq())
   }
+  for (s <- asScala(underlying.getAcceptStates()))
+    setAccept(old2new(s),true)
 }

@@ -33,7 +33,7 @@ class NuxmvBasedSolver(
   private val outFile = new File("parikh.smv")
 
   private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
-    val inputVars = constraints.zipWithIndex.map { case (_, i) =>
+    val labels = constraints.zipWithIndex.map { case (_, i) =>
       s"l$i"
     }
     val state2int =
@@ -45,7 +45,7 @@ class NuxmvBasedSolver(
 
     println("IVAR")
     // input label variable
-    for (inputVar <- inputVars)
+    for (inputVar <- labels)
       println(s"  $inputVar : integer;")
 
     println("VAR")
@@ -69,6 +69,10 @@ class NuxmvBasedSolver(
       println(s"  init($i) := 0;")
 
     ParikhUtil.todo("transition and invariant")
+    // transitions
+    for ((c, l) <- constraints.zip(labels); (s, a, t, v) <- c.auts.flatMap(_.transitionsWithVec)){
+      println(s"TRANS ${}")
+    }
   }
 
   def solve: Result = {
