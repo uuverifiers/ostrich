@@ -111,7 +111,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
 
           } catch {
             case t: ap.util.Timeout => throw t
-            case t: Throwable       => { t.printStackTrace; throw t }
+            // case t: Throwable       => { t.printStackTrace; throw t }
           }
 
       }
