@@ -172,14 +172,14 @@ object CaleyGraph {
       : Map[Box[A], Iterable[A#TLabel]] = {
     val ae = aut.labelEnumerator
     val boxes : Map[A#TLabel,Box[A]] =
-      ae.enumDisjointLabelsComplete.map(i => i -> new Box[A]).toMap
+      ae.enumDisjointLabelsComplete.view.map(i => i -> new Box[A]).toMap
 
     for ((q1, i, q2) <- aut.transitions;
          i2 <- ae.enumLabelOverlap(i))
       boxes(i2).addEdge(q1, q2)
 
     // reverse map
-    boxes.groupBy(_._2).mapValues(_.keys).toMap
+    boxes.groupBy(_._2).view.mapValues(_.keys).toMap
   }
 
   /**

@@ -267,7 +267,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     // check whether any of the terms have concrete definitions
     for (t <- allTerms)
       for (w <- strDatabase.term2List(t)) {
-        val str : String = w.map(i => i.toChar).mkString("")
+        val str : String = w.view.map(i => i.toChar).mkString("")
         additionalConstraints += ((t, BricsAutomaton fromString str))
         for (ind <- term2Index get t)
           coveredTerms += ind
@@ -875,15 +875,15 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       constraints forall (_(w))
 
     def getAcceptedWord : Seq[Int] =
-      constraints match {
+      constraints.toSeq match {
         case Seq() => List()
         case auts  => intersection.getAcceptedWord.get
       }
 
     def getAcceptedWordLen(len : Int) : Seq[Int] =
-      constraints match {
+      constraints.toSeq match {
         case Seq() => for (_ <- 0 until len) yield 0
-        case auts  => AutomataUtils.findAcceptedWord(auts.toSeq, len).get
+        case auts  => AutomataUtils.findAcceptedWord(auts, len).get
       }
   }
 

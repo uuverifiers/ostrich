@@ -75,7 +75,8 @@ object CaleyGraphSpecification
     val aut = new BAutomaton
     val q = aut.getInitialState
     val baut = new BricsAutomaton(aut)
-    caleyGraphHasBoxes(baut, Set(Box[BricsAutomaton]((q, q))))
+    val nodes = Set(Box[BricsAutomaton](), Box[BricsAutomaton]((q, q)))
+    caleyGraphHasBoxes(baut, nodes)
   }
 
   property("Caley graph nodes for q0 -a-> q1 -b-> q2") = {
