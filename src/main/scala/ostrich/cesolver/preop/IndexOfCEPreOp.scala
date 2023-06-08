@@ -19,7 +19,7 @@ import ostrich.cesolver.automata.CEBasicOperations.{
 }
 import ap.parser.ITerm
 import ap.parser.IExpression._
-import ap.parser.IIntLit
+import ap.parser.IExpression.Const
 import ostrich.cesolver.util.TermGenerator
 
 object IndexOfCEPreOp {
@@ -46,7 +46,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     var preimages = Iterator[Seq[Automaton]]()
 
     val startPosPrefix = startPos match {
-      case IIntLit(value) => {
+      case Const(value) => {
         automatonWithLen(value.intValueSafe)
       }
       case _ => {
@@ -61,7 +61,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     )
 
     val notMatchedPrefix = index match {
-      case IIntLit(value) => {
+      case Const(value) => {
         concatenate(
           Seq(
             intersection(
@@ -86,7 +86,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     }
 
     val matchedSuffix = index match {
-      case IIntLit(value) => {
+      case Const(value) => {
         concatenate(
           Seq(
             automatonWithLen(value.intValueSafe),
@@ -114,7 +114,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     // index = -1
     // len(searchedStr) < startPos
     val preimage2 = startPos match {
-      case IIntLit(value) => {
+      case Const(value) => {
         if (value.intValueSafe < 0) {
           makeAnyString()
         } else
@@ -134,7 +134,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
 
     // len(searchedStr) > startPos and no match after startPos
     val preimage3 = startPos match {
-      case IIntLit(value) => {
+      case Const(value) => {
         concatenate(
           Seq(automatonWithLen(value.intValueSafe), notMatched)
         )
@@ -159,7 +159,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     preimage4.regsRelation = and(Seq(preimage4.regsRelation, index === startPos))
 
     index match {
-      case IIntLit(value) if !matchString.isEmpty => {
+      case Const(value) if !matchString.isEmpty => {
         if (value.intValueSafe == -1) {
           preimages = Iterator(Seq(preimage2), Seq(preimage3))
         } else {
@@ -167,7 +167,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
         }
       }
 
-      case IIntLit(value) if matchString.isEmpty => {
+      case Const(value) if matchString.isEmpty => {
         if (value.intValueSafe == -1) {
           preimages = Iterator(Seq(preimage2), Seq(preimage3))
         } else {

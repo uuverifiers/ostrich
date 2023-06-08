@@ -85,6 +85,8 @@ trait FinalConstraints {
   // accessors and mutators
   def getRegsRelation: IFormula
 
+  def getRegisters = auts.flatMap(_.registers)
+
   def setInterestTermModel(partialModel: PartialModel): Unit =
     for (term <- interestTerms)
       interestTermsModel += (term -> evalTerm(term, partialModel))
@@ -197,10 +199,9 @@ trait FinalConstraints {
         val trasitionTerm = transtion2Term(from, lbl, to, vec)
         vec.zipWithIndex.foreach {
           case (veci, i) => {
-            val registeri = aut.registers(i)
             val update =
               registerUpdateMap.getOrElseUpdate(
-                registeri,
+                aut.registers(i),
                 new ArrayBuffer[ITerm]
               )
             update.append(trasitionTerm * veci)
