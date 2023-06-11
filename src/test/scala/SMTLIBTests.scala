@@ -372,6 +372,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/indexof-4.smt2", "sat")
   property("indexof-5.smt2") =
     checkFile("tests/indexof-5.smt2", "sat")
+  property("indexof-6.smt2") =
+    checkFile("tests/indexof-6.smt2", "unsat")
 
   property("substring.smt2") =
     checkFile("tests/substring.smt2", "sat")
