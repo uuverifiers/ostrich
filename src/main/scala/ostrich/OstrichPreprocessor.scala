@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -173,13 +173,16 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
       eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
         suffixDef1 &
-        ((resultVar === -1 &
-            (!str_in_re(bigStrSuffix, containingStr) | suffixDef2)) |
-         (suffixDef3 &
-            resultVar === str_len(unmatchedPrefixVar) + shiftedStartIndex &
-            strCat(unmatchedPrefixVar, subStr,
-                   unmatchedSuffixVar) === bigStrSuffix &
-            !str_in_re(unmatchedPrefixVar, containingOrSuffix)))
+         ((resultVar === -1 &
+            suffixDef3 &
+            !str_in_re(bigStrSuffix, containingStr)) |
+          (resultVar === -1 &
+             suffixDef2) |
+          (suffixDef3 &
+             resultVar === str_len(unmatchedPrefixVar) + shiftedStartIndex &
+             strCat(unmatchedPrefixVar, subStr,
+                    unmatchedSuffixVar) === bigStrSuffix &
+             !str_in_re(unmatchedPrefixVar, containingOrSuffix)))
       ))))))
     }
 
