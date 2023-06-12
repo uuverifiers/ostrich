@@ -432,11 +432,11 @@ class ParikhExploration(
       }
 
       // generate conflict set
-      // if (needCompleteContentsForConflicts)
-      //   collectedConflicts ++=
-      //     (for (aut <- constraintStores(res).getCompleteContents)
-      //       yield TermConstraint(res, aut))
-      // else
+      if (needCompleteContentsForConflicts)
+        collectedConflicts ++=
+          (for (aut <- constraintStores(res).getCompleteContents)
+            yield TermConstraint(res, aut))
+      else
       collectedConflicts += TermConstraint(res, resAut)
 
       collectedConflicts ++=
@@ -483,7 +483,8 @@ class ParikhExploration(
     initialConstraints ++ additionalConstraints
   }
 
-  protected val needCompleteContentsForConflicts: Boolean = false
+  // set to true if we product eagerly
+  protected val needCompleteContentsForConflicts: Boolean = true
   protected def newStore(t: ITerm): ParikhStore =
     new ParikhStore(t)
 }
