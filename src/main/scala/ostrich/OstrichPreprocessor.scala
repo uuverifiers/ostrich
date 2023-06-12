@@ -73,6 +73,8 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         re_*?(re_allchar())
       case IFunApp(`re_*`, _) =>
         re_*?(subres(0).asInstanceOf[ITerm])
+      case IFunApp(`re_+`, _) =>
+        re_+?(subres(0).asInstanceOf[ITerm])
       case IFunApp(`re_opt`, _) =>
         re_opt_?(subres(0).asInstanceOf[ITerm])
       case IFunApp(`re_loop`, _) =>
