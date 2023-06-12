@@ -136,4 +136,10 @@ object ParikhUtil {
     if(debug)
       println("TODO:" + s)
   }
+
+  def throwWithStackTrace(e: Throwable) = {
+    throw e
+    if(debug)
+      e.printStackTrace  
+  }
 }

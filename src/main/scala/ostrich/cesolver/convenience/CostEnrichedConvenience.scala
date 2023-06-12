@@ -9,12 +9,12 @@ import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 object CostEnrichedConvenience {
-  implicit def automaton2CostEnriched(
+  def automaton2CostEnriched(
       auts: Seq[Automaton]
   ): Seq[CostEnrichedAutomatonBase] =
     auts.map(automaton2CostEnriched(_))
 
-  implicit def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonBase = {
+  def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonBase = {
     if (
       aut.isInstanceOf[CostEnrichedAutomatonBase]
     ) {

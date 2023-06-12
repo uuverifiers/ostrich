@@ -1,7 +1,6 @@
 package ostrich.cesolver.core
 
 import ostrich.preop.PreOp
-import ostrich.automata.Automaton
 import ostrich.StrDatabase
 import ap.SimpleAPI
 import scala.collection.mutable.{
@@ -39,10 +38,11 @@ import ap.parser.Internal2InputAbsy
 import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
+import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 
 object ParikhExploration {
 
-  case class TermConstraint(t: ITerm, aut: Automaton)
+  case class TermConstraint(t: ITerm, aut: CostEnrichedAutomatonBase)
 
   type ConflictSet = Seq[TermConstraint]
 
@@ -58,7 +58,7 @@ object ParikhExploration {
 
 class ParikhExploration(
     funApps: Seq[(PreOp, Seq[ITerm], ITerm)],
-    initialConstraints: Seq[(ITerm, Automaton)],
+    initialConstraints: Seq[(ITerm, CostEnrichedAutomatonBase)],
     strDatabase: StrDatabase,
     flags: OFlags,
     lProver: SimpleAPI,
@@ -197,6 +197,7 @@ class ParikhExploration(
     allTerms filter { case t => !(resultTerms contains t) }
 
   private def trivalConflict: ConflictSet = {
+    ParikhUtil.debugPrintln("trivalConflict")
     for (
       t <- leafTerms.toSeq;
       aut <- constraintStores(t).getCompleteContents
@@ -211,8 +212,8 @@ class ParikhExploration(
 
     for ((t, aut) <- allInitialConstraints) {
       constraintStores(t).assertConstraint(aut) match {
-        case Some(confilctSet) =>
-          // println(confilctSet)
+        case Some(conflictSet) =>
+          // println(conflictSet)
           return None
         case None => // nothing
       }
@@ -369,7 +370,7 @@ class ParikhExploration(
       op: PreOp,
       args: Seq[ITerm],
       res: ITerm,
-      resConstraints: List[Automaton],
+      resConstraints: List[CostEnrichedAutomatonBase],
       nextApps: List[(PreOp, Seq[ITerm], ITerm)]
   ): ConflictSet = resConstraints match {
     case List() =>
@@ -403,9 +404,10 @@ class ParikhExploration(
           var consistent = true
           for ((a, aut) <- args zip argCS)
             if (consistent) {
-              newConstraints += TermConstraint(a, aut)
+              val cea = aut.asInstanceOf[CostEnrichedAutomatonBase]
+              newConstraints += TermConstraint(a, cea)
               // add pre image aut to its constraint store, check consistency
-              constraintStores(a).assertConstraint(aut) match {
+              constraintStores(a).assertConstraint(cea) match {
                 case Some(conflict) => {
                   consistent = false
 
@@ -424,7 +426,8 @@ class ParikhExploration(
             ) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-              // println("backjump " + conflict)
+              ParikhUtil.debugPrintln("backjump ")
+              ParikhUtil.debugPrintln(conflict)
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
@@ -437,11 +440,11 @@ class ParikhExploration(
       }
 
       // generate conflict set
-      // if (needCompleteContentsForConflicts)
-      //   collectedConflicts ++=
-      //     (for (aut <- constraintStores(res).getCompleteContents)
-      //       yield TermConstraint(res, aut))
-      // else
+      if (needCompleteContentsForConflicts)
+        collectedConflicts ++=
+          (for (aut <- constraintStores(res).getCompleteContents)
+            yield TermConstraint(res, aut))
+      else
       collectedConflicts += TermConstraint(res, resAut)
 
       collectedConflicts ++=
@@ -449,18 +452,18 @@ class ParikhExploration(
           (t, auts) <- args.iterator zip argDependencies.iterator;
           aut <- auts.iterator
         )
-          yield TermConstraint(t, aut))
+          yield TermConstraint(t, aut.asInstanceOf[CostEnrichedAutomatonBase]))
       collectedConflicts.toSeq
     }
   }
 
   // need to be cost-enriched constraints
-  val allInitialConstraints: Seq[(ITerm, Automaton)] = {
+  val allInitialConstraints: Seq[(ITerm, CostEnrichedAutomatonBase)] = {
     val coveredTerms = new MHashSet[ITerm]
     for ((t, _) <- initialConstraints)
       coveredTerms += t
 
-    val additionalConstraints = new ArrayBuffer[(ITerm, Automaton)]
+    val additionalConstraints = new ArrayBuffer[(ITerm, CostEnrichedAutomatonBase)]
 
     // check whether any of the terms have concrete definitions
     for (t <- strTerms)
@@ -488,7 +491,8 @@ class ParikhExploration(
     initialConstraints ++ additionalConstraints
   }
 
-  protected val needCompleteContentsForConflicts: Boolean = false
+  // set to true when eagerly product 
+  protected val needCompleteContentsForConflicts: Boolean = true
   protected def newStore(t: ITerm): ParikhStore =
     new ParikhStore(t)
 }

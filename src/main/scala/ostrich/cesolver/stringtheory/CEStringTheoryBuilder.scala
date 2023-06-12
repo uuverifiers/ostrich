@@ -11,6 +11,7 @@ import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ostrich.OFlags
 import OFlags.CEABackend.{Unary, Baseline, Catra, Nuxmv}
 import ostrich.cesolver.util.ParikhUtil
+import ap.CmdlMain
 
 /** The entry class of the Ostrich string solver.
   */
@@ -69,6 +70,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.Opt("debug", value) =>
       debug = value
       ParikhUtil.debug = value
+      CmdlMain.stackTraces = value
     case CmdlParser.ValueOpt("backend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("backend", "unary") =>

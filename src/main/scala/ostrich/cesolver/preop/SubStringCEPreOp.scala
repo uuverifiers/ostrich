@@ -12,7 +12,6 @@ import ap.parser.IExpression._
 import ap.parser.IIntLit
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
 object SubStringCEPreOp {
   def apply(beginIdx: ITerm, length: ITerm) =
@@ -37,7 +36,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     var preimages = Iterator[Seq[Automaton]]()
     var preimagesOfEmptyStr = Iterator[Seq[Automaton]]()
-    val res = automaton2CostEnriched(resultConstraint)
+    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     if (res.isAccept(res.initialState)) {
       // empty string result
       val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString

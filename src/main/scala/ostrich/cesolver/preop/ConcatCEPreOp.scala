@@ -22,19 +22,21 @@ object ConcatCEPreOp extends CEPreOp {
     })
     val letfRegsRelation = concatLeft.regsRelation
     val resRegsRelation = result.regsRelation
-    concatLeft.regsRelation = and(Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation))
+    concatLeft.regsRelation = and(
+      Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation)
+    )
   }
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val resultAut = automaton2CostEnriched(resultConstraint)
+    val resultAut = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val argLengths = (
       for (argAuts <- argumentConstraints) yield {
         (for (
           aut <- argAuts;
-          lengths <- aut.uniqueAcceptedWordLengths
+          lengths <- aut.asInstanceOf[CostEnrichedAutomatonBase].uniqueAcceptedWordLengths
         )
           yield (aut, lengths)).toSeq.headOption
       }

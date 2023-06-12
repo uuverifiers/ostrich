@@ -13,6 +13,7 @@ import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
+import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
@@ -30,6 +31,7 @@ import ap.parser.ITerm
 import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
 import ostrich.cesolver.util.ParikhUtil
+import ostrich.cesolver.convenience.CostEnrichedConvenience
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
@@ -356,9 +358,10 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
           (Internal2InputAbsy(t), aut)
         }
 
+        val inputCEAs = inputRegexes.map{case (id, aut) => (id, automaton2CostEnriched(aut))}
         val approxExp = new ParikhExploration(
           inputFuns.toSeq,
-          inputRegexes.toSeq,
+          inputCEAs.toSeq,
           strDatabase,
           flags,
           lProver,

@@ -50,6 +50,8 @@ object DenghangTests extends Properties("DenghangTests") {
     checkFile("tests/hu-benchmarks/concat_sat.smt2", "sat")
   property("concat_unsat.smt2") =
     checkFile("tests/hu-benchmarks/concat_unsat.smt2", "unsat")
+  property("concat_backjump_bug.smt2") = 
+    checkFile("tests/hu-benchmarks/concat_backjump_bug.smt2", "sat")
 
   // integration tests for indexof
   property("indexof_const_index_sat.smt2") =
