@@ -148,6 +148,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("str.trim",
                         List(SSo, Sort.Integer, Sort.Integer), SSo, true, false)
 
+  // Replacement of the left-most, longest match
+  val str_replacere_longest =
+    new MonoSortedIFunction("str.replace_re_longest",
+                            List(SSo, RSo, SSo), SSo, true, false)
+  val str_replaceallre_longest =
+    new MonoSortedIFunction("str.replace_re_longest_all",
+                            List(SSo, RSo, SSo), SSo, true, false)
+
   // Replacement with regular expression and capture groups
   val str_replacecg =
     new MonoSortedIFunction("str.replace_cg",
@@ -193,6 +201,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          re_from_ecma2020, re_from_ecma2020_flags,
          re_case_insensitive,
          str_at_right, str_trim,
+         str_replacere_longest, str_replaceallre_longest,
          str_replacecg, str_replaceallcg,
          re_*?, re_+?, re_opt_?)
 
@@ -284,14 +293,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
-                   str_replacere, str_replaceallre, str_replaceallcg, 
-                   str_replacecg, str_to_re,
+                   str_replacere, str_replaceallre,
+                   str_replacere_longest, str_replaceallre_longest,
+                   str_replaceallcg, str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
-                   re_comp, re_loop, re_loop_?, re_from_str, re_capture, re_reference,
+                   re_comp, re_loop, re_loop_?, re_from_str, re_capture,
+                   re_reference,
                    re_begin_anchor, re_end_anchor,
                    re_from_ecma2020, re_from_ecma2020_flags,
                    re_case_insensitive))
