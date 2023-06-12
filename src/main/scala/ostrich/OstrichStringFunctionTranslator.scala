@@ -51,7 +51,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
   import theory.{FunPred, strDatabase, autDatabase,
                  str_++, str_at, str_at_right, str_trim,
                  str_replaceall, str_replace,
-                 str_replaceallre, str_replacere,
+                 str_replaceallre_longest, str_replacere_longest,
                  str_replaceallcg, str_replacecg, str_extract}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
@@ -67,7 +67,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
-                    str_replacere, str_replaceallre,
+                    str_replacere_longest, str_replaceallre_longest,
                     str_at, str_at_right, str_trim) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
@@ -89,7 +89,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
-    case FunPred(`str_replaceallre`) =>
+    case FunPred(`str_replaceallre_longest`) =>
       for (regex <- regexAsTerm(a(1))) yield {
         val op = () => {
           val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
@@ -97,7 +97,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
         }
         (op, List(a(0), a(2)), a(3))
       }
-    case FunPred(`str_replacere`) =>
+    case FunPred(`str_replacere_longest`) =>
       for (regex <- regexAsTerm(a(1))) yield {
         val op = () => {
           val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
