@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -35,8 +35,8 @@ package ostrich.automata
 import ostrich.UnicodeData
 
 import scala.collection.mutable.{HashSet => MHashSet, ArrayStack,
-                                 Stack => MStack, HashMap => MHashMap,
-                                 MultiMap, ArrayBuffer, Set => MSet}
+  Stack => MStack, HashMap => MHashMap,
+  MultiMap, ArrayBuffer, Set => MSet}
 
 /**
  * Collection of useful functions for automata
@@ -59,10 +59,10 @@ object AutomataUtils {
     val todo = new ArrayStack[List[Any]]
 
     def isAccepting(states : List[Any]) : Boolean =
-          (auts.iterator zip states.iterator) forall {
-             case (aut, state) =>
-               aut.acceptingStates contains state.asInstanceOf[aut.State]
-          }
+      (auts.iterator zip states.iterator) forall {
+        case (aut, state) =>
+          aut.acceptingStates contains state.asInstanceOf[aut.State]
+      }
 
     def enumNext(auts : List[AtomicStateAutomaton],
                  states : List[Any],
@@ -73,10 +73,10 @@ object AutomataUtils {
         case aut :: otherAuts => {
           val state :: otherStates = states
           for ((to, label) <- aut.outgoingTransitions(
-                                state.asInstanceOf[aut.State]);
+            state.asInstanceOf[aut.State]);
                newILabel <- aut.LabelOps.intersectLabels(
-                             intersectedLabels.asInstanceOf[aut.TLabel],
-                             label).toSeq;
+                 intersectedLabels.asInstanceOf[aut.TLabel],
+                 label).toSeq;
                tailNext <- enumNext(otherAuts, otherStates, newILabel))
           yield (to :: tailNext)
         }
@@ -164,10 +164,10 @@ object AutomataUtils {
     val todo = new ArrayStack[(List[Any], List[Int])]
 
     def isAccepting(states : List[Any]) : Boolean =
-          (auts.iterator zip states.iterator) forall {
-             case (aut, state) =>
-               aut.acceptingStates contains state.asInstanceOf[aut.State]
-          }
+      (auts.iterator zip states.iterator) forall {
+        case (aut, state) =>
+          aut.acceptingStates contains state.asInstanceOf[aut.State]
+      }
 
     def enumNext(auts : List[AtomicStateAutomaton],
                  states : List[Any],
@@ -175,15 +175,15 @@ object AutomataUtils {
       auts match {
         case List() =>
           Iterator((List(),
-                    headAut.LabelOps.enumLetters(
-                      intersectedLabels.asInstanceOf[headAut.TLabel]).next))
+            headAut.LabelOps.enumLetters(
+              intersectedLabels.asInstanceOf[headAut.TLabel]).next))
         case aut :: otherAuts => {
           val state :: otherStates = states
           for ((to, label) <- aut.outgoingTransitions(
-                                state.asInstanceOf[aut.State]);
+            state.asInstanceOf[aut.State]);
                newILabel <- aut.LabelOps.intersectLabels(
-                             intersectedLabels.asInstanceOf[aut.TLabel],
-                             label).toSeq;
+                 intersectedLabels.asInstanceOf[aut.TLabel],
+                 label).toSeq;
                (tailNext, let) <- enumNext(otherAuts, otherStates, newILabel))
           yield (to :: tailNext, let)
         }
@@ -201,7 +201,7 @@ object AutomataUtils {
       val (next, w) = todo.pop
       val wSize = w.size
       for ((reached, let) <-
-            enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
+             enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
         if (visitedStates.add((reached, wSize + 1))) {
           val newW = let :: w
           if (isAccepting(reached) && wSize + 1 == len)
@@ -221,8 +221,8 @@ object AutomataUtils {
   def findAcceptedWord(auts : Seq[Automaton],
                        len : Int) : Option[Seq[Int]] =
     findAcceptedWordAtomic(for (aut <- auts)
-                             yield aut.asInstanceOf[AtomicStateAutomaton],
-                           len)
+      yield aut.asInstanceOf[AtomicStateAutomaton],
+      len)
 
   /**
    * Product of a number of given automata
@@ -232,7 +232,7 @@ object AutomataUtils {
               minimize : Boolean = false) : Automaton =
     if (auts forall { _.isInstanceOf[AtomicStateAutomaton] }) {
       productWithMap(auts map (_.asInstanceOf[AtomicStateAutomaton]),
-                     minimize)._1
+        minimize)._1
     } else {
       // TODO: minimize?
       auts reduceLeft (_ & _)
@@ -247,7 +247,7 @@ object AutomataUtils {
    * which should only be used if the returned maps are not used.
    */
   def productWithMap(auts : Seq[AtomicStateAutomaton], minimize : Boolean = false) :
-    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+  (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
     val idMap = Map[Any, Seq[Any]]().withDefault(s => Seq(s))
     productWithMaps(auts.map((_, idMap)), minimize)
   }
@@ -262,9 +262,9 @@ object AutomataUtils {
    * which should only be used if the returned maps are not used.
    */
   private def productWithMaps(auts : Seq[(AtomicStateAutomaton,
-                                         Map[Any, Seq[Any]])],
+    Map[Any, Seq[Any]])],
                               minimize : Boolean = false) :
-    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+  (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
     if (auts.size == 0)
       return (BricsAutomaton.makeAnyString, Map.empty[Any, Seq[Any]])
@@ -273,8 +273,8 @@ object AutomataUtils {
       return auts.head
 
     val firstSlice = auts.grouped(MaxSimultaneousProduct)
-                         .map(fullProductWithMaps(_, minimize))
-                         .toSeq
+      .map(fullProductWithMaps(_, minimize))
+      .toSeq
 
     if (firstSlice.size == 1)
       return firstSlice(0)
@@ -291,9 +291,9 @@ object AutomataUtils {
    * which should only be used if the returned maps are not used.
    */
   private def fullProductWithMaps(auts : Seq[(AtomicStateAutomaton,
-                                             Map[Any, Seq[Any]])],
+    Map[Any, Seq[Any]])],
                                   minimize : Boolean = false) :
-    (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
+  (AtomicStateAutomaton, Map[Any, Seq[Any]]) = {
 
     val (autsSeq, mapsSeq) = auts.unzip
 
@@ -326,7 +326,7 @@ object AutomataUtils {
     seenlist += initStates
 
     builder.setAccept(initState,
-                      autsSeq forall { aut => aut.isAccept(aut.initialState) })
+      autsSeq forall { aut => aut.isAccept(aut.initialState) })
 
     var checkCnt = 0
 
@@ -349,15 +349,15 @@ object AutomataUtils {
           case Seq() =>  {
             val nextState = ssp.reverse
             if (!seenlist.contains(nextState)) {
-                val nextPState = builder.getNewState
-                val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
-                  case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
-                }
-                builder.setAccept(nextPState, isAccept)
-                sMap += nextPState -> mapsImage(nextState)
-                sMapRev += nextState -> nextPState
-                worklist.push((nextPState, nextState))
-                seenlist += nextState
+              val nextPState = builder.getNewState
+              val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
+                case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
+              }
+              builder.setAccept(nextPState, isAccept)
+              sMap += nextPState -> mapsImage(nextState)
+              sMapRev += nextState -> nextPState
+              worklist.push((nextPState, nextState))
+              seenlist += nextState
             }
             val nextPState = sMapRev(nextState)
             builder.addTransition(ps, lbl, nextPState)
@@ -369,8 +369,8 @@ object AutomataUtils {
             aut.outgoingTransitions(state) foreach {
               case (s, nextLbl) => {
                 val newLbl =
-                    builder.LabelOps.intersectLabels(lbl,
-                                                     nextLbl.asInstanceOf[head.TLabel])
+                  builder.LabelOps.intersectLabels(lbl,
+                    nextLbl.asInstanceOf[head.TLabel])
                 for (l <- newLbl)
                   addTransitions(l, s::ssp, autsTail, ssTail)
               }
@@ -396,9 +396,9 @@ object AutomataUtils {
    * Replace a-transitions with new a-transitions between pairs of states
    */
   def replaceTransitions[A <: AtomicStateAutomaton](
-        aut : A,
-        a : Char,
-        states : Iterable[(A#State, A#State)]) : AtomicStateAutomaton = {
+                                                     aut : A,
+                                                     a : Char,
+                                                     states : Iterable[(A#State, A#State)]) : AtomicStateAutomaton = {
     val builder = aut.getBuilder
     val smap : Map[A#State, aut.State] =
       aut.states.map(s => (s -> builder.getNewState))(collection.breakOut)
@@ -466,12 +466,19 @@ object AutomataUtils {
 
     for ((s1, l, s2) <- aut2.transitions) {
       val convL = l.asInstanceOf[aut1.TLabel]
-      if (s1 == aut2.initialState)
-        for (sf <- aut1.acceptingStates)
+      if (s1 == aut2.initialState) {
+        var flag = false
+        if (builder.isAccept(smap2(aut2.initialState))){
+          flag = true
+        }
+        for (sf <- aut1.acceptingStates) {
+          builder.setAccept(smap1(sf), true)
           builder.addTransition(smap1(sf), convL, smap2(s2))
-      builder.addTransition(smap2(s2), convL, smap2(s1))
+        }
+      }
+      builder.addTransition(smap2(s1), convL, smap2(s2))
     }
-
+    println("test " + builder.getAutomaton)
     builder.getAutomaton
   }
 
@@ -504,7 +511,7 @@ object AutomataUtils {
       builder.setAccept(smapOuter(sf), true)
 
     val epsilons = new MHashMap[autOuter.State, MSet[autOuter.State]]
-                       with MultiMap[autOuter.State, autOuter.State]
+      with MultiMap[autOuter.State, autOuter.State]
 
     // copy outer
     for ((s1, lbl, s2) <- autOuter.transitions) {
@@ -598,8 +605,8 @@ object AutomataUtils {
       val (ll, lu) = l.asInstanceOf[(Char, Char)]
       for ((nl, nu) <- UnicodeData.upperLowerCaseClosure((ll.toInt, lu.toInt)))
         builder.addTransition(stateMapping(a),
-                              (nl.toChar, nu.toChar),
-                              stateMapping(b))
+          (nl.toChar, nu.toChar),
+          stateMapping(b))
     }
 
     builder.getAutomaton
