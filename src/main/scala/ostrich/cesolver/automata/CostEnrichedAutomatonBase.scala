@@ -355,8 +355,24 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
 
   def toDot(suffix: String) = {
+    def cleanDirectory(directory: File): Unit = {
+      if (directory.exists()) {
+        val files = directory.listFiles()
+        if (files != null) {
+          for (file <- files) {
+            if (file.isDirectory) {
+              cleanDirectory(file)
+            } else {
+              file.delete()
+            }
+          }
+        }
+        directory.delete()
+      }
+    }
     states.zipWithIndex.toMap
     val outdir = "dot" + File.separator + LocalDate.now().toString
+    cleanDirectory(new File(outdir))
     new File(outdir).mkdirs()
     val dotfile = outdir + File.separator + s"${suffix}.dot"
     val writer = new DotWriter(dotfile.toString)

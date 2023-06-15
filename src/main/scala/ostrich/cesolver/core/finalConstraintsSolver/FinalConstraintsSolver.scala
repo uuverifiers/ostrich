@@ -9,6 +9,26 @@ import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.core.OstrichModel
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
 
+object Result {
+  def ceaSatResult = {
+    val res = new Result
+    res.setStatus(ProverStatus.Sat)
+    res
+  }
+
+  def ceaUnsatResult = {
+    val res = new Result
+    res.setStatus(ProverStatus.Unsat)
+    res
+  }
+
+  def ceaUnknownResult = {
+    val res = new Result
+    res.setStatus(ProverStatus.Unknown)
+    res
+  }
+}
+
 class Result {
   protected var status = ProverStatus.Unknown
 

@@ -105,7 +105,12 @@ class NuxmvBasedSolver(
             .mkString(" | ")}) & next(${c.strId}_aut_${aut.hashCode}) = ${paddingOf(aut)})"
       }).mkString(" | ")
     val metainModel = inputVars.map(v => s"next($v) = $v").mkString(" & ")
-    println(s"($autsTrans) | \n(($acceptingToPadding) & ($metainModel) & $nuxmvlia)")
+    // println(
+    //   s"($autsTrans) | \n(($acceptingToPadding) & ($metainModel) & $nuxmvlia)"
+    // )
+     println(
+      s"($autsTrans) | \n(($acceptingToPadding) & ($metainModel) & $nuxmvlia)"
+    )
     // invariant
     println("INVARSPEC")
     val accepting = (for (c <- constraints; aut <- c.auts) yield {
@@ -116,6 +121,7 @@ class NuxmvBasedSolver(
   }
 
   def solve: Result = {
+    if (constraints.isEmpty) return Result.ceaSatResult
     for (c <- constraints; (aut, i) <- c.auts.zipWithIndex) {
       aut.toDot(s"nuxmv_${c.strId}_${i}")
     }
@@ -125,7 +131,8 @@ class NuxmvBasedSolver(
     val originName2FreshITerm = origin2fresh.map { case (k, v) =>
       k.toString -> v
     }
-    val name2ITerm = inputVars.map(v => v.toString -> v).toMap ++ originName2FreshITerm
+    val name2ITerm =
+      inputVars.map(v => v.toString -> v).toMap ++ originName2FreshITerm
     val res = {
       val result = new Result
       val out = new java.io.FileOutputStream(outFile)
@@ -184,23 +191,26 @@ class NuxmvBasedSolver(
       }
       ParikhUtil.todo("Generate model smarter")
       ParikhUtil.todo("Unstable nuxmv, not tested")
-      // update constant integer model 
-      for ((k, v) <- freshIntTerm2orgin){
-        v match {
-          case IExpression.Const(value) => result.updateModel(k, value)
-          case _ =>
+      // sat and generate model
+      if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
+        // update constant integer model
+        for ((k, v) <- freshIntTerm2orgin) {
+          v match {
+            case IExpression.Const(value) => result.updateModel(k, value)
+            case _                        =>
+          }
         }
-      }
-      // string model 
-      val integerModel = result.getModel.map{
-        case (i, Model.IntValue(v)) => i -> v
-        case _ => throw new Exception("not integer model")
-      }.toMap
-      for (c <- constraints){
-        c.setInterestTermModel(integerModel)
-        c.getModel match {
-          case Some(value) => result.updateModel(c.strId, value)
-          case None => throw new Exception("fail to generate string model")
+        // string model
+        val integerModel = result.getModel.map {
+          case (i, Model.IntValue(v)) => i -> v
+          case _ => throw new Exception("not integer model")
+        }.toMap
+        for (c <- constraints) {
+          c.setInterestTermModel(integerModel)
+          c.getModel match {
+            case Some(value) => result.updateModel(c.strId, value)
+            case None => throw new Exception("fail to generate string model")
+          }
         }
       }
 
