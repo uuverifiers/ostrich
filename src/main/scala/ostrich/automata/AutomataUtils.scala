@@ -466,12 +466,20 @@ object AutomataUtils {
 
     for ((s1, l, s2) <- aut2.transitions) {
       val convL = l.asInstanceOf[aut1.TLabel]
-      if (s1 == aut2.initialState)
-        for (sf <- aut1.acceptingStates)
+      if (s1 == aut2.initialState) {
+        var flag = false
+        if (builder.isAccept(smap2(aut2.initialState))){
+          flag = true
+        }
+        for (sf <- aut1.acceptingStates) {
+          if (flag) {
+            builder.setAccept(smap1(sf), true)
+          }
           builder.addTransition(smap1(sf), convL, smap2(s2))
-      builder.addTransition(smap2(s2), convL, smap2(s1))
+        }
+      }
+      builder.addTransition(smap2(s1), convL, smap2(s2))
     }
-
     builder.getAutomaton
   }
 
