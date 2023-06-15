@@ -105,10 +105,7 @@ class NuxmvBasedSolver(
             .mkString(" | ")}) & next(${c.strId}_aut_${aut.hashCode}) = ${paddingOf(aut)})"
       }).mkString(" | ")
     val metainModel = inputVars.map(v => s"next($v) = $v").mkString(" & ")
-    // println(
-    //   s"($autsTrans) | \n(($acceptingToPadding) & ($metainModel) & $nuxmvlia)"
-    // )
-     println(
+    println(
       s"($autsTrans) | \n(($acceptingToPadding) & ($metainModel) & $nuxmvlia)"
     )
     // invariant
@@ -122,8 +119,8 @@ class NuxmvBasedSolver(
 
   def solve: Result = {
     if (constraints.isEmpty) return Result.ceaSatResult
-    for (c <- constraints; (aut, i) <- c.auts.zipWithIndex) {
-      aut.toDot(s"nuxmv_${c.strId}_${i}")
+    for (c <- constraints; aut <- c.auts) {
+      aut.toDot(s"nuxmv_${c.strId}_aut_${aut.hashCode}")
     }
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
     val inputVars = (SymbolCollector constants lia).map(Internal2InputAbsy(_))

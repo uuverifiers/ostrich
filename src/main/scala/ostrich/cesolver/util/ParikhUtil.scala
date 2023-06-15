@@ -17,6 +17,7 @@ import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ostrich.automata.BricsTLabelOps
+import java.io.File
 
 object ParikhUtil {
   type State = CostEnrichedAutomatonBase#State
@@ -76,13 +77,13 @@ object ParikhUtil {
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: MMap[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
-    
+
     val aut = auts.reduce(_ product _)
     findAcceptedWordByRegistersComplete(aut, registersModel)
 
   }
 
-   /** find all states pair (s, t, vec) that s ---str--> t and vec is the sum of
+  /** find all states pair (s, t, vec) that s ---str--> t and vec is the sum of
     * updates on the transitions
     */
   def partition(
@@ -110,36 +111,51 @@ object ParikhUtil {
   }
 
   // sum of two Seq
-   def sum(v1: Seq[Int], v2: Seq[Int]): Seq[Int] = {
+  def sum(v1: Seq[Int], v2: Seq[Int]): Seq[Int] = {
     v1.zip(v2).map { case (x, y) => x + y }
   }
 
   def getImage(
-        aut: CostEnrichedAutomatonBase,
-        states: Set[State],
-        lbl: TLabel
-    ): Set[State] = {
-      (for (
-        s <- states; (t, lblAut, _) <- aut.outgoingTransitionsWithVec(s);
-        if aut.LabelOps.labelsOverlap(lbl, lblAut)
-      )
-        yield t).toSet
-    }
+      aut: CostEnrichedAutomatonBase,
+      states: Set[State],
+      lbl: TLabel
+  ): Set[State] = {
+    (for (
+      s <- states; (t, lblAut, _) <- aut.outgoingTransitionsWithVec(s);
+      if aut.LabelOps.labelsOverlap(lbl, lblAut)
+    )
+      yield t).toSet
+  }
 
+  def cleanDirectory(directory: File): Unit = {
+    if (directory.exists()) {
+      val files = directory.listFiles()
+      if (files != null) {
+        for (file <- files) {
+          if (file.isDirectory) {
+            cleanDirectory(file)
+          } else {
+            file.delete()
+          }
+        }
+      }
+      directory.delete()
+    }
+  }
 
   def debugPrintln(s: Any) = {
-    if(debug)
+    if (debug)
       println("Debug: " + s)
   }
 
-  def todo(s:Any) = {
-    if(debug)
+  def todo(s: Any) = {
+    if (debug)
       println("TODO:" + s)
   }
 
   def throwWithStackTrace(e: Throwable) = {
     throw e
-    if(debug)
-      e.printStackTrace  
+    if (debug)
+      e.printStackTrace
   }
 }
