@@ -60,7 +60,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       )
     )
 
-    val notMatchedPrefix = index match {
+    val notMatchedStr = index match {
       case Const(value) => {
         concatenate(
           Seq(
@@ -85,7 +85,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       }
     }
 
-    val matchedSuffix = index match {
+    val matchedStr = index match {
       case Const(value) => {
         concatenate(
           Seq(
@@ -108,8 +108,8 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
 
 
     // index >= 0
-    val preimage1 = intersection(notMatchedPrefix, matchedSuffix)
-    preimage1.regsRelation = and(Seq(preimage1.regsRelation, index >= startPos))
+    val preimage1 = intersection(notMatchedStr, matchedStr)
+    preimage1.regsRelation = and(Seq(preimage1.regsRelation, index >= startPos, startPos >= 0))
 
     // index = -1
     // len(searchedStr) < startPos

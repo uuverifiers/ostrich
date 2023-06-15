@@ -9,7 +9,6 @@ import ostrich.cesolver.automata.CEBasicOperations.{intersection, concatenate}
 import ostrich.automata.BricsAutomaton
 import ap.parser.ITerm
 import ap.parser.IExpression._
-import ap.parser.IIntLit
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
 
@@ -45,7 +44,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         length <= 0
       ))
       val preimageOfEmp2 = beginIdx match {
-        case  IIntLit(value) => {
+        case  Const(value) => {
           automatonWithLenLessThan(value.intValueSafe)
         }
         case _ => {
@@ -69,7 +68,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
     }
     val beginIdxPrefix = beginIdx match {
-      case IIntLit(value) => {
+      case Const(value) => {
         automatonWithLen(value.intValueSafe)
       }
       case _ => {
@@ -78,7 +77,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     }
 
     val middleSubStr = length match {
-      case IIntLit(value) => {
+      case Const(value) => {
         intersection(
           automatonWithLen(value.intValueSafe),
           res
@@ -93,7 +92,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     }
 
     val smallLenSuffix = length match {
-      case IIntLit(value) => {
+      case Const(value) => {
         intersection(
           automatonWithLenLessThan(value.intValueSafe),
           res

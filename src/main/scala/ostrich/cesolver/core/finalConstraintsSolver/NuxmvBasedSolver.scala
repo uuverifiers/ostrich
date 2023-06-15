@@ -22,6 +22,7 @@ import ap.basetypes.IdealInt
 import ap.parser.Internal2InputAbsy
 import ostrich.cesolver.core.Model
 import ap.parser.IExpression
+import java.time.LocalDate
 
 class NuxmvBasedSolver(
     private val inputFormula: IFormula,
@@ -66,7 +67,7 @@ class NuxmvBasedSolver(
     for (c <- constraints; aut <- c.auts) {
 
       println(
-        s"  ${c.strId}_aut_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut)).mkString(", ")}};"
+        s"  aut_${c.strId}_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut)).mkString(", ")}};"
       )
     }
     // integer variable
@@ -77,7 +78,7 @@ class NuxmvBasedSolver(
     // init state variable and integer variable
     for (c <- constraints; aut <- c.auts) {
       println(
-        s"  init(${c.strId}_aut_${aut.hashCode}) := ${aut.initialState};"
+        s"  init(aut_${c.strId}_${aut.hashCode}) := ${aut.initialState};"
       )
     }
     for (variable <- registers)
@@ -93,25 +94,33 @@ class NuxmvBasedSolver(
       ) yield {
         val min = a._1.toInt
         val max = a._2.toInt
-        val regsUpdates = aut.registers.zipWithIndex
-          .map { case (r, i) => s"next($r) = $r + ${v(i)}" }
-          .mkString(" & ")
-        s"($l >= $min & $l <= $max & ${c.strId}_aut_${aut.hashCode} = $s & next(${c.strId}_aut_${aut.hashCode}) = $t & $regsUpdates)"
+        val regsUpdates =
+          if (registers.isEmpty)
+            "TRUE"
+          else
+            aut.registers.zipWithIndex
+              .map { case (r, i) => s"next($r) = $r + ${v(i)}" }
+              .mkString(" & ")
+        s"($l >= $min & $l <= $max & aut_${c.strId}_${aut.hashCode} = $s & next(aut_${c.strId}_${aut.hashCode}) = $t & $regsUpdates)"
       }).mkString(" | \n")
     val acceptingToPadding =
       (for (c <- constraints; aut <- c.auts) yield {
         s"((${aut.acceptingStates
-            .map(s => s"${c.strId}_aut_${aut.hashCode} = $s")
-            .mkString(" | ")}) & next(${c.strId}_aut_${aut.hashCode}) = ${paddingOf(aut)})"
+            .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
+            .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${paddingOf(aut)})"
       }).mkString(" | ")
-    val metainModel = inputVars.map(v => s"next($v) = $v").mkString(" & ")
+    val metainModel =
+      if (inputVars.isEmpty)
+        "TRUE"
+      else
+        inputVars.map(v => s"next($v) = $v").mkString(" & ")
     println(
       s"($autsTrans) | \n(($acceptingToPadding) & ($metainModel) & $nuxmvlia)"
     )
     // invariant
     println("INVARSPEC")
     val accepting = (for (c <- constraints; aut <- c.auts) yield {
-      s"${c.strId}_aut_${aut.hashCode} = ${paddingOf(aut)}"
+      s"aut_${c.strId}_${aut.hashCode} = ${paddingOf(aut)}"
     }).mkString(" & ")
     // If nuxmv finding a counterexample, accepting is true and !(nuxmvlia) is false. So the constraints are satisfiable and the counterexample is a model
     println(s"!($accepting)")
@@ -119,9 +128,28 @@ class NuxmvBasedSolver(
 
   def solve: Result = {
     if (constraints.isEmpty) return Result.ceaSatResult
-    for (c <- constraints; aut <- c.auts) {
-      aut.toDot(s"nuxmv_${c.strId}_aut_${aut.hashCode}")
+    // remove dot files directory and generate them
+    def cleanDirectory(directory: File): Unit = {
+      if (directory.exists()) {
+        val files = directory.listFiles()
+        if (files != null) {
+          for (file <- files) {
+            if (file.isDirectory) {
+              cleanDirectory(file)
+            } else {
+              file.delete()
+            }
+          }
+        }
+        directory.delete()
+      }
     }
+    val outdir = "dot" + File.separator + LocalDate.now().toString
+    cleanDirectory(new File(outdir))
+    for (c <- constraints; aut <- c.auts) {
+      aut.toDot(s"nuxmv_aut_${c.strId}_${aut.hashCode}")
+    }
+    ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
     val inputVars = (SymbolCollector constants lia).map(Internal2InputAbsy(_))
     val origin2fresh = freshIntTerm2orgin.map(_.swap)
@@ -130,6 +158,7 @@ class NuxmvBasedSolver(
     }
     val name2ITerm =
       inputVars.map(v => v.toString -> v).toMap ++ originName2FreshITerm
+    ParikhUtil.debugPrintln(name2ITerm)
     val res = {
       val result = new Result
       val out = new java.io.FileOutputStream(outFile)

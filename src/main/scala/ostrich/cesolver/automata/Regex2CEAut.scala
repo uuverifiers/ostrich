@@ -112,7 +112,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
       case IFunApp(
             `re_loop` | `re_loop_?`,
-            Seq(IIntLit(IdealInt(n1)), IIntLit(IdealInt(n2)), t)
+            Seq(IExpression.Const(IdealInt(n1)), IExpression.Const(IdealInt(n2)), t)
           ) =>
         if (unwind) {
           repeatUnwind(toCEAutomaton(t, true), n1, n2)

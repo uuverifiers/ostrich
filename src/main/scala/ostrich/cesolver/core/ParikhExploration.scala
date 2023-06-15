@@ -30,7 +30,6 @@ import ap.parser.InputAbsy2Internal
 import ap.terfor.Term
 import ap.terfor.TermOrder
 import ostrich.cesolver.util.{TermGenerator, ParikhUtil}
-import ap.parser.IIntLit
 import ap.terfor.SortedWithOrder
 import ostrich.OstrichSolver
 import ap.proof.theoryPlugins.Plugin
@@ -39,6 +38,7 @@ import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ap.parser.IExpression.Const
 
 object ParikhExploration {
 
@@ -72,9 +72,10 @@ class ParikhExploration(
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
 
+  // fresh integer term is used to avoid the same name of const integer and str id
+  private val freshIntTerm2orgin = new MHashMap[ITerm, ITerm]
   // topological sorting of the function applications
   // divide integer term and string term
-  private val freshIntTerm2orgin = new MHashMap[ITerm, ITerm]
   private val (integerTerms, strTerms, sortedFunApps, ignoredApps) = {
     val strTerms = MHashSet[ITerm]()
     for ((t, _) <- initialConstraints)
@@ -336,7 +337,7 @@ class ParikhExploration(
             }
             for ((fresh, orign) <- freshIntTerm2orgin) {
               orign match {
-                case IIntLit(_) => // do nothing
+                case Const(_) => // do nothing
                 case _ =>
                   model.put(orign, model(fresh))
               }
