@@ -42,8 +42,7 @@ import ap.parser.IExpression._
 import ap.parser.IFormula
 
 class CatraBasedSolver(
-    private val inputFormula: IFormula,
-    private val freshIntTerm2orgin: Map[ITerm, ITerm]
+    private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
@@ -171,7 +170,7 @@ class CatraBasedSolver(
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
         val name2Term =
-          (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values).map {
+          (strIntersted ++ integerTerms).map {
             case t =>
               (t.toString(), t)
           }.toMap
@@ -193,9 +192,7 @@ class CatraBasedSolver(
         }
 
         // update integer model
-        for ((fresh, origin) <- freshIntTerm2orgin) {
-          result.updateModel(fresh, termModel(origin))
-        }
+        ParikhUtil.todo("Update integer model")
         result.setStatus(ProverStatus.Sat)
       }
       case OutOfMemory => throw new Exception("Out of memory")

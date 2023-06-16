@@ -22,7 +22,7 @@ import ostrich.cesolver.util.TermGenerator
 
 object FinalConstraints {
 
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   def unaryHeuristicACs(
       t: ITerm,

@@ -67,59 +67,48 @@ class ParikhExploration(
 
   import ParikhExploration._
 
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
 
-  // fresh integer term is used to avoid the same name of const integer and str id
-  private val freshIntTerm2orgin = new MHashMap[ITerm, ITerm]
   // topological sorting of the function applications
   // divide integer term and string term
   private val (integerTerms, strTerms, sortedFunApps, ignoredApps) = {
     val strTerms = MHashSet[ITerm]()
+    val integerTerms = MHashSet[ITerm]()
     for ((t, _) <- initialConstraints)
       strTerms += t
-    val newFunApps = funApps.map {
+    funApps.foreach {
       case (op: LengthCEPreOp, Seq(str), length) => {
-        val frashInt = termGen.intTerm
-        freshIntTerm2orgin += (frashInt -> length)
+        integerTerms += length
         strTerms += str
-        (op, Seq(str), frashInt)
       }
       case (op: SubStringCEPreOp, Seq(str, start, length), subStr) => {
-        val frashInt1 = termGen.intTerm
-        val frashInt2 = termGen.intTerm
-        freshIntTerm2orgin += (frashInt1 -> start)
-        freshIntTerm2orgin += (frashInt2 -> length)
+        integerTerms += start
+        integerTerms += length
         strTerms += str
         strTerms += subStr
-        (op, Seq(str, frashInt1, frashInt2), subStr)
       }
       case (op: IndexOfCEPreOp, Seq(str, subStr, start), index) => {
-        val frashInt1 = termGen.intTerm
-        val frashInt2 = termGen.intTerm
-        freshIntTerm2orgin += (frashInt1 -> start)
-        freshIntTerm2orgin += (frashInt2 -> index)
+        integerTerms += start
+        integerTerms += index
         strTerms += str
         strTerms += subStr
-        (op, Seq(str, subStr, frashInt1), frashInt2)
       }
       case (op, strs, resstr) => {
         strTerms ++= strs
         strTerms += resstr
-        (op, strs, resstr)
       }
     }
-    val integerTerms = freshIntTerm2orgin.keySet
 
     val sortedApps = new ArrayBuffer[(Seq[(PreOp, Seq[ITerm])], ITerm)]
     var ignoredApps = new ArrayBuffer[(PreOp, Seq[ITerm], ITerm)]
-    var remFunApps = newFunApps
-    var topSortedFunApps = newFunApps
+    var remFunApps = funApps
+    var topSortedFunApps = funApps
 
     val termCout = new MHashMap[ITerm, Int]
-    for ((op, args, res) <- newFunApps) {
+    for ((op, args, res) <- funApps) {
       termCout(res) = termCout.getOrElse(res, 0)
       for (arg <- args) termCout(arg) = termCout.getOrElse(arg, 0) + 1
     }
@@ -163,7 +152,7 @@ class ParikhExploration(
             case None      => t.toString()
           }
         } else {
-          freshIntTerm2orgin(t).toString()
+          t.toString()
         }
 
       println("   " + term2String(res) + " =")
@@ -245,23 +234,23 @@ class ParikhExploration(
       apps: Iterator[(PreOp, Seq[ITerm], ITerm)],
       model: MHashMap[ITerm, Either[IdealInt, Seq[Int]]]
   ): MHashMap[ITerm, Either[IdealInt, Seq[Int]]] = {
-    for (
-      (op, args, res) <- apps;
-      argValues = args map model
-    ) {
-
-      val args: Seq[Seq[Int]] = argValues map {
+    for ((op, args, res) <- apps) {
+      val argValues = args map {
+        case arg if (model contains arg) =>  model(arg)
+        case Const(value) => Left(value)
+      }
+      val argsValues: Seq[Seq[Int]] = argValues map {
         case Left(value)   => Seq(value.intValueSafe)
         case Right(values) => values
       }
 
       val resValue =
-        op.eval(args) match {
+        op.eval(argsValues) match {
           case Some(v) => v
           case None =>
             throw new Exception(
               "Model extraction failed: " + op + " is not defined for " +
-                args.mkString(", ")
+                argsValues.mkString(", ")
             )
         }
       def throwResultCutException: Unit = {
@@ -312,11 +301,10 @@ class ParikhExploration(
         // check linear arith consistency of final automata
         val backendSolver =
           flags.backend match {
-            case Nuxmv    => new NuxmvBasedSolver(inputFormula, freshIntTerm2orgin.toMap)
-            case Catra    => new CatraBasedSolver(inputFormula, freshIntTerm2orgin.toMap)
+            case Nuxmv    => new NuxmvBasedSolver(inputFormula)
+            case Catra    => new CatraBasedSolver(inputFormula)
             case Baseline => new BaselineSolver(lProver)
-            case Unary =>
-              new UnaryBasedSolver(flags, freshIntTerm2orgin.toMap, lProver)
+            case Unary =>    new UnaryBasedSolver(flags, lProver)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
@@ -335,11 +323,11 @@ class ParikhExploration(
                 case StringValue(s) => model.put(t, Right(s))
               }
             }
-            for ((fresh, orign) <- freshIntTerm2orgin) {
-              orign match {
+            for (i <- integerTerms) {
+              i match {
                 case Const(_) => // do nothing
                 case _ =>
-                  model.put(orign, model(fresh))
+                  model.put(i, model(i))
               }
             }
 

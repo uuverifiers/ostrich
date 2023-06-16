@@ -7,17 +7,18 @@ import ostrich.cesolver.convenience.CostEnrichedConvenience._
 import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.cesolver.core.finalConstraints.{FinalConstraints, UnaryFinalConstraints}
+import ostrich.cesolver.core.finalConstraints.{
+  FinalConstraints,
+  UnaryFinalConstraints
+}
 import ostrich.OFlags
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
 
-
 class UnaryBasedSolver(
     flags: OFlags,
-    freshIntTerm2orgin: Map[ITerm, ITerm],
     lProver: SimpleAPI
 ) extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
@@ -61,10 +62,13 @@ class UnaryBasedSolver(
     val finalArith = f
 
     lProver.push
+    val internalInt =
+      (for (t <- integerTerms) yield SymbolCollector constants t).flatten
     val newConsts =
-      SymbolCollector.constants(finalArith) &~ lProver.order.orderedConstants
+      (SymbolCollector.constants(
+        finalArith
+      ) ++ internalInt) &~ lProver.order.orderedConstants
     lProver.addConstantsRaw(newConsts)
-    lProver.addConstants(integerTerms)
     lProver !! finalArith
     val status = measure(
       s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
@@ -88,7 +92,7 @@ class UnaryBasedSolver(
         }
         // update integer model
         for (term <- integerTerms) {
-          val value = FinalConstraints.evalTerm(freshIntTerm2orgin(term), partialModel)
+          val value = FinalConstraints.evalTerm(term, partialModel)
           res.updateModel(term, value)
         }
 
