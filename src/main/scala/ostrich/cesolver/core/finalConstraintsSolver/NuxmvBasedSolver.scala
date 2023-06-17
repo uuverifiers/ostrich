@@ -40,112 +40,158 @@ class NuxmvBasedSolver(
 
   private val nuxmvCmd = baseCommand
 
-  // private val outFile = Files.createTempFile("nuxmv", ".smv").toFile
-  private val outFile = new File("nuxmv.smv")
+  private val outFile = 
+    if(ParikhUtil.debug)
+      new File("nuxmv.smv")
+    else
+      Files.createTempFile("nuxmv", ".smv").toFile
 
   private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
-    val labels = constraints.zipWithIndex.map { case (_, i) =>
+    val constraintsIdx = constraints.zipWithIndex.toMap
+    val transIdx = constraints
+      .flatMap(_.auts)
+      .flatMap(_.transitionsWithVec)
+      .zipWithIndex
+      .toMap
+    val labels = constraintsIdx.map { case (_, i) =>
       s"l$i"
-    }
+    }.toSeq
+    val nondeterminControlInputVar = "nondeterminism"
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    val inputVars = SymbolCollector constants lia
-    val registers = constraints.flatMap(_.getRegisters)
+    val nuxmvlia =
+      lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
+    val integers = (SymbolCollector constants lia)
     // padding one special state for each automaton, the state is reached from accepting states if lia is santisfied
     val paddingOf =
       constraints.flatMap(_.auts).map(a => a -> a.newState()).toMap
-    val deadOf = constraints.flatMap(_.auts).map(a => a -> a.newState()).toMap
 
     println("MODULE main")
 
     println("IVAR")
     // input label variable
-    for (inputVar <- labels)
-      println(s"  $inputVar : integer;")
+    for (inputLbl <- labels :+ nondeterminControlInputVar)
+      println(s"  $inputLbl : integer;")
 
     println("VAR")
     // state variable for each automaton
     for (c <- constraints; aut <- c.auts) {
       println(
-        s"  aut_${c.strId}_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut) :+ deadOf(aut))
+        s"  aut_${c.strId}_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut))
             .mkString(", ")}};"
       )
     }
     // integer variable
-    for (variable <- inputVars)
-      println(s"  $variable : integer;")
+    for (int <- integers)
+      println(s"  $int : integer;")
 
     println("ASSIGN")
-    // init state variable and integer variable
+    // init integers (contains registers)
+    for (int <- integers)
+      println(s"  init($int) := 0;")
     for (c <- constraints; aut <- c.auts) {
+      // init states and next states
       println(
         s"  init(aut_${c.strId}_${aut.hashCode}) := ${aut.initialState};"
       )
+      val constraintsidx = constraintsIdx(c)
+      println(s"  next(aut_${c.strId}_${aut.hashCode}) := case")
+      for (s <- aut.states) {
+        for ((t, l, v) <- aut.outgoingTransitionsWithVec(s)) {
+          val transidx = transIdx((s, l, t, v))
+          println(
+            s"    aut_${c.strId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $t;"
+          )
+        }
+        println(s"    aut_${c.strId}_${aut.hashCode} = $s: $s;")
+      }
+      println(s"    esac;")
+
+      // next registers
+      if (aut.registers.nonEmpty) {
+        for ((reg, i) <- aut.registers.zipWithIndex) {
+          println(s"  next($reg) := case")
+          for ((s, l, t, v) <- aut.transitionsWithVec) {
+            val transidx = transIdx((s, l, t, v))
+            println(
+              s"    aut_${c.strId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $reg + ${v(i)};"
+            )
+          }
+          println(s"    TRUE: $reg;")
+          println(s"    esac;")
+        }
+      }
     }
-    for (variable <- registers)
-      println(s"  init($variable) := 0;")
+
+    // invariant
+    val accepting = (for (c <- constraints; aut <- c.auts) yield {
+      val acceptingStates = aut.acceptingStates
+      s"(${acceptingStates.map(s => s"aut_${c.strId}_${aut.hashCode} = $s").mkString(" | ")})"
+    }).mkString(" & ")
+    println("INVARSPEC")
+    println(s"  ($accepting) -> !($nuxmvlia);")
 
     // transitions
-    println("TRANS")
-    // aut transitions
-    val autsTrans =
-      (for (
-        (c, l) <- constraints.zip(labels);
-        aut <- c.auts;
-        (s, a, t, v) <- aut.transitionsWithVec
-      ) yield {
-        val min = a._1.toInt
-        val max = a._2.toInt
-        val otherRegs = registers.filterNot(aut.registers.contains)
-        val autRegsUpdates =
-          if (aut.registers.isEmpty)
-            "TRUE"
-          else
-            aut.registers.zipWithIndex
-              .map { case (r, i) => s"next($r) = $r + ${v(i)}" }
-              .mkString(" & ")
-        val otherRegsUpdates =
-          if (otherRegs.isEmpty)
-            "TRUE"
-          else
-            otherRegs.zipWithIndex
-              .map { case (r, i) => s"next($r) = $r" }
-              .mkString(" & ")
-        s"($l >= $min & $l <= $max & aut_${c.strId}_${aut.hashCode} = $s & next(aut_${c.strId}_${aut.hashCode}) = $t & $autRegsUpdates & $otherRegsUpdates)"
-      }).mkString(" | \n")
+    // println("TRANS")
+    // // aut transitions
+    // val autsTrans =
+    //   (for (
+    //     (c, l) <- constraints.zip(labels);
+    //     aut <- c.auts;
+    //     (s, a, t, v) <- aut.transitionsWithVec
+    //   ) yield {
+    //     val min = a._1.toInt
+    //     val max = a._2.toInt
+    //     val otherRegs = registers.filterNot(aut.registers.contains)
+    //     val autRegsUpdates =
+    //       if (aut.registers.isEmpty)
+    //         "TRUE"
+    //       else
+    //         aut.registers.zipWithIndex
+    //           .map { case (r, i) => s"next($r) = $r + ${v(i)}" }
+    //           .mkString(" & ")
+    //     val otherRegsUpdates =
+    //       if (otherRegs.isEmpty)
+    //         "TRUE"
+    //       else
+    //         otherRegs.zipWithIndex
+    //           .map { case (r, i) => s"next($r) = $r" }
+    //           .mkString(" & ")
+    //     s"($l >= $min & $l <= $max & aut_${c.strId}_${aut.hashCode} = $s & next(aut_${c.strId}_${aut.hashCode}) = $t & $autRegsUpdates & $otherRegsUpdates)"
+    //   }).mkString(" | \n")
 
-    // accepting states to padding states
-    val acceptingToPadding =
-      (for (c <- constraints; aut <- c.auts) yield {
-        s"((${aut.acceptingStates
-            .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
-            .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${paddingOf(aut)})"
-      }).mkString(" | ")
-    val metainModel =
-      if (inputVars.isEmpty)
-        "TRUE"
-      else
-        inputVars.map(v => s"next($v) = $v").mkString(" & ")
-    val nuxmvlia =
-      lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
+    // // accepting states to padding states
+    // val acceptingToPadding =
+    //   (for (c <- constraints; aut <- c.auts) yield {
+    //     s"((${aut.acceptingStates
+    //         .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
+    //         .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${paddingOf(aut)})"
+    //   }).mkString(" | ")
+    // val metainModel =
+    //   if (inputVars.isEmpty)
+    //     "TRUE"
+    //   else
+    //     inputVars.map(v => s"next($v) = $v").mkString(" & ")
+    // val nuxmvlia =
+    //   lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
 
-    // states to dead states
-    val toDeadStates =
-      (for (c <- constraints; aut <- c.auts) yield {
-        s"((${(aut.states ++ Iterable(deadOf(aut)))
-            .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
-            .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${deadOf(aut)})"
-      }).mkString(" | ")
+    // // states to dead states
+    // val toDeadStates =
+    //   (for (c <- constraints; aut <- c.auts) yield {
+    //     s"((${(aut.states ++ Iterable(deadOf(aut)))
+    //         .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
+    //         .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${deadOf(aut)})"
+    //   }).mkString(" | ")
 
-    println(
-      s"($autsTrans) | \n\n(($acceptingToPadding) & ($metainModel) & $nuxmvlia) | \n\n($toDeadStates)"
-    )
-    // invariant
-    println("INVARSPEC")
-    val accepting = (for (c <- constraints; aut <- c.auts) yield {
-      s"aut_${c.strId}_${aut.hashCode} = ${paddingOf(aut)}"
-    }).mkString(" & ")
-    // If nuxmv finding a counterexample, accepting is true and !(nuxmvlia) is false. So the constraints are satisfiable and the counterexample is a model
-    println(s"!($accepting)")
+    // println(
+    //   s"($autsTrans) | \n\n(($acceptingToPadding) & ($metainModel) & $nuxmvlia) | \n\n($toDeadStates)"
+    // )
+    // // invariant
+    // println("INVARSPEC")
+    // val accepting = (for (c <- constraints; aut <- c.auts) yield {
+    //   s"aut_${c.strId}_${aut.hashCode} = ${paddingOf(aut)}"
+    // }).mkString(" & ")
+    // // If nuxmv finding a counterexample, accepting is true and !(nuxmvlia) is false. So the constraints are satisfiable and the counterexample is a model
+    // println(s"!($accepting)")
   }
 
   def solve: Result = {
@@ -167,7 +213,7 @@ class NuxmvBasedSolver(
       }
     }
     val outdir = "dot" + File.separator + LocalDate.now().toString
-    cleanDirectory(new File(outdir))
+    if (ParikhUtil.debug) cleanDirectory(new File(outdir))
     for (c <- constraints; aut <- c.auts) {
       aut.toDot(s"nuxmv_aut_${c.strId}_${aut.hashCode}")
     }
