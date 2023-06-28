@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@ import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
+import ap.parser.SMTLineariser
 import ap.terfor.{Term, ConstantTerm, OneTerm, TerForConvenience, SortedWithOrder}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
@@ -208,7 +209,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
       def term2String(t : Term) = 
         (strDatabase term2Str t) match {
-          case Some(str) => "\"" + str + "\""
+          case Some(str) => "\"" + (SMTLineariser escapeString str) + "\""
           case None => t.toString
         }
 

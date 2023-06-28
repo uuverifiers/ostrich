@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -59,6 +59,31 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
   private def strCat(ts : ITerm*) : ITerm = ts match {
     case Seq() => str_empty()
     case ts    => ts reduceLeft (str_++(_, _))
+  }
+
+  private object ToLazyRegexConverter
+                 extends CollectingVisitor[Unit, IExpression] {
+    def apply(t : ITerm) : ITerm =
+      this.visit(t, ()).asInstanceOf[ITerm]
+
+    def postVisit(t : IExpression,
+                  arg : Unit,
+                  subres : Seq[IExpression]) : IExpression = t match {
+      case IFunApp(`re_all`, _) =>
+        re_*?(re_allchar())
+      case IFunApp(`re_*`, _) =>
+        re_*?(subres(0).asInstanceOf[ITerm])
+      case IFunApp(`re_+`, _) =>
+        re_+?(subres(0).asInstanceOf[ITerm])
+      case IFunApp(`re_opt`, _) =>
+        re_opt_?(subres(0).asInstanceOf[ITerm])
+      case IFunApp(`re_loop`, _) =>
+        re_loop_?(subres(0).asInstanceOf[ITerm],
+                  subres(1).asInstanceOf[ITerm],
+                  subres(2).asInstanceOf[ITerm])
+      case _ =>
+        t update subres
+    }
   }
 
   def apply(f : IFormula) : IFormula =
@@ -173,13 +198,16 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
       eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
         suffixDef1 &
-        ((resultVar === -1 &
-            (!str_in_re(bigStrSuffix, containingStr) | suffixDef2)) |
-         (suffixDef3 &
-            resultVar === str_len(unmatchedPrefixVar) + shiftedStartIndex &
-            strCat(unmatchedPrefixVar, subStr,
-                   unmatchedSuffixVar) === bigStrSuffix &
-            !str_in_re(unmatchedPrefixVar, containingOrSuffix)))
+         ((resultVar === -1 &
+            suffixDef3 &
+            !str_in_re(bigStrSuffix, containingStr)) |
+          (resultVar === -1 &
+             suffixDef2) |
+          (suffixDef3 &
+             resultVar === str_len(unmatchedPrefixVar) + shiftedStartIndex &
+             strCat(unmatchedPrefixVar, subStr,
+                    unmatchedSuffixVar) === bigStrSuffix &
+             !str_in_re(unmatchedPrefixVar, containingOrSuffix)))
       ))))))
     }
 
@@ -364,6 +392,22 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
       re_charrange(lower, upper)
+
+    // Replace_re considers shortest matches of regexes; make
+    // quantifiers in the regexes lazy to model this.
+    case (IFunApp(`str_replacere`, _),
+          Seq(str : ITerm, regex : ITerm, replStr : ITerm)) =>
+      str_replacecg(str,
+                    ToLazyRegexConverter(regex),
+                    str_to_re(replStr))
+
+    // Replace_re considers shortest matches of regexes; make
+    // quantifiers in the regexes lazy to model this.
+    case (IFunApp(`str_replaceallre`, _),
+          Seq(str : ITerm, regex : ITerm, replStr : ITerm)) =>
+      str_replaceallcg(str,
+                       ToLazyRegexConverter(regex),
+                       str_to_re(replStr))
 
 /*
 //TODO: how to control the translation from length constraints to regexes, and vice versa?
