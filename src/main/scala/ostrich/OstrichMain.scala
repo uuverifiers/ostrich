@@ -55,6 +55,7 @@ object OstrichMain {
    */
   val options = List("-stringSolver=" + ostrichStringTheory, "-logo")
 
+  // Run the BW, ADT, and CEA solvers
   ParallelFileProver.addPortfolio(
     "strings", arguments => {
                  import arguments._
@@ -93,8 +94,9 @@ object OstrichMain {
                                     threadNum)
                })
 
+  // Run the BW and ADT solvers
   ParallelFileProver.addPortfolio(
-    "strings2", arguments => {
+    "bw-adt", arguments => {
                  import arguments._
                  val strategies =
                    List(ParallelFileProver.Configuration(
@@ -102,22 +104,6 @@ object OstrichMain {
                           "-stringSolver=" +
                             Param.STRING_THEORY_DESC(baseSettings),
                           1000000000,
-                          2000),
-                        ParallelFileProver.Configuration(
-                          Param.STRING_THEORY_DESC.set(
-                                  baseSettings,
-                                  Param.STRING_THEORY_DESC.defau),
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC.defau,
-                          120000,
-                          2000),
-                        ParallelFileProver.Configuration(
-                          Param.STRING_THEORY_DESC.set(
-                                  baseSettings,
-                                  ceaStringTheory),
-                          "-stringSolver=" +
-                            ceaStringTheory,
-                          120000,
                           2000),
                         ParallelFileProver.Configuration(
                           Param.STRING_THEORY_DESC.set(
