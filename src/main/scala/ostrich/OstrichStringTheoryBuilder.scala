@@ -51,7 +51,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Philipp Rümmer, 2018-2022")
+    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2023")
     println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
@@ -59,8 +59,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh = false
-  private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  protected var eager, forward, minimizeAuts, useParikh = false
+  protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -97,17 +97,17 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   private var createdTheory = false
 
+  lazy val symTransducers =
+    for ((name, transducer) <- transducers) yield {
+      Console.err.println("Translating transducer " + name + " ...")
+      val aut = TransducerTranslator.toBricsTransducer(
+                  transducer, OstrichStringTheory.alphabetSize,
+                  getTransducerTheory.get)
+      (name, aut)
+    }
+
   lazy val theory = {
     createdTheory = true
-
-    val symTransducers =
-      for ((name, transducer) <- transducers) yield {
-        Console.err.println("Translating transducer " + name + " ...")
-        val aut = TransducerTranslator.toBricsTransducer(
-                    transducer, OstrichStringTheory.alphabetSize,
-                    getTransducerTheory.get)
-        (name, aut)
-      }
 
     new OstrichStringTheory (symTransducers,
                              OFlags(eagerAutomataOperations = eager,

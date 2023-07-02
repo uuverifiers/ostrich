@@ -305,7 +305,7 @@ class ParikhExploration(
         // check linear arith consistency of final automata
 
         val backendSolver =
-          flags.backend match {
+          flags.ceaBackend match {
             // case Catra()    => new CatraBasedSolver(freshIntTerm2orgin.toMap)
             case Baseline => new BaselineSolver(lProver)
             case Unary =>
