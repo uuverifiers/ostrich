@@ -41,7 +41,7 @@ import ap.parameters.Param
  */
 object OstrichMain {
 
-  val version = "unstable build (Princess: " + ap.CmdlMain.version + ")"
+  val version = "1.3 (Princess: " + ap.CmdlMain.version + ")"
 
   private val ostrichStringTheory =
     "ostrich.OstrichStringTheory"
