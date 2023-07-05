@@ -110,7 +110,7 @@ class FormulaBuilder(goal   : Goal,
         val prefixes =
           (for (_ <- (2 until terms.size).iterator)
            yield newVar(StringSort)) ++ Iterator(res)
-        terms.reduceLeft[Term]{
+        terms reduceLeft[Term] {
           case (t1, t2) => {
             val s = prefixes.next
             addConcat(t1, t2, s)
