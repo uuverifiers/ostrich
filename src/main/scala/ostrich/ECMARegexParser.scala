@@ -39,7 +39,7 @@ import ecma2020regex._
 import ecma2020regex.Absyn._
 import ecma2020regex.Absyn.{Quantifier => ECMAQuantifier}
 
-import scala.collection.JavaConverters.asScala
+import scala.collection.JavaConversions.{asScalaBuffer, asScalaIterator}
 
 object ECMARegexParser {
 

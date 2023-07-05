@@ -47,6 +47,7 @@ import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
+
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet}
 
@@ -302,10 +303,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps.toSeq, regexes.toSeq, strDatabase,
+          Exploration.eagerExp(funApps, regexes, strDatabase,
                                lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps.toSeq, regexes.toSeq, strDatabase,
+          Exploration.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
       val result = exploration.findModel

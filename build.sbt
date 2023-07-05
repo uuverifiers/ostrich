@@ -2,7 +2,7 @@ lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
   maxErrors             := 5,
-  version               := "1.2.1",
+  version               := "1.3",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
@@ -45,7 +45,7 @@ lazy val commonSettings = Seq(
                           ),
 //
   scalaVersion          := "2.13.8",
-//  scalacOptions         += "-deprecation",
+  scalacOptions         += "-deprecation",
   fork in run           := true,
   cancelable in Global  := true,
 //
@@ -76,11 +76,11 @@ lazy val root = (project in file(".")).
     mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
-    resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
+//    resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
 //
-    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2022-11-03",
-//    libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
+//    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2023-06-19",
+  //  libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",

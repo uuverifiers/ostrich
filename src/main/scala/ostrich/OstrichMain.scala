@@ -41,17 +41,62 @@ import ap.parameters.Param
  */
 object OstrichMain {
 
-  val version = "unstable build (Princess: " + ap.CmdlMain.version + ")"
+  val version = "1.3 (Princess: " + ap.CmdlMain.version + ")"
+
+  private val ostrichStringTheory =
+    "ostrich.OstrichStringTheory"
+  private val ceaStringTheory     =
+    "ostrich.cesolver.stringtheory.CEStringTheory"
 
   /**
    * The options forwarded to Princess. They will be overwritten by options
    * specified on the command line, so it is possible to provide more specific
    * string solver options on the command line.
    */
-  val options = List("-stringSolver=ostrich.OstrichStringTheory", "-logo")
+  val options = List("-stringSolver=" + ostrichStringTheory, "-logo")
 
+  // Run the BW, ADT, and CEA solvers
   ParallelFileProver.addPortfolio(
     "strings", arguments => {
+                 import arguments._
+                 val strategies =
+                   List(ParallelFileProver.Configuration(
+                          baseSettings,
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC(baseSettings),
+                          1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  Param.STRING_THEORY_DESC.defau),
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC.defau,
+                          1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  ceaStringTheory),
+                          "-stringSolver=" +
+                            ceaStringTheory,
+                          1000000000,
+                          2000))
+                 ParallelFileProver(createReader,
+                                    timeout,
+                                    true,
+                                    userDefStoppingCond(),
+                                    strategies,
+                                    1,
+                                    3,
+                                    runUntilProof,
+                                    prelResultPrinter,
+                                    threadNum)
+               })
+
+  // Run the BW and ADT solvers
+  ParallelFileProver.addPortfolio(
+    "bw-adt", arguments => {
                  import arguments._
                  val strategies =
                    List(ParallelFileProver.Configuration(

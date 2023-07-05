@@ -28,7 +28,7 @@ object APITest extends Properties("APITest") {
       import p._
 
       val x, y, z = createConstant(StringSort)
-      implicit val ctxt = decoderContext
+      implicit val _ = decoderContext
 
       scope {
         !! (x === "abc")
@@ -62,7 +62,7 @@ object APITest extends Properties("APITest") {
       import p._
 
       val x, y, z = createConstant(StringSort)
-      implicit val ctxt = decoderContext
+      implicit val _ = decoderContext
 
       scope {
         !! (x ++ y === y ++ x)
@@ -107,5 +107,16 @@ object APITest extends Properties("APITest") {
       !! (x === evalToTerm(x))
       ??? == ProverStatus.Sat
     }}
+
+  property("integer") = 
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+          import p._
+          val i = createConstant("i")
+          val j = createConstant("j")
+          !! (i === j)
+          ??? == ProverStatus.Sat
+      }
+    }
 
 }
