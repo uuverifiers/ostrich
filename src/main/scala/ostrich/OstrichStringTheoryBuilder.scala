@@ -45,7 +45,7 @@ import scala.collection.mutable.ArrayBuffer
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   val name = "OSTRICH"
-  val version = "1.2.1"
+  val version = "1.3"
 
   Console.withOut(Console.err) {
     println
