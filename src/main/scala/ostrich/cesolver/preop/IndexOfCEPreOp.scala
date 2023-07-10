@@ -70,7 +70,7 @@ object IndexOfCEPreOp {
 class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     extends CEPreOp {
 
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton

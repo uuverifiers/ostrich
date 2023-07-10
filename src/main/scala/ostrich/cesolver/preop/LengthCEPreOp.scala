@@ -41,7 +41,7 @@ import ostrich.cesolver.util.TermGenerator
 
 object LengthCEPreOp {
 
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   def apply(length: ITerm): LengthCEPreOp = new LengthCEPreOp(length)
 

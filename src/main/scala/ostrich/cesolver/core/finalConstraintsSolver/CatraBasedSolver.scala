@@ -157,9 +157,11 @@ class CatraBasedSolver(
       sb.append(toCatraInputRegisterUpdate(aut, vec))
       sb.append(";\n")
     }
-    sb.append("\taccepting ")
-    sb.append(aut.acceptingStates.map("s" + state2Int(_)).mkString(", "))
-    sb.append(";\n")
+    if (!aut.acceptingStates.isEmpty) {
+      sb.append("\taccepting ")
+      sb.append(aut.acceptingStates.map("s" + state2Int(_)).mkString(", "))
+      sb.append(";\n")
+    }
     sb.append("};\n")
     sb.toString()
   }

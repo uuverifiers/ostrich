@@ -53,7 +53,7 @@ import ostrich.cesolver.util.TermGenerator
 
 object CEBasicOperations {
 
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   def toBricsAutomaton(aut: CostEnrichedAutomatonBase): BAutomaton = aut match {
     case a: BricsAutomatonWrapper => a.underlying

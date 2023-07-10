@@ -58,7 +58,7 @@ object SubStringCEPreOp {
   *   the max length of subtring
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   override def toString(): String =
     "subStringCEPreOp"

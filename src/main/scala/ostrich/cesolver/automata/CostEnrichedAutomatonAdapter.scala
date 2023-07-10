@@ -45,7 +45,7 @@ abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
     val underlying: A
 ) extends CostEnrichedAutomatonBase {
 
-  val termGen = TermGenerator(hashCode())
+  val termGen = TermGenerator()
 
   // initialize registers
   this.registers = Seq.fill(underlying.registers.size)(termGen.registerTerm)

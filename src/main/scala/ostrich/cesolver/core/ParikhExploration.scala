@@ -95,7 +95,7 @@ class ParikhExploration(
 
   import ParikhExploration._
 
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
