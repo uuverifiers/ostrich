@@ -62,7 +62,7 @@ import scala.util.Random
 import java.io.File
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.ITerm
+import ap.parser.{ITerm, IConstant}
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.util.CatraWriter
@@ -207,11 +207,16 @@ class CatraBasedSolver(
               (t.toString(), t)
           }.toMap
 
+        val termModelPre2 =
+          (for ((_, t : IConstant) <- name2Term)
+           yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap
+
         val termModelPre =
+          termModelPre2 ++ (
           for (
             (k, v) <- assignments;
             t <- name2Term.get(k.name)
-          ) yield (t, IdealInt(v))
+          ) yield (t, IdealInt(v)))
 
         val termModel =
           termModelPre ++ (
@@ -253,10 +258,12 @@ class CatraBasedSolver(
       result.setStatus(ProverStatus.Sat)
       return result
     }
+/*
     for (c <- constraints) {
       val productAut = c.auts.reduceLeft(_ product _)
       productAut.toDot("catra_" + c.strId)
     }
+ */
     var result = new Result
     val interFile = File.createTempFile("ostrich-catra", ".par", null)
     ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
