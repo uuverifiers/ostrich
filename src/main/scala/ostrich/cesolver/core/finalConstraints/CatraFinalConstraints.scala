@@ -56,4 +56,8 @@ class CatraFinalConstraints(
     val registersModel = MHashMap() ++ interestTermsModel
     ParikhUtil.findAcceptedWordByRegisters(auts, registersModel)
   }
+
+  override def toString : String =
+    "" + strId + ", " + auts.mkString(", ")
+
 }

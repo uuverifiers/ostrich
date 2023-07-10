@@ -57,7 +57,7 @@ import ostrich.cesolver.util.TimeoutException
 import ostrich.OFlags
 import OFlags.CEABackend.{Baseline, Unary, Catra}
 import ap.terfor.linearcombination.LinearCombination
-import ap.parser.ITerm
+import ap.parser.{ITerm, IFormula}
 import ap.parser.InputAbsy2Internal
 import ap.terfor.Term
 import ap.terfor.TermOrder
@@ -87,6 +87,7 @@ object ParikhExploration {
 class ParikhExploration(
     funApps: Seq[(PreOp, Seq[ITerm], ITerm)],
     initialConstraints: Seq[(ITerm, Automaton)],
+    initialLengthConstraints : IFormula,
     strDatabase: StrDatabase,
     flags: OFlags,
     lProver: SimpleAPI
@@ -338,7 +339,7 @@ class ParikhExploration(
 
         val backendSolver =
           flags.ceaBackend match {
-            case Catra    => new CatraBasedSolver(ap.parser.IBoolLit(true),
+            case Catra    => new CatraBasedSolver(initialLengthConstraints,
                                                   freshIntTerm2orgin.toMap)
             case Baseline => new BaselineSolver(lProver)
             case Unary =>
@@ -351,6 +352,8 @@ class ParikhExploration(
         }
 
         val res = backendSolver.measureTimeSolve
+
+        ParikhUtil.debugPrintln("Result from CEA backend: " + res)
 
         res.getStatus match {
           case ProverStatus.Sat => {

@@ -391,6 +391,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         val approxExp = new ParikhExploration(
           inputFuns.toSeq,
           inputRegexes.toSeq,
+          lProver.asIFormula(Conjunction.conj(goal.facts.arithConj, lProver.order)),
           strDatabase,
           flags,
           lProver

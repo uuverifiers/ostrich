@@ -33,7 +33,7 @@
 package ostrich.cesolver.core
 
 import ap.api.SimpleAPI.ProverStatus
-import ap.parser.SymbolCollector
+import ap.parser.{SymbolCollector, PrincessLineariser}
 import ap.terfor.TerForConvenience._
 import ap.terfor.Term
 import ap.basetypes.IdealInt
@@ -188,7 +188,7 @@ class CatraBasedSolver(
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
     if (lia.isTrue) return ""
     sb.append("constraint ")
-    sb.append(lia.toString.replaceAll("&", "&&"))
+    sb.append(PrincessLineariser.asString(lia).replaceAll("&", "&&"))
     sb.append(";\n")
     sb.toString()
   }
@@ -198,16 +198,29 @@ class CatraBasedSolver(
     res match {
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
+
         val name2Term =
-          (strIntersted ++ integerTerms).map {
+          (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values).map {
             case t =>
               (t.toString(), t)
           }.toMap
-        val termModel =
+
+        val termModelPre =
           for (
             (k, v) <- assignments;
             t <- name2Term.get(k.name)
           ) yield (t, IdealInt(v))
+
+        val termModel =
+          termModelPre ++ (
+            for ((a, b) <- freshIntTerm2orgin;
+                 c <- termModelPre get b)
+            yield (a -> c)
+          )
+
+        for ((a, b) <- termModel)
+          result.updateModel(a, b)
+
         // update string model
         for (singleString <- constraints) {
           singleString.setInterestTermModel(termModel)
@@ -221,7 +234,6 @@ class CatraBasedSolver(
         }
 
         // update integer model
-        ParikhUtil.todo("Update integer model")
         result.setStatus(ProverStatus.Sat)
       }
       case OutOfMemory => throw new Exception("Out of memory")
@@ -234,7 +246,6 @@ class CatraBasedSolver(
   }
 
   def solve: Result = {
-    // ParikhUtil.todo("bug exists in catra")
     if (constraints.isEmpty) {
       val result = new Result
       result.setStatus(ProverStatus.Sat)
@@ -245,14 +256,15 @@ class CatraBasedSolver(
       productAut.toDot("catra_" + c.strId)
     }
     var result = new Result
-    // val interFlie = File.createTempFile("catra", "jjj")
-    val interFlie = new File("catra")
+    val interFile = File.createTempFile("ostrich-catra", ".par", null)
+    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
+    // val interFile = new File("catra")
     try {
-      val writer = new CatraWriter(interFlie.toString())
+      val writer = new CatraWriter(interFile.toString())
       writer.write(toCatraInput)
       writer.close()
       val arguments = CommandLineOptions(
-        inputFiles = Seq(interFlie.toString()),
+        inputFiles = Seq(interFile.toString()),
         timeout_ms = Some(OFlags.timeout),
         dumpSMTDir = None,
         dumpGraphvizDir = None,
@@ -271,18 +283,24 @@ class CatraBasedSolver(
         randomSeed = 1234567,
         printProof = false
       )
+
+      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
+      
       val catraRes = ParikhUtil.measure(
         s"${this.getClass().getSimpleName()}::findIntegerModel"
       )(runInstances(arguments))
+
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-          result
         case Failure(e) => throw e
       }
+
+      result
+
     } finally {
       // delete temp file
-      // interFlie.delete()
+      // interFile.delete()
     }
   }
 }
