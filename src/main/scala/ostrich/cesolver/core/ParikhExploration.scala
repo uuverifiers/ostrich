@@ -272,8 +272,8 @@ class ParikhExploration(
       model: MHashMap[ITerm, Either[IdealInt, Seq[Int]]]
   ): MHashMap[ITerm, Either[IdealInt, Seq[Int]]] = {
     for (
-      (op, args, res) <- apps;
-      argValues = args map model
+      (op, formalArgs, res) <- apps;
+      argValues = formalArgs map model
     ) {
 
       val args: Seq[Seq[Int]] = argValues map {
@@ -317,7 +317,7 @@ class ParikhExploration(
             throwResultCutException
           else
             throw new Exception(
-              "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
+              "Model extraction failed: " + res + " old value::" + _oldValue + " != res value::" + resValue
             )
       }
 
@@ -348,7 +348,7 @@ class ParikhExploration(
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
         for (t <- leafTerms; if (strTerms contains t)) {
-          backendSolver.addConstraint(t, constraintStores(t).getContents)
+          backendSolver.addConstraint(t, constraintStores(t).getCompleteContents)
         }
 
         val res = backendSolver.measureTimeSolve

@@ -62,7 +62,7 @@ import scala.util.Random
 import java.io.File
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.{ITerm, IConstant}
+import ap.parser.{ITerm, IConstant, IIntLit, SimplifyingConstantSubstVisitor}
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.util.CatraWriter
@@ -201,28 +201,34 @@ class CatraBasedSolver(
       case Sat(assignments) => {
         val strIntersted = constraints.flatMap(_.interestTerms)
 
+        val freshTerms =
+          (for ((IConstant(a), b) <- freshIntTerm2orgin;
+                t <- List(a) ++ (SymbolCollector constants b))
+           yield IConstant(t)).toSeq
+
         val name2Term =
-          (strIntersted ++ integerTerms ++ freshIntTerm2orgin.values).map {
-            case t =>
-              (t.toString(), t)
+          (strIntersted ++ integerTerms ++ freshTerms).map {
+            case t => (t.toString(), t)
           }.toMap
 
-        val termModelPre2 =
-          (for ((_, t : IConstant) <- name2Term)
-           yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap
-
         val termModelPre =
-          termModelPre2 ++ (
-          for (
-            (k, v) <- assignments;
-            t <- name2Term.get(k.name)
-          ) yield (t, IdealInt(v)))
+          (for ((_, t : IConstant) <- name2Term)
+           yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap ++
+          (for (
+             (k, v) <- assignments;
+             t <- name2Term.get(k.name)
+           ) yield (t, IdealInt(v)))
+
+        val preAssignment =
+          (for ((IConstant(c), t) <- termModelPre)
+           yield (c -> IIntLit(t))).toMap
 
         val termModel =
           termModelPre ++ (
             for ((a, b) <- freshIntTerm2orgin;
-                 c <- termModelPre get b)
-            yield (a -> c)
+                 IIntLit(value) <-
+                   List(SimplifyingConstantSubstVisitor(b, preAssignment)))
+            yield (a -> value)
           )
 
         for ((a, b) <- termModel)
