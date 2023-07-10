@@ -120,7 +120,15 @@ class CatraBasedSolver(
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    val allIntTerms = SymbolCollector.constants(lia)
+
+    val liaIntTerms = SymbolCollector.constants(lia)
+    val autIntTerms =
+      (for (constraint <- constraints;
+            aut <- constraint.auts;
+            IConstant(c) <- aut.registers)
+       yield c).toSet
+
+    val allIntTerms = liaIntTerms ++ autIntTerms
     if (allIntTerms.isEmpty) return ""
 
     sb.append("counter int ")
@@ -315,7 +323,7 @@ class CatraBasedSolver(
 
     } finally {
       // delete temp file
-      // interFile.delete()
+      interFile.delete()
     }
   }
 }

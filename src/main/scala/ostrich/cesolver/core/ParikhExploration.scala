@@ -224,7 +224,7 @@ class ParikhExploration(
   val leafTerms =
     allTerms filter { case t => !(resultTerms contains t) }
 
-  private def trivalConflict: ConflictSet = {
+  private def trivialConflict: ConflictSet = {
     for (
       t <- leafTerms.toSeq;
       aut <- constraintStores(t).getCompleteContents
@@ -387,7 +387,11 @@ class ParikhExploration(
               }.toMap
             )
           }
-          case _ => return trivalConflict
+          case _ => {
+            val conflictSet = trivialConflict
+            ParikhUtil.debugPrintln("Conflict set has size " + conflictSet.size)
+            return conflictSet
+          }
         }
 
       }
