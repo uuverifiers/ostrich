@@ -41,6 +41,12 @@ lazy val commonSettings = Seq(
                                name  = "Oliver Markgraf",
                                email = "markgraf@cs.uni-kl.de",
                                url   = url("https://arg.cs.uni-kl.de/gruppe/markgraf/")
+                             ),
+                             Developer(
+                               id    = "denghang.hu",
+                               name  = "Denghang Hu",
+                               email = "hudh@ios.ac.cn",
+                               url   = url("https://tis.ios.ac.cn/?page_id=2451")
                              )
                           ),
 //
