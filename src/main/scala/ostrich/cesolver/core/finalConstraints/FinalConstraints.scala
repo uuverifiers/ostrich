@@ -71,7 +71,6 @@ object FinalConstraints {
     new BaselineFinalConstraints(t, auts)
   }
 
-/*
   def catraACs(
       t: ITerm,
       auts: Seq[CostEnrichedAutomatonBase]
@@ -79,6 +78,7 @@ object FinalConstraints {
     new CatraFinalConstraints(t, auts)
   }
 
+/*
   def nuxmvACs(
     t: ITerm,
     auts: Seq[CostEnrichedAutomatonBase]

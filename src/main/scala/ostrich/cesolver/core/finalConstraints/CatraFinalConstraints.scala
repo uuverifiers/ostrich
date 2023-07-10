@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2023 Denghang Hu. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,42 +30,30 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.cesolver.core
 
-object OFlags {
+import ap.terfor.Formula
+import scala.collection.mutable.{HashMap => MHashMap}
+import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ap.parser.ITerm
+import ap.parser.IExpression._
+import ap.parser.IFormula
+import ostrich.cesolver.util.ParikhUtil
 
-  object LengthOptions extends Enumeration {
-    val Off, On, Auto = Value
+
+class CatraFinalConstraints(
+    override val strId: ITerm,
+    override val auts: Seq[CostEnrichedAutomatonBase]
+) extends FinalConstraints {
+
+  val interestTerms: Seq[ITerm] = auts.flatMap(_.registers)
+
+  import ap.terfor.TerForConvenience._
+  
+  def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
+
+  def getModel: Option[Seq[Int]] = {
+    val registersModel = MHashMap() ++ interestTermsModel
+    ParikhUtil.findAcceptedWordByRegisters(auts, registersModel)
   }
-
-  object CEABackend extends Enumeration {
-    val Baseline, Unary, Catra = Value
-  }
-
-  /**
-   * Compile-time flag that can be used to switch on debugging output
-   * throughout the theory.
-   */
-  protected[ostrich] val debug = false
-
-  val timeout = 60000
-
 }
-
-case class OFlags(
-    // Pre-image specific options
-    eagerAutomataOperations: Boolean = false,
-    measureTimes: Boolean = false,
-    useLength: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto,
-    useParikhConstraints: Boolean = true,
-    forwardApprox: Boolean = false,
-    minimizeAutomata: Boolean = false,
-
-    // Options for the cost-enriched-automata solver
-    ceaBackend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
-    useCostEnriched: Boolean = false,
-    debug: Boolean = false,
-    underApprox: Boolean = true,
-    underApproxBound: Int = 15,
-    simplifyAut: Boolean = true
-)
