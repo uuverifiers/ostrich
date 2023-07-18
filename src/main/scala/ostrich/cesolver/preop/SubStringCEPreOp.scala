@@ -92,12 +92,18 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         }
       }
       for (r <- res.registers) {
-        // tansmit the empty string integer info
+        // make sure all registers are 0
         preimageOfEmp1.regsRelation =
           and(Seq(preimageOfEmp1.regsRelation, r === 0))
         preimageOfEmp2.regsRelation =
           and(Seq(preimageOfEmp2.regsRelation, r === 0))
       }
+      // transmit the result automaton's registers info
+      preimageOfEmp1.regsRelation =
+        and(Seq(preimageOfEmp1.regsRelation, res.regsRelation))
+      preimageOfEmp2.regsRelation =
+        and(Seq(preimageOfEmp2.regsRelation, res.regsRelation))
+
       preimagesOfEmptyStr =
         Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
     }
