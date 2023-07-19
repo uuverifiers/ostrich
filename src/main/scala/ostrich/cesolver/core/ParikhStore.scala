@@ -82,8 +82,6 @@ class ParikhStore(t: ITerm) {
       var tmpAut = aut
       for (aut2 <- constraints) {
         if (tmpAut.isEmpty){
-          ParikhUtil.debugPrintln("Conflict found!")
-          ParikhUtil.debugPrintln("Conflict set: " + consideredAuts)
           return Some(consideredAuts.toSeq)
         }
         tmpAut = tmpAut product aut2

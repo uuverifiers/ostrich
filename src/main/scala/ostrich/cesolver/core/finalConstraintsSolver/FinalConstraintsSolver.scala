@@ -52,8 +52,6 @@ class Result {
 
 trait FinalConstraintsSolver[A <: FinalConstraints] {
 
-  ParikhUtil.todo("remove unused integerTerms")
-
   def solve: Result
 
   def measureTimeSolve: Result =

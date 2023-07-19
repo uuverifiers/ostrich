@@ -192,7 +192,7 @@ class CatraBasedSolver(
         }
 
         // update integer model
-        ParikhUtil.todo("Update integer model")
+        ParikhUtil.todo("CatraBasedSolver: Update integer model")
         result.setStatus(ProverStatus.Sat)
       }
       case OutOfMemory => throw new Exception("Out of memory")
@@ -205,7 +205,6 @@ class CatraBasedSolver(
   }
 
   def solve: Result = {
-    // ParikhUtil.todo("bug exists in catra")
     if (constraints.isEmpty) {
       val result = new Result
       result.setStatus(ProverStatus.Sat)

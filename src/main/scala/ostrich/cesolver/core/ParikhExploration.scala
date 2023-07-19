@@ -39,6 +39,9 @@ import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression.Const
+import ap.parser.IIntLit
+import ap.parser.IConstant
+import ap.parser.SimplifyingConstantSubstVisitor
 
 object ParikhExploration {
 
@@ -187,7 +190,6 @@ class ParikhExploration(
     allTerms filter { case t => !(resultTerms contains t) }
 
   private def trivalConflict: ConflictSet = {
-    ParikhUtil.debugPrintln("trivalConflict")
     for (
       t <- leafTerms.toSeq;
       aut <- constraintStores(t).getCompleteContents
@@ -297,6 +299,7 @@ class ParikhExploration(
 
         // we are finished and just have to construct a model
         val model = new MHashMap[ITerm, Either[IdealInt, Seq[Int]]]
+        val intModel = new MHashMap[ITerm, IdealInt]
 
         // check linear arith consistency of final automata
         val backendSolver =
@@ -319,15 +322,24 @@ class ParikhExploration(
             // model of leaf term
             for ((t, v) <- res.getModel) {
               v match {
-                case IntValue(i)    => model.put(t, Left(i))
+                case IntValue(i)    => 
+                  model.put(t, Left(i))
+                  intModel.put(t, i)
                 case StringValue(s) => model.put(t, Right(s))
               }
             }
+            val intAssignment = 
+              (for ((IConstant(c), value) <- intModel)
+               yield (c, IIntLit(value))).toMap
+
+            ParikhUtil.debugPrintln("model of leaf term: " + model)
             for (i <- integerTerms) {
               i match {
-                case Const(_) => // do nothing
-                case _ =>
-                  model.put(i, model(i))
+                // case Const(_) => // do nothing
+                case _ if !model.contains(i) => // lia
+                  for (IIntLit(value) <- List(SimplifyingConstantSubstVisitor(i, intAssignment)))
+                    model.put(i, Left(value))
+                case _ => // do nothing
               }
             }
 
@@ -415,8 +427,7 @@ class ParikhExploration(
             ) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-              ParikhUtil.debugPrintln("backjump ")
-              ParikhUtil.debugPrintln(conflict)
+              ParikhUtil.debugPrintln("backjump !")
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)

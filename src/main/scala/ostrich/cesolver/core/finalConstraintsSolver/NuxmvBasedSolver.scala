@@ -25,6 +25,7 @@ import ostrich.cesolver.core.Model
 import ap.parser.IExpression
 import java.time.LocalDate
 
+
 class NuxmvBasedSolver(
     private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
@@ -255,6 +256,7 @@ class NuxmvBasedSolver(
       var cont = true
 
       while (cont) {
+        ap.util.Timeout.check
         cont = readLine match {
           case null =>
             // The process has closed the stream. Wait for it to finish, but
@@ -278,8 +280,7 @@ class NuxmvBasedSolver(
           case _ => true
         }
       }
-      ParikhUtil.todo("Generate model smarter")
-      ParikhUtil.todo("Unstable nuxmv, not tested")
+      ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
       // sat and generate model
       if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
         // string model
