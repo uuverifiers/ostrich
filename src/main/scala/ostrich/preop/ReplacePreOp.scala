@@ -146,12 +146,20 @@ object ReplacePreOpWord {
         if (!handledChars.contains(charNext) && buffer.endsWith(prefix)) {
           val rejectedOldMatchSize = buffer.size - prefix.size
           val rejectedOldMatchPart = buffer.slice(0, rejectedOldMatchSize)
+          // next char either part of next match or last char and not
+          // buffered
           val rejectedOutput = OutputOp(rejectedOldMatchPart, NOP, "")
+          val rejectedOutputFin = OutputOp(rejectedOldMatchPart, Plus(0), "")
 
           builder.addTransition(states(i),
                                 (charNext, charNext),
                                 rejectedOutput,
                                 states(prefix.size + 1))
+          // or word ends here...
+          builder.addTransition(states(i),
+                                (charNext, charNext),
+                                rejectedOutputFin,
+                                finstates(i))
 
           handledChars.add(charNext)
         }
@@ -163,7 +171,7 @@ object ReplacePreOpWord {
       }
 
       // handle word ending in middle of match
-      val outop = if (i == w.size -1) internal else output
+      val outop = if (i == w.size - 1) internal else output
       builder.addTransition(states(i), (w(i), w(i)), outop, finstates(i))
     }
 

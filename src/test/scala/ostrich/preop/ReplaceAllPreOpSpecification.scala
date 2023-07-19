@@ -295,5 +295,13 @@ object ReplaceAllPreOpSpecification
       Seq(Seq(), Seq(dAut)), ddddAut
     )._1.exists(cons => { cons(0)(seq("dabcabcd")) })
   }
+
+  property("Bug 56 style error") = {
+    // "aa" = replaceAll(x, ab, c) has x = aa
+    val cAut = BricsAutomaton.fromString("c")
+    ReplaceAllShortestPreOp("ab")(
+      Seq(Seq(), Seq(cAut)), aaAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
 }
 
