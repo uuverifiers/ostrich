@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -46,15 +46,15 @@ import scala.collection.mutable.{HashMap => MHashMap,
                                  Stack => MStack,
                                  HashSet => MHashSet}
 
-object ReplacePreOp {
-  import Transducer._
-
+abstract class ReplacePreOpBase {
   def apply(a : Char) : PreOp = ReplacePreOpWord(Seq(a))
 
   def apply(w : Seq[Char]) : PreOp = ReplacePreOpWord(w)
 
-  def apply(s : String) : PreOp = ReplacePreOp(s.toSeq)
+  def apply(s : String) : PreOp = ReplacePreOpWord(s.toSeq)
+}
 
+object ReplacePreOp extends ReplacePreOpBase {
   /**
    * PreOp for x = replace(y, e, z) for regex e
    */
@@ -67,6 +67,15 @@ object ReplacePreOp {
    */
   def apply(aut : AtomicStateAutomaton) : PreOp =
     ReplacePreOpRegEx(aut)
+}
+
+object ReplaceShortestPreOp extends ReplacePreOpBase {
+  /**
+   * PreOp for x = replace(y, e, z) for regex e represented as
+   * automaton aut, where left-most non-empty shortest match is replaced
+   */
+  def apply(aut : AtomicStateAutomaton) : PreOp =
+    ReplaceShortestPreOpRegEx(aut)
 }
 
 /**
@@ -305,6 +314,139 @@ object ReplacePreOpRegEx {
             val noMatch = getState(CopyRest, frontImg ++ noreachImg)
 
             builder.addTransition(ts, lbl, copy, noMatch)
+          }
+        }
+        case CopyRest => {
+          for (lbl <- labels) {
+            val noreachImg = aut.getImage(noreach, lbl)
+            val copyRest = getState(CopyRest, noreachImg)
+            builder.addTransition(ts, lbl, copy, copyRest)
+          }
+        }
+      }
+    }
+
+    val tran = builder.getTransducer
+    tran
+  }
+}
+
+/**
+ * Companion class for building representation of x = replace(y, e,
+ * z) for a regular expression e with SMT-LIB leftmost shortest
+ * semantics. Also, in line with SMT-LIB, prepend the word if e accepts
+ * the empty language.
+ */
+object ReplaceShortestPreOpRegEx {
+  import Transducer._
+
+  /**
+   * Build preop from aut giving regex to be replaced
+   */
+  def apply(aut : AtomicStateAutomaton) : PreOp = {
+    val tran = buildTransducer(aut)
+    new ReplacePreOpTran(tran)
+  }
+
+  /**
+   * Builds transducer that identifies leftmost and shortest non-empty
+   * match of regex by rewriting matches to internalChar.
+   *
+   * If aut contains the empty word, the internalChar will be prepended
+   */
+  private def buildTransducer(aut : AtomicStateAutomaton) : Transducer = {
+    abstract class Mode
+    // not matching
+    case object NotMatching extends Mode
+    // matching, word read so far could reach any state in frontier
+    case class Matching(val frontier : Set[aut.State]) extends Mode
+    // copy the rest of the word after first match
+    case object CopyRest extends Mode
+
+    val labels = aut.labelEnumerator.enumDisjointLabelsComplete
+    val builder = aut.getTransducerBuilder
+    val nop = OutputOp("", NOP, "")
+    val copy = OutputOp("", Plus(0), "")
+    val internal = OutputOp("", Internal, "")
+
+    // states of transducer have current mode and a set of states that
+    // should never reach a final state (if they do, a match has been
+    // missed)
+    val sMap = new MHashMap[aut.State, (Mode, Set[aut.State])]
+    val sMapRev = new MHashMap[(Mode, Set[aut.State]), aut.State]
+
+    // states of new transducer to be constructed
+    val worklist = new MStack[aut.State]
+
+    def mapState(s : aut.State, q : (Mode, Set[aut.State])) = {
+      sMap += (s -> q)
+      sMapRev += (q -> s)
+    }
+
+    // creates and adds to worklist any new states if needed
+    def getState(m : Mode, noreach : Set[aut.State]) : aut.State = {
+      sMapRev.getOrElse((m, noreach), {
+        val s = builder.getNewState
+        mapState(s, (m, noreach))
+        val goodNoreach = !noreach.exists(aut.isAccept(_))
+        builder.setAccept(s, m match {
+          case NotMatching => goodNoreach
+          case Matching(_) => false
+          case CopyRest => goodNoreach
+        })
+        if (goodNoreach)
+          worklist.push(s)
+        s
+      })
+    }
+
+    val autInit = aut.initialState
+    val tranInit = builder.initialState
+
+    // if accepts empty word, prepend internalChar and copy
+    if (aut(Seq.empty)) {
+      val copyRest = getState(CopyRest, Set.empty[aut.State])
+      builder.addETransition(tranInit, internal, copyRest)
+    } else {
+      mapState(tranInit, (NotMatching, Set.empty[aut.State]))
+      builder.setAccept(tranInit, true)
+      worklist.push(tranInit)
+    }
+
+    while (!worklist.isEmpty) {
+      val ts = worklist.pop()
+      val (mode, noreach) = sMap(ts)
+
+      mode match {
+        case NotMatching => {
+          for (lbl <- labels) {
+            val initImg = aut.getImage(autInit, lbl)
+            val noreachImg = aut.getImage(noreach, lbl)
+
+            val dontMatch = getState(NotMatching, noreachImg ++ initImg)
+            builder.addTransition(ts, lbl, copy, dontMatch)
+
+            if (initImg.exists(aut.isAccept(_))) {
+              val oneCharMatch = getState(CopyRest, noreachImg)
+              builder.addTransition(ts, lbl, internal, oneCharMatch)
+            } else if (!initImg.isEmpty) {
+              val newMatch = getState(Matching(initImg), noreachImg)
+              builder.addTransition(ts, lbl, nop, newMatch)
+            }
+          }
+        }
+        case Matching(frontier) => {
+          for (lbl <- labels) {
+            val frontImg = aut.getImage(frontier, lbl)
+            val noreachImg = aut.getImage(noreach, lbl)
+
+            if (frontImg.exists(aut.isAccept(_))) {
+                val stopMatch = getState(CopyRest, noreachImg)
+                builder.addTransition(ts, lbl, internal, stopMatch)
+            } else if (!frontImg.isEmpty) {
+              val contMatch = getState(Matching(frontImg), noreachImg)
+              builder.addTransition(ts, lbl, nop, contMatch)
+            }
           }
         }
         case CopyRest => {

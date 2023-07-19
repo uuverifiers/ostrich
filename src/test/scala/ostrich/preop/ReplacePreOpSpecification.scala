@@ -18,6 +18,7 @@ object ReplacePreOpSpecification
   val abdAut = BricsAutomaton.fromString("abd")
   val dbaAut = BricsAutomaton.fromString("dba")
   val dAut = BricsAutomaton.fromString("d")
+  val ddAut = BricsAutomaton.fromString("dd")
   val eAut = BricsAutomaton.fromString("")
 
   def seq(s : String) = s.map(_.toInt)
@@ -232,11 +233,95 @@ object ReplacePreOpSpecification
 
   property("Regex longest catches all") = {
     // dd = replace(x, a*, d) cannot contain aa
-    val ddAut = BricsAutomaton.fromString("dd")
     val aut = BricsAutomaton("a*")
     !ReplacePreOp(aut)(Seq(Seq(), Seq(dAut)), ddAut)._1.exists(cons => {
       cons(0)(seq("aa"))
     })
+  }
+
+  property("Regex shortest matches empty ") = {
+    // daa = replaceShortest(x, a*, d) can have x = aa
+    // note smtlib says if regex accepts empty, then replace prepends
+    // replacement
+    val daaAut = BricsAutomaton.fromString("daa")
+    val aut = BricsAutomaton("a*")
+    ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), daaAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Regex shortest matches single") = {
+    // da = replaceShortest(x, a+, d) can have x = aa
+    val daAut = BricsAutomaton.fromString("da")
+    val aut = BricsAutomaton("aa*")
+    ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), daAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Regex shortest doesn't match double") = {
+    // d = replaceShortest(x, a*, d) can't have x = aa
+    val aut = BricsAutomaton("a*")
+    !ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), dAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Regex shortest empty prepends") = {
+    // dd = replaceShortest(x, "", d) allows x = d
+    val aut = BricsAutomaton("")
+    ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddAut
+    )._1.exists(cons => { cons(0)(seq("d")) })
+  }
+
+  property("Regex shortest empty prepends neg") = {
+    // dd = replaceShortest(x, "", d) does not allow x = dd
+    val aut = BricsAutomaton("")
+    !ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddAut
+    )._1.exists(cons => { cons(0)(seq("dd")) })
+  }
+
+  property("Regex shortest empty with prepend pre") = {
+    // "d" = replaceShortest(x, a*, d) has x = ""
+    val aut = BricsAutomaton("a*")
+    ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), dAut
+    )._1.exists(cons => { cons(0)(seq("")) })
+  }
+
+  property("Regex shortest empty with empty pre neg") = {
+    // "" = replaceShortest(x, a*, d) does not accept
+    val aut = BricsAutomaton("a*")
+    !ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), eAut
+    )._1.exists(cons => { cons(0)(seq("")) })
+  }
+
+  property("Regex shortest repeated word match") = {
+    // "dd" = replaceShortest(x, (abc)+, d) has x = abcd
+    val aut = BricsAutomaton("abc(abc)*")
+    ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddAut
+    )._1.exists(cons => { cons(0)(seq("abcd")) })
+  }
+
+  property("Regex shortest repeated word match neg") = {
+    // "d" = replaceShortest(x, (abc)+, d) has not x = abcabc
+    val aut = BricsAutomaton("abc(abc)*")
+    !ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), dAut
+    )._1.exists(cons => { cons(0)(seq("abcabc")) })
+  }
+
+  property("Regex middle repeated word match") = {
+    // "ddabcd" = replaceShortest(x, (abc)+, d) has x = dabcabcd
+    val ddabcdAut = BricsAutomaton.fromString("ddabcd")
+    val aut = BricsAutomaton("abc(abc)*")
+    ReplaceShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddabcdAut
+    )._1.exists(cons => { cons(0)(seq("dabcabcd")) })
   }
 }
 
