@@ -160,8 +160,12 @@ object ReplaceAllPreOpWord {
   import Transducer._
 
   def apply(w : Seq[Char]) = {
-    val wtran = buildWordTransducer(w)
-    new ReplaceAllPreOpTran(wtran)
+    if (w.isEmpty) {
+      NOPPreOp
+    } else {
+      val wtran = buildWordTransducer(w)
+      new ReplaceAllPreOpTran(wtran)
+    }
   }
 
   private def buildWordTransducer(w : Seq[Char]) : Transducer = {
@@ -405,7 +409,7 @@ object ReplaceAllLongestPreOpRegEx {
 /**
  * Companion class for building representation of x = replaceall(y, e,
  * z) for a regular expression e under the shortest match replaced
- * semantics.
+ * semantics. SMT-LIB semantics is only non-empty matches are replaced.
  */
 object ReplaceAllShortestPreOpRegEx {
   import Transducer._
@@ -422,8 +426,8 @@ object ReplaceAllShortestPreOpRegEx {
    * Builds transducer that identifies leftmost and shortest matches of
    * regex by rewriting matches to internalChar.
    *
-   * Note: SMT-LIB 2.6 specifies that for replace_all_re, only non-empty
-   * matches are replaced. (Also leftmost, shortest.)
+   * Assumes that aut does not accept epsilon (in which case SMT-LIB
+   * semantics are that the string should be returned unchanged).
    */
   private def buildTransducer(aut : AtomicStateAutomaton) : Transducer = {
     abstract class Mode
@@ -586,5 +590,4 @@ class ReplaceAllPreOpTran(tran : Transducer) extends PreOp {
     PostImageAutomaton(yProd, tran, Some(zProd))
   }
 }
-
 

@@ -303,5 +303,21 @@ object ReplaceAllPreOpSpecification
       Seq(Seq(), Seq(cAut)), aaAut
     )._1.exists(cons => { cons(0)(seq("aa")) })
   }
+
+  property("Unchanged shortest empty") = {
+    // "aa" = replaceAll(x, "", c) has x = aa
+    val cAut = BricsAutomaton.fromString("c")
+    ReplaceAllShortestPreOp("")(
+      Seq(Seq(), Seq(cAut)), aaAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Unchanged shortest empty neg") = {
+    // "c" = replaceAll(x, "", c) has not x = aa
+    val cAut = BricsAutomaton.fromString("c")
+    !ReplaceAllShortestPreOp("")(
+      Seq(Seq(), Seq(cAut)), cAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
 }
 
