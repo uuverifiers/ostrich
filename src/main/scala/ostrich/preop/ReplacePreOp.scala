@@ -42,7 +42,9 @@ import ap.terfor.preds.PredConj
 
 import dk.brics.automaton.RegExp
 
-import scala.collection.mutable.{HashMap => MHashMap, Stack => MStack}
+import scala.collection.mutable.{HashMap => MHashMap,
+                                 Stack => MStack,
+                                 HashSet => MHashSet}
 
 object ReplacePreOp {
   import Transducer._
@@ -91,7 +93,6 @@ object ReplacePreOpWord {
     val finstates = List.fill(w.size)(builder.getNewState)
     val copyRest = builder.getNewState
     val nop = OutputOp("", NOP, "")
-    // TODO: internal
     val internal = OutputOp("", Internal, "")
     val copy = OutputOp("", Plus(0), "")
     val end = w.size - 1
@@ -111,12 +112,46 @@ object ReplacePreOpWord {
     builder.addTransition(copyRest, builder.LabelOps.sigmaLabel, copy, copyRest)
 
     for (i <- 0 until w.size) {
-      val output = OutputOp(w.slice(0, i), Plus(0), "")
+      // the amount of w read up to state i
+      val buffer = w.slice(0, i)
+      // for when we need to output whole prefix read so far
+      val output = OutputOp(buffer, Plus(0), "")
 
-      // begin again if mismatch
+      // if mismatch, look for the largest suffix of the output buffer
+      // that is a correct prefix of the word being searched for. Then
+      // return to the state corresponding to that part of the word.
+
       val anyLbl = builder.LabelOps.sigmaLabel
-      for (lbl <- builder.LabelOps.subtractLetter(w(i), anyLbl))
+
+      // chars that are handled specially (do not return to start)
+      // e.g. the next letter in w
+      val handledChars= new MHashSet[Char]
+      handledChars.add(w(i))
+
+      // for each prefix - we go in reverse so we get the longest ones
+      // first
+      for (j <- i - 1 to 0 by -1) {
+        val prefix = w.slice(0, j)
+        val charNext = w(prefix.size)
+
+        if (!handledChars.contains(charNext) && buffer.endsWith(prefix)) {
+          val rejectedOldMatchSize = buffer.size - prefix.size
+          val rejectedOldMatchPart = buffer.slice(0, rejectedOldMatchSize)
+          val rejectedOutput = OutputOp(rejectedOldMatchPart, NOP, "")
+
+          builder.addTransition(states(i),
+                                (charNext, charNext),
+                                rejectedOutput,
+                                states(prefix.size + 1))
+
+          handledChars.add(charNext)
+        }
+      }
+
+      // letters that should return to start
+      for (lbl <- builder.LabelOps.subtractLetters(handledChars, anyLbl)) {
         builder.addTransition(states(i), lbl, output, states(0))
+      }
 
       // handle word ending in middle of match
       val outop = if (i == w.size -1) internal else output
