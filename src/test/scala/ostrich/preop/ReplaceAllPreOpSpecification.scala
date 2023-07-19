@@ -273,7 +273,7 @@ object ReplaceAllPreOpSpecification
 
   property("Regex shortest repeated word match") = {
     // "dd" = replaceAllShortest(x, (abc)+, d) has x = abcabc
-    val aut = BricsAutomaton("abc(abc)*")
+    val aut = BricsAutomaton("(abc)*")
     ReplaceAllShortestPreOp(aut)(
       Seq(Seq(), Seq(dAut)), ddAut
     )._1.exists(cons => { cons(0)(seq("abcabc")) })
@@ -281,7 +281,7 @@ object ReplaceAllPreOpSpecification
 
   property("Regex shortest repeated word match neg") = {
     // "d" = replaceShortest(x, (abc)+, d) has not x = abcabc
-    val aut = BricsAutomaton("abc(abc)*")
+    val aut = BricsAutomaton("(abc)*")
     !ReplaceAllShortestPreOp(aut)(
       Seq(Seq(), Seq(dAut)), dAut
     )._1.exists(cons => { cons(0)(seq("abcabc")) })
@@ -290,7 +290,7 @@ object ReplaceAllPreOpSpecification
   property("Regex middle repeated word match") = {
     // "dddd" = replaceShortest(x, (abc)+, d) has x = dabcabcd
     val ddddAut = BricsAutomaton.fromString("dddd")
-    val aut = BricsAutomaton("abc(abc)*")
+    val aut = BricsAutomaton("(abc)*")
     ReplaceAllShortestPreOp(aut)(
       Seq(Seq(), Seq(dAut)), ddddAut
     )._1.exists(cons => { cons(0)(seq("dabcabcd")) })
