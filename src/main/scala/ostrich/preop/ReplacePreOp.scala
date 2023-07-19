@@ -54,7 +54,7 @@ abstract class ReplacePreOpBase {
   def apply(s : String) : PreOp = ReplacePreOpWord(s.toSeq)
 }
 
-object ReplacePreOp extends ReplacePreOpBase {
+object ReplaceLongestPreOp extends ReplacePreOpBase {
   /**
    * PreOp for x = replace(y, e, z) for regex e
    */
@@ -66,7 +66,7 @@ object ReplacePreOp extends ReplacePreOpBase {
    * automaton aut
    */
   def apply(aut : AtomicStateAutomaton) : PreOp =
-    ReplacePreOpRegEx(aut)
+    ReplaceLongestPreOpRegEx(aut)
 }
 
 object ReplaceShortestPreOp extends ReplacePreOpBase {
@@ -184,7 +184,7 @@ object ReplacePreOpWord {
  * Companion class for building representation of x = replace(y, e,
  * z) for a regular expression e.
  */
-object ReplacePreOpRegEx {
+object ReplaceLongestPreOpRegEx {
   import Transducer._
 
   /**
@@ -524,11 +524,11 @@ class ReplacePreOpTran(tran : Transducer) extends PreOp {
   override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {
     val yCons = argumentConstraints(0).map(_ match {
         case saut : AtomicStateAutomaton => saut
-        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+        case _ => throw new IllegalArgumentException("ReplacePreOp.forwardApprox can only approximate AtomicStateAutomata")
     })
     val zCons = argumentConstraints(1).map(_ match {
         case saut : AtomicStateAutomaton => saut
-        case _ => throw new IllegalArgumentException("ConcatPreOp.forwardApprox can only approximate AtomicStateAutomata")
+        case _ => throw new IllegalArgumentException("ReplacePreOp.forwardApprox can only approximate AtomicStateAutomata")
     })
     val yProd = ProductAutomaton(yCons)
     val zProd = ProductAutomaton(zCons)

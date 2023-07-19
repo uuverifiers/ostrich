@@ -60,7 +60,7 @@ abstract class ReplaceAllPreOpBase {
   def apply(s : String) : PreOp = ReplaceAllPreOpWord(s.toSeq)
 }
 
-object ReplaceAllPreOp extends ReplaceAllPreOpBase {
+object ReplaceAllLongestPreOp extends ReplaceAllPreOpBase {
   /**
    * PreOp for x = replaceall(y, e, z) for regex e
    */
@@ -72,7 +72,7 @@ object ReplaceAllPreOp extends ReplaceAllPreOpBase {
    * automaton aut
    */
   def apply(aut : AtomicStateAutomaton) : PreOp =
-    ReplaceAllPreOpRegEx(aut)
+    ReplaceAllLongestPreOpRegEx(aut)
 }
 
 object ReplaceAllShortestPreOp extends ReplaceAllPreOpBase {
@@ -247,7 +247,7 @@ object ReplaceAllPreOpWord {
  * Companion class for building representation of x = replaceall(y, e,
  * z) for a regular expression e.
  */
-object ReplaceAllPreOpRegEx {
+object ReplaceAllLongestPreOpRegEx {
   import Transducer._
 
   /**

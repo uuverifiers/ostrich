@@ -25,70 +25,70 @@ object ReplaceAllPreOpSpecification
 
   property("Simple single char test 1") = {
     // abcd = replaceall(x, e, bc)
-    ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("aed"))
     })
   }
 
   property("Simple single char test 2") = {
     // abcd = replaceall(x, e, bc)
-    ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("abcd"))
     })
   }
 
   property("Simple single char test 3") = {
     // abcd = replaceall(x, e, bc)
-    !ReplaceAllPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp('e')(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("abd"))
     })
   }
 
   property("Simple word test 1") = {
     // abcd = replaceall(x, word, bc)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("awordd"))
     })
   }
 
   property("Simple word test 2") = {
     // abcd = replaceall(x, word, bc)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("abcd"))
     })
   }
 
   property("Simple word test 3") = {
     // abcd = replaceall(x, word, bc)
-    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("xbcx"))
     })
   }
 
   property("Simple word test 4") = {
     // abcd = replaceall(x, word, bc)
-    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(bcAut)), abcdAut)._1.exists(cons => {
       cons(0)(seq("word"))
     })
   }
 
   property("Double word test 1") = {
     // aa = replaceall(x, word, a|b)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaAut)._1.exists(cons => {
       cons(0)(seq("wordword"))
     })
   }
 
   property("Double word test 3") = {
     // aa = replaceall(x, word, a|b)
-    ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
       cons(0)(seq("wordword"))
     })
   }
 
   property("Double word test 4") = {
     // aa = replaceall(x, word, a|b)
-    !ReplaceAllPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp("word")(Seq(Seq(), Seq(aorbAut)), aaorbbAut)._1.exists(cons => {
       cons(0)(seq("ab"))
     })
   }
@@ -96,7 +96,7 @@ object ReplaceAllPreOpSpecification
   property("Regex simple test 1") = {
     // bc = replaceall(x, a*, bc)
     val aut = BricsAutomaton("a*")
-    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
       cons(0)(seq("aaaa"))
     })
   }
@@ -104,7 +104,7 @@ object ReplaceAllPreOpSpecification
   property("Regex simple test 2") = {
     // bc = replaceall(x, a*, bc)
     val aut = BricsAutomaton("a*")
-    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
       cons(0)(seq("bc"))
     })
   }
@@ -112,7 +112,7 @@ object ReplaceAllPreOpSpecification
   property("Regex simple test 3") = {
     // bc = replaceall(x, a*, bc)
     val aut = BricsAutomaton("a*")
-    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp(aut)(Seq(Seq(), Seq(bcAut)), bcAut)._1.exists(cons => {
       cons(0)(seq("abc"))
     })
   }
@@ -120,7 +120,7 @@ object ReplaceAllPreOpSpecification
   property("Regex leftmost test 1") = {
     // dba = replaceall(x, aba, d)
     val aut = BricsAutomaton("aba")
-    ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), dbaAut)._1.exists(cons => {
+    ReplaceAllLongestPreOp(aut)(Seq(Seq(), Seq(dAut)), dbaAut)._1.exists(cons => {
       cons(0)(seq("ababa"))
     })
   }
@@ -128,7 +128,7 @@ object ReplaceAllPreOpSpecification
   property("Regex leftmost test 2") = {
     // abd = replaceall(x, aba, d)
     val aut = BricsAutomaton("aba")
-    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), abdAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp(aut)(Seq(Seq(), Seq(dAut)), abdAut)._1.exists(cons => {
       cons(0)(seq("ababa"))
     })
   }
@@ -137,7 +137,7 @@ object ReplaceAllPreOpSpecification
     val baut1 = BricsAutomaton.fromString("hello")
     val baut2 = BricsAutomaton.fromString("world")
 
-    val post = ReplaceAllPreOp('l').
+    val post = ReplaceAllLongestPreOp('l').
       forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
                         Seq(baut2.asInstanceOf[Automaton])))
 
@@ -152,7 +152,7 @@ object ReplaceAllPreOpSpecification
     val baut1 = BricsAutomaton.fromString("hello")
     val baut2 = BricsAutomaton.fromString("world")
 
-    val post = ReplaceAllPreOp("el").
+    val post = ReplaceAllLongestPreOp("el").
       forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
                         Seq(baut2.asInstanceOf[Automaton])))
 
@@ -168,7 +168,7 @@ object ReplaceAllPreOpSpecification
     val baut2 = BricsAutomaton.fromString("world")
     val regex = BricsAutomaton.fromString("el")
 
-    val post = ReplaceAllPreOp(regex).
+    val post = ReplaceAllLongestPreOp(regex).
       forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
                         Seq(baut2.asInstanceOf[Automaton])))
 
@@ -190,7 +190,7 @@ object ReplaceAllPreOpSpecification
     aut.setInitialState(q0)
     val regex = new BricsAutomaton(aut)
 
-    val post = ReplaceAllPreOp(regex).
+    val post = ReplaceAllLongestPreOp(regex).
       forwardApprox(Seq(Seq(baut1.asInstanceOf[Automaton]),
                         Seq(baut2.asInstanceOf[Automaton])))
 
@@ -205,7 +205,7 @@ object ReplaceAllPreOpSpecification
     val scscriptriptAut = BricsAutomaton.fromString("scscriptript")
     val tAut = BricsAutomaton.fromString("")
 
-    !ReplaceAllPreOp("scr")(Seq(Seq(), Seq(eAut)),
+    !ReplaceAllLongestPreOp("scr")(Seq(Seq(), Seq(eAut)),
                            scscriptriptAut)._1.exists(cons => {
       cons(0)(seq("scscriptript"))
     })
@@ -215,7 +215,7 @@ object ReplaceAllPreOpSpecification
     val aabaabAut = BricsAutomaton.fromString("aabaab")
     val tAut = BricsAutomaton.fromString("")
 
-    !ReplaceAllPreOp("aabaab")(Seq(Seq(), Seq(eAut)),
+    !ReplaceAllLongestPreOp("aabaab")(Seq(Seq(), Seq(eAut)),
                                aabaabAut)._1.exists(cons => {
       cons(0)(seq("aabaab"))
     })
@@ -225,7 +225,7 @@ object ReplaceAllPreOpSpecification
     val aabaabAut = BricsAutomaton.fromString("ccc")
     val tAut = BricsAutomaton.fromString("")
 
-    ReplaceAllPreOp("aabaab")(Seq(Seq(), Seq(eAut)),
+    ReplaceAllLongestPreOp("aabaab")(Seq(Seq(), Seq(eAut)),
                                aabaabAut)._1.exists(cons => {
       cons(0)(seq("ccc"))
     })
@@ -234,7 +234,7 @@ object ReplaceAllPreOpSpecification
   property("Regex longest catches all") = {
     // dd = replaceAll(x, a*, d) cannot contain aa
     val aut = BricsAutomaton("a*")
-    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), ddAut)._1.exists(cons => {
+    !ReplaceAllLongestPreOp(aut)(Seq(Seq(), Seq(dAut)), ddAut)._1.exists(cons => {
       cons(0)(seq("aa"))
     })
   }
