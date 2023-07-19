@@ -18,6 +18,7 @@ object ReplaceAllPreOpSpecification
   val abdAut = BricsAutomaton.fromString("abd")
   val dbaAut = BricsAutomaton.fromString("dba")
   val dAut = BricsAutomaton.fromString("d")
+  val ddAut = BricsAutomaton.fromString("dd")
   val eAut = BricsAutomaton.fromString("")
 
   def seq(s : String) = s.map(_.toInt)
@@ -230,5 +231,69 @@ object ReplaceAllPreOpSpecification
     })
   }
 
+  property("Regex longest catches all") = {
+    // dd = replaceAll(x, a*, d) cannot contain aa
+    val aut = BricsAutomaton("a*")
+    !ReplaceAllPreOp(aut)(Seq(Seq(), Seq(dAut)), ddAut)._1.exists(cons => {
+      cons(0)(seq("aa"))
+    })
+  }
+
+  property("Regex shortest matches single") = {
+    // dd = replaceAllShortest(x, a*, d) can contain aa
+    val aut = BricsAutomaton("a*")
+    ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Regex shortest doesn't match double") = {
+    // d = replaceAllShortest(x, a*, d) can't have x = aa
+    val aut = BricsAutomaton("a*")
+    !ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), dAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Regex shortest empty does nothing") = {
+    // dd = replaceAllShortest(x, "", d) allows x = dd
+    val aut = BricsAutomaton("")
+    ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddAut
+    )._1.exists(cons => { cons(0)(seq("dd")) })
+  }
+
+  property("Regex shortest empty post-image empty pre") = {
+    // "" = replaceAllShortest(x, a*, d) has x = ""
+    val aut = BricsAutomaton("a*")
+    ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), eAut
+    )._1.exists(cons => { cons(0)(seq("")) })
+  }
+
+  property("Regex shortest repeated word match") = {
+    // "dd" = replaceAllShortest(x, (abc)+, d) has x = abcabc
+    val aut = BricsAutomaton("abc(abc)*")
+    ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddAut
+    )._1.exists(cons => { cons(0)(seq("abcabc")) })
+  }
+
+  property("Regex shortest repeated word match neg") = {
+    // "d" = replaceShortest(x, (abc)+, d) has not x = abcabc
+    val aut = BricsAutomaton("abc(abc)*")
+    !ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), dAut
+    )._1.exists(cons => { cons(0)(seq("abcabc")) })
+  }
+
+  property("Regex middle repeated word match") = {
+    // "dddd" = replaceShortest(x, (abc)+, d) has x = dabcabcd
+    val ddddAut = BricsAutomaton.fromString("dddd")
+    val aut = BricsAutomaton("abc(abc)*")
+    ReplaceAllShortestPreOp(aut)(
+      Seq(Seq(), Seq(dAut)), ddddAut
+    )._1.exists(cons => { cons(0)(seq("dabcabcd")) })
+  }
 }
 
