@@ -16,6 +16,8 @@ object ReplacePreOpSpecification
   val aorbAut = BricsAutomaton.fromString("a") | BricsAutomaton.fromString("b")
   val aaorbbAut = BricsAutomaton.fromString("aa") | BricsAutomaton.fromString("bb")
   val abdAut = BricsAutomaton.fromString("abd")
+  val cAut = BricsAutomaton.fromString("c")
+  val caaAut = BricsAutomaton.fromString("caa")
   val dbaAut = BricsAutomaton.fromString("dba")
   val dAut = BricsAutomaton.fromString("d")
   val ddAut = BricsAutomaton.fromString("dd")
@@ -328,6 +330,21 @@ object ReplacePreOpSpecification
     // "aa" = replaceShortest(x, ab, c) has x = aa
     val cAut = BricsAutomaton.fromString("c")
     ReplaceShortestPreOp("ab")(
+      Seq(Seq(), Seq(cAut)), aaAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Replace empty string prepend") = {
+    // "caa" = replaceShortest(x, "", c) has x = aa
+    ReplaceShortestPreOp("")(
+      Seq(Seq(), Seq(cAut)), caaAut
+    )._1.exists(cons => { cons(0)(seq("aa")) })
+  }
+
+  property("Replace empty string prepend neg") = {
+    // "aa" = replaceShortest(x, "", c) has not x = aa
+    val cAut = BricsAutomaton.fromString("c")
+    !ReplaceShortestPreOp("")(
       Seq(Seq(), Seq(cAut)), aaAut
     )._1.exists(cons => { cons(0)(seq("aa")) })
   }

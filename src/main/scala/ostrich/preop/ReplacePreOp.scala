@@ -86,15 +86,33 @@ object ReplacePreOpWord {
   import Transducer._
 
   def apply(w : Seq[Char]) = {
-    val wtran = buildWordTransducer(w)
+    val wtran = if (w.isEmpty) buildEmptyWordTransducer()
+      else buildNonEmptyWordTransducer(w)
     new ReplacePreOpTran(wtran)
+  }
+
+  private def buildEmptyWordTransducer() : Transducer = {
+    val builder = BricsTransducer.getBuilder
+    val initState = builder.initialState
+    val copyRest = builder.getNewState
+    val internal = OutputOp("", Internal, "")
+    val copy = OutputOp("", Plus(0), "")
+
+    builder.addETransition(initState, internal, copyRest)
+    builder.addTransition(copyRest, builder.LabelOps.sigmaLabel, copy, copyRest)
+    builder.setAccept(copyRest, true)
+
+    val res = builder.getTransducer
+    return res
   }
 
   /**
    * Build transducer that identifies first instance of w and replaces it with
    * internal char
    */
-  private def buildWordTransducer(w : Seq[Char]) : Transducer = {
+  private def buildNonEmptyWordTransducer(w : Seq[Char]) : Transducer = {
+    assert(!w.isEmpty)
+
     val builder = BricsTransducer.getBuilder
 
     val initState = builder.initialState
