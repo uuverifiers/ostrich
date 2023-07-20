@@ -169,7 +169,7 @@ class ParikhExploration(
 
   val nonTreeLikeApps =
     sortedFunApps exists { case (ops, t) =>
-      ops.size > 1 && !(strDatabase isConcrete InputAbsy2Internal(
+      ops.size > 1 && !integerTerms.contains(t) && !(strDatabase isConcrete InputAbsy2Internal(
         t,
         TermOrder.EMPTY
       ))
