@@ -61,31 +61,6 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case ts    => ts reduceLeft (str_++(_, _))
   }
 
-  private object ToLazyRegexConverter
-                 extends CollectingVisitor[Unit, IExpression] {
-    def apply(t : ITerm) : ITerm =
-      this.visit(t, ()).asInstanceOf[ITerm]
-
-    def postVisit(t : IExpression,
-                  arg : Unit,
-                  subres : Seq[IExpression]) : IExpression = t match {
-      case IFunApp(`re_all`, _) =>
-        re_*?(re_allchar())
-      case IFunApp(`re_*`, _) =>
-        re_*?(subres(0).asInstanceOf[ITerm])
-      case IFunApp(`re_+`, _) =>
-        re_+?(subres(0).asInstanceOf[ITerm])
-      case IFunApp(`re_opt`, _) =>
-        re_opt_?(subres(0).asInstanceOf[ITerm])
-      case IFunApp(`re_loop`, _) =>
-        re_loop_?(subres(0).asInstanceOf[ITerm],
-                  subres(1).asInstanceOf[ITerm],
-                  subres(2).asInstanceOf[ITerm])
-      case _ =>
-        t update subres
-    }
-  }
-
   def apply(f : IFormula) : IFormula =
     this.visit(f, Context(())).asInstanceOf[IFormula]
 
@@ -393,21 +368,6 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
       re_charrange(lower, upper)
 
-    // Replace_re considers shortest matches of regexes; make
-    // quantifiers in the regexes lazy to model this.
-    case (IFunApp(`str_replacere`, _),
-          Seq(str : ITerm, regex : ITerm, replStr : ITerm)) =>
-      str_replacecg(str,
-                    ToLazyRegexConverter(regex),
-                    str_to_re(replStr))
-
-    // Replace_re considers shortest matches of regexes; make
-    // quantifiers in the regexes lazy to model this.
-    case (IFunApp(`str_replaceallre`, _),
-          Seq(str : ITerm, regex : ITerm, replStr : ITerm)) =>
-      str_replaceallcg(str,
-                       ToLazyRegexConverter(regex),
-                       str_to_re(replStr))
 
 /*
 //TODO: how to control the translation from length constraints to regexes, and vice versa?
