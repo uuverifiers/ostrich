@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -71,21 +71,21 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                     str_at, str_at_right, str_trim) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
-  
+
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
     case FunPred(`str_++`) =>
       Some((() => ConcatPreOp, List(a(0), a(1)), a(2)))
     case FunPred(`str_replaceall`) if strDatabase isConcrete a(1) => {
       val op = () => {
         val b = strDatabase term2ListGet a(1)
-        ReplaceAllPreOp(b map (_.toChar))
+        ReplaceAllShortestPreOp(b map (_.toChar))
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
     case FunPred(`str_replace`) if strDatabase isConcrete a(1) => {
       val op = () => {
         val b = strDatabase term2ListGet a(1)
-        ReplacePreOp(b map (_.toChar))
+        ReplaceShortestPreOp(b map (_.toChar))
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
@@ -93,7 +93,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       for (regex <- regexAsTerm(a(1))) yield {
         val op = () => {
           val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-          ReplaceAllPreOp(aut)
+          ReplaceAllLongestPreOp(aut)
         }
         (op, List(a(0), a(2)), a(3))
       }
@@ -101,7 +101,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       for (regex <- regexAsTerm(a(1))) yield {
         val op = () => {
           val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
-          ReplacePreOp(aut)
+          ReplaceLongestPreOp(aut)
         }
         (op, List(a(0), a(2)), a(3))
       }
