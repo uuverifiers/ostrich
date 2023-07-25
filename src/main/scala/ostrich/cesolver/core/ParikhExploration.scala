@@ -282,7 +282,7 @@ class ParikhExploration(
             throwResultCutException
           else
             throw new Exception(
-              "Model extraction failed: old value::" + _oldValue + " != res value::" + resValue
+              s"For $res = $op($args), model extraction failed: old value::" + _oldValue + " != res value::" + resValue
             )
       }
 
@@ -314,7 +314,6 @@ class ParikhExploration(
         for (t <- leafTerms; if (strTerms contains t)) {
           backendSolver.addConstraint(t, constraintStores(t).getContents)
         }
-
         val res = backendSolver.measureTimeSolve
 
         res.getStatus match {
@@ -335,8 +334,7 @@ class ParikhExploration(
             ParikhUtil.debugPrintln("model of leaf term: " + model)
             for (i <- integerTerms) {
               i match {
-                // case Const(_) => // do nothing
-                case _ if !model.contains(i) => // lia
+                case _ if !model.contains(i) => // lia, update the lia result valut in model
                   for (IIntLit(value) <- List(SimplifyingConstantSubstVisitor(i, intAssignment)))
                     model.put(i, Left(value))
                 case _ => // do nothing

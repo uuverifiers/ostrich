@@ -35,8 +35,8 @@ class NuxmvBasedSolver(
   }
 
   private val baseCommand = Array("nuxmv", "-int")
-  private val Unreachable = """^-- invariant .* is true$""".r
-  private val Reachable = """^-- invariant .* is false$""".r
+  private val Unreachable = """^.* is true$""".r
+  private val Reachable = """^.* is false$""".r
   private val CounterValue = """^ {4}(.*) = (\d+)$""".r
 
   private val nuxmvCmd = baseCommand
@@ -130,69 +130,6 @@ class NuxmvBasedSolver(
     }).mkString(" & ")
     println("INVARSPEC")
     println(s"  ($accepting) -> !($nuxmvlia);")
-
-    // transitions
-    // println("TRANS")
-    // // aut transitions
-    // val autsTrans =
-    //   (for (
-    //     (c, l) <- constraints.zip(labels);
-    //     aut <- c.auts;
-    //     (s, a, t, v) <- aut.transitionsWithVec
-    //   ) yield {
-    //     val min = a._1.toInt
-    //     val max = a._2.toInt
-    //     val otherRegs = registers.filterNot(aut.registers.contains)
-    //     val autRegsUpdates =
-    //       if (aut.registers.isEmpty)
-    //         "TRUE"
-    //       else
-    //         aut.registers.zipWithIndex
-    //           .map { case (r, i) => s"next($r) = $r + ${v(i)}" }
-    //           .mkString(" & ")
-    //     val otherRegsUpdates =
-    //       if (otherRegs.isEmpty)
-    //         "TRUE"
-    //       else
-    //         otherRegs.zipWithIndex
-    //           .map { case (r, i) => s"next($r) = $r" }
-    //           .mkString(" & ")
-    //     s"($l >= $min & $l <= $max & aut_${c.strId}_${aut.hashCode} = $s & next(aut_${c.strId}_${aut.hashCode}) = $t & $autRegsUpdates & $otherRegsUpdates)"
-    //   }).mkString(" | \n")
-
-    // // accepting states to padding states
-    // val acceptingToPadding =
-    //   (for (c <- constraints; aut <- c.auts) yield {
-    //     s"((${aut.acceptingStates
-    //         .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
-    //         .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${paddingOf(aut)})"
-    //   }).mkString(" | ")
-    // val metainModel =
-    //   if (inputVars.isEmpty)
-    //     "TRUE"
-    //   else
-    //     inputVars.map(v => s"next($v) = $v").mkString(" & ")
-    // val nuxmvlia =
-    //   lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
-
-    // // states to dead states
-    // val toDeadStates =
-    //   (for (c <- constraints; aut <- c.auts) yield {
-    //     s"((${(aut.states ++ Iterable(deadOf(aut)))
-    //         .map(s => s"aut_${c.strId}_${aut.hashCode} = $s")
-    //         .mkString(" | ")}) & next(aut_${c.strId}_${aut.hashCode}) = ${deadOf(aut)})"
-    //   }).mkString(" | ")
-
-    // println(
-    //   s"($autsTrans) | \n\n(($acceptingToPadding) & ($metainModel) & $nuxmvlia) | \n\n($toDeadStates)"
-    // )
-    // // invariant
-    // println("INVARSPEC")
-    // val accepting = (for (c <- constraints; aut <- c.auts) yield {
-    //   s"aut_${c.strId}_${aut.hashCode} = ${paddingOf(aut)}"
-    // }).mkString(" & ")
-    // // If nuxmv finding a counterexample, accepting is true and !(nuxmvlia) is false. So the constraints are satisfiable and the counterexample is a model
-    // println(s"!($accepting)")
   }
 
   def solve: Result = {

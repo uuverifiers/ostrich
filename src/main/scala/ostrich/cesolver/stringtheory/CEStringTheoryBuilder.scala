@@ -41,7 +41,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   private var backend: OFlags.CEABackend.Value = Unary
   private var underApprox, simplifyAut = true
-  private var underApproxBound = 15
+  private var underApproxBound = 10
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -71,13 +71,13 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       debug = value
       ParikhUtil.debug = value
       CmdlMain.stackTraces = value
-    case CmdlParser.ValueOpt("backend", "baseline") =>
+    case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
-    case CmdlParser.ValueOpt("backend", "unary") =>
+    case CmdlParser.ValueOpt("ceaBackend", "unary") =>
       backend = Unary
-    case CmdlParser.ValueOpt("backend", "catra") =>
+    case CmdlParser.ValueOpt("ceaBackend", "catra") =>
       backend = Catra
-    case CmdlParser.ValueOpt("backend", "nuxmv") =>
+    case CmdlParser.ValueOpt("ceaBackend", "nuxmv") =>
       backend = Nuxmv
     case CmdlParser.ValueOpt("under-approx-bound", value) =>
       underApproxBound = value.toInt

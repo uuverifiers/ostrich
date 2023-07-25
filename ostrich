@@ -16,16 +16,23 @@ JAVA=java
 export JAVA_OPTS="-Xss20000k -Xmx2000m"
 
 princessParams=()
+ostrichSolver=ostrich.OstrichStringTheory
 ostrichParams=""
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh)
+        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -ceaBackend=* | [+-]debug | [+-]under-approx | [+-]simplify-aut)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else
                 ostrichParams=$ostrichParams,$p
             fi
+            ;;
+        -cea)
+            ostrichSolver=ostrich.OstrichStringTheory
+            ;;
+        +cea)
+            ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
             ;;
         *)
             princessParams+=("$p")
@@ -33,6 +40,10 @@ for p; do
     esac
 done
 
+echo $JAVA $JAVA_OPTS -cp $TARGET \
+     ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
+     "${princessParams[@]}"
+
 exec $JAVA $JAVA_OPTS -cp $TARGET \
-     ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+     ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
      "${princessParams[@]}"

@@ -1,7 +1,37 @@
+/** This file is part of Ostrich, an SMT solver for strings. Copyright (c) 2023
+  * Denghang Hu. All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+  *
+  * * Redistributions of source code must retain the above copyright notice,
+  * this list of conditions and the following disclaimer.
+  *
+  * * Redistributions in binary form must reproduce the above copyright notice,
+  * this list of conditions and the following disclaimer in the documentation
+  * and/or other materials provided with the distribution.
+  *
+  * * Neither the name of the authors nor the names of their contributors may be
+  * used to endorse or promote products derived from this software without
+  * specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
+
 package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
-import ap.parser.SymbolCollector
+import ap.parser.{SymbolCollector, PrincessLineariser}
 import ap.terfor.TerForConvenience._
 import ap.terfor.Term
 import ap.basetypes.IdealInt
@@ -29,17 +59,15 @@ import scala.collection.mutable.{HashMap => MHashMap}
 import scala.util.Random
 import java.io.File
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.cesolver.core.finalConstraints.{
-  CatraFinalConstraints,
-  FinalConstraints
-}
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.ITerm
+import ap.parser.{ITerm, IConstant, IIntLit, SimplifyingConstantSubstVisitor}
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.util.CatraWriter
 import ap.parser.IExpression._
 import ap.parser.IFormula
+import ostrich.cesolver.core.finalConstraints.CatraFinalConstraints
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
 
 class CatraBasedSolver(
     private val inputFormula: IFormula
@@ -91,7 +119,16 @@ class CatraBasedSolver(
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    val allIntTerms = SymbolCollector.constants(lia)
+    val liaIntTerms = SymbolCollector.constants(lia)
+    val autIntTerms =
+      (for (
+        constraint <- constraints;
+        aut <- constraint.auts;
+        IConstant(c) <- aut.registers
+      )
+        yield c).toSet
+    val allIntTerms = liaIntTerms ++ autIntTerms
+
     if (allIntTerms.isEmpty) return ""
 
     sb.append("counter int ")
@@ -128,9 +165,11 @@ class CatraBasedSolver(
       sb.append(toCatraInputRegisterUpdate(aut, vec))
       sb.append(";\n")
     }
-    sb.append("\taccepting ")
-    sb.append(aut.acceptingStates.map("s" + state2Int(_)).mkString(", "))
-    sb.append(";\n")
+    if (!aut.acceptingStates.isEmpty) {
+      sb.append("\taccepting ")
+      sb.append(aut.acceptingStates.map("s" + state2Int(_)).mkString(", "))
+      sb.append(";\n")
+    }
     sb.append("};\n")
     sb.toString()
   }
@@ -159,7 +198,12 @@ class CatraBasedSolver(
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
     if (lia.isTrue) return ""
     sb.append("constraint ")
-    sb.append(lia.toString.replaceAll("&", "&&"))
+    sb.append(
+      PrincessLineariser
+        .asString(lia)
+        .replaceAll("&", "&&")
+        .replaceAll("[|]", "||")
+    )
     sb.append(";\n")
     sb.toString()
   }
@@ -168,17 +212,36 @@ class CatraBasedSolver(
     val result = new Result
     res match {
       case Sat(assignments) => {
+        // update integer model
         val strIntersted = constraints.flatMap(_.interestTerms)
+        val sb = new StringBuilder
+        val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+        val liaIntTerms = SymbolCollector.constants(lia)
+        val autIntTerms =
+          (for (
+            constraint <- constraints;
+            aut <- constraint.auts;
+            IConstant(c) <- aut.registers
+          )
+            yield c).toSet
+        val allIntTerms = liaIntTerms ++ autIntTerms
+
         val name2Term =
-          (strIntersted ++ integerTerms).map {
-            case t =>
-              (t.toString(), t)
+          (allIntTerms /*++ freshTerms*/ ).map { case t =>
+            (t.toString(), IConstant(t))
           }.toMap
+
         val termModel =
-          for (
-            (k, v) <- assignments;
-            t <- name2Term.get(k.name)
-          ) yield (t, IdealInt(v))
+          (for ((_, t: IConstant) <- name2Term)
+            yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap ++
+            (for (
+              (k, v) <- assignments;
+              t <- name2Term.get(k.name)
+            ) yield (t, IdealInt(v)))
+
+        for ((a, b) <- termModel)
+          result.updateModel(a, b)
+
         // update string model
         for (singleString <- constraints) {
           singleString.setInterestTermModel(termModel)
@@ -192,7 +255,6 @@ class CatraBasedSolver(
         }
 
         // update integer model
-        ParikhUtil.todo("CatraBasedSolver: Update integer model")
         result.setStatus(ProverStatus.Sat)
       }
       case OutOfMemory => throw new Exception("Out of memory")
@@ -210,19 +272,24 @@ class CatraBasedSolver(
       result.setStatus(ProverStatus.Sat)
       return result
     }
+    /*
     for (c <- constraints) {
       val productAut = c.auts.reduceLeft(_ product _)
       productAut.toDot("catra_" + c.strId)
     }
+     */
     var result = new Result
-    // val interFlie = File.createTempFile("catra", "jjj")
-    val interFlie = new File("catra")
+    val interFile =
+      if (ParikhUtil.debug) new File("catra_input.par")
+      else File.createTempFile("ostrich-catra", ".par", null)
+    // val interFile = File.createTempFile("ostrich-catra", ".par", null)
+    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
     try {
-      val writer = new CatraWriter(interFlie.toString())
+      val writer = new CatraWriter(interFile.toString())
       writer.write(toCatraInput)
       writer.close()
       val arguments = CommandLineOptions(
-        inputFiles = Seq(interFlie.toString()),
+        inputFiles = Seq(interFile.toString()),
         timeout_ms = Some(OFlags.timeout),
         dumpSMTDir = None,
         dumpGraphvizDir = None,
@@ -241,18 +308,25 @@ class CatraBasedSolver(
         randomSeed = 1234567,
         printProof = false
       )
+
+      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
+
       val catraRes = ParikhUtil.measure(
         s"${this.getClass().getSimpleName()}::findIntegerModel"
       )(runInstances(arguments))
+
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-          result
         case Failure(e) => throw e
       }
+
+      result
+
     } finally {
       // delete temp file
-      // interFlie.delete()
+      if (!ParikhUtil.debug)
+        interFile.delete()
     }
   }
 }

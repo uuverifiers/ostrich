@@ -119,65 +119,65 @@ object NuxmvTests extends Properties("DenghangTests.nuxmv"){
 
   // integration tests for length
   property("length_sat.smt2") =
-    checkFile("tests/hu-benchmarks/length_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/length_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 
   // integration tests for concatenate
   property("concat_sat.smt2") =
-    checkFile("tests/hu-benchmarks/concat_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/concat_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("concat_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/concat_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/concat_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("concat_backjump_bug.smt2") = 
-    checkFile("tests/hu-benchmarks/concat_backjump_bug.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/concat_backjump_bug.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 
   // integration tests for indexof
   property("indexof_const_index_sat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_const_index_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_const_index_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_const_index_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_const_index_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_const_index_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_const_startpos_sat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_const_startpos_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_const_startpos_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_const_startpos_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_const_startpos_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_const_startpos_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_var_sat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_var_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_var_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_var_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_var_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_var_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_empty_sat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_empty_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_empty_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_empty_sat2.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_empty_sat2.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_empty_sat2.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("indexof_empty_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_empty_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/indexof_empty_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 
   // integration tests for substring
   property("substr_const_begin_sat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_const_begin_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_const_begin_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_const_begin_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_const_begin_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_const_begin_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_const_len_sat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_const_len_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_const_len_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_const_len_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_const_len_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_const_len_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_var_sat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_var_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_var_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_var_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_var_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_var_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_empty_sat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_empty_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_empty_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_empty_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/substr_empty_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/hu-benchmarks/substr_empty_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   
   // nuxmv timeout
   // property("regex_counting_unsat.smt2") =
-  //   checkFile("tests/hu-benchmarks/regex_counting_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+  //   checkFile("tests/hu-benchmarks/regex_counting_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 
   // integration tests for replace
   property("replace-length.smt2") =
-    checkFile("tests/replace-length.smt2", timeout,"sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/replace-length.smt2", timeout,"sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("replace-length-2.smt2") =
-    checkFile("tests/replace-length-2.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/replace-length-2.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("bug-56-replace-bug2.smt2") =
-    checkFile("tests/bug-56-replace-bug2.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/bug-56-replace-bug2.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("bug-58-replace-re") =
-    checkFile("tests/bug-58-replace-re.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-backend=nuxmv")
+    checkFile("tests/bug-58-replace-re.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 }

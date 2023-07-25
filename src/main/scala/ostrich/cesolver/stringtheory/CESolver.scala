@@ -359,6 +359,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         }
 
         val inputCEAs = inputRegexes.map{case (id, aut) => (id, automaton2CostEnriched(aut))}
+        ParikhUtil.todo("bug: goal.facts.arithConj is not the right input lia")
         val approxExp = new ParikhExploration(
           inputFuns.toSeq,
           inputCEAs.toSeq,
