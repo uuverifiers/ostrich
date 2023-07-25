@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -50,6 +50,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                                       facts : Conjunction) {
   import theory.{FunPred, strDatabase, autDatabase,
                  str_++, str_at, str_at_right, str_trim,
+                 str_replacere, str_replaceallre,
                  str_replaceall, str_replace,
                  str_replaceallre_longest, str_replacere_longest,
                  str_replaceallcg, str_replacecg, str_extract}
@@ -67,6 +68,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
 
   val translatablePredicates : Seq[Predicate] =
     (for (f <- List(str_++, str_replace, str_replaceall,
+                    str_replacere, str_replaceallre,
                     str_replacere_longest, str_replaceallre_longest,
                     str_at, str_at_right, str_trim) ++
                theory.extraFunctionPreOps.keys)
@@ -89,6 +91,22 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       }
       Some((op, List(a(0), a(2)), a(3)))
     }
+    case FunPred(`str_replaceallre`) =>
+      for (regex <- regexAsTerm(a(1))) yield {
+        val op = () => {
+          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
+          ReplaceAllShortestPreOp(aut)
+        }
+        (op, List(a(0), a(2)), a(3))
+      }
+    case FunPred(`str_replacere`) =>
+      for (regex <- regexAsTerm(a(1))) yield {
+        val op = () => {
+          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
+          ReplaceShortestPreOp(aut)
+        }
+        (op, List(a(0), a(2)), a(3))
+      }
     case FunPred(`str_replaceallre_longest`) =>
       for (regex <- regexAsTerm(a(1))) yield {
         val op = () => {

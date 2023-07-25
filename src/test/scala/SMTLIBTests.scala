@@ -261,6 +261,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/test-replace-regex2.smt2", "unsat")
   property("test-replace-regex3") =
     checkFile("tests/test-replace-regex3.smt2", "sat")
+  property("test-replace-regex4") =
+    checkFile("tests/test-replace-regex4.smt2", "unsat")
 
 /*
   property("membership_427.smt2") =
