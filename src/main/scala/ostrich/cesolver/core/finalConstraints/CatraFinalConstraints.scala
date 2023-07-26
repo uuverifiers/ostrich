@@ -14,14 +14,13 @@ class CatraFinalConstraints(
     override val auts: Seq[CostEnrichedAutomatonBase]
 ) extends FinalConstraints {
 
-  val interestTerms: Seq[ITerm] = auts.flatMap(_.registers)
+  val regsTerms: Seq[ITerm] = auts.flatMap(_.registers)
 
   import ap.terfor.TerForConvenience._
   
   def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
 
   def getModel: Option[Seq[Int]] = {
-    val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(auts, registersModel)
+    ParikhUtil.findAcceptedWordByRegisters(auts, regTermsModel)
   }
 }

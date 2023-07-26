@@ -35,7 +35,7 @@ object ParikhUtil {
 
   def findAcceptedWordByRegistersComplete(
       aut: CostEnrichedAutomatonBase,
-      registersModel: MMap[ITerm, IdealInt]
+      registersModel: Map[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
     val registersValue = aut.registers.map(registersModel(_).intValue)
     val todoList = new ArrayStack[(State, Seq[Int], Seq[Char])]
@@ -74,7 +74,7 @@ object ParikhUtil {
 
   def findAcceptedWordByRegisters(
       auts: Seq[CostEnrichedAutomatonBase],
-      registersModel: MMap[ITerm, IdealInt]
+      registersModel: Map[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
     findAcceptedWordByRegistersComplete(aut, registersModel)

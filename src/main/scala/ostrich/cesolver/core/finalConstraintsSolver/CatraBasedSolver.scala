@@ -213,8 +213,8 @@ class CatraBasedSolver(
     res match {
       case Sat(assignments) => {
         // update integer model
-        val strIntersted = constraints.flatMap(_.interestTerms)
         val sb = new StringBuilder
+        // lia may contains some string term which should be ignored
         val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
         val liaIntTerms = SymbolCollector.constants(lia)
         val autIntTerms =
@@ -244,7 +244,7 @@ class CatraBasedSolver(
 
         // update string model
         for (singleString <- constraints) {
-          singleString.setInterestTermModel(termModel)
+          singleString.setRegTermsModel(termModel)
           val value = ParikhUtil.measure(
             s"${this.getClass().getSimpleName()}::findStringModel"
           )(singleString.getModel)

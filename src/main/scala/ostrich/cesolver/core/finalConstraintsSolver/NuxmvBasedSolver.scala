@@ -226,7 +226,7 @@ class NuxmvBasedSolver(
           case _ => throw new Exception("not integer model")
         }.toMap
         for (c <- constraints) {
-          c.setInterestTermModel(integerModel)
+          c.setRegTermsModel(integerModel)
           c.getModel match {
             case Some(value) => result.updateModel(c.strId, value)
             case None => throw new Exception("fail to generate string model")

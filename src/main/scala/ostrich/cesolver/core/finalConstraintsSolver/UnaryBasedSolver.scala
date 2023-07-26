@@ -77,7 +77,7 @@ class UnaryBasedSolver(
         val partialModel = lProver.partialModel
         // update string model
         for (singleString <- constraints) {
-          singleString.setInterestTermModel(partialModel)
+          singleString.setRegTermsModel(partialModel)
           val value = measure(
             s"${this.getClass.getSimpleName}::findStringModel"
           )(singleString.getModel)

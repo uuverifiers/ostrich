@@ -3,22 +3,21 @@ package ostrich.cesolver.core.finalConstraints
 
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
+import ap.parser.IConstant
+import ap.parser.IExpression
+import ap.parser.IExpression._
+import ap.parser.IFormula
+import ap.parser.ITerm
 import ap.terfor.ConstantTerm
 import ap.terfor.OneTerm
-import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ap.parser.IExpression
-import scala.collection.mutable.{
-  ArrayBuffer,
-  HashMap => MHashMap,
-  HashSet => MHashSet
-}
 import ostrich.OFlags
-import ap.parser.ITerm
-import ap.parser.IFormula
-import ap.parser.IExpression._
-import ap.parser.IConstant
+import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.util.TermGenerator
+
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.mutable.{HashSet => MHashSet}
 
 object FinalConstraints {
 
@@ -77,23 +76,27 @@ trait FinalConstraints {
 
   val auts: Seq[CostEnrichedAutomatonBase]
 
-  val interestTerms: Seq[ITerm]
+  val regsTerms: Seq[ITerm]
 
   def getModel: Option[Seq[Int]]
 
-  protected var interestTermsModel: Map[ITerm, IdealInt] = Map()
+  protected var regTermsModel: Map[ITerm, IdealInt] = Map()
   // accessors and mutators
   def getRegsRelation: IFormula
 
   def getRegisters = auts.flatMap(_.registers)
 
-  def setInterestTermModel(partialModel: PartialModel): Unit =
-    for (term <- interestTerms)
-      interestTermsModel += (term -> evalTerm(term, partialModel))
+  def setRegTermsModel(partialModel: PartialModel): Unit = {
+    regTermsModel = Map()
+    for (term <- getRegisters)
+      regTermsModel += (term -> evalTerm(term, partialModel))
+  }
 
-  def setInterestTermModel(termModel: Map[ITerm, IdealInt]): Unit =
-    for (term <- interestTerms)
-      interestTermsModel = interestTermsModel + (term -> termModel(term))
+  def setRegTermsModel(termModel: Map[ITerm, IdealInt]): Unit = {
+    regTermsModel = Map()
+    for (term <- getRegisters)
+      regTermsModel += (term -> termModel(term))
+  }
 
   lazy val getCompleteLIA: IFormula = getCompleteLIA(auts.reduce(_ product _))
 

@@ -86,13 +86,12 @@ class UnaryFinalConstraints(
 
   def getRegsRelation: IFormula = checkSatAut.regsRelation
 
-  val interestTerms: Seq[ITerm] = productAut.registers
+  val regsTerms: Seq[ITerm] = productAut.registers
 
   def getModel: Option[Seq[Int]] = {
-    val registersModel = MHashMap() ++ interestTermsModel
     ParikhUtil.findAcceptedWordByRegisters(
       Seq(findModelAut),
-      registersModel
+      regTermsModel
     )
   }
 
