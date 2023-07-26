@@ -8,7 +8,7 @@ import ap.parser.IFormula
 import ap.parser.IExpression._
 
 class BaselineFinalConstraints(
-    override val strId: ITerm,
+    override val strDataBaseId: ITerm,
     override val auts: Seq[CostEnrichedAutomatonBase]
 ) extends FinalConstraints {
 

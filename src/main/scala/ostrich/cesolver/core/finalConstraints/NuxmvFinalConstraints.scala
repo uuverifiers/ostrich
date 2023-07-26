@@ -9,7 +9,7 @@ import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
 
 class NuxmvFinalConstraints(
-    override val strId: ITerm,
+    override val strDataBaseId: ITerm,
     override val auts: Seq[CostEnrichedAutomatonBase]
 ) extends FinalConstraints {
 

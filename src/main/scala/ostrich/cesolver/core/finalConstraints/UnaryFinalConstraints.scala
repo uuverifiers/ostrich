@@ -11,7 +11,7 @@ import ap.parser.IFormula
 import ap.parser.IExpression._
 
 class UnaryFinalConstraints(
-    override val strId: ITerm,
+    override val strDataBaseId: ITerm,
     override val auts: Seq[CostEnrichedAutomatonBase],
     flags : OFlags
 ) extends FinalConstraints {
@@ -96,9 +96,9 @@ class UnaryFinalConstraints(
   }
 
   if (flags.debug) {
-    productAut.toDot("product_" + strId.toString)
-    mostlySimplifiedAut.toDot("simplified_" + strId.toString)
-    simplifyButRemainLabelAut.toDot("original_" + strId.toString)
+    productAut.toDot("product_" + strDataBaseId.toString)
+    mostlySimplifiedAut.toDot("simplified_" + strDataBaseId.toString)
+    simplifyButRemainLabelAut.toDot("original_" + strDataBaseId.toString)
   }
 
   private def computeGlobalSWithRegsValue(

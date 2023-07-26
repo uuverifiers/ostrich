@@ -72,7 +72,7 @@ import FinalConstraints._
 trait FinalConstraints {
   type State = CostEnrichedAutomatonBase#State
 
-  val strId: ITerm
+  val strDataBaseId: ITerm
 
   val auts: Seq[CostEnrichedAutomatonBase]
 

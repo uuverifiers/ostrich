@@ -68,6 +68,8 @@ import ap.parser.IExpression._
 import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraints.CatraFinalConstraints
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
+import ap.types.SortedConstantTerm
+import ostrich.OstrichStringTheory
 
 class CatraBasedSolver(
     private val inputFormula: IFormula
@@ -141,7 +143,7 @@ class CatraBasedSolver(
     val sb = new StringBuilder
     for (constraint <- constraints) {
       sb.append("synchronised {\n")
-      val autNamePrefix = constraint.strId.toString
+      val autNamePrefix = constraint.strDataBaseId.toString
       for ((aut, i) <- constraint.auts.zipWithIndex) {
         sb.append(toCatraInputAutomaton(aut, autNamePrefix + i))
       }
@@ -216,7 +218,10 @@ class CatraBasedSolver(
         val sb = new StringBuilder
         // lia may contains some string term which should be ignored
         val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-        val liaIntTerms = SymbolCollector.constants(lia)
+        val liaIntTerms = SymbolCollector.constants(lia).filterNot{
+          case a: SortedConstantTerm => a.sort.isInstanceOf[OstrichStringTheory.OstrichStringSort]
+          case _ => false
+        }
         val autIntTerms =
           (for (
             constraint <- constraints;
@@ -249,7 +254,7 @@ class CatraBasedSolver(
             s"${this.getClass().getSimpleName()}::findStringModel"
           )(singleString.getModel)
           value match {
-            case Some(v) => result.updateModel(singleString.strId, v)
+            case Some(v) => result.updateModel(singleString.strDataBaseId, v)
             case None    => throw UnknownException("Cannot find string model")
           }
         }

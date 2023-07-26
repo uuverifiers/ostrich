@@ -77,7 +77,7 @@ class NuxmvBasedSolver(
     // state variable for each automaton
     for (c <- constraints; aut <- c.auts) {
       println(
-        s"  aut_${c.strId}_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut))
+        s"  aut_${c.strDataBaseId}_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut))
             .mkString(", ")}};"
       )
     }
@@ -92,18 +92,18 @@ class NuxmvBasedSolver(
     for (c <- constraints; aut <- c.auts) {
       // init states and next states
       println(
-        s"  init(aut_${c.strId}_${aut.hashCode}) := ${aut.initialState};"
+        s"  init(aut_${c.strDataBaseId}_${aut.hashCode}) := ${aut.initialState};"
       )
       val constraintsidx = constraintsIdx(c)
-      println(s"  next(aut_${c.strId}_${aut.hashCode}) := case")
+      println(s"  next(aut_${c.strDataBaseId}_${aut.hashCode}) := case")
       for (s <- aut.states) {
         for ((t, l, v) <- aut.outgoingTransitionsWithVec(s)) {
           val transidx = transIdx((s, l, t, v))
           println(
-            s"    aut_${c.strId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $t;"
+            s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $t;"
           )
         }
-        println(s"    aut_${c.strId}_${aut.hashCode} = $s: $s;")
+        println(s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s: $s;")
       }
       println(s"    esac;")
 
@@ -114,7 +114,7 @@ class NuxmvBasedSolver(
           for ((s, l, t, v) <- aut.transitionsWithVec) {
             val transidx = transIdx((s, l, t, v))
             println(
-              s"    aut_${c.strId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $reg + ${v(i)};"
+              s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $reg + ${v(i)};"
             )
           }
           println(s"    TRUE: $reg;")
@@ -126,7 +126,7 @@ class NuxmvBasedSolver(
     // invariant
     val accepting = (for (c <- constraints; aut <- c.auts) yield {
       val acceptingStates = aut.acceptingStates
-      s"(${acceptingStates.map(s => s"aut_${c.strId}_${aut.hashCode} = $s").mkString(" | ")})"
+      s"(${acceptingStates.map(s => s"aut_${c.strDataBaseId}_${aut.hashCode} = $s").mkString(" | ")})"
     }).mkString(" & ")
     println("INVARSPEC")
     println(s"  ($accepting) -> !($nuxmvlia);")
@@ -153,7 +153,7 @@ class NuxmvBasedSolver(
     val outdir = "dot" + File.separator + LocalDate.now().toString
     if (ParikhUtil.debug) cleanDirectory(new File(outdir))
     for (c <- constraints; aut <- c.auts) {
-      aut.toDot(s"nuxmv_aut_${c.strId}_${aut.hashCode}")
+      aut.toDot(s"nuxmv_aut_${c.strDataBaseId}_${aut.hashCode}")
     }
     ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
@@ -228,7 +228,7 @@ class NuxmvBasedSolver(
         for (c <- constraints) {
           c.setRegTermsModel(integerModel)
           c.getModel match {
-            case Some(value) => result.updateModel(c.strId, value)
+            case Some(value) => result.updateModel(c.strDataBaseId, value)
             case None => throw new Exception("fail to generate string model")
           }
         }

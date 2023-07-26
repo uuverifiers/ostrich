@@ -46,7 +46,7 @@ class BaselineSolver(val lProver: SimpleAPI)
             s"${this.getClass.getSimpleName}::findStringModel"
           )(singleString.getModel)
           value match {
-            case Some(v) => res.updateModel(singleString.strId, v)
+            case Some(v) => res.updateModel(singleString.strDataBaseId, v)
             case None    => throw UnknownException("Cannot find string model")
           }
 
