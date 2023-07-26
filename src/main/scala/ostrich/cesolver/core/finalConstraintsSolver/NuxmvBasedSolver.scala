@@ -24,6 +24,8 @@ import ap.parser.Internal2InputAbsy
 import ostrich.cesolver.core.Model
 import ap.parser.IExpression
 import java.time.LocalDate
+import ap.types.SortedConstantTerm
+import ostrich.OstrichStringTheory.OstrichStringSort
 
 
 class NuxmvBasedSolver(
@@ -157,7 +159,7 @@ class NuxmvBasedSolver(
     }
     ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    val inputVars = (SymbolCollector constants lia).map(Internal2InputAbsy(_))
+    val inputVars = SymbolCollector constants lia
     val name2ITerm =
       inputVars.map(v => v.toString -> v).toMap
     val res = {
@@ -210,9 +212,15 @@ class NuxmvBasedSolver(
           case Reachable() =>
             result.setStatus(SimpleAPI.ProverStatus.Sat)
             true // Capture the model assignment
-          case CounterValue(intName, value) if name2ITerm.contains(intName) =>
+          case CounterValue(intName, value) =>
             // integer model
-            result.updateModel(name2ITerm(intName), IdealInt(value))
+            if(name2ITerm.contains(intName)){
+              // filter string term in input lia formula 
+              name2ITerm(intName) match {
+                case x : SortedConstantTerm if x.sort.isInstanceOf[OstrichStringSort] => // do nothing
+                case _ => result.updateModel(name2ITerm(intName), IdealInt(value))
+              }
+            }
             true
           case _ => true
         }

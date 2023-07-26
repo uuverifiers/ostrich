@@ -69,7 +69,7 @@ import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraints.CatraFinalConstraints
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ap.types.SortedConstantTerm
-import ostrich.OstrichStringTheory
+import ostrich.OstrichStringTheory.OstrichStringSort
 
 class CatraBasedSolver(
     private val inputFormula: IFormula
@@ -219,7 +219,7 @@ class CatraBasedSolver(
         // lia may contains some string term which should be ignored
         val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
         val liaIntTerms = SymbolCollector.constants(lia).filterNot{
-          case a: SortedConstantTerm => a.sort.isInstanceOf[OstrichStringTheory.OstrichStringSort]
+          case a: SortedConstantTerm => a.sort.isInstanceOf[OstrichStringSort]
           case _ => false
         }
         val autIntTerms =
