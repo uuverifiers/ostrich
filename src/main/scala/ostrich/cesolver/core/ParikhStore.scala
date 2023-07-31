@@ -9,6 +9,7 @@ import ap.util.Seqs
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ap.parser.ITerm
 import ostrich.cesolver.util.ParikhUtil
+import ostrich.cesolver.automata.CostEnrichedAutomaton
 
 object ParikhStore {
   sealed trait LIAStrategy // linear integer arithmetic generating strategy
@@ -77,22 +78,23 @@ class ParikhStore(t: ITerm) {
     */
   private def checkConsistency(aut: CostEnrichedAutomatonBase): Option[Seq[CostEnrichedAutomatonBase]] = {
     productAut = productAut product aut
+    val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
     if (productAut.isEmpty) {
-      val consideredAuts = ArrayBuffer(aut)
-      var tmpAut = aut
-      for (aut2 <- constraints) {
-        if (tmpAut.isEmpty){
-          return Some(consideredAuts.toSeq)
-        }
+      // inconsistent, generate the minimal conflicted set
+      var tmpAut: CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
+      for (aut2 <- aut +: constraints) {
         tmpAut = tmpAut product aut2
         consideredAuts += aut2
+        if (tmpAut.isEmpty) {
+          // found the minimal conflicted set
+          return Some(consideredAuts.toSeq)
+        }
       }
     }
     None
   }
   def assertConstraint(aut: CostEnrichedAutomatonBase): Option[ConflictSet] = {
-    // Console.err.println("assert")
-
+    
     if (!constraints.contains(aut)) {
       // check if the stored automata is consistent after adding the aut
       // 1. check if the aut is already in inconsistent core:

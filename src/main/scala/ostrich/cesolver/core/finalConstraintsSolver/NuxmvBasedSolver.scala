@@ -27,7 +27,6 @@ import java.time.LocalDate
 import ap.types.SortedConstantTerm
 import ostrich.OstrichStringTheory.OstrichStringSort
 
-
 class NuxmvBasedSolver(
     private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
@@ -39,12 +38,12 @@ class NuxmvBasedSolver(
   private val baseCommand = Array("nuxmv", "-int")
   private val Unreachable = """^.* is true$""".r
   private val Reachable = """^.* is false$""".r
-  private val CounterValue = """^ {4}(.*) = (\d+)$""".r
+  private val CounterValue = """^ {4}(.*) = (-?\d+)$""".r
 
   private val nuxmvCmd = baseCommand
 
-  private val outFile = 
-    if(ParikhUtil.debug)
+  private val outFile =
+    if (ParikhUtil.debug)
       new File("nuxmv.smv")
     else
       Files.createTempFile("nuxmv", ".smv").toFile
@@ -102,7 +101,9 @@ class NuxmvBasedSolver(
         for ((t, l, v) <- aut.outgoingTransitionsWithVec(s)) {
           val transidx = transIdx((s, l, t, v))
           println(
-            s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $t;"
+            s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(
+                constraintsidx
+              )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $t;"
           )
         }
         println(s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s: $s;")
@@ -116,7 +117,9 @@ class NuxmvBasedSolver(
           for ((s, l, t, v) <- aut.transitionsWithVec) {
             val transidx = transIdx((s, l, t, v))
             println(
-              s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(constraintsidx)} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $reg + ${v(i)};"
+              s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(
+                  constraintsidx
+                )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $reg + ${v(i)};"
             )
           }
           println(s"    TRUE: $reg;")
@@ -159,9 +162,10 @@ class NuxmvBasedSolver(
     }
     ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    val inputVars = SymbolCollector constants lia
+    // val inputVars = SymbolCollector constants lia
+    val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
     val name2ITerm =
-      inputVars.map(v => v.toString -> v).toMap
+      allIntTerms.map(v => v.toString -> v).toMap
     val res = {
       val result = new Result
       val out = new java.io.FileOutputStream(outFile)
@@ -214,12 +218,9 @@ class NuxmvBasedSolver(
             true // Capture the model assignment
           case CounterValue(intName, value) =>
             // integer model
-            if(name2ITerm.contains(intName)){
-              // filter string term in input lia formula 
-              name2ITerm(intName) match {
-                case x : SortedConstantTerm if x.sort.isInstanceOf[OstrichStringSort] => // do nothing
-                case _ => result.updateModel(name2ITerm(intName), IdealInt(value))
-              }
+            if (name2ITerm.contains(intName)) {
+              // filter string term in input lia formula
+              result.updateModel(name2ITerm(intName), IdealInt(value))
             }
             true
           case _ => true

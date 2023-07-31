@@ -81,8 +81,10 @@ class UnaryFinalConstraints(
     and(Seq(r1Formula, getRegsRelation))
   }
 
-  override lazy val getCompleteLIA: IFormula = 
+  override lazy val getCompleteLIA: IFormula = {
+    ParikhUtil.debugPrintln("getCompleteLIA")
     getCompleteLIA(checkSatAut)
+  }
 
   def getRegsRelation: IFormula = checkSatAut.regsRelation
 

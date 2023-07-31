@@ -81,6 +81,7 @@ class CEPreprocessor(theory: CEStringTheory)
       // str_at_right(bigStr, offset - 1)
 
       case (IFunApp(`str_at`, _), Seq(bigStr: ITerm, index: ITerm)) => {
+        ParikhUtil.debugPrintln("str_at: " + bigStr + " " + index)
         str_substr(bigStr, index, 1)
       }
       case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t

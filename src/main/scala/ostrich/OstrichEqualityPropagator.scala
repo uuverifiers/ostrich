@@ -40,6 +40,7 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.types.SortedPredicate
 import ap.theories.TheoryRegistry
 import ap.util.Seqs
+import ostrich.cesolver.util.ParikhUtil
 
 /**
  * Class to propagate equalities between string variables; this is
@@ -59,6 +60,7 @@ class OstrichEqualityPropagator(theory : OstrichStringTheory) {
                    : Seq[Plugin.Action] = {
     val predConj = goal.facts.predConj
     val allAtoms = predConj.positiveLits ++ predConj.negativeLits
+    ParikhUtil.debugPrintln("model = " + model)
     val nonTheoryAtoms =
       allAtoms filterNot {
         a => TheoryRegistry.lookupSymbol(a.pred) match {

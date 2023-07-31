@@ -37,7 +37,10 @@ object ParikhUtil {
       aut: CostEnrichedAutomatonBase,
       registersModel: Map[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
+    debugPrintln("aut is " + aut)
+    debugPrintln("regsmodel is " + registersModel)
     val registersValue = aut.registers.map(registersModel(_).intValue)
+    debugPrintln("registersValue is " + registersValue)
     val todoList = new ArrayStack[(State, Seq[Int], Seq[Char])]
     val visited = new MHashSet[(State, Seq[Int])]
     todoList.push(

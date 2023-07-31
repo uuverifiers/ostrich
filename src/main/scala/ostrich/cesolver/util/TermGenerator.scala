@@ -7,11 +7,20 @@ import ap.parser.IExpression._
 
 
 object TermGenerator {
-  def apply(): TermGenerator = new TermGenerator
+
+  private var id_counter = 0
+
+  private def nextId : Int = synchronized {
+    id_counter = id_counter + 1
+    id_counter - 1
+  }
+
+  def apply(id: Int): TermGenerator = new TermGenerator(id)
+
+  def apply(): TermGenerator = apply(nextId)
 }
 
-class TermGenerator  {
-  private val id = hashCode()
+class TermGenerator(private val id: Int)  {
   var count = 0
   def registerTerm: ITerm = {
     count = count + 1

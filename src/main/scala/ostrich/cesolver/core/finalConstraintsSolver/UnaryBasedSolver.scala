@@ -19,7 +19,8 @@ import ap.parser.IExpression._
 
 class UnaryBasedSolver(
     flags: OFlags,
-    lProver: SimpleAPI
+    lProver: SimpleAPI,
+    additionalLia: IFormula
 ) extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(FinalConstraints.unaryHeuristicACs(t, auts, flags))
@@ -56,7 +57,7 @@ class UnaryBasedSolver(
   def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {
     val res = new Result
 
-    val finalArith = f
+    val finalArith = f & additionalLia
 
     lProver.push
     val internalInt =
@@ -74,6 +75,7 @@ class UnaryBasedSolver(
     }
     status match {
       case ProverStatus.Sat if generateModel =>
+        // generate model
         val partialModel = lProver.partialModel
         // update string model
         for (singleString <- constraints) {
@@ -88,15 +90,14 @@ class UnaryBasedSolver(
 
         }
         // update integer model
+        ParikhUtil.debugPrintln(integerTerms)
         for (term <- integerTerms) {
           val value = FinalConstraints.evalTerm(term, partialModel)
           res.updateModel(term, value)
         }
-
-        res.setStatus(ProverStatus.Sat)
-      case _ => res.setStatus(_)
+      case _ => //do nothing
     }
-
+    res.setStatus(status)
     lProver.pop
     res
   }

@@ -40,7 +40,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
     false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   private var backend: OFlags.CEABackend.Value = Unary
-  private var underApprox, simplifyAut = true
+  private var simplifyAut = true
+  private var underApprox = false
   private var underApproxBound = 10
 
   // TODO: add more command line arguments

@@ -101,7 +101,6 @@ trait FinalConstraints {
   lazy val getCompleteLIA: IFormula = getCompleteLIA(auts.reduce(_ product _))
 
   def getCompleteLIA(aut: CostEnrichedAutomatonBase): IFormula = {
-    ParikhUtil.debugPrintln("getCompleteLIA")
     lazy val transtion2Term =
       aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
     def outFlowTerms(from: State): Seq[ITerm] = {
@@ -215,7 +214,7 @@ trait FinalConstraints {
     }
 
     val registerUpdateFormula =
-      if (registerUpdateMap.size == 0)
+      if (registerUpdateMap.size == 0)  // empty automaton
         and(for (r <- aut.registers) yield r === 0)
       else
         and(

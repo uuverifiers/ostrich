@@ -42,6 +42,7 @@ import ap.parser.IExpression.Const
 import ap.parser.IIntLit
 import ap.parser.IConstant
 import ap.parser.SimplifyingConstantSubstVisitor
+import ap.parser.IExpression
 
 object ParikhExploration {
 
@@ -77,41 +78,58 @@ class ParikhExploration(
 
   // topological sorting of the function applications
   // divide integer term and string term
+
+  private val fresh2origin = new MHashMap[ITerm, ITerm]
+
   private val (integerTerms, strTerms, sortedFunApps, ignoredApps) = {
     val strTerms = MHashSet[ITerm]()
     val integerTerms = MHashSet[ITerm]()
     for ((t, _) <- initialConstraints)
       strTerms += t
-    funApps.foreach {
+    val newFunApps = funApps.map {
       case (op: LengthCEPreOp, Seq(str), length) => {
-        integerTerms += length
+        val freshLen = termGen.intTerm
+        integerTerms += freshLen
+        fresh2origin += (freshLen -> length)
         strTerms += str
+        (op, Seq(str), freshLen)
       }
       case (op: SubStringCEPreOp, Seq(str, start, length), subStr) => {
-        integerTerms += start
-        integerTerms += length
+        val freshStart = termGen.intTerm
+        val freshLen = termGen.intTerm
+        integerTerms += freshStart  
+        integerTerms += freshLen
         strTerms += str
         strTerms += subStr
+        fresh2origin += (freshStart -> start)
+        fresh2origin += (freshLen -> length)
+        (op, Seq(str, freshStart, freshLen), subStr)
       }
       case (op: IndexOfCEPreOp, Seq(str, subStr, start), index) => {
-        integerTerms += start
-        integerTerms += index
+        val freshStart = termGen.intTerm
+        val freshIndex = termGen.intTerm
+        integerTerms += freshStart
+        integerTerms += freshIndex
         strTerms += str
         strTerms += subStr
+        fresh2origin += (freshStart -> start)
+        fresh2origin += (freshIndex -> index)
+        (op, Seq(str, subStr, freshStart), freshIndex)
       }
       case (op, strs, resstr) => {
         strTerms ++= strs
         strTerms += resstr
+        (op, strs, resstr)
       }
     }
 
     val sortedApps = new ArrayBuffer[(Seq[(PreOp, Seq[ITerm])], ITerm)]
     var ignoredApps = new ArrayBuffer[(PreOp, Seq[ITerm], ITerm)]
-    var remFunApps = funApps
-    var topSortedFunApps = funApps
+    var remFunApps = newFunApps
+    var topSortedFunApps = newFunApps
 
     val termCout = new MHashMap[ITerm, Int]
-    for ((op, args, res) <- funApps) {
+    for ((op, args, res) <- newFunApps) {
       termCout(res) = termCout.getOrElse(res, 0)
       for (arg <- args) termCout(arg) = termCout.getOrElse(arg, 0) + 1
     }
@@ -144,6 +162,10 @@ class ParikhExploration(
     (integerTerms, strTerms, sortedApps, ignoredApps)
   }
 
+  private val freshIntegerTermFormula = fresh2origin.map({
+    case (fresh, origin) => fresh === origin
+  }).foldLeft(IExpression.Boolean2IFormula(true))(_ & _)
+
   for ((apps, res) <- sortedFunApps) {
     Console.withOut(Console.err) {
 
@@ -154,6 +176,8 @@ class ParikhExploration(
             case Some(str) => "\"" + str + "\""
             case None      => t.toString()
           }
+        } else if(integerTerms contains t) {
+          fresh2origin(t).toString()
         } else {
           t.toString()
         }
@@ -304,10 +328,10 @@ class ParikhExploration(
         // check linear arith consistency of final automata
         val backendSolver =
           flags.backend match {
-            case Nuxmv    => new NuxmvBasedSolver(inputFormula)
-            case Catra    => new CatraBasedSolver(inputFormula)
+            case Nuxmv    => new NuxmvBasedSolver(inputFormula & freshIntegerTermFormula)
+            case Catra    => new CatraBasedSolver(inputFormula & freshIntegerTermFormula)
             case Baseline => new BaselineSolver(lProver)
-            case Unary =>    new UnaryBasedSolver(flags, lProver)
+            case Unary =>    new UnaryBasedSolver(flags, lProver, freshIntegerTermFormula)
           }
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
@@ -350,13 +374,17 @@ class ParikhExploration(
                 yield (op, args, res)) ++
                 ignoredApps.iterator
             model ++= generateResultModel(allFunApps, model)
+            ParikhUtil.debugPrintln(model)
             throw FoundModel(
               model.map { case (term, value) =>
                 InputAbsy2Internal(term, lProver.order) -> value
               }.toMap
             )
           }
-          case _ => return trivalConflict
+          case ProverStatus.Unsat => return trivalConflict
+          case _ => 
+            ParikhUtil.debugPrintln(res)
+            throw UnknownException("backend solver failed")
         }
 
       }

@@ -214,27 +214,13 @@ class CatraBasedSolver(
     val result = new Result
     res match {
       case Sat(assignments) => {
+        ParikhUtil.debugPrintln("Catra assignment " + assignments)
         // update integer model
         val sb = new StringBuilder
         // lia may contains some string term which should be ignored
         val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-        val liaIntTerms = SymbolCollector.constants(lia).filterNot{
-          case a: SortedConstantTerm => a.sort.isInstanceOf[OstrichStringSort]
-          case _ => false
-        }
-        val autIntTerms =
-          (for (
-            constraint <- constraints;
-            aut <- constraint.auts;
-            IConstant(c) <- aut.registers
-          )
-            yield c).toSet
-        val allIntTerms = liaIntTerms ++ autIntTerms
-
-        val name2Term =
-          (allIntTerms /*++ freshTerms*/ ).map { case t =>
-            (t.toString(), IConstant(t))
-          }.toMap
+        val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
+        val name2Term = allIntTerms.map(t => (t.toString(), t)).toMap
 
         val termModel =
           (for ((_, t: IConstant) <- name2Term)
@@ -325,7 +311,6 @@ class CatraBasedSolver(
           result = decodeCatraResult(_catraRes)
         case Failure(e) => throw e
       }
-
       result
 
     } finally {
