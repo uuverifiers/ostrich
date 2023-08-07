@@ -20,6 +20,7 @@ import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IExpression
+import ostrich.cesolver.util.ParikhUtil
 
 /** This is the implementation of cost-enriched finite automaton(CEFA). Each
   * transition of CEFA contains a vector of integers, which is used to record
@@ -354,7 +355,8 @@ class CostEnrichedAutomatonBase extends Automaton {
     """
   }
 
-  def toDot(suffix: String) = {
+  def toDot(suffix: String) : Unit = {
+    if(!ParikhUtil.debug) return
     states.zipWithIndex.toMap
     val outdir = "dot" + File.separator + LocalDate.now().toString
     new File(outdir).mkdirs()
@@ -376,7 +378,9 @@ class CostEnrichedAutomatonBase extends Automaton {
           ","
         )})\"]""")
     }
-    strbuilder.append("}")
+    strbuilder.append("\n")
+    strbuilder.append(s"        \"${registers.mkString(", ")}\" [shape=plaintext]")
+    strbuilder.append("\n      }")
     writer.closeAfterWrite(strbuilder.toString())
   }
 }

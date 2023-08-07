@@ -90,7 +90,6 @@ class UnaryBasedSolver(
 
         }
         // update integer model
-        ParikhUtil.debugPrintln(integerTerms)
         for (term <- integerTerms) {
           val value = FinalConstraints.evalTerm(term, partialModel)
           res.updateModel(term, value)

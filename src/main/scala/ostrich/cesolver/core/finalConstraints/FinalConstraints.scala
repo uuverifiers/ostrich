@@ -225,6 +225,7 @@ trait FinalConstraints {
         )
 
     /////////////////////////////////////////////////////////////////////////////////
+    ParikhUtil.debugPrintln("regs relation: " + getRegsRelation)
     and(
       Seq(
         registerUpdateFormula,

@@ -87,6 +87,7 @@ class ParikhStore(t: ITerm) {
         consideredAuts += aut2
         if (tmpAut.isEmpty) {
           // found the minimal conflicted set
+          ParikhUtil.debugPrintln("find unconstrained automata: " + consideredAuts)
           return Some(consideredAuts.toSeq)
         }
       }

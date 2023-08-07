@@ -108,6 +108,10 @@ object CEATests extends Properties("DenghangTests.cea") {
   property("bug-58-replace-re") =
     checkFile("tests/bug-58-replace-re.smt2", timeout, "sat")
 
+  // integration tests for union
+  property("re_union_counting_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/re_union_counting_unsat.smt2", timeout, "unsat")
+
 }
 
 object NuxmvTests extends Properties("DenghangTests.nuxmv"){
@@ -166,10 +170,6 @@ object NuxmvTests extends Properties("DenghangTests.nuxmv"){
     checkFile("tests/hu-benchmarks/substr_empty_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
   property("substr_empty_unsat.smt2") =
     checkFile("tests/hu-benchmarks/substr_empty_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
-  
-  // nuxmv timeout
-  // property("regex_counting_unsat.smt2") =
-  //   checkFile("tests/hu-benchmarks/regex_counting_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 
   // integration tests for replace
   property("replace-length.smt2") =

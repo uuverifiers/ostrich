@@ -58,7 +58,6 @@ class UnaryFinalConstraints(
     * @return
     */
   def getUnderApprox(bound: Int): IFormula = {
-    ParikhUtil.debugPrintln("getUnderApprox")
     val aut = checkSatAut
     val lowerBound = globalS.size
     computeGlobalSWithRegsValue(bound)
@@ -82,7 +81,6 @@ class UnaryFinalConstraints(
   }
 
   override lazy val getCompleteLIA: IFormula = {
-    ParikhUtil.debugPrintln("getCompleteLIA")
     getCompleteLIA(checkSatAut)
   }
 

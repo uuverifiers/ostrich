@@ -23,22 +23,19 @@ object CEBasicOperations {
 
   private val termGen = TermGenerator()
 
-  def toBricsAutomaton(aut: CostEnrichedAutomatonBase): BAutomaton = aut match {
-    case a: BricsAutomatonWrapper => a.underlying
-    case _ => {
-      val baut = new BAutomaton
-      baut.setDeterministic(false)
+  def toBricsAutomaton(aut: CostEnrichedAutomatonBase): BAutomaton = {
+    val baut = new BAutomaton
+    baut.setDeterministic(false)
 
-      val old2new = aut.states.map(s => s -> new State()).toMap
-      for ((s, l, t, v) <- aut.transitionsWithVec) {
-        old2new(s).addTransition(new Transition(l._1, l._2, old2new(t)))
-      }
-      for (s <- aut.acceptingStates) {
-        old2new(s).setAccept(true)
-      }
-      baut.setInitialState(old2new(aut.initialState))
-      baut
+    val old2new = aut.states.map(s => s -> new State()).toMap
+    for ((s, l, t, v) <- aut.transitionsWithVec) {
+      old2new(s).addTransition(new Transition(l._1, l._2, old2new(t)))
     }
+    for (s <- aut.acceptingStates) {
+      old2new(s).setAccept(true)
+    }
+    baut.setInitialState(old2new(aut.initialState))
+    baut
   }
 
   def unionWithoutRegs(
@@ -56,6 +53,7 @@ object CEBasicOperations {
     if (auts.forall(_.registers.isEmpty))
       return unionWithoutRegs(auts)
     val ceAut = new CostEnrichedAutomaton
+    val termGen = TermGenerator()
     val initialS = ceAut.initialState
     val newRegisters: ArrayBuffer[ITerm] = new ArrayBuffer
     val oldRegsiters = auts.flatMap(_.registers)
@@ -72,21 +70,8 @@ object CEBasicOperations {
     val aut2newRegIdx = MHashMap[CostEnrichedAutomatonBase, Int]()
 
     for (aut <- auts) {
-      var f = IExpression.Boolean2IFormula(false)
-      val initialStateOut =
-        aut.outgoingTransitionsWithVec(aut.initialState).map(_._3)
-      if (initialStateOut.forall(_.exists(_ > 0))) {
-        // all vectors of transitions from initialState have elements > 0
-        for (vec <- initialStateOut) {
-          val notZeroIdx = vec.indexWhere(_ > 0)
-          f = or(Seq(f, aut.registers(notZeroIdx) >= 1))
-        }
-      }
-      if (f == IExpression.Boolean2IFormula(false)) {
-        // all value of initialOutVecs are 0
-        newRegisters += termGen.registerTerm
-        f = newRegisters.last >= 1
-      }
+      newRegisters += termGen.registerTerm
+      val f = newRegisters.last >= 1
       aut2newRegIdx += (aut -> (newRegisters.size - 1))
       partitionFormula += (aut -> f)
     }
@@ -115,11 +100,11 @@ object CEBasicOperations {
       prefixlen += aut.registers.size
 
       ceAut.addEpsilon(initialS, old2new(aut.initialState))
-      finalDisjList += and(Seq(partitionFormula(aut), aut.regsRelation))
+      finalDisjList += partitionFormula(aut) & aut.regsRelation
     }
-    // forall i newRegisters(i) == 0 and disj(epsilonSatisfied)
+    // all register equal to 0 and disj(epsilonSatisfied)
     finalDisjList += and(
-      (newRegisters.map(_ === 0)) :+ or(epsilonSatisfied)
+      ((oldRegsiters ++ newRegisters).map(_ === 0)) :+ or(epsilonSatisfied)
     )
 
     ceAut.regsRelation = or(finalDisjList)
@@ -352,8 +337,8 @@ object CEBasicOperations {
     aut
   }
 
-  // For final intersected automaton, when more than one transitions contain same (s, t, v), 
-  // we can only reserve one of them 
+  // For final intersected automaton, when more than one transitions contain same (s, t, v),
+  // we can only reserve one of them
   def removeDuplicatedTrans(
       aut: CostEnrichedAutomatonBase
   ): CostEnrichedAutomatonBase = {

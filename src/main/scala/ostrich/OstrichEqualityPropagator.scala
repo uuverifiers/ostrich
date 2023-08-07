@@ -60,7 +60,6 @@ class OstrichEqualityPropagator(theory : OstrichStringTheory) {
                    : Seq[Plugin.Action] = {
     val predConj = goal.facts.predConj
     val allAtoms = predConj.positiveLits ++ predConj.negativeLits
-    ParikhUtil.debugPrintln("model = " + model)
     val nonTheoryAtoms =
       allAtoms filterNot {
         a => TheoryRegistry.lookupSymbol(a.pred) match {

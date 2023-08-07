@@ -374,7 +374,6 @@ class ParikhExploration(
                 yield (op, args, res)) ++
                 ignoredApps.iterator
             model ++= generateResultModel(allFunApps, model)
-            ParikhUtil.debugPrintln(model)
             throw FoundModel(
               model.map { case (term, value) =>
                 InputAbsy2Internal(term, lProver.order) -> value
@@ -383,7 +382,6 @@ class ParikhExploration(
           }
           case ProverStatus.Unsat => return trivalConflict
           case _ => 
-            ParikhUtil.debugPrintln(res)
             throw UnknownException("backend solver failed")
         }
 
