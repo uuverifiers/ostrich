@@ -349,8 +349,9 @@ class CostEnrichedAutomatonBase extends Automaton {
       ${transitionsWithVec.toSeq
         .sortBy(_._1)
         .map(transition2Str)
-        .mkString("\n  ")}
+        .mkString("\n    ")}
       accepting ${acceptingStates.map(s => s"${s2str(s)}").mkString(", ")};
+      Registers ${registers.mkString(", ")};
     };
     """
   }

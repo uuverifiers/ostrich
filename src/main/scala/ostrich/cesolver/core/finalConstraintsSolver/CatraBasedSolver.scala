@@ -196,8 +196,20 @@ class CatraBasedSolver(
   }
 
   def toCatraInputLIA: String = {
+    // check if the aut accepts empty string only
+    def isEmptyString(aut: CostEnrichedAutomatonBase): Boolean = {
+      aut.isAccept(aut.initialState) && aut.transitionsWithVec.isEmpty
+    }
+
     val sb = new StringBuilder
-    val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+
+    // to match the semantic of catra, we need to generate a constraint R = 0 if 
+    // the automaton accepts empty string only and has register R
+    val zeroConstraint = 
+      and(for (c <- constraints; aut <- c.auts; reg <- aut.registers; if isEmptyString(aut))
+        yield reg === IIntLit(0))
+
+    val lia = and(inputFormula +: constraints.map(_.getRegsRelation) :+ zeroConstraint)
     if (lia.isTrue) return ""
     sb.append("constraint ")
     sb.append(

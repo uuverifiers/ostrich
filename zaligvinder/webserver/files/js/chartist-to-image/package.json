@@ -1,0 +1,59 @@
+{
+  "_from": "chartist-to-image",
+  "_id": "chartist-to-image@1.2.1",
+  "_inBundle": false,
+  "_integrity": "sha512-tTfHhB8tKNiKov2vtLzbXhshwgGcp50yaGJNDm7BAmFUG3w78PWjnk/ZPHbiFNea9kXTzsI35wCbpGy/NZd7wg==",
+  "_location": "/chartist-to-image",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "chartist-to-image",
+    "name": "chartist-to-image",
+    "escapedName": "chartist-to-image",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/chartist-to-image/-/chartist-to-image-1.2.1.tgz",
+  "_shasum": "d27abfb33b5ffa71d000e6b6a0119239fc58c9bc",
+  "_spec": "chartist-to-image",
+  "_where": "/Users/mku/Test",
+  "author": {
+    "name": "Nisal Waduge",
+    "url": "deQuota"
+  },
+  "bugs": {
+    "url": "https://github.com/deQuota/chartist-to-image/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "dom-to-image": "^2.6.0"
+  },
+  "deprecated": false,
+  "description": "Renders images from 'chartist' charts",
+  "devDependencies": {
+    "mocha": "^5.0.0"
+  },
+  "homepage": "https://github.com/deQuota/chartist-to-image#readme",
+  "keywords": [
+    "chartist",
+    "chart",
+    "images"
+  ],
+  "license": "MIT",
+  "main": "chartist-to-image.js",
+  "name": "chartist-to-image",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deQuota/chartist-to-image.git"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "version": "1.2.1"
+}

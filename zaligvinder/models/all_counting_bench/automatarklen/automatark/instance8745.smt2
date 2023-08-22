@@ -1,0 +1,15 @@
+(set-logic QF_SLIA)
+(set-option :produce-models true)
+(declare-const X String)
+; http[s]?://(www.facebook|[a-zA-Z]{2}-[a-zA-Z]{2}.facebook|facebook)\.com/(events/[0-9]+|[a-zA-Z0-9\.-]+)[/]?$
+(assert (str.in_re X (re.++ (str.to_re "http") (re.opt (str.to_re "s")) (str.to_re "://") (re.union (re.++ (str.to_re "www") re.allchar (str.to_re "facebook")) (re.++ ((_ re.loop 2 2) (re.union (re.range "a" "z") (re.range "A" "Z"))) (str.to_re "-") ((_ re.loop 2 2) (re.union (re.range "a" "z") (re.range "A" "Z"))) re.allchar (str.to_re "facebook")) (str.to_re "facebook")) (str.to_re ".com/") (re.union (re.++ (str.to_re "events/") (re.+ (re.range "0" "9"))) (re.+ (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9") (str.to_re ".") (str.to_re "-")))) (re.opt (str.to_re "/")) (str.to_re "\u{0a}"))))
+; ^(([1-9]{1}\d{0,2},(\d{3},)*\d{3})|([1-9]{1}\d{0,}))$
+(assert (not (str.in_re X (re.++ (re.union (re.++ ((_ re.loop 1 1) (re.range "1" "9")) ((_ re.loop 0 2) (re.range "0" "9")) (str.to_re ",") (re.* (re.++ ((_ re.loop 3 3) (re.range "0" "9")) (str.to_re ","))) ((_ re.loop 3 3) (re.range "0" "9"))) (re.++ ((_ re.loop 1 1) (re.range "1" "9")) (re.* (re.range "0" "9")))) (str.to_re "\u{0a}")))))
+; /filename=[^\n]*\u{2e}vap/i
+(assert (str.in_re X (re.++ (str.to_re "/filename=") (re.* (re.comp (str.to_re "\u{0a}"))) (str.to_re ".vap/i\u{0a}"))))
+; ^( )*(\+?( )?\(?( )?(\d{1,3})?)\)?(.|-|_ )?\(?(\d{3})\)?(.|-|_ )?\(?(\d{3})\)?(.|-|_ )?\(?(\d{4})\)?( )*$
+(assert (str.in_re X (re.++ (re.* (str.to_re " ")) (re.opt (str.to_re ")")) (re.opt (re.union re.allchar (str.to_re "-") (str.to_re "_ "))) (re.opt (str.to_re "(")) ((_ re.loop 3 3) (re.range "0" "9")) (re.opt (str.to_re ")")) (re.opt (re.union re.allchar (str.to_re "-") (str.to_re "_ "))) (re.opt (str.to_re "(")) ((_ re.loop 3 3) (re.range "0" "9")) (re.opt (str.to_re ")")) (re.opt (re.union re.allchar (str.to_re "-") (str.to_re "_ "))) (re.opt (str.to_re "(")) ((_ re.loop 4 4) (re.range "0" "9")) (re.opt (str.to_re ")")) (re.* (str.to_re " ")) (str.to_re "\u{0a}") (re.opt (str.to_re "+")) (re.opt (str.to_re " ")) (re.opt (str.to_re "(")) (re.opt (str.to_re " ")) (re.opt ((_ re.loop 1 3) (re.range "0" "9"))))))
+; (^\+?1[0-7]\d(\.\d+)?$)|(^\+?([1-9])?\d(\.\d+)?$)|(^-180$)|(^-1[1-7]\d(\.\d+)?$)|(^-[1-9]\d(\.\d+)?$)|(^\-\d(\.\d+)?$)
+(assert (str.in_re X (re.union (re.++ (re.opt (str.to_re "+")) (str.to_re "1") (re.range "0" "7") (re.range "0" "9") (re.opt (re.++ (str.to_re ".") (re.+ (re.range "0" "9"))))) (re.++ (re.opt (str.to_re "+")) (re.opt (re.range "1" "9")) (re.range "0" "9") (re.opt (re.++ (str.to_re ".") (re.+ (re.range "0" "9"))))) (str.to_re "-180") (re.++ (str.to_re "-1") (re.range "1" "7") (re.range "0" "9") (re.opt (re.++ (str.to_re ".") (re.+ (re.range "0" "9"))))) (re.++ (str.to_re "-") (re.range "1" "9") (re.range "0" "9") (re.opt (re.++ (str.to_re ".") (re.+ (re.range "0" "9"))))) (re.++ (str.to_re "\u{0a}-") (re.range "0" "9") (re.opt (re.++ (str.to_re ".") (re.+ (re.range "0" "9"))))))))
+(assert (> (str.len X) 10))
+(check-sat)

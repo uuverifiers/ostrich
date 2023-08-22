@@ -1,0 +1,13 @@
+language: node_js
+
+node_js:
+  - stable
+
+install:
+  - npm install
+
+before_script: chmod 0777 ./node_modules/.bin/mocha
+script:
+  - npm test
+
+

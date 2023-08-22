@@ -1,0 +1,35 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/mku/tools/z3str4/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_2090c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_2090c.dir/build.make CMakeFiles/cmTC_2090c.dir/build
+make[1]: Entering directory '/home/mku/tools/z3str4/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_2090c.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++     -o CMakeFiles/cmTC_2090c.dir/CheckSymbolExists.cxx.o -c /home/mku/tools/z3str4/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_2090c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2090c.dir/link.txt --verbose=1
+/usr/bin/c++       CMakeFiles/cmTC_2090c.dir/CheckSymbolExists.cxx.o  -o cmTC_2090c 
+CMakeFiles/cmTC_2090c.dir/CheckSymbolExists.cxx.o: In function `main':
+CheckSymbolExists.cxx:(.text+0x1b): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_2090c.dir/build.make:97: recipe for target 'cmTC_2090c' failed
+make[1]: *** [cmTC_2090c] Error 1
+make[1]: Leaving directory '/home/mku/tools/z3str4/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_2090c/fast' failed
+make: *** [cmTC_2090c/fast] Error 2
+
+File /home/mku/tools/z3str4/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+

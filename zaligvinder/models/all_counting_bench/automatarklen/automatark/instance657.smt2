@@ -1,0 +1,15 @@
+(set-logic QF_SLIA)
+(set-option :produce-models true)
+(declare-const X String)
+; /ID3\u{03}\u{00}.{5}([TW][A-Z]{3}|COMM)/smi
+(assert (not (str.in_re X (re.++ (str.to_re "/ID3\u{03}\u{00}") ((_ re.loop 5 5) re.allchar) (re.union (re.++ (re.union (str.to_re "T") (str.to_re "W")) ((_ re.loop 3 3) (re.range "A" "Z"))) (str.to_re "COMM")) (str.to_re "/smi\u{0a}")))))
+; ((\d{1,6}\-\d{1,6})|(\d{1,6}\\\d{1,6})|(\d{1,6})(\/)(\d{1,6})|(\w{1}\-?\d{1,6})|(\w{1}\s\d{1,6})|((P\.?O\.?\s)((BOX)|(Box))(\s\d{1,6}))|((([R]{2})|([H][C]))(\s\d{1,6}\s)((BOX)|(Box))(\s\d{1,6}))?)$
+(assert (str.in_re X (re.++ (re.union (re.++ ((_ re.loop 1 6) (re.range "0" "9")) (str.to_re "-") ((_ re.loop 1 6) (re.range "0" "9"))) (re.++ ((_ re.loop 1 6) (re.range "0" "9")) (str.to_re "\u{5c}") ((_ re.loop 1 6) (re.range "0" "9"))) (re.++ ((_ re.loop 1 6) (re.range "0" "9")) (str.to_re "/") ((_ re.loop 1 6) (re.range "0" "9"))) (re.++ ((_ re.loop 1 1) (re.union (re.range "0" "9") (re.range "A" "Z") (re.range "a" "z") (str.to_re "_"))) (re.opt (str.to_re "-")) ((_ re.loop 1 6) (re.range "0" "9"))) (re.++ ((_ re.loop 1 1) (re.union (re.range "0" "9") (re.range "A" "Z") (re.range "a" "z") (str.to_re "_"))) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) ((_ re.loop 1 6) (re.range "0" "9"))) (re.++ (re.union (str.to_re "BOX") (str.to_re "Box")) (str.to_re "P") (re.opt (str.to_re ".")) (str.to_re "O") (re.opt (str.to_re ".")) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) ((_ re.loop 1 6) (re.range "0" "9"))) (re.opt (re.++ (re.union ((_ re.loop 2 2) (str.to_re "R")) (str.to_re "HC")) (re.union (str.to_re "BOX") (str.to_re "Box")) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) ((_ re.loop 1 6) (re.range "0" "9")) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) ((_ re.loop 1 6) (re.range "0" "9"))))) (str.to_re "\u{0a}"))))
+; /\/flash201(3|4)\.php$/U
+(assert (not (str.in_re X (re.++ (str.to_re "//flash201") (re.union (str.to_re "3") (str.to_re "4")) (str.to_re ".php/U\u{0a}")))))
+; log\=\x7BIP\x3A\d\x2Etxt\s+Pcast\x2Edat\x2EToolbar\x7D\x7BOS\x3Atoolsbar\x2Ekuaiso\x2EcomHost\x3A
+(assert (not (str.in_re X (re.++ (str.to_re "log={IP:") (re.range "0" "9") (str.to_re ".txt") (re.+ (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}"))) (str.to_re "Pcast.dat.Toolbar}{OS:toolsbar.kuaiso.comHost:\u{0a}")))))
+; ^(\d{4},?)+$
+(assert (not (str.in_re X (re.++ (re.+ (re.++ ((_ re.loop 4 4) (re.range "0" "9")) (re.opt (str.to_re ",")))) (str.to_re "\u{0a}")))))
+(assert (> (str.len X) 10))
+(check-sat)
