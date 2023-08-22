@@ -31,6 +31,10 @@ import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.OstrichInternalPreprocessor
 import ap.terfor.conjunctions.IdentityReducerPluginFactory
 import ostrich.cesolver.preprocess.CEInternalPreprocessor
+import ap.terfor.conjunctions.ReducerPlugin
+import ostrich.OstrichReducer
+import ostrich.cesolver.preprocess.CEReducerFactory
+import ap.terfor.conjunctions.ReducerPluginFactory
 
 object CEStringTheory {
   val alphabetSize = 0x10000
@@ -190,4 +194,6 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
     preprocessor.preprocess(f, order)
   }
 
+  override val reducerPlugin  = 
+    new CEReducerFactory(this)
 }
