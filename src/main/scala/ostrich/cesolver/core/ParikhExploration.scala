@@ -200,9 +200,6 @@ class ParikhExploration(
     }
 
   if (nonTreeLikeApps)
-    // throw new UnknownException(
-    //   "Non-straightline function applications are not supported"
-    // )
     Console.err.println(
       "Warning: input is not straightline, some variables have multiple " +
         "definitions"

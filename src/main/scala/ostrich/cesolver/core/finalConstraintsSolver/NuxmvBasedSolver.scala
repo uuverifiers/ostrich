@@ -4,7 +4,6 @@ import ap.parser.{ITerm, IFormula}
 import ap.parser.IExpression._
 
 import java.io.File
-import java.nio.file.Files
 
 import ostrich.cesolver.core.finalConstraints.{
   FinalConstraints,
@@ -45,8 +44,11 @@ class NuxmvBasedSolver(
   private val outFile =
     if (ParikhUtil.debug)
       new File("nuxmv.smv")
-    else
-      Files.createTempFile("nuxmv", ".smv").toFile
+    else{
+      val tmpfile  = File.createTempFile("nuxmv", ".smv")
+      tmpfile.deleteOnExit()
+      tmpfile
+    }
 
   private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
     val constraintsIdx = constraints.zipWithIndex.toMap

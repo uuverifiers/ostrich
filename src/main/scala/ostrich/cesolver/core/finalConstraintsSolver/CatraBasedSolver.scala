@@ -203,13 +203,20 @@ class CatraBasedSolver(
 
     val sb = new StringBuilder
 
-    // to match the semantic of catra, we need to generate a constraint R = 0 if 
+    // to match the semantic of catra, we need to generate a constraint R = 0 if
     // the automaton accepts empty string only and has register R
-    val zeroConstraint = 
-      and(for (c <- constraints; aut <- c.auts; reg <- aut.registers; if isEmptyString(aut))
-        yield reg === IIntLit(0))
+    val zeroConstraint =
+      and(
+        for (
+          c <- constraints; aut <- c.auts; reg <- aut.registers;
+          if isEmptyString(aut)
+        )
+          yield reg === IIntLit(0)
+      )
 
-    val lia = and(inputFormula +: constraints.map(_.getRegsRelation) :+ zeroConstraint)
+    val lia = and(
+      inputFormula +: constraints.map(_.getRegsRelation) :+ zeroConstraint
+    )
     if (lia.isTrue) return ""
     sb.append("constraint ")
     sb.append(
@@ -284,51 +291,49 @@ class CatraBasedSolver(
     var result = new Result
     val interFile =
       if (ParikhUtil.debug) new File("catra_input.par")
-      else File.createTempFile("ostrich-catra", ".par", null)
-    // val interFile = File.createTempFile("ostrich-catra", ".par", null)
-    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
-    try {
-      val writer = new CatraWriter(interFile.toString())
-      writer.write(toCatraInput)
-      writer.close()
-      val arguments = CommandLineOptions(
-        inputFiles = Seq(interFile.toString()),
-        timeout_ms = Some(OFlags.timeout),
-        dumpSMTDir = None,
-        dumpGraphvizDir = None,
-        printDecisions = false,
-        runMode = SolveSatisfy,
-        // backend = ChooseNuxmv,
-        backend = ChooseLazy,
-        checkTermSat = true,
-        checkIntermediateSat = true,
-        eliminateQuantifiers = true,
-        dumpEquationDir = None,
-        nrUnknownToMaterialiseProduct = 6,
-        enableClauseLearning = true,
-        enableRestarts = true,
-        restartTimeoutFactor = 500L,
-        randomSeed = 1234567,
-        printProof = false
-      )
-
-      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
-
-      val catraRes = ParikhUtil.measure(
-        s"${this.getClass().getSimpleName()}::findIntegerModel"
-      )(runInstances(arguments))
-
-      catraRes match {
-        case Success(_catraRes) =>
-          result = decodeCatraResult(_catraRes)
-        case Failure(e) => throw e
+      else {
+        var tmpfile = File.createTempFile("ostrich-catra", ".par")
+        tmpfile.deleteOnExit()
+        tmpfile
       }
-      result
 
-    } finally {
-      // delete temp file
-      if (!ParikhUtil.debug)
-        interFile.delete()
+    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
+    
+    val writer = new CatraWriter(interFile.toString())
+    writer.write(toCatraInput)
+    writer.close()
+    val arguments = CommandLineOptions(
+      inputFiles = Seq(interFile.toString()),
+      timeout_ms = Some(OFlags.timeout),
+      dumpSMTDir = None,
+      dumpGraphvizDir = None,
+      printDecisions = false,
+      runMode = SolveSatisfy,
+      // backend = ChooseNuxmv,
+      backend = ChooseLazy,
+      checkTermSat = true,
+      checkIntermediateSat = true,
+      eliminateQuantifiers = true,
+      dumpEquationDir = None,
+      nrUnknownToMaterialiseProduct = 6,
+      enableClauseLearning = true,
+      enableRestarts = true,
+      restartTimeoutFactor = 500L,
+      randomSeed = 1234567,
+      printProof = false
+    )
+
+    ParikhUtil.debugPrintln("Catra arguments: " + arguments)
+
+    val catraRes = ParikhUtil.measure(
+      s"${this.getClass().getSimpleName()}::findIntegerModel"
+    )(runInstances(arguments))
+
+    catraRes match {
+      case Success(_catraRes) =>
+        result = decodeCatraResult(_catraRes)
+      case Failure(e) => throw e
     }
+    result
   }
 }
