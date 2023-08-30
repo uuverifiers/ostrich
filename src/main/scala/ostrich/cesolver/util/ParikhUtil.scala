@@ -150,6 +150,9 @@ object ParikhUtil {
     if (debug)
       println("TODO:" + s)
   }
+  def bug(s: Any) = {
+      println("Bug:" + s)
+  }
 
   def throwWithStackTrace(e: Throwable) = {
     throw e

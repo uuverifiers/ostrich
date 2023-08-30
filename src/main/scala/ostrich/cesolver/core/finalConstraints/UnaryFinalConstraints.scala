@@ -98,7 +98,7 @@ class UnaryFinalConstraints(
   if (flags.debug) {
     productAut.toDot("product_" + strDataBaseId.toString)
     mostlySimplifiedAut.toDot("simplified_" + strDataBaseId.toString)
-    simplifyButRemainLabelAut.toDot("original_" + strDataBaseId.toString)
+    simplifyButRemainLabelAut.toDot("simplified_remainlabel_" + strDataBaseId.toString)
   }
 
   private def computeGlobalSWithRegsValue(

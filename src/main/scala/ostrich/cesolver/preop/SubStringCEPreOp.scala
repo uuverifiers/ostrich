@@ -13,8 +13,14 @@ import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
 
 object SubStringCEPreOp {
-  def apply(beginIdx: ITerm, length: ITerm) =
-    new SubStringCEPreOp(beginIdx, length)
+  private var count = 0 // debug
+
+  def apply(beginIdx: ITerm, length: ITerm) = {
+    count = count + 1 // debug
+    new SubStringCEPreOp(beginIdx, length, count - 1)
+  }
+  
+  
 }
 
 /** Pre-operator for substring constraint.
@@ -23,7 +29,7 @@ object SubStringCEPreOp {
   * @param length
   *   the max length of subtring
   */
-class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
+class SubStringCEPreOp(beginIdx: ITerm, length: ITerm, debugId: Int) extends CEPreOp {
   private val termGen = TermGenerator()
 
   override def toString(): String =
@@ -120,18 +126,21 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     }
     val anyStrSuffix = BricsAutomatonWrapper.makeAnyString
 
-    val preimage1 = concatenate(Seq(
+    val midSubStr = concatenate(Seq(
       beginIdxPrefix,
       middleSubStr,
       anyStrSuffix
     ))
 
-    val preimage2 = concatenate(
+    val suffixSubStr = concatenate(
       Seq(beginIdxPrefix, smallLenSuffix)
     )
 
-    preimages = Iterator(Seq(preimage1), Seq(preimage2))
+    preimages = Iterator(Seq(suffixSubStr), Seq(midSubStr))
 
+    suffixSubStr.toDot("suffixSubStr " + debugId)
+    midSubStr.toDot("midSubStr " + debugId)
+    
     (preimagesOfEmptyStr ++ preimages, Seq())
   }
 

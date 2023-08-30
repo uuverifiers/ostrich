@@ -25,55 +25,52 @@ import ap.parser.IExpression
 import java.time.LocalDate
 import ap.types.SortedConstantTerm
 import ostrich.OstrichStringTheory.OstrichStringSort
+import scala.sys.process._
 
 class NuxmvBasedSolver(
     private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
+  ParikhUtil.todo("Maybe bug when there are overlap labels in different transitions. For example, s1 -[a-c],(1)-> s2 and s1 -[b-d],(0)-> s3.")
+
+  private var count = 0 // for debug
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(FinalConstraints.nuxmvACs(t, auts))
   }
 
-  private val baseCommand = Array("nuxmv", "-int")
+  private val nuxmvCmd = Seq("nuxmv", "-source", "source", "nuxmv.smv")
   private val Unreachable = """^.* is true$""".r
   private val Reachable = """^.* is false$""".r
   private val CounterValue = """^ {4}(.*) = (-?\d+)$""".r
 
-  private val nuxmvCmd = baseCommand
-
   private val outFile =
     if (ParikhUtil.debug)
       new File("nuxmv.smv")
-    else{
-      val tmpfile  = File.createTempFile("nuxmv", ".smv")
+    else {
+      val tmpfile = File.createTempFile("nuxmv", ".smv")
       tmpfile.deleteOnExit()
       tmpfile
     }
 
   private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
     val constraintsIdx = constraints.zipWithIndex.toMap
-    val transIdx = constraints
-      .flatMap(_.auts)
-      .flatMap(_.transitionsWithVec)
-      .zipWithIndex
-      .toMap
     val labels = constraintsIdx.map { case (_, i) =>
       s"l$i"
     }.toSeq
-    val nondeterminControlInputVar = "nondeterminism"
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
     val nuxmvlia =
       lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
     val integers = (SymbolCollector constants lia)
-    // padding one special state for each automaton, the state is reached from accepting states if lia is santisfied
+    // padding one trap state for each automaton
     val paddingOf =
       constraints.flatMap(_.auts).map(a => a -> a.newState()).toMap
 
     println("MODULE main")
+    println("MODULE main")
 
     println("IVAR")
     // input label variable
-    for (inputLbl <- labels :+ nondeterminControlInputVar)
+    for (inputLbl <- labels)
       println(s"  $inputLbl : integer;")
 
     println("VAR")
@@ -98,69 +95,56 @@ class NuxmvBasedSolver(
         s"  init(aut_${c.strDataBaseId}_${aut.hashCode}) := ${aut.initialState};"
       )
       val constraintsidx = constraintsIdx(c)
+      // if (aut.transitionsWithVec.nonEmpty)
       println(s"  next(aut_${c.strDataBaseId}_${aut.hashCode}) := case")
       for (s <- aut.states) {
         for ((t, l, v) <- aut.outgoingTransitionsWithVec(s)) {
-          val transidx = transIdx((s, l, t, v))
           println(
             s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(
                 constraintsidx
-              )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $t;"
+              )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} : $t;"
           )
         }
-        println(s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s: $s;")
       }
+      // if (aut.transitionsWithVec.nonEmpty)
+      println(s"    TRUE: ${paddingOf(aut)};")
       println(s"    esac;")
 
       // next registers
       if (aut.registers.nonEmpty) {
         for ((reg, i) <- aut.registers.zipWithIndex) {
+          // if (aut.transitionsWithVec.nonEmpty)
           println(s"  next($reg) := case")
           for ((s, l, t, v) <- aut.transitionsWithVec) {
-            val transidx = transIdx((s, l, t, v))
             println(
               s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(
                   constraintsidx
-                )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} & $nondeterminControlInputVar = $transidx: $reg + ${v(i)};"
+                )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} : $reg + ${v(i)};"
             )
           }
-          println(s"    TRUE: $reg;")
+          println(s"    TRUE: 0;")
+          // if (aut.transitionsWithVec.nonEmpty)
           println(s"    esac;")
         }
       }
     }
 
     // invariant
-    val accepting = (for (c <- constraints; aut <- c.auts) yield {
-      val acceptingStates = aut.acceptingStates
-      s"(${acceptingStates.map(s => s"aut_${c.strDataBaseId}_${aut.hashCode} = $s").mkString(" | ")})"
-    }).mkString(" & ")
+    val accepting =
+      (for (c <- constraints; aut <- c.auts; if aut.acceptingStates.nonEmpty)
+        yield {
+          val acceptingStates = aut.acceptingStates
+          s"(${acceptingStates.map(s => s"aut_${c.strDataBaseId}_${aut.hashCode} = $s").mkString(" | ")})"
+        }).mkString(" & ")
     println("INVARSPEC")
     println(s"  ($accepting) -> !($nuxmvlia);")
   }
 
   def solve: Result = {
     if (constraints.isEmpty) return Result.ceaSatResult
-    // remove dot files directory and generate them
-    def cleanDirectory(directory: File): Unit = {
-      if (directory.exists()) {
-        val files = directory.listFiles()
-        if (files != null) {
-          for (file <- files) {
-            if (file.isDirectory) {
-              cleanDirectory(file)
-            } else {
-              file.delete()
-            }
-          }
-        }
-        directory.delete()
-      }
-    }
-    val outdir = "dot" + File.separator + LocalDate.now().toString
-    if (ParikhUtil.debug) cleanDirectory(new File(outdir))
     for (c <- constraints; aut <- c.auts) {
-      aut.toDot(s"nuxmv_aut_${c.strDataBaseId}_${aut.hashCode}")
+      aut.toDot(s"nuxmv_aut_${c.strDataBaseId}_${count}")
+      count += 1
     }
     ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
@@ -176,58 +160,86 @@ class NuxmvBasedSolver(
       }
       out.close()
 
-      val process = Runtime.getRuntime.exec(nuxmvCmd)
-      val stdin = process.getOutputStream
-      val stderr = process.getErrorStream
-      val stdout = process.getInputStream
+      // val process = Runtime.getRuntime.exec(nuxmvCmd)
+      // val stdin = process.getOutputStream
+      // val stderr = process.getErrorStream
+      // val stdout = process.getInputStream
 
-      val stdinWriter = new PrintWriter(new OutputStreamWriter(stdin))
-      val stdoutReader = new BufferedReader(new InputStreamReader(stdout))
+      // val stdinWriter = new PrintWriter(new OutputStreamWriter(stdin))
+      // val stdoutReader = new BufferedReader(new InputStreamReader(stdout))
 
-      def sendCommand(cmd: String): Unit = {
-        stdinWriter.println(cmd)
-        stdinWriter.flush()
-      }
+      // def sendCommand(cmd: String): Unit = {
+      //   ParikhUtil.debugPrintln("sendCommand " + cmd)
+      //   stdinWriter.println(cmd)
+      //   stdinWriter.flush()
+      // }
 
-      def readLine: String = stdoutReader.readLine
+      // def readLine: String = {
+      //   ParikhUtil.debugPrintln("readLine begin")
+      //   ParikhUtil.bug("hang at readline, don't know why. Maybe use scala.sys.process instead.")
+      //   ParikhUtil.debugPrintln(stdoutReader.ready().toString)
+      //   val res = stdoutReader.readLine()
+      //   ParikhUtil.debugPrintln(res)
+      //   res
 
-      sendCommand("read_model -i " + outFile + ";")
-      sendCommand("flatten_hierarchy;")
-      sendCommand("encode_variables;")
-      sendCommand("go_msat;")
-      sendCommand("check_invar_ic3;")
-      sendCommand("quit;")
+      // }
 
-      var cont = true
+      // sendCommand("read_model -i " + outFile + ";")
+      // sendCommand("flatten_hierarchy;")
+      // // sendCommand("encode_variables;")
+      // sendCommand("go_msat;")
+      // sendCommand("check_invar_ic3;")
+      // sendCommand("quit;")
 
-      while (cont) {
-        ap.util.Timeout.check
-        cont = readLine match {
-          case null =>
-            // The process has closed the stream. Wait for it to finish, but
-            // don't wait for too long and kill it if it's too slow.
-            val didExit = process.waitFor(1, TimeUnit.SECONDS)
-            if (!didExit) {
-              // Wait for the process to really, really exit.
-              process.destroyForcibly().waitFor()
-            }
-            false // We're done!
+      // var cont = true
+
+      val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
+      // ParikhUtil.debugPrintln(nuxmvResLines.mkString("\n"))
+      ap.util.Timeout.check
+
+      for (line <- nuxmvResLines) {
+        line match {
           case Unreachable() =>
             result.setStatus(SimpleAPI.ProverStatus.Unsat)
-            false // There's nothing more to parse.
           case Reachable() =>
             result.setStatus(SimpleAPI.ProverStatus.Sat)
-            true // Capture the model assignment
           case CounterValue(intName, value) =>
             // integer model
             if (name2ITerm.contains(intName)) {
               // filter string term in input lia formula
               result.updateModel(name2ITerm(intName), IdealInt(value))
             }
-            true
-          case _ => true
+          case _ => // do nothing
         }
       }
+      // while (cont) {
+      //   ap.util.Timeout.check
+      //   cont = readLine match {
+      //     case null =>
+      //       // The process has closed the stream. Wait for it to finish, but
+      //       // don't wait for too long and kill it if it's too slow.
+      //       val didExit = process.waitFor(1, TimeUnit.SECONDS)
+      //       if (!didExit) {
+      //         // Wait for the process to really, really exit.
+      //         process.destroyForcibly().waitFor()
+      //       }
+      //       false // We're done!
+      //     case Unreachable() =>
+      //       result.setStatus(SimpleAPI.ProverStatus.Unsat)
+      //       false // There's nothing more to parse.
+      //     case Reachable() =>
+      //       result.setStatus(SimpleAPI.ProverStatus.Sat)
+      //       true // Capture the model assignment
+      //     case CounterValue(intName, value) =>
+      //       // integer model
+      //       if (name2ITerm.contains(intName)) {
+      //         // filter string term in input lia formula
+      //         result.updateModel(name2ITerm(intName), IdealInt(value))
+      //       }
+      //       true
+      //     case _ => true
+      //   }
+      // }
       ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
       // sat and generate model
       if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
@@ -246,9 +258,9 @@ class NuxmvBasedSolver(
       }
 
       // close stream
-      stdinWriter.close()
-      stdoutReader.close()
-      stderr.close()
+      // stdinWriter.close()
+      // stdoutReader.close()
+      // stderr.close()
       result
     }
     res

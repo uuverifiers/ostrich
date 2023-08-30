@@ -77,20 +77,20 @@ class ParikhStore(t: ITerm) {
     *   None if constraints are still consistent; Some(unsatCore) otherwise.
     */
   private def checkConsistency(aut: CostEnrichedAutomatonBase): Option[Seq[CostEnrichedAutomatonBase]] = {
-    productAut = productAut product aut
-    val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
-    if (productAut.isEmpty) {
-      // inconsistent, generate the minimal conflicted set
-      var tmpAut: CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
-      for (aut2 <- aut +: constraints) {
-        tmpAut = tmpAut product aut2
-        consideredAuts += aut2
-        if (tmpAut.isEmpty) {
-          // found the minimal conflicted set
-          return Some(consideredAuts.toSeq)
-        }
-      }
-    }
+    // productAut = productAut product aut
+    // val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
+    // if (productAut.isEmpty) {
+    //   // inconsistent, generate the minimal conflicted set
+    //   var tmpAut: CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
+    //   for (aut2 <- aut +: constraints) {
+    //     tmpAut = tmpAut product aut2
+    //     consideredAuts += aut2
+    //     if (tmpAut.isEmpty) {
+    //       // found the minimal conflicted set
+    //       return Some(consideredAuts.toSeq)
+    //     }
+    //   }
+    // }
     None
   }
   def assertConstraint(aut: CostEnrichedAutomatonBase): Option[ConflictSet] = {
@@ -138,7 +138,9 @@ class ParikhStore(t: ITerm) {
   }
 
   // used to get the product automaton
-  def getContents: List[CostEnrichedAutomatonBase] = Seq(productAut).toList
+  def getContents: List[CostEnrichedAutomatonBase] = 
+    // Seq(productAut).toList
+    constraints.toList
 
   // used to cut off the searching tree
   def getCompleteContents: List[CostEnrichedAutomatonBase] = constraints.toList

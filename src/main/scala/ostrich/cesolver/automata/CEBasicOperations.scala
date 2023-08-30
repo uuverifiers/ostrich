@@ -163,9 +163,8 @@ object CEBasicOperations {
           case Some(label) => {
             val to = pair2state.getOrElseUpdate(
               (to1, to2), {
-                val newState = ceAut.newState()
                 worklist.push((to1, to2))
-                newState
+                ceAut.newState()
               }
             )
             val vector = vec1 ++ vec2
@@ -501,22 +500,21 @@ object CEBasicOperations {
         }
       }
     }
-    val ceAut = new CostEnrichedAutomaton
     val s2new = new MHashMap[State, State]
     for ((s1, s2) <- pairs) {
       if (pairsIsEqual((s1, s2))) {
         val equalS = s2new.get(s1) match {
-          case None        => s2new.getOrElse(s2, ceAut.newState())
+          case None        => s2new.getOrElse(s2, aut.newState())
           case Some(state) => state
         }
         s2new += (s1 -> equalS)
         s2new += (s2 -> equalS)
       } else {
-        s2new += (s1 -> s2new.getOrElse(s1, ceAut.newState()))
-        s2new += (s2 -> s2new.getOrElse(s2, ceAut.newState()))
+        s2new += (s1 -> s2new.getOrElse(s1, aut.newState()))
+        s2new += (s2 -> s2new.getOrElse(s2, aut.newState()))
       }
     }
-    if (pairs.isEmpty) s2new += (aut.initialState -> ceAut.newState())
+    if (pairs.isEmpty) s2new += (aut.initialState -> aut.newState())
     s2new.toMap
   }
 
@@ -590,22 +588,21 @@ object CEBasicOperations {
         }
       }
     }
-    val ceAut = new CostEnrichedAutomaton
     val s2new = new MHashMap[State, State]
     for ((s1, s2) <- pairs) {
       if (pairsIsEqual((s1, s2))) {
         val equalS = s2new.get(s1) match {
-          case None        => s2new.getOrElse(s2, ceAut.newState())
+          case None        => s2new.getOrElse(s2, aut.newState())
           case Some(state) => state
         }
         s2new += (s1 -> equalS)
         s2new += (s2 -> equalS)
       } else {
-        s2new += (s1 -> s2new.getOrElse(s1, ceAut.newState()))
-        s2new += (s2 -> s2new.getOrElse(s2, ceAut.newState()))
+        s2new += (s1 -> s2new.getOrElse(s1, aut.newState()))
+        s2new += (s2 -> s2new.getOrElse(s2, aut.newState()))
       }
     }
-    if (pairs.isEmpty) s2new += (aut.initialState -> ceAut.newState())
+    if (pairs.isEmpty) s2new += (aut.initialState -> aut.newState())
     s2new.toMap
   }
 

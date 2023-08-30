@@ -108,12 +108,12 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
 
 
     // index >= 0
-    val preimage1 = intersection(notMatchedStr, matchedStr)
-    preimage1.regsRelation = and(Seq(preimage1.regsRelation, index >= startPos, startPos >= 0))
+    val positiveIndex = intersection(notMatchedStr, matchedStr)
+    positiveIndex.regsRelation = and(Seq(positiveIndex.regsRelation, index >= startPos, startPos >= 0))
 
     // index = -1
     // len(searchedStr) < startPos
-    val preimage2 = startPos match {
+    val negtiveIndex1 = startPos match {
       case Const(value) => {
         if (value.intValueSafe < 0) {
           makeAnyString()
@@ -130,10 +130,10 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
         smallerThanStartPos
       }
     }
-    preimage2.regsRelation = and(Seq(preimage2.regsRelation, index === -1))
+    negtiveIndex1.regsRelation = and(Seq(negtiveIndex1.regsRelation, index === -1))
 
     // len(searchedStr) > startPos and no match after startPos
-    val preimage3 = startPos match {
+    val negtiveIndex2 = startPos match {
       case Const(value) => {
         concatenate(
           Seq(automatonWithLen(value.intValueSafe), notMatched)
@@ -152,38 +152,38 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
         )
       }
     }
-    preimage3.regsRelation = and(Seq(preimage3.regsRelation, index === -1))
+    negtiveIndex2.regsRelation = and(Seq(negtiveIndex2.regsRelation, index === -1))
 
     // empty match string with index >= 0
-    val preimage4 = concatenate(Seq(startPosPrefix, makeAnyString()))
-    preimage4.regsRelation = and(Seq(preimage4.regsRelation, index === startPos))
+    val emptyPositiveIndex = concatenate(Seq(startPosPrefix, makeAnyString()))
+    emptyPositiveIndex.regsRelation = and(Seq(emptyPositiveIndex.regsRelation, index === startPos))
 
     index match {
       case Const(value) if !matchString.isEmpty => {
         if (value.intValueSafe == -1) {
-          preimages = Iterator(Seq(preimage2), Seq(preimage3))
+          preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2))
         } else {
-          preimages = Iterator(Seq(preimage1))
+          preimages = Iterator(Seq(positiveIndex))
         }
       }
 
       case Const(value) if matchString.isEmpty => {
         if (value.intValueSafe == -1) {
-          preimages = Iterator(Seq(preimage2), Seq(preimage3))
+          preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2))
         } else {
-          preimages = Iterator(Seq(preimage4))
+          preimages = Iterator(Seq(emptyPositiveIndex))
         }
       }
 
       case _ if !matchString.isEmpty => {
-        preimages = Iterator(Seq(preimage1), Seq(preimage2), Seq(preimage3))
+        preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2), Seq(positiveIndex))
       }
 
       case _ if matchString.isEmpty => {
-        preimages = Iterator(Seq(preimage4), Seq(preimage2), Seq(preimage3))
+        preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2), Seq(emptyPositiveIndex))
       }
     }
-
+    positiveIndex.toDot("positiveIndex" + this.hashCode())
     (preimages, Seq())
   }
 

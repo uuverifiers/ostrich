@@ -31,6 +31,7 @@ import ostrich.cesolver.util.ParikhUtil
   * automation accepting words of length less than 10.
   */
 class CostEnrichedAutomatonBase extends Automaton {
+  
   type State = BState
   type TLabel = (Char, Char)
   type Update = Seq[Int]
@@ -107,7 +108,7 @@ class CostEnrichedAutomatonBase extends Automaton {
       None
   }
 
-  def newState(): State = {
+  def newState(): State = synchronized {
     stateidx += 1
     new State() {
       val idx = stateidx

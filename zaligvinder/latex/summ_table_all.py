@@ -29,7 +29,7 @@ class TableGenerator:
             self._output.write ("" + solverLayout + "\\\\ \n  \\hline\\hline \n")
         
     def getData (self,all=True,group=None):
-        output = ["sat ","unsat ","\\hline \n unknown ","timeout ","soundness error ","program crashes ","\\hline \n Total correct ", "Time (ms) ", "Time w/o timeouts (ms) "]
+        output = ["sat ","unsat ","\\hline \n unknown ","timeout ","soundness error ","program crashes ","\\hline \n Total correct ", "Time (s) ", "Time w/o timeouts (s) "]
         key = ["sat","unsat","unk","timeout","errorsTotal","crash","totalClassified","time","timeWO"]
         for s in self._solvers:
             if not all:
@@ -112,9 +112,9 @@ if __name__ == "__main__":
     program error &  &  &  \\
     \hline
     \hline
-    Time (ms) &  &  &  \\
+    Time (s) &  &  &  \\
     \hline
-    Time w/o timeouts (ms) &  &  &  \\
+    Time w/o timeouts (s) &  &  &  \\
     \hline
 \end{tabular}
 
