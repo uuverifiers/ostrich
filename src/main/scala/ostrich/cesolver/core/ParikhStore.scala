@@ -10,6 +10,7 @@ import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ap.parser.ITerm
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.automata.CostEnrichedAutomaton
+import ostrich.OFlags
 
 object ParikhStore {
   sealed trait LIAStrategy // linear integer arithmetic generating strategy
@@ -17,7 +18,7 @@ object ParikhStore {
   case class ArithBeforeProduct(syncLen: Int) extends LIAStrategy
 }
 
-class ParikhStore(t: ITerm) {
+class ParikhStore(t: ITerm, flags: OFlags) {
 
   // constraints in this store
   private val constraints = new ArrayBuffer[CostEnrichedAutomatonBase]
@@ -26,13 +27,16 @@ class ParikhStore(t: ITerm) {
   private val productAutStack = new ArrayStack[CostEnrichedAutomatonBase]
 
   // the intermidiate product automaton
-  private var productAut: CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
+  private var productAut: CostEnrichedAutomatonBase =
+    BricsAutomatonWrapper.makeAnyString
 
   // Combinations of automata that are known to have empty intersection
-  private val inconsistentAutomata = new ArrayBuffer[Seq[CostEnrichedAutomatonBase]]
+  private val inconsistentAutomata =
+    new ArrayBuffer[Seq[CostEnrichedAutomatonBase]]
   // Map from watched automata to the indexes of
   // <code>inconsistentAutomata</code> that is watched
-  private val watchedAutomata = new MHashMap[CostEnrichedAutomatonBase, List[Int]]
+  private val watchedAutomata =
+    new MHashMap[CostEnrichedAutomatonBase, List[Int]]
 
   def push: Unit = {
     productAutStack push productAut
@@ -52,7 +56,9 @@ class ParikhStore(t: ITerm) {
     *   None if constraints belong to one of **inconsistentAutomata**;
     *   ConflicSet otherwise.
     */
-  private def directlyConflictSet(aut: CostEnrichedAutomatonBase): Option[ConflictSet] = {
+  private def directlyConflictSet(
+      aut: CostEnrichedAutomatonBase
+  ): Option[ConflictSet] = {
     var potentialConflictsIdxs = watchedAutomata.getOrElse(aut, List())
     while (!potentialConflictsIdxs.isEmpty) {
       val potentialConflictsIdx = potentialConflictsIdxs.head
@@ -76,25 +82,28 @@ class ParikhStore(t: ITerm) {
     * @return
     *   None if constraints are still consistent; Some(unsatCore) otherwise.
     */
-  private def checkConsistency(aut: CostEnrichedAutomatonBase): Option[Seq[CostEnrichedAutomatonBase]] = {
-    // productAut = productAut product aut
-    // val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
-    // if (productAut.isEmpty) {
-    //   // inconsistent, generate the minimal conflicted set
-    //   var tmpAut: CostEnrichedAutomatonBase = BricsAutomatonWrapper.makeAnyString
-    //   for (aut2 <- aut +: constraints) {
-    //     tmpAut = tmpAut product aut2
-    //     consideredAuts += aut2
-    //     if (tmpAut.isEmpty) {
-    //       // found the minimal conflicted set
-    //       return Some(consideredAuts.toSeq)
-    //     }
-    //   }
-    // }
+  private def checkConsistency(
+      aut: CostEnrichedAutomatonBase
+  ): Option[Seq[CostEnrichedAutomatonBase]] = {
+    productAut = productAut product aut
+    val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
+    if (productAut.isEmpty) {
+      // inconsistent, generate the minimal conflicted set
+      var tmpAut: CostEnrichedAutomatonBase =
+        BricsAutomatonWrapper.makeAnyString
+      for (aut2 <- aut +: constraints) {
+        tmpAut = tmpAut product aut2
+        consideredAuts += aut2
+        if (tmpAut.isEmpty) {
+          // found the minimal conflicted set
+          return Some(consideredAuts.toSeq)
+        }
+      }
+    }
     None
   }
   def assertConstraint(aut: CostEnrichedAutomatonBase): Option[ConflictSet] = {
-    
+
     if (!constraints.contains(aut)) {
       // check if the stored automata is consistent after adding the aut
       // 1. check if the aut is already in inconsistent core:
@@ -138,9 +147,11 @@ class ParikhStore(t: ITerm) {
   }
 
   // used to get the product automaton
-  def getContents: List[CostEnrichedAutomatonBase] = 
-    // Seq(productAut).toList
-    constraints.toList
+  def getContents: List[CostEnrichedAutomatonBase] =
+    if (flags.eagerAutomataOperations)
+      List(productAut)
+    else
+      constraints.toList
 
   // used to cut off the searching tree
   def getCompleteContents: List[CostEnrichedAutomatonBase] = constraints.toList

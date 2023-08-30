@@ -64,5 +64,6 @@ case class OFlags(
     debug: Boolean = false,
     underApprox: Boolean = true,
     underApproxBound: Int = 15,
-    simplifyAut: Boolean = true
+    simplifyAut: Boolean = true,
+    noAutomataProduct: Boolean = false,
 )

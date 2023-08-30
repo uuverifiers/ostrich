@@ -518,5 +518,5 @@ class ParikhExploration(
   // set to true when eagerly product 
   protected val needCompleteContentsForConflicts: Boolean = true
   protected def newStore(t: ITerm): ParikhStore =
-    new ParikhStore(t)
+    new ParikhStore(t, flags)
 }

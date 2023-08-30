@@ -66,7 +66,6 @@ class NuxmvBasedSolver(
       constraints.flatMap(_.auts).map(a => a -> a.newState()).toMap
 
     println("MODULE main")
-    println("MODULE main")
 
     println("IVAR")
     // input label variable

@@ -36,12 +36,12 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug =
+  ParikhUtil.todo("add noAutomataProduct option, to disable automata product when using catra and nuxmv backend")
+  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug, underApprox, noAutomataProduct =
     false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   private var backend: OFlags.CEABackend.Value = Unary
   private var simplifyAut = true
-  private var underApprox = false
   private var underApproxBound = 10
 
   // TODO: add more command line arguments
