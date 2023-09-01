@@ -49,6 +49,8 @@ object CEATests extends Properties("DenghangTests.cea") {
   // integration tests for length
   property("length_sat.smt2") =
     checkFile("tests/hu-benchmarks/length_sat.smt2", timeout, "sat")
+  property("emptystr_len_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/emptystr_len_unsat.smt2", timeout, "unsat")
 
   // integration tests for concatenate
   property("concat_sat.smt2") =
@@ -124,6 +126,8 @@ object NuxmvTests extends Properties("DenghangTests.nuxmv"){
   // integration tests for length
   property("length_sat.smt2") =
     checkFile("tests/hu-benchmarks/length_sat.smt2", timeout, "sat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
+  property("emptystr_len_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/emptystr_len_unsat.smt2", timeout, "unsat", "-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory:-ceaBackend=nuxmv")
 
   // integration tests for concatenate
   property("concat_sat.smt2") =

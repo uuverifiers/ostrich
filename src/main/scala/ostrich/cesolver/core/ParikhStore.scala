@@ -85,6 +85,7 @@ class ParikhStore(t: ITerm, flags: OFlags) {
   private def checkConsistency(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
+    if (flags.noAutomataProduct)  return None
     productAut = productAut product aut
     val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
     if (productAut.isEmpty) {

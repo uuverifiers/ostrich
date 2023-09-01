@@ -125,20 +125,9 @@ object ParikhUtil {
       yield t).toSet
   }
 
-  def cleanDirectory(directory: File): Unit = {
-    if (directory.exists()) {
-      val files = directory.listFiles()
-      if (files != null) {
-        for (file <- files) {
-          if (file.isDirectory) {
-            cleanDirectory(file)
-          } else {
-            file.delete()
-          }
-        }
-      }
-      directory.delete()
-    }
+    // check if the aut only accepts empty string
+  def isEmptyString(aut: CostEnrichedAutomatonBase): Boolean = {
+    aut.isAccept(aut.initialState) && aut.transitionsWithVec.isEmpty
   }
 
   def debugPrintln(s: Any) = {

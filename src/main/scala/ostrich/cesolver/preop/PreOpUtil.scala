@@ -1,33 +1,37 @@
 package ostrich.cesolver.preop
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.cesolver.automata.BricsAutomatonWrapper.{makeEmpty, makeEmptyString}
+import ostrich.cesolver.automata.BricsAutomatonWrapper.{
+  makeEmpty,
+  makeEmptyString
+}
 
 object PreOpUtil {
-    def automatonWithLen(len: Int): CostEnrichedAutomatonBase = {
+  def automatonWithLen(len: Int): CostEnrichedAutomatonBase = {
     if (len < 0) return makeEmpty()
     if (len == 0) return makeEmptyString()
-    val automaton = new CostEnrichedAutomatonBase
-    val sigma = automaton.LabelOps.sigmaLabel
+    val ceAut = new CostEnrichedAutomatonBase
+    val sigma = ceAut.LabelOps.sigmaLabel
     val states =
-      automaton.initialState +: (for (_ <- 0 to len) yield automaton.newState())
+      ceAut.initialState +: (for (_ <- 0 to len) yield ceAut.newState())
     for (i <- 0 until len) {
-      automaton.addTransition(states(i), sigma, states(i + 1), Seq())
+      ceAut.addTransition(states(i), sigma, states(i + 1), Seq())
     }
-    automaton.setAccept(states(len), true)
-    automaton
+    ceAut.setAccept(states(len), true)
+    ceAut
   }
 
   def automatonWithLenLessThan(len: Int): CostEnrichedAutomatonBase = {
     if (len <= 0) return makeEmpty()
-    val automaton = new CostEnrichedAutomatonBase
-    val sigma = automaton.LabelOps.sigmaLabel
+    val ceAut = new CostEnrichedAutomatonBase
+    val sigma = ceAut.LabelOps.sigmaLabel
     val states =
-      automaton.initialState +: (for (_ <- 0 to len) yield automaton.newState())
+      ceAut.initialState +: (for (_ <- 0 to len) yield ceAut.newState())
     for (i <- 0 until len - 1) {
-      automaton.setAccept(states(i), true)
-      automaton.addTransition(states(i), sigma, states(i + 1), Seq())
+      ceAut.setAccept(states(i), true)
+      ceAut.addTransition(states(i), sigma, states(i + 1), Seq())
     }
-    automaton.setAccept(states(len - 1), true)
-    automaton
+    ceAut.setAccept(states(len - 1), true)
+    ceAut
   }
+
 }

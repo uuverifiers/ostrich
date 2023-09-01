@@ -21,6 +21,7 @@ import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IExpression.Const
 import ostrich.cesolver.util.TermGenerator
+import ostrich.cesolver.util.ParikhUtil
 
 object IndexOfCEPreOp {
   def apply(startPos: ITerm, index: ITerm, matchStr: String) =
@@ -44,7 +45,6 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     var preimages = Iterator[Seq[Automaton]]()
-
     val startPosPrefix = startPos match {
       case Const(value) => {
         automatonWithLen(value.intValueSafe)
@@ -68,7 +68,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
               automatonWithLen(value.intValueSafe + matchString.size - 1),
               concatenate(Seq(startPosPrefix, notMatched))
             ),
-            makeAnyString
+            makeAnyString()
           )
         )
       }
@@ -79,7 +79,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
               lengthPreimage(index + matchString.size - 1),
               concatenate(Seq(startPosPrefix, notMatched))
             ),
-            makeAnyString
+            makeAnyString()
           )
         )
       }
@@ -176,14 +176,13 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       }
 
       case _ if !matchString.isEmpty => {
-        preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2), Seq(positiveIndex))
+        preimages = Iterator(Seq(positiveIndex), Seq(negtiveIndex1), Seq(negtiveIndex2))
       }
 
       case _ if matchString.isEmpty => {
-        preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2), Seq(emptyPositiveIndex))
+        preimages = Iterator(Seq(emptyPositiveIndex), Seq(negtiveIndex1), Seq(negtiveIndex2))
       }
     }
-    positiveIndex.toDot("positiveIndex" + this.hashCode())
     (preimages, Seq())
   }
 

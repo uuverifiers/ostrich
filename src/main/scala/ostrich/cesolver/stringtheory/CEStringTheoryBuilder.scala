@@ -62,6 +62,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       useParikh = value
 
     // Options for cost-enriched-automata based solver
+    case CmdlParser.Opt("product", value) => 
+      noAutomataProduct = !value
     case CmdlParser.Opt("simplify-aut", value) =>
       simplifyAut = value
     case CmdlParser.Opt("costenriched", value) =>
@@ -129,7 +131,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         debug = debug,
         underApprox = underApprox,
         underApproxBound = underApproxBound,
-        simplifyAut = simplifyAut
+        simplifyAut = simplifyAut,
+        noAutomataProduct = noAutomataProduct
       )
     )
   }

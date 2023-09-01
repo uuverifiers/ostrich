@@ -30,40 +30,41 @@ import scala.sys.process._
 class NuxmvBasedSolver(
     private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
-  ParikhUtil.todo("Maybe bug when there are overlap labels in different transitions. For example, s1 -[a-c],(1)-> s2 and s1 -[b-d],(0)-> s3.")
-
   private var count = 0 // for debug
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(FinalConstraints.nuxmvACs(t, auts))
   }
 
-  private val nuxmvCmd = Seq("nuxmv", "-source", "source", "nuxmv.smv")
   private val Unreachable = """^.* is true$""".r
   private val Reachable = """^.* is false$""".r
   private val CounterValue = """^ {4}(.*) = (-?\d+)$""".r
-
   private val outFile =
     if (ParikhUtil.debug)
       new File("nuxmv.smv")
-    else {
-      val tmpfile = File.createTempFile("nuxmv", ".smv")
-      tmpfile.deleteOnExit()
-      tmpfile
-    }
+    else
+      File.createTempFile("nuxmv", ".smv")
+  private val nuxmvCmd = Seq("nuxmv", "-source", "source", outFile.toString())
 
   private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
     val constraintsIdx = constraints.zipWithIndex.toMap
+    val autIdx = constraints.flatMap(_.auts).zipWithIndex.toMap
     val labels = constraintsIdx.map { case (_, i) =>
       s"l$i"
     }.toSeq
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    val nuxmvlia =
+    var emptyStingRegsUpdate = Boolean2IFormula(true)
+    val regsRelationAndInputLIA =
       lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
     val integers = (SymbolCollector constants lia)
-    // padding one trap state for each automaton
-    val paddingOf =
-      constraints.flatMap(_.auts).map(a => a -> a.newState()).toMap
+    // padding one trap state for each automaton, should be unique to other states
+    var maxStateIdx = 0
+    for (c <- constraints; aut <- c.auts; state <- aut.states) {
+      val idx = state.toString().substring(1).toInt
+      maxStateIdx = idx max maxStateIdx
+    }
+    val trapState =
+      s"s${maxStateIdx + 1}" // trap state, stand for unique accepting state
 
     println("MODULE main")
 
@@ -76,7 +77,7 @@ class NuxmvBasedSolver(
     // state variable for each automaton
     for (c <- constraints; aut <- c.auts) {
       println(
-        s"  aut_${c.strDataBaseId}_${aut.hashCode} : {${(aut.states.toSeq :+ paddingOf(aut))
+        s"  aut_${c.strDataBaseId}_${autIdx(aut)} : {${(aut.states.toSeq :+ trapState)
             .mkString(", ")}};"
       )
     }
@@ -89,54 +90,86 @@ class NuxmvBasedSolver(
     for (int <- integers)
       println(s"  init($int) := 0;")
     for (c <- constraints; aut <- c.auts) {
-      // init states and next states
+      // init states
       println(
-        s"  init(aut_${c.strDataBaseId}_${aut.hashCode}) := ${aut.initialState};"
+        s"  init(aut_${c.strDataBaseId}_${autIdx(aut)}) := ${aut.initialState};"
       )
-      val constraintsidx = constraintsIdx(c)
-      // if (aut.transitionsWithVec.nonEmpty)
-      println(s"  next(aut_${c.strDataBaseId}_${aut.hashCode}) := case")
-      for (s <- aut.states) {
-        for ((t, l, v) <- aut.outgoingTransitionsWithVec(s)) {
-          println(
-            s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(
-                constraintsidx
-              )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} : $t;"
+    }
+    // transitions for each automaton
+    for (c <- constraints; aut <- c.auts) {
+      val identityUpdateRegs = aut.registers
+        .map { r =>
+          s"next($r) = $r"
+        }
+        .mkString(" & ")
+      val identityUpdateRegsNuxmv =
+        if (identityUpdateRegs.isEmpty) "TRUE"
+        else identityUpdateRegs
+      print(s"TRANS  ")
+      if (aut.transitionsWithVec.isEmpty) {
+        // special case: no transition
+        if (aut.isAccept(aut.initialState)) {
+          print(
+            s"((aut_${c.strDataBaseId}_${autIdx(aut)} = ${aut.initialState} & ${labels(
+                constraintsIdx(c)
+              )} = 65536) & $identityUpdateRegsNuxmv & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = $trapState)"
+          )
+        } else {
+          print(
+            s"((aut_${c.strDataBaseId}_${autIdx(aut)} = ${aut.initialState} & ${labels(
+                constraintsIdx(c)
+              )} = 65536) & $identityUpdateRegsNuxmv & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = ${aut.initialState})"
+          )
+        }
+      } else {
+        print(
+          aut.transitionsWithVec
+            .map {
+              case (s, (min, max), t, v) => {
+                val updateRegs = aut.registers
+                  .zip(v)
+                  .map { case (r, update) => s"next($r) = $r + $update" }
+                  .mkString(" & ")
+                val updateRegsNuxmv =
+                  if (updateRegs.isEmpty) "TRUE" else updateRegs
+                s"((aut_${c.strDataBaseId}_${autIdx(aut)} = $s & ${labels(
+                    constraintsIdx(c)
+                  )} >= ${min.toInt} & ${labels(constraintsIdx(c))} <= ${max.toInt} & $updateRegsNuxmv) & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = $t)"
+              }
+            }
+            .mkString(" | ")
+        )
+        // epsilon transition from accepting state to unique accepting state (trap state), use 65536 as epsilon label
+        if (aut.acceptingStates.nonEmpty) {
+          print(" | ")
+          print(
+            aut.acceptingStates
+              .map(s =>
+                s"((aut_${c.strDataBaseId}_${autIdx(aut)} = $s & ${labels(
+                    constraintsIdx(c)
+                  )} = 65536 & $identityUpdateRegsNuxmv) & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = $trapState)"
+              )
+              .mkString(" | ")
           )
         }
       }
-      // if (aut.transitionsWithVec.nonEmpty)
-      println(s"    TRUE: ${paddingOf(aut)};")
-      println(s"    esac;")
+      // self loop for trap state
+      print(
+        s" | ((aut_${c.strDataBaseId}_${autIdx(aut)} = $trapState & ${labels(
+            constraintsIdx(c)
+          )} = 65536 & $identityUpdateRegsNuxmv) & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = $trapState);\n"
+      )
 
-      // next registers
-      if (aut.registers.nonEmpty) {
-        for ((reg, i) <- aut.registers.zipWithIndex) {
-          // if (aut.transitionsWithVec.nonEmpty)
-          println(s"  next($reg) := case")
-          for ((s, l, t, v) <- aut.transitionsWithVec) {
-            println(
-              s"    aut_${c.strDataBaseId}_${aut.hashCode} = $s & ${labels(
-                  constraintsidx
-                )} >= ${l._1.toInt} & ${labels(constraintsidx)} <= ${l._2.toInt} : $reg + ${v(i)};"
-            )
-          }
-          println(s"    TRUE: 0;")
-          // if (aut.transitionsWithVec.nonEmpty)
-          println(s"    esac;")
-        }
-      }
     }
 
     // invariant
     val accepting =
-      (for (c <- constraints; aut <- c.auts; if aut.acceptingStates.nonEmpty)
+      (for (c <- constraints; aut <- c.auts)
         yield {
-          val acceptingStates = aut.acceptingStates
-          s"(${acceptingStates.map(s => s"aut_${c.strDataBaseId}_${aut.hashCode} = $s").mkString(" | ")})"
+          s"aut_${c.strDataBaseId}_${autIdx(aut)} = $trapState"
         }).mkString(" & ")
     println("INVARSPEC")
-    println(s"  ($accepting) -> !($nuxmvlia);")
+    println(s"  ($accepting) -> !($regsRelationAndInputLIA);")
   }
 
   def solve: Result = {
@@ -151,117 +184,49 @@ class NuxmvBasedSolver(
     val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
     val name2ITerm =
       allIntTerms.map(v => v.toString -> v).toMap
-    val res = {
-      val result = new Result
-      val out = new java.io.FileOutputStream(outFile)
-      Console.withOut(out) {
-        printNUXMVModule(constraints)
-      }
-      out.close()
-
-      // val process = Runtime.getRuntime.exec(nuxmvCmd)
-      // val stdin = process.getOutputStream
-      // val stderr = process.getErrorStream
-      // val stdout = process.getInputStream
-
-      // val stdinWriter = new PrintWriter(new OutputStreamWriter(stdin))
-      // val stdoutReader = new BufferedReader(new InputStreamReader(stdout))
-
-      // def sendCommand(cmd: String): Unit = {
-      //   ParikhUtil.debugPrintln("sendCommand " + cmd)
-      //   stdinWriter.println(cmd)
-      //   stdinWriter.flush()
-      // }
-
-      // def readLine: String = {
-      //   ParikhUtil.debugPrintln("readLine begin")
-      //   ParikhUtil.bug("hang at readline, don't know why. Maybe use scala.sys.process instead.")
-      //   ParikhUtil.debugPrintln(stdoutReader.ready().toString)
-      //   val res = stdoutReader.readLine()
-      //   ParikhUtil.debugPrintln(res)
-      //   res
-
-      // }
-
-      // sendCommand("read_model -i " + outFile + ";")
-      // sendCommand("flatten_hierarchy;")
-      // // sendCommand("encode_variables;")
-      // sendCommand("go_msat;")
-      // sendCommand("check_invar_ic3;")
-      // sendCommand("quit;")
-
-      // var cont = true
-
-      val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
-      // ParikhUtil.debugPrintln(nuxmvResLines.mkString("\n"))
-      ap.util.Timeout.check
-
-      for (line <- nuxmvResLines) {
-        line match {
-          case Unreachable() =>
-            result.setStatus(SimpleAPI.ProverStatus.Unsat)
-          case Reachable() =>
-            result.setStatus(SimpleAPI.ProverStatus.Sat)
-          case CounterValue(intName, value) =>
-            // integer model
-            if (name2ITerm.contains(intName)) {
-              // filter string term in input lia formula
-              result.updateModel(name2ITerm(intName), IdealInt(value))
-            }
-          case _ => // do nothing
-        }
-      }
-      // while (cont) {
-      //   ap.util.Timeout.check
-      //   cont = readLine match {
-      //     case null =>
-      //       // The process has closed the stream. Wait for it to finish, but
-      //       // don't wait for too long and kill it if it's too slow.
-      //       val didExit = process.waitFor(1, TimeUnit.SECONDS)
-      //       if (!didExit) {
-      //         // Wait for the process to really, really exit.
-      //         process.destroyForcibly().waitFor()
-      //       }
-      //       false // We're done!
-      //     case Unreachable() =>
-      //       result.setStatus(SimpleAPI.ProverStatus.Unsat)
-      //       false // There's nothing more to parse.
-      //     case Reachable() =>
-      //       result.setStatus(SimpleAPI.ProverStatus.Sat)
-      //       true // Capture the model assignment
-      //     case CounterValue(intName, value) =>
-      //       // integer model
-      //       if (name2ITerm.contains(intName)) {
-      //         // filter string term in input lia formula
-      //         result.updateModel(name2ITerm(intName), IdealInt(value))
-      //       }
-      //       true
-      //     case _ => true
-      //   }
-      // }
-      ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
-      // sat and generate model
-      if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
-        // string model
-        val integerModel = result.getModel.map {
-          case (i, Model.IntValue(v)) => i -> v
-          case _ => throw new Exception("not integer model")
-        }.toMap
-        for (c <- constraints) {
-          c.setRegTermsModel(integerModel)
-          c.getModel match {
-            case Some(value) => result.updateModel(c.strDataBaseId, value)
-            case None => throw new Exception("fail to generate string model")
-          }
-        }
-      }
-
-      // close stream
-      // stdinWriter.close()
-      // stdoutReader.close()
-      // stderr.close()
-      result
+    val result = new Result
+    val out = new java.io.FileOutputStream(outFile)
+    Console.withOut(out) {
+      printNUXMVModule(constraints)
     }
-    res
+    out.close()
+
+    val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
+    ap.util.Timeout.check
+
+    for (line <- nuxmvResLines) {
+      line match {
+        case Unreachable() =>
+          result.setStatus(SimpleAPI.ProverStatus.Unsat)
+        case Reachable() =>
+          result.setStatus(SimpleAPI.ProverStatus.Sat)
+        case CounterValue(intName, value) =>
+          // integer model
+          if (name2ITerm.contains(intName)) {
+            // filter string term in input lia formula
+            result.updateModel(name2ITerm(intName), IdealInt(value))
+          }
+        case _ => // do nothing
+      }
+    }
+    ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
+    // sat and generate model
+    if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
+      // string model
+      val integerModel = result.getModel.map {
+        case (i, Model.IntValue(v)) => i -> v
+        case _                      => throw new Exception("not integer model")
+      }.toMap
+      ParikhUtil.debugPrintln(s"integerModel: $integerModel")
+      for (c <- constraints) {
+        c.setRegTermsModel(integerModel)
+        c.getModel match {
+          case Some(value) => result.updateModel(c.strDataBaseId, value)
+          case None => throw new Exception("fail to generate string model")
+        }
+      }
+    }
+    if (!ParikhUtil.debug) outFile.delete()
+    result
   }
 }

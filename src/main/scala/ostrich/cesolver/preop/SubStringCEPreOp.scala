@@ -13,14 +13,11 @@ import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
 
 object SubStringCEPreOp {
-  private var count = 0 // debug
-
+  private var debugId = 0
+  
   def apply(beginIdx: ITerm, length: ITerm) = {
-    count = count + 1 // debug
-    new SubStringCEPreOp(beginIdx, length, count - 1)
+    new SubStringCEPreOp(beginIdx, length)
   }
-  
-  
 }
 
 /** Pre-operator for substring constraint.
@@ -29,7 +26,7 @@ object SubStringCEPreOp {
   * @param length
   *   the max length of subtring
   */
-class SubStringCEPreOp(beginIdx: ITerm, length: ITerm, debugId: Int) extends CEPreOp {
+class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   private val termGen = TermGenerator()
 
   override def toString(): String =
@@ -136,10 +133,12 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm, debugId: Int) extends CEP
       Seq(beginIdxPrefix, smallLenSuffix)
     )
 
-    preimages = Iterator(Seq(suffixSubStr), Seq(midSubStr))
+    preimages = Iterator(Seq(midSubStr), Seq(suffixSubStr))
 
+    import SubStringCEPreOp.debugId
     suffixSubStr.toDot("suffixSubStr " + debugId)
     midSubStr.toDot("midSubStr " + debugId)
+    debugId += 1
     
     (preimagesOfEmptyStr ++ preimages, Seq())
   }
