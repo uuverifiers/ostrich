@@ -39,12 +39,6 @@ class NuxmvBasedSolver(
   private val Unreachable = """^.* is true$""".r
   private val Reachable = """^.* is false$""".r
   private val CounterValue = """^ {4}(.*) = (-?\d+)$""".r
-  private val outFile =
-    if (ParikhUtil.debug)
-      new File("nuxmv.smv")
-    else
-      File.createTempFile("nuxmv", ".smv")
-  private val nuxmvCmd = Seq("nuxmv", "-source", "source", outFile.toString())
 
   private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
     val constraintsIdx = constraints.zipWithIndex.toMap
@@ -185,7 +179,13 @@ class NuxmvBasedSolver(
     val name2ITerm =
       allIntTerms.map(v => v.toString -> v).toMap
     val result = new Result
+    val outFile =
+      if (ParikhUtil.debug)
+        new File("nuxmv.smv")
+      else
+        File.createTempFile("nuxmv", ".smv")
     val out = new java.io.FileOutputStream(outFile)
+    val nuxmvCmd = Seq("nuxmv", "-source", "source", outFile.toString())
     Console.withOut(out) {
       printNUXMVModule(constraints)
     }
@@ -222,11 +222,14 @@ class NuxmvBasedSolver(
         c.setRegTermsModel(integerModel)
         c.getModel match {
           case Some(value) => result.updateModel(c.strDataBaseId, value)
-          case None => throw new Exception("fail to generate string model")
+          case None => 
+            throw new Exception("fail to generate string model")
         }
       }
     }
-    if (!ParikhUtil.debug) outFile.delete()
+    if (!ParikhUtil.debug) {
+      outFile.delete()
+    }
     result
   }
 }

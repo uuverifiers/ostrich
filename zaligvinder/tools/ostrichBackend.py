@@ -35,7 +35,6 @@ def run(params, eq, timeout, ploc, wd):
                     "+incremental",
                     "-inputFormat=smtlib",
                     "-timeout=" + str(timeout) + "000",
-                    "+cea",
                 ] + params + [smtfile],
                 timeout=timeout,
             )
@@ -73,9 +72,10 @@ def addRunner(addto):
     from functools import partial
     params = {
         #   "unary-no-simplify": ["-ceaBackend=unary", "-simplify-aut"],
-        "unary": ["-ceaBackend=unary"],
-        "nuxmv": ["-ceaBackend=nuxmv"]
-        #   "catra": [ "-ceaBackend=catra"],
+        # "unary": ["+cea", "-ceaBackend=unary"],
+        "nuxmv": ["+cea", "-ceaBackend=nuxmv", "-product"],
+        "catra": ["+cea", "-ceaBackend=catra", "-product"],
+        "seq": ["+seq"]
     }
     for i in params.keys():
         addto['ostrich-'+i] = partial(run, params[i])

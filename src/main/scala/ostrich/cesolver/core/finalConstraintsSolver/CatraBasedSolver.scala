@@ -276,28 +276,18 @@ class CatraBasedSolver(
       result.setStatus(ProverStatus.Sat)
       return result
     }
-    /*
-    for (c <- constraints) {
-      val productAut = c.auts.reduceLeft(_ product _)
-      productAut.toDot("catra_" + c.strId)
-    }
-     */
     var result = new Result
-    val interFile =
+    val tmpFile =
       if (ParikhUtil.debug) new File("catra_input.par")
-      else {
-        var tmpfile = File.createTempFile("ostrich-catra", ".par")
-        tmpfile.deleteOnExit()
-        tmpfile
-      }
+      else File.createTempFile("ostrich-catra", ".par")
 
-    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
-    
-    val writer = new CatraWriter(interFile.toString())
+    ParikhUtil.debugPrintln("Writing Catra input to " + tmpFile)
+
+    val writer = new CatraWriter(tmpFile.toString())
     writer.write(toCatraInput)
     writer.close()
     val arguments = CommandLineOptions(
-      inputFiles = Seq(interFile.toString()),
+      inputFiles = Seq(tmpFile.toString()),
       timeout_ms = Some(OFlags.timeout),
       dumpSMTDir = None,
       dumpGraphvizDir = None,
@@ -326,8 +316,10 @@ class CatraBasedSolver(
     catraRes match {
       case Success(_catraRes) =>
         result = decodeCatraResult(_catraRes)
-      case Failure(e) => throw e
+      case Failure(e) => // do nothing as unknown result
+        // throw e
     }
+    tmpFile.delete()
     result
   }
 }

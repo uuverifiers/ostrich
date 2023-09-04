@@ -21,7 +21,7 @@ ostrichParams=""
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -ceaBackend=* | [+-]debug | [+-]under-approx | [+-]simplify-aut)
+        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -ceaBackend=* | [+-]debug | [+-]under-approx | [+-]simplify-aut | [+-]product)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else
@@ -33,6 +33,9 @@ for p; do
             ;;
         +cea)
             ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
+            ;;
+        +seq)
+            ostrichSolver=ap.theories.strings.SeqStringTheory
             ;;
         *)
             princessParams+=("$p")
