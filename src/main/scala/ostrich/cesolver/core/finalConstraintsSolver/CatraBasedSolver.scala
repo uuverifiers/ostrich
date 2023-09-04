@@ -280,6 +280,7 @@ class CatraBasedSolver(
     val tmpFile =
       if (ParikhUtil.debug) new File("catra_input.par")
       else File.createTempFile("ostrich-catra", ".par")
+    tmpFile.deleteOnExit()
 
     ParikhUtil.debugPrintln("Writing Catra input to " + tmpFile)
 

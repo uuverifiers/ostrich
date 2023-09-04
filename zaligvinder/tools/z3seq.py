@@ -38,12 +38,12 @@ def run(eq, timeout, ploc, wd):
         time.stop()
         out = "Error in " + eq + ": " + str(e)
         return utils.Result(None, time.getTime_ms(), False, 1, out)
-
+    finally:
+        shutil.rmtree(tempd)
     time.stop()
 
     if "NOT IMPLEMENTED YET!" in out and not time >= timeout:
         out = "Error in " + eq + ": " + out
-    shutil.rmtree(tempd)
 
     # print(smtfile)
 

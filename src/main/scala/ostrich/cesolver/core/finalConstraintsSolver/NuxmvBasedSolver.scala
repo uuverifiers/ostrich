@@ -184,6 +184,7 @@ class NuxmvBasedSolver(
         new File("nuxmv.smv")
       else
         File.createTempFile("nuxmv", ".smv")
+    outFile.deleteOnExit()
     val out = new java.io.FileOutputStream(outFile)
     val nuxmvCmd = Seq("nuxmv", "-source", "source", outFile.toString())
     Console.withOut(out) {

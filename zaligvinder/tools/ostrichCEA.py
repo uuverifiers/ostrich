@@ -49,9 +49,9 @@ def run(eq, timeout, ploc, wd):
         time.stop()
         out = "Error in " + eq + ": " + str(e)
         return utils.Result(None, time.getTime_ms(), False, 1, out)
-
+    finally:
+        shutil.rmtree(tempd)
     time.stop()
-    shutil.rmtree(tempd)
     if "unsat" in out:
         return utils.Result(False, time.getTime_ms(), False, 1, out)
     elif "sat" in out:
