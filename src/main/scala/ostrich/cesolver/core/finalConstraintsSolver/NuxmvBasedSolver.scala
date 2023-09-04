@@ -168,7 +168,7 @@ class NuxmvBasedSolver(
 
   def solve: Result = {
     if (constraints.isEmpty) return Result.ceaSatResult
-    for (c <- constraints; aut <- c.auts) {
+    for (c <- constraints; aut <- c.auts; if ParikhUtil.debug) {
       aut.toDot(s"nuxmv_aut_${c.strDataBaseId}_${count}")
       count += 1
     }
@@ -179,57 +179,59 @@ class NuxmvBasedSolver(
     val name2ITerm =
       allIntTerms.map(v => v.toString -> v).toMap
     val result = new Result
-    val outFile =
+    val nuxmvInputF =
       if (ParikhUtil.debug)
         new File("nuxmv.smv")
       else
         File.createTempFile("nuxmv", ".smv")
-    outFile.deleteOnExit()
-    val out = new java.io.FileOutputStream(outFile)
-    val nuxmvCmd = Seq("nuxmv", "-source", "source", outFile.toString())
-    Console.withOut(out) {
-      printNUXMVModule(constraints)
-    }
-    out.close()
-
-    val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
-    ap.util.Timeout.check
-
-    for (line <- nuxmvResLines) {
-      line match {
-        case Unreachable() =>
-          result.setStatus(SimpleAPI.ProverStatus.Unsat)
-        case Reachable() =>
-          result.setStatus(SimpleAPI.ProverStatus.Sat)
-        case CounterValue(intName, value) =>
-          // integer model
-          if (name2ITerm.contains(intName)) {
-            // filter string term in input lia formula
-            result.updateModel(name2ITerm(intName), IdealInt(value))
-          }
-        case _ => // do nothing
+    try {
+      val out = new java.io.FileOutputStream(nuxmvInputF)
+      val nuxmvCmd = Seq("nuxmv", "-source", "source", nuxmvInputF.toString())
+      Console.withOut(out) {
+        printNUXMVModule(constraints)
       }
-    }
-    ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
-    // sat and generate model
-    if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
-      // string model
-      val integerModel = result.getModel.map {
-        case (i, Model.IntValue(v)) => i -> v
-        case _                      => throw new Exception("not integer model")
-      }.toMap
-      ParikhUtil.debugPrintln(s"integerModel: $integerModel")
-      for (c <- constraints) {
-        c.setRegTermsModel(integerModel)
-        c.getModel match {
-          case Some(value) => result.updateModel(c.strDataBaseId, value)
-          case None => 
-            throw new Exception("fail to generate string model")
+      out.close()
+
+      val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
+      ap.util.Timeout.check
+
+      for (line <- nuxmvResLines) {
+        line match {
+          case Unreachable() =>
+            result.setStatus(SimpleAPI.ProverStatus.Unsat)
+          case Reachable() =>
+            result.setStatus(SimpleAPI.ProverStatus.Sat)
+          case CounterValue(intName, value) =>
+            // integer model
+            if (name2ITerm.contains(intName)) {
+              // filter string term in input lia formula
+              result.updateModel(name2ITerm(intName), IdealInt(value))
+            }
+          case _ => // do nothing
         }
       }
-    }
-    if (!ParikhUtil.debug) {
-      outFile.delete()
+      ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
+      // sat and generate model
+      if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
+        // string model
+        val integerModel = result.getModel.map {
+          case (i, Model.IntValue(v)) => i -> v
+          case _ => throw new Exception("not integer model")
+        }.toMap
+        ParikhUtil.debugPrintln(s"integerModel: $integerModel")
+        for (c <- constraints) {
+          c.setRegTermsModel(integerModel)
+          c.getModel match {
+            case Some(value) => result.updateModel(c.strDataBaseId, value)
+            case None =>  // do nothing as unknown result
+              // throw new Exception("fail to generate string model")
+          }
+        }
+      }
+    } finally {
+      if (!ParikhUtil.debug) {
+        nuxmvInputF.delete()
+      }
     }
     result
   }

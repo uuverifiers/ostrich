@@ -12,8 +12,7 @@ def run(eq, timeout, ploc, wd):
     if not path:
         raise "Ostrich Not in Path"
 
-    tempd = tempfile.mkdtemp()
-    smtfile = os.path.join(tempd, "out.smt")
+    (fd, smtfile) = tempfile.mkstemp(suffix=".smt2")
 
     # hack to get rid of (get-model), not needed for z3 and returns 1 / Error if input is unsat
     f = open(eq, "r")
@@ -50,7 +49,7 @@ def run(eq, timeout, ploc, wd):
         out = "Error in " + eq + ": " + str(e)
         return utils.Result(None, time.getTime_ms(), False, 1, out)
     finally:
-        shutil.rmtree(tempd)
+        os.unlink(smtfile)
     time.stop()
     if "unsat" in out:
         return utils.Result(False, time.getTime_ms(), False, 1, out)

@@ -15,8 +15,7 @@ def run(eq, timeout, ploc, wd, solver="1", param="60"):
     path = ploc.findProgram("Cvc5")
     if not path:
         raise "cvc5 Not in Path"
-    tempd = tempfile.mkdtemp()
-    smtfile = os.path.join(tempd, "out.smt")
+    (fd, smtfile) = tempfile.mkstemp(suffix=".smt2")
 
     setLogicPresent = False
     # set logic present?
@@ -85,7 +84,7 @@ def run(eq, timeout, ploc, wd, solver="1", param="60"):
             out = "Error in " + eq + ": " + str(e.output)
             return utils.Result(None, time.getTime_ms(), False, 1, out)
     finally:
-        shutil.rmtree(tempd)
+        os.unlink(smtfile)
     time.stop()
     if "unsat" in out:
         return utils.Result(False, time.getTime_ms(), False, 1, out)

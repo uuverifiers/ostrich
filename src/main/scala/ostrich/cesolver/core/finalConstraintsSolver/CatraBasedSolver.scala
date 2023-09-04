@@ -277,50 +277,52 @@ class CatraBasedSolver(
       return result
     }
     var result = new Result
-    val tmpFile =
+    val catraInputF =
       if (ParikhUtil.debug) new File("catra_input.par")
-      else File.createTempFile("ostrich-catra", ".par")
-    tmpFile.deleteOnExit()
+      else File.createTempFile("catra_input", ".par")
+    try {
+      ParikhUtil.debugPrintln("Writing Catra input to " + catraInputF)
 
-    ParikhUtil.debugPrintln("Writing Catra input to " + tmpFile)
+      val writer = new CatraWriter(catraInputF.toString())
+      writer.write(toCatraInput)
+      writer.close()
+      val arguments = CommandLineOptions(
+        inputFiles = Seq(catraInputF.toString()),
+        timeout_ms = Some(OFlags.timeout),
+        dumpSMTDir = None,
+        dumpGraphvizDir = None,
+        printDecisions = false,
+        runMode = SolveSatisfy,
+        // backend = ChooseNuxmv,
+        backend = ChooseLazy,
+        checkTermSat = true,
+        checkIntermediateSat = true,
+        eliminateQuantifiers = true,
+        dumpEquationDir = None,
+        nrUnknownToMaterialiseProduct = 6,
+        enableClauseLearning = true,
+        enableRestarts = true,
+        restartTimeoutFactor = 500L,
+        randomSeed = 1234567,
+        printProof = false
+      )
 
-    val writer = new CatraWriter(tmpFile.toString())
-    writer.write(toCatraInput)
-    writer.close()
-    val arguments = CommandLineOptions(
-      inputFiles = Seq(tmpFile.toString()),
-      timeout_ms = Some(OFlags.timeout),
-      dumpSMTDir = None,
-      dumpGraphvizDir = None,
-      printDecisions = false,
-      runMode = SolveSatisfy,
-      // backend = ChooseNuxmv,
-      backend = ChooseLazy,
-      checkTermSat = true,
-      checkIntermediateSat = true,
-      eliminateQuantifiers = true,
-      dumpEquationDir = None,
-      nrUnknownToMaterialiseProduct = 6,
-      enableClauseLearning = true,
-      enableRestarts = true,
-      restartTimeoutFactor = 500L,
-      randomSeed = 1234567,
-      printProof = false
-    )
+      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
 
-    ParikhUtil.debugPrintln("Catra arguments: " + arguments)
+      val catraRes = ParikhUtil.measure(
+        s"${this.getClass().getSimpleName()}::findIntegerModel"
+      )(runInstances(arguments))
 
-    val catraRes = ParikhUtil.measure(
-      s"${this.getClass().getSimpleName()}::findIntegerModel"
-    )(runInstances(arguments))
-
-    catraRes match {
-      case Success(_catraRes) =>
-        result = decodeCatraResult(_catraRes)
-      case Failure(e) => // do nothing as unknown result
+      catraRes match {
+        case Success(_catraRes) =>
+          result = decodeCatraResult(_catraRes)
+        case Failure(e) => // do nothing as unknown result
         // throw e
+      }
+    } finally {
+      if (!ParikhUtil.debug)
+        catraInputF.delete()
     }
-    tmpFile.delete()
     result
   }
 }

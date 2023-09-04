@@ -14,8 +14,7 @@ def run (eq,timeout,ploc,wd):
     if not path:
         raise "Trau Not in Path"
 
-    tempd = tempfile.mkdtemp ()
-    smtfile = os.path.join (tempd,"out_trau.smt")
+    (fd, smtfile) = tempfile.mkstemp(suffix=".smt2")
     #tools.woorpje2smt.run (eq,smtfile,ploc)
 
 
@@ -44,7 +43,7 @@ def run (eq,timeout,ploc,wd):
         out = "Error in " + eq + ": " + str(e)
         return utils.Result(None,time.getTime_ms(),False,1,out)
     finally:
-        shutil.rmtree(tempd)
+        os.unlink(smtfile)
     time.stop()    
 
     if "NOT IMPLEMENTED YET!" in out and not time >= timeout:
