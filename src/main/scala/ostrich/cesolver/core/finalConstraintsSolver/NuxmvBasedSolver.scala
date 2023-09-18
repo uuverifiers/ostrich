@@ -186,7 +186,7 @@ class NuxmvBasedSolver(
         File.createTempFile("nuxmv", ".smv")
     try {
       val out = new java.io.FileOutputStream(nuxmvInputF)
-      val nuxmvCmd = Seq("nuxmv", "-source", "source", nuxmvInputF.toString())
+      val nuxmvCmd = Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString())
       Console.withOut(out) {
         printNUXMVModule(constraints)
       }
