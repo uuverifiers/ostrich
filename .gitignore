@@ -1,8 +1,9 @@
 /.bloop/
 /.metals/
 target
-project
-lib
+project/project
+project/target
+project/build.properties
 *.swo
 *.swp
 /.bsp
