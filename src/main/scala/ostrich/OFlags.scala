@@ -62,8 +62,6 @@ case class OFlags(
     backend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
     useCostEnriched: Boolean = false,
     debug: Boolean = false,
-    underApprox: Boolean = true,
-    underApproxBound: Int = 15,
     simplifyAut: Boolean = true,
     noAutomataProduct: Boolean = false,
 )

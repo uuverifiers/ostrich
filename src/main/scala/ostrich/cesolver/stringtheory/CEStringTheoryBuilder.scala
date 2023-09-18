@@ -37,12 +37,11 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   def setAlphabetSize(w: Int): Unit = ()
 
   ParikhUtil.todo("add noAutomataProduct option, to disable automata product when using catra and nuxmv backend")
-  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug, underApprox, noAutomataProduct =
+  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug, noAutomataProduct =
     false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   private var backend: OFlags.CEABackend.Value = Unary
   private var simplifyAut = true
-  private var underApproxBound = 10
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -68,8 +67,6 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       simplifyAut = value
     case CmdlParser.Opt("costenriched", value) =>
       useCostEnriched = value
-    case CmdlParser.Opt("under-approx", value) =>
-      underApprox = value
     case CmdlParser.Opt("debug", value) =>
       debug = value
       ParikhUtil.debug = value
@@ -82,8 +79,6 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       backend = Catra
     case CmdlParser.ValueOpt("ceaBackend", "nuxmv") =>
       backend = Nuxmv
-    case CmdlParser.ValueOpt("under-approx-bound", value) =>
-      underApproxBound = value.toInt
     case str =>
       super.parseParameter(str)
   }
@@ -129,8 +124,6 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         backend = backend,
         useCostEnriched = useCostEnriched,
         debug = debug,
-        underApprox = underApprox,
-        underApproxBound = underApproxBound,
         simplifyAut = simplifyAut,
         noAutomataProduct = noAutomataProduct
       )

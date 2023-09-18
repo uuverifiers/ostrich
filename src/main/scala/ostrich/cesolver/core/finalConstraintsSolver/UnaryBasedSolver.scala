@@ -26,29 +26,7 @@ class UnaryBasedSolver(
     addConstraint(FinalConstraints.unaryHeuristicACs(t, auts, flags))
   }
 
-  def solve: Result = {
-    if (flags.underApprox) {
-      val res = solveUnderApprox
-      if (res.isSat) return res
-    }
-    solveCompleteLIA
-  }
-
-  def solveUnderApprox: Result = {
-    // add bound iterately
-    val maxBound = flags.underApproxBound
-    val step = 5
-    var nowBound = 5
-    var result = new Result
-    while (nowBound <= maxBound && !result.isSat) {
-      ap.util.Timeout.check
-      result = solveFormula(
-        and(constraints.map(_.getUnderApprox(nowBound)))
-      )
-      nowBound += step
-    }
-    result
-  }
+  def solve: Result = solveCompleteLIA
 
   def solveCompleteLIA: Result = solveFormula(
     and(constraints.map(_.getCompleteLIA))
