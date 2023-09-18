@@ -41,6 +41,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
     false
   private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   private var backend: OFlags.CEABackend.Value = Unary
+  private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
   private var simplifyAut = true
 
   // TODO: add more command line arguments
@@ -79,6 +80,10 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       backend = Catra
     case CmdlParser.ValueOpt("ceaBackend", "nuxmv") =>
       backend = Nuxmv
+    case CmdlParser.ValueOpt("nuxmvBackend", "bmc") =>
+      nuxmvBackend = OFlags.NuxmvBackend.Bmc
+    case CmdlParser.ValueOpt("nuxmvBackend", "ic3") =>
+      nuxmvBackend = OFlags.NuxmvBackend.Ic3
     case str =>
       super.parseParameter(str)
   }
@@ -125,7 +130,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         useCostEnriched = useCostEnriched,
         debug = debug,
         simplifyAut = simplifyAut,
-        noAutomataProduct = noAutomataProduct
+        noAutomataProduct = noAutomataProduct,
+        NuxmvBackend = nuxmvBackend
       )
     )
   }

@@ -26,9 +26,12 @@ import java.time.LocalDate
 import ap.types.SortedConstantTerm
 import ostrich.OstrichStringTheory.OstrichStringSort
 import scala.sys.process._
+import ostrich.OFlags
+import ostrich.cesolver.util.UnknownException
 
 class NuxmvBasedSolver(
-    private val inputFormula: IFormula
+    flags: OFlags,
+    val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
   private var count = 0 // for debug
 
@@ -76,8 +79,12 @@ class NuxmvBasedSolver(
       )
     }
     // integer variable
-    for (int <- integers)
-      println(s"  $int : integer;")
+    for (int <- integers) {
+      if (flags.NuxmvBackend == OFlags.NuxmvBackend.Bmc)
+        println(s"  $int : 0..100;")
+      else
+        println(s"  $int : integer;")
+    }
 
     println("ASSIGN")
     // init integers (contains registers)
@@ -186,7 +193,11 @@ class NuxmvBasedSolver(
         File.createTempFile("nuxmv", ".smv")
     try {
       val out = new java.io.FileOutputStream(nuxmvInputF)
-      val nuxmvCmd = Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString())
+      val nuxmvCmd =
+        if (flags.NuxmvBackend == OFlags.NuxmvBackend.Bmc)
+          Seq("nuxmv", "-source", "bmc_source", nuxmvInputF.toString())
+        else
+          Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString())
       Console.withOut(out) {
         printNUXMVModule(constraints)
       }
@@ -223,11 +234,14 @@ class NuxmvBasedSolver(
           c.setRegTermsModel(integerModel)
           c.getModel match {
             case Some(value) => result.updateModel(c.strDataBaseId, value)
-            case None =>  // do nothing as unknown result
-              // throw new Exception("fail to generate string model")
+            case None        => // do nothing as unknown result
+            // throw new Exception("fail to generate string model")
           }
         }
       }
+    } catch {
+      case e: Throwable =>
+        throw UnknownException(e.toString())
     } finally {
       if (!ParikhUtil.debug) {
         nuxmvInputF.delete()

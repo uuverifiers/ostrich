@@ -42,6 +42,10 @@ object OFlags {
     val Baseline, Unary, Catra, Nuxmv = Value
   }
 
+  object NuxmvBackend extends Enumeration {
+    val Bmc, Ic3 = Value
+  }
+
   /** Compile-time flag that can be used to switch on debugging output
     * throughout the theory.
     */
@@ -64,4 +68,6 @@ case class OFlags(
     debug: Boolean = false,
     simplifyAut: Boolean = true,
     noAutomataProduct: Boolean = false,
+    NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
+
 )

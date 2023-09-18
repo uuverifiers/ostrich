@@ -4,9 +4,11 @@ target
 project/project
 project/target
 project/build.properties
+project/metals.sbt
 *.swo
 *.swp
 /.bsp
+dot/
 
 1.*
 
