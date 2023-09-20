@@ -19,3 +19,7 @@ dot/
 zaligvinder/models
 zaligvinder/result_db
 *_result
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/

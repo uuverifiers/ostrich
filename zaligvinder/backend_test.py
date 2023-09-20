@@ -5,7 +5,7 @@ import utils
 import storage
 import voting.majority as voting
 
-import models.PyEx_All as pyex
+import models.pyex_sat as pyex_sat
 import models.test as test
 
 import startwebserver
@@ -17,14 +17,14 @@ import tools.ostrich
 import summarygenerators
 
 tracks = (
-    pyex.getTrackData()
+    pyex_sat.getTrackData()
 ) + []
 
 solvers = {}
 for s in [
     tools.cvc5,
     tools.ostrichBackend,
-    tools.ostrich
+    # tools.ostrich
 ]:
     s.addRunner(solvers)
 
@@ -32,7 +32,7 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("backend_test")
+store = storage.SQLiteDB("nuxmv_bmc_test")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 testrunner(12).runTestSetup(

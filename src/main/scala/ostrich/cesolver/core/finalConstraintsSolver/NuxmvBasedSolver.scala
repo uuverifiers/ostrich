@@ -68,7 +68,7 @@ class NuxmvBasedSolver(
     println("IVAR")
     // input label variable
     for (inputLbl <- labels)
-      println(s"  $inputLbl : integer;")
+      println(s"  $inputLbl : 0..65536;")
 
     println("VAR")
     // state variable for each automaton
@@ -81,7 +81,7 @@ class NuxmvBasedSolver(
     // integer variable
     for (int <- integers) {
       if (flags.NuxmvBackend == OFlags.NuxmvBackend.Bmc)
-        println(s"  $int : 0..100;")
+        println(s"  $int : 0..50;")
       else
         println(s"  $int : integer;")
     }

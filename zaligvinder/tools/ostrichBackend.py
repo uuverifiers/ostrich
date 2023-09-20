@@ -73,9 +73,9 @@ def addRunner(addto):
     params = {
         #   "unary-no-simplify": ["-ceaBackend=unary", "-simplify-aut"],
         # "unary": ["+cea", "-ceaBackend=unary"],
-        "nuxmv": ["+cea", "-ceaBackend=nuxmv", "-product"],
-        "catra": ["+cea", "-ceaBackend=catra", "-product"],
-        "seq": ["+seq"]
+        "nuxmv_bmc": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=bmc"],
+        # "catra": ["+cea", "-ceaBackend=catra"],
+        # "seq": ["+seq"]
     }
     for i in params.keys():
         addto['ostrich-'+i] = partial(run, params[i])
