@@ -70,12 +70,6 @@ class ParikhStore(t: ITerm, flags: OFlags) {
     None
   }
 
-  /** Check if constraints are still consistent after adding `aut`
-    * @param aut
-    *   new added aut
-    * @return
-    *   None if constraints are still consistent; Some(unsatCore) otherwise.
-    */
   private def checkConsistency(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
@@ -97,6 +91,13 @@ class ParikhStore(t: ITerm, flags: OFlags) {
     }
     None
   }
+
+  /** Add `aut` to the store if `aut` is consistent with the stored constraints
+    * @param aut
+    *   added aut
+    * @return
+    *   None if constraints are still consistent; Some(unsatCore) otherwise.
+    */
   def assertConstraint(aut: CostEnrichedAutomatonBase): Option[ConflictSet] = {
     if (!constraints.contains(aut)) {
       // check if the stored automata is consistent after adding the aut
