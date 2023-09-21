@@ -14,10 +14,10 @@ class UnaryFinalConstraints(
     override val strDataBaseId: ITerm,
     override val auts: Seq[CostEnrichedAutomatonBase],
     flags : OFlags
-) extends FinalConstraints {
-  val productAut = auts.reduce(_ product _)
+) extends BaselineFinalConstraints(strDataBaseId, auts) {
+  private val productAut = auts.reduce(_ product _)
 
-  val mostlySimplifiedAut = {
+  private val mostlySimplifiedAut = {
     val ceAut = CEBasicOperations.minimizeHopcroftByVec(
       CEBasicOperations.determinateByVec(
         CEBasicOperations.epsilonClosureByVec(
@@ -29,7 +29,7 @@ class UnaryFinalConstraints(
     ceAut
   }
 
-  val simplifyButRemainLabelAut = {
+  private val simplifyButRemainLabelAut = {
     val ceAut = CEBasicOperations.removeDuplicatedTrans(
       CEBasicOperations.minimizeHopcroft(
         productAut
@@ -40,9 +40,9 @@ class UnaryFinalConstraints(
   }
     
 
-  lazy val checkSatAut =
+  private  val checkSatAut =
     if (flags.simplifyAut) mostlySimplifiedAut else productAut
-  lazy val findModelAut =
+  private  val findModelAut =
     if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
 
   override lazy val getCompleteLIA: IFormula = {
@@ -56,11 +56,5 @@ class UnaryFinalConstraints(
       Seq(findModelAut),
       regTermsModel
     )
-  }
-
-  if (flags.debug) {
-    productAut.toDot("product_" + strDataBaseId.toString)
-    mostlySimplifiedAut.toDot("simplified_" + strDataBaseId.toString)
-    simplifyButRemainLabelAut.toDot("simplified_remainlabel_" + strDataBaseId.toString)
   }
 }
