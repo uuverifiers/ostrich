@@ -49,11 +49,9 @@ class UnaryFinalConstraints(
     getCompleteLIA(checkSatAut)
   }
 
-  def getRegsRelation: IFormula = checkSatAut.regsRelation
+  override def getRegsRelation: IFormula = checkSatAut.regsRelation
 
-  val regsTerms: Seq[ITerm] = productAut.registers
-
-  def getModel: Option[Seq[Int]] = {
+  override def getModel: Option[Seq[Int]] = {
     ParikhUtil.findAcceptedWordByRegisters(
       Seq(findModelAut),
       regTermsModel

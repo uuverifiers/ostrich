@@ -76,13 +76,14 @@ trait FinalConstraints {
 
   val auts: Seq[CostEnrichedAutomatonBase]
 
-  val regsTerms: Seq[ITerm]
-
-  def getModel: Option[Seq[Int]]
+  val regsTerms: Seq[ITerm] = auts.flatMap(_.registers)
 
   protected var regTermsModel: Map[ITerm, IdealInt] = Map()
-  // accessors and mutators
-  def getRegsRelation: IFormula
+
+  // accessors and mutators-------------------------------------------
+  def getModel: Option[Seq[Int]] =  ParikhUtil.findAcceptedWordByRegisters(auts, regTermsModel)
+
+  def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
 
   def getRegisters = auts.flatMap(_.registers)
 
@@ -97,6 +98,7 @@ trait FinalConstraints {
     for (term <- getRegisters)
       regTermsModel += (term -> termModel(term))
   }
+  // accessors and mutators-------------------------------------------
 
   lazy val getCompleteLIA: IFormula = getCompleteLIA(auts.reduce(_ product _))
 
