@@ -11,8 +11,17 @@ import ap.parser.ITerm
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.automata.CostEnrichedAutomaton
 import ostrich.OFlags
+import ap.parser.IFormula
+import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
+import ap.api.SimpleAPI
+import ostrich.cesolver.core.finalConstraintsSolver.Result
 
-class ParikhStore(t: ITerm, flags: OFlags) {
+class ParikhStore(
+    t: ITerm,
+    flags: OFlags,
+    inputFormula: IFormula,
+    integerTerms: Set[ITerm]
+) {
 
   // constraints in this store
   private val constraints = new ArrayBuffer[CostEnrichedAutomatonBase]
@@ -70,10 +79,10 @@ class ParikhStore(t: ITerm, flags: OFlags) {
     None
   }
 
-  private def checkConsistency(
+  private def checkConsistencyByProduct(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
-    if (flags.noAutomataProduct)  return None
+    if (flags.noAutomataProduct) return None
     productAut = productAut product aut
     val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
     if (productAut.isEmpty) {
@@ -90,6 +99,41 @@ class ParikhStore(t: ITerm, flags: OFlags) {
       }
     }
     None
+  }
+
+  private def checkConsistencyByNuxmv(
+      aut: CostEnrichedAutomatonBase
+  ): Option[Seq[CostEnrichedAutomatonBase]] = {
+    val backendSolver = new NuxmvBasedSolver(flags, inputFormula)
+    backendSolver.setIntegerTerm(integerTerms)
+    val syncRes =
+      backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
+    if (syncRes.getStatus == SimpleAPI.ProverStatus.Unsat) {
+      // inconsistent, generate the minimal conflicted set
+      var tmpRes = Result.ceaSatResult
+      val tmpAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
+      while (tmpRes.getStatus ==  SimpleAPI.ProverStatus.Sat) {
+        backendSolver.cleanConstaints
+        for (consideredAut <- aut +: constraints) {
+          tmpAuts += consideredAut
+          backendSolver.addConstraint(t, tmpAuts.toSeq)
+          val tmpRes =
+            backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
+        }
+      }
+      return Some(tmpAuts.toSeq)
+    }
+    None
+  }
+
+  private def checkConsistency(
+      aut: CostEnrichedAutomatonBase
+  ): Option[Seq[CostEnrichedAutomatonBase]] = {
+    if (flags.backend == OFlags.CEABackend.Nuxmv) {
+      checkConsistencyByNuxmv(aut)
+    } else {
+      checkConsistencyByProduct(aut)
+    }
   }
 
   /** Add `aut` to the store if `aut` is consistent with the stored constraints
@@ -156,7 +200,7 @@ class ParikhStore(t: ITerm, flags: OFlags) {
   def isAcceptedWord(w: Seq[Int]): Boolean = false // no need
 
   def getAcceptedWord: Seq[Int] = Seq() // no need
-  
+
   def getAcceptedWordLen(len: Int): Seq[Int] = Seq() // no need
 
 }

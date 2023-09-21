@@ -72,4 +72,6 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def addConstraint(c: A) = constraints = constraints :+ c
 
+  def cleanConstaints: Unit = constraints = Seq()
+
 }

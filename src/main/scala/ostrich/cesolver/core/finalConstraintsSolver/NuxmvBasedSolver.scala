@@ -30,7 +30,7 @@ import ostrich.OFlags
 import ostrich.cesolver.util.UnknownException
 
 class NuxmvBasedSolver(
-    flags: OFlags,
+    val flags: OFlags,
     val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
   private var count = 0 // for debug
@@ -173,7 +173,7 @@ class NuxmvBasedSolver(
     println(s"  ($accepting) -> !($regsRelationAndInputLIA);")
   }
 
-  def solve: Result = {
+  def solveWithoutGenerateModel(nuxmvBackend: OFlags.NuxmvBackend.Value): Result = {
     if (constraints.isEmpty) return Result.ceaSatResult
     for (c <- constraints; aut <- c.auts; if ParikhUtil.debug) {
       aut.toDot(s"nuxmv_aut_${c.strDataBaseId}_${count}")
@@ -194,7 +194,7 @@ class NuxmvBasedSolver(
     try {
       val out = new java.io.FileOutputStream(nuxmvInputF)
       val nuxmvCmd =
-        if (flags.NuxmvBackend == OFlags.NuxmvBackend.Bmc)
+        if (nuxmvBackend == OFlags.NuxmvBackend.Bmc)
           Seq("nuxmv", "-source", "bmc_source", nuxmvInputF.toString())
         else
           Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString())
@@ -221,30 +221,36 @@ class NuxmvBasedSolver(
           case _ => // do nothing
         }
       }
-      ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
-      // sat and generate model
-      if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
-        // string model
-        val integerModel = result.getModel.map {
-          case (i, Model.IntValue(v)) => i -> v
-          case _ => throw new Exception("not integer model")
-        }.toMap
-        ParikhUtil.debugPrintln(s"integerModel: $integerModel")
-        for (c <- constraints) {
-          c.setRegTermsModel(integerModel)
-          c.getModel match {
-            case Some(value) => result.updateModel(c.strDataBaseId, value)
-            case None        => // do nothing as unknown result
-            // throw new Exception("fail to generate string model")
-          }
-        }
-      }
     } catch {
       case e: Throwable =>
         throw UnknownException(e.toString())
     } finally {
       if (!ParikhUtil.debug) {
         nuxmvInputF.delete()
+      }
+    }
+    result
+  }
+
+  def solve: Result = {
+    val result = solveWithoutGenerateModel(flags.NuxmvBackend)
+    ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
+    // sat and generate model
+    if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
+      // integer model
+      val integerModel = result.getModel.map {
+        case (i, Model.IntValue(v)) => i -> v
+        case _                      => throw new Exception("not integer model")
+      }.toMap
+      ParikhUtil.debugPrintln(s"integerModel: $integerModel")
+      // string model
+      for (c <- constraints) {
+        c.setRegTermsModel(integerModel)
+        c.getModel match {
+          case Some(value) => result.updateModel(c.strDataBaseId, value)
+          case None        => // do nothing as unknown result
+          // throw new Exception("fail to generate string model")
+        }
       }
     }
     result
