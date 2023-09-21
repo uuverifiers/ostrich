@@ -12,12 +12,6 @@ import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.automata.CostEnrichedAutomaton
 import ostrich.OFlags
 
-object ParikhStore {
-  sealed trait LIAStrategy // linear integer arithmetic generating strategy
-  case class ArithAfterProduct() extends LIAStrategy
-  case class ArithBeforeProduct(syncLen: Int) extends LIAStrategy
-}
-
 class ParikhStore(t: ITerm, flags: OFlags) {
 
   // constraints in this store
