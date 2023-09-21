@@ -15,14 +15,9 @@ class UnaryFinalConstraints(
     override val auts: Seq[CostEnrichedAutomatonBase],
     flags : OFlags
 ) extends FinalConstraints {
-  // the globalS is used to store the state we have explored before
-  // to avoid repeated exploration
-  private val globalS = ArrayBuffer[Set[(State, Seq[Int])]]()
+  val productAut = auts.reduce(_ product _)
 
-  // eagerly product
-  lazy val productAut = auts.reduce(_ product _)
-
-  lazy val mostlySimplifiedAut = {
+  val mostlySimplifiedAut = {
     val ceAut = CEBasicOperations.minimizeHopcroftByVec(
       CEBasicOperations.determinateByVec(
         CEBasicOperations.epsilonClosureByVec(
@@ -34,7 +29,7 @@ class UnaryFinalConstraints(
     ceAut
   }
 
-  lazy val simplifyButRemainLabelAut = {
+  val simplifyButRemainLabelAut = {
     val ceAut = CEBasicOperations.removeDuplicatedTrans(
       CEBasicOperations.minimizeHopcroft(
         productAut
@@ -49,36 +44,6 @@ class UnaryFinalConstraints(
     if (flags.simplifyAut) mostlySimplifiedAut else productAut
   lazy val findModelAut =
     if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
-
-  /**
-    * Like Bounded Model Checking(BMC), we find all runs of length less and equal to 
-    * bound. If the end state of the run is an accepting state, we compute the registers updates
-    * on the run and add them to the formula. 
-    * @param bound
-    * @return
-    */
-  def getUnderApprox(bound: Int): IFormula = {
-    val aut = checkSatAut
-    val lowerBound = globalS.size
-    computeGlobalSWithRegsValue(bound)
-    if (lowerBound == globalS.size) {
-      // the globalS does not change
-      return Boolean2IFormula(false)
-    }
-    val registers = aut.registers
-
-    val r1Formula = or(
-      for (
-        j <- lowerBound until globalS.size;
-        if !globalS(j).isEmpty;
-        (s, regVal) <- globalS(j);
-        if (aut.isAccept(s))
-      ) yield {
-        and(for (i <- 0 until registers.size) yield registers(i) === regVal(i))
-      }
-    )
-    and(Seq(r1Formula, getRegsRelation))
-  }
 
   override lazy val getCompleteLIA: IFormula = {
     getCompleteLIA(checkSatAut)
@@ -100,37 +65,4 @@ class UnaryFinalConstraints(
     mostlySimplifiedAut.toDot("simplified_" + strDataBaseId.toString)
     simplifyButRemainLabelAut.toDot("simplified_remainlabel_" + strDataBaseId.toString)
   }
-
-  private def computeGlobalSWithRegsValue(
-      sLen: Int
-  ): Unit = {
-    var idx = globalS.size
-    checkSatAut.states.zipWithIndex.toMap
-    if (idx == 0) {
-      val initialRegsVals = Seq.fill(checkSatAut.registers.size)(0)
-      globalS += Set((checkSatAut.initialState, initialRegsVals))
-      idx += 1
-    }
-    while (idx < sLen && !globalS(idx - 1).isEmpty) {
-      globalS += (for (
-        (s, regVal) <- globalS(idx - 1);
-        (t, vec) <- succWithVec(checkSatAut, s)
-      ) yield {
-        (t, addTwoSeq(regVal, vec))
-      })
-      idx += 1
-    }
-  }
-
-  private def succWithVec(
-      aut: CostEnrichedAutomatonBase,
-      s: State
-  ): Iterable[(State, Seq[Int])] =
-    for ((t, lbl, vec) <- aut.outgoingTransitionsWithVec(s)) yield (t, vec)
-
-  // e.g (1,1) + (1,0) = (2,1)
-  private def addTwoSeq(seq1: Seq[Int], seq2: Seq[Int]): Seq[Int] = {
-    seq1 zip seq2 map { case (a, b) => a + b }
-  }
-
 }

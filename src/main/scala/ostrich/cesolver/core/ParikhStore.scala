@@ -104,13 +104,12 @@ class ParikhStore(t: ITerm, flags: OFlags) {
     None
   }
   def assertConstraint(aut: CostEnrichedAutomatonBase): Option[ConflictSet] = {
-
     if (!constraints.contains(aut)) {
       // check if the stored automata is consistent after adding the aut
       // 1. check if the aut is already in inconsistent core:
       // We will maintain an ArrayBuffer **inconsistentAutomata** to store confilctSets.
-      // We return the conflictSet directly if current constraints with aut belongs to
-      // one confilctSet in **inconsistentAutomata**.
+      // We return the conflictSet directly if current constraints contain
+      // one of confilctSets in **inconsistentAutomata**.
       directlyConflictSet(aut) match {
         case Some(confilctSet) =>
           return Some(confilctSet);
@@ -147,7 +146,7 @@ class ParikhStore(t: ITerm, flags: OFlags) {
     None
   }
 
-  // used to get the product automaton
+  // used to get the product automaton or stored automata
   def getContents: List[CostEnrichedAutomatonBase] =
     if (flags.eagerAutomataOperations)
       List(productAut)
@@ -162,6 +161,7 @@ class ParikhStore(t: ITerm, flags: OFlags) {
   def isAcceptedWord(w: Seq[Int]): Boolean = false // no need
 
   def getAcceptedWord: Seq[Int] = Seq() // no need
+  
   def getAcceptedWordLen(len: Int): Seq[Int] = Seq() // no need
 
 }

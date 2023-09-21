@@ -14,7 +14,7 @@ import ostrich.cesolver.util.ParikhUtil
 
 object SubStringCEPreOp {
   private var debugId = 0
-  
+
   def apply(beginIdx: ITerm, length: ITerm) = {
     new SubStringCEPreOp(beginIdx, length)
   }
@@ -42,41 +42,47 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     if (res.isAccept(res.initialState)) {
       // empty string result
       val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
-      preimageOfEmp1.regsRelation = and(Seq(
-        preimageOfEmp1.regsRelation,
-        length <= 0
-      ))
+      preimageOfEmp1.regsRelation = and(
+        Seq(
+          preimageOfEmp1.regsRelation,
+          length <= 0
+        )
+      )
       val preimageOfEmp2 = beginIdx match {
-        case  Const(value) => {
+        case Const(value) => {
           automatonWithLenLessThan(value.intValueSafe)
         }
         case _ => {
           val searchedStrLen = termGen.lenTerm
           val preimage = LengthCEPreOp.lengthPreimage(searchedStrLen)
-          preimage.regsRelation = and(Seq(
-            preimage.regsRelation,
-            searchedStrLen <= beginIdx
-          ))
+          preimage.regsRelation = and(
+            Seq(
+              preimage.regsRelation,
+              searchedStrLen <= beginIdx
+            )
+          )
           preimage
         }
       }
       for (r <- res.registers) {
         // make sure all registers are 0
-        preimageOfEmp1.regsRelation =
-          and(Seq(preimageOfEmp1.regsRelation, r === 0))
-        preimageOfEmp2.regsRelation =
-          and(Seq(preimageOfEmp2.regsRelation, r === 0))
+        preimageOfEmp1.regsRelation = and(
+          Seq(preimageOfEmp1.regsRelation, r === 0)
+        )
+        preimageOfEmp2.regsRelation = and(
+          Seq(preimageOfEmp2.regsRelation, r === 0)
+        )
       }
-
       // transmit the result automaton's registers info
-      preimageOfEmp1.regsRelation =
-        and(Seq(preimageOfEmp1.regsRelation, res.regsRelation))
-      preimageOfEmp2.regsRelation =
-        and(Seq(preimageOfEmp2.regsRelation, res.regsRelation))
-
-      preimagesOfEmptyStr =
-        Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
+      preimageOfEmp1.regsRelation = and(
+        Seq(preimageOfEmp1.regsRelation, res.regsRelation)
+      )
+      preimageOfEmp2.regsRelation = and(
+        Seq(preimageOfEmp2.regsRelation, res.regsRelation)
+      )
+      preimagesOfEmptyStr = Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
     }
+
     val beginIdxPrefix = beginIdx match {
       case Const(value) => {
         automatonWithLen(value.intValueSafe)
@@ -85,7 +91,6 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         LengthCEPreOp.lengthPreimage(beginIdx)
       }
     }
-
     val middleSubStr = length match {
       case Const(value) => {
         intersection(
@@ -100,7 +105,6 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         )
       }
     }
-
     val smallLenSuffix = length match {
       case Const(value) => {
         intersection(
@@ -114,32 +118,34 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
           LengthCEPreOp.lengthPreimage(smallLen),
           res
         )
-        smallLenSuffix.regsRelation = and(Seq(
-          smallLenSuffix.regsRelation,
-          smallLen <= length
-        ))
+        smallLenSuffix.regsRelation = and(
+          Seq(
+            smallLenSuffix.regsRelation,
+            smallLen <= length
+          )
+        )
         smallLenSuffix
       }
     }
     val anyStrSuffix = BricsAutomatonWrapper.makeAnyString
-
-    val midSubStr = concatenate(Seq(
-      beginIdxPrefix,
-      middleSubStr,
-      anyStrSuffix
-    ))
-
-    val suffixSubStr = concatenate(
+    val preImgOfSubstrInMid = concatenate(
+      Seq(
+        beginIdxPrefix,
+        middleSubStr,
+        anyStrSuffix
+      )
+    )
+    val preImgOfSubstrInSuffix = concatenate(
       Seq(beginIdxPrefix, smallLenSuffix)
     )
 
-    preimages = Iterator(Seq(midSubStr), Seq(suffixSubStr))
+    preimages = Iterator(Seq(preImgOfSubstrInMid), Seq(preImgOfSubstrInSuffix))
 
     import SubStringCEPreOp.debugId
-    suffixSubStr.toDot("suffixSubStr " + debugId)
-    midSubStr.toDot("midSubStr " + debugId)
+    preImgOfSubstrInSuffix.toDot("suffixSubStr " + debugId)
+    preImgOfSubstrInMid.toDot("midSubStr " + debugId)
     debugId += 1
-    
+
     (preimagesOfEmptyStr ++ preimages, Seq())
   }
 
