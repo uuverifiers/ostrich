@@ -109,13 +109,13 @@ class ParikhStore(
     for (tmpAut <- aut +: constraints) {
       productComplexity *= tmpAut.transitionsWithVec.size
     }
-    if (productComplexity < 1000000) return checkConsistencyByProduct(aut)
+    if (productComplexity < 50_000_000) return checkConsistencyByProduct(aut)
     val backendSolver = new NuxmvBasedSolver(flags, inputFormula)
     backendSolver.addConstraint(t, aut +: constraints.toSeq)
     backendSolver.setIntegerTerm(integerTerms)
     val syncRes =
       backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
-    ParikhUtil.debugPrintln("nuxmv check consistency result: " syncRes.getStatus)
+    ParikhUtil.debugPrintln("nuxmv check consistency result: " + syncRes.getStatus)
     if (syncRes.getStatus == SimpleAPI.ProverStatus.Unsat) {
       // inconsistent, generate the minimal conflicted set
       val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]

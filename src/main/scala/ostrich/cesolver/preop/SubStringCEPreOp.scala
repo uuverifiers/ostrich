@@ -11,6 +11,7 @@ import ap.parser.ITerm
 import ap.parser.IExpression._
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IBoolLit
 
 object SubStringCEPreOp {
   private var debugId = 0
@@ -28,61 +29,68 @@ object SubStringCEPreOp {
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   private val termGen = TermGenerator()
+  ParikhUtil.debugPrintln(beginIdx + length)
+  ParikhUtil.debugPrintln((beginIdx +++ length))
 
   override def toString(): String =
     "subStringCEPreOp"
 
-  def apply(
-      argumentConstraints: Seq[Seq[Automaton]],
-      resultConstraint: Automaton
-  ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    var preimages = Iterator[Seq[Automaton]]()
-    var preimagesOfEmptyStr = Iterator[Seq[Automaton]]()
-    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    if (res.isAccept(res.initialState)) {
-      // empty string result
-      val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
-      preimageOfEmp1.regsRelation = and(
-        Seq(
-          preimageOfEmp1.regsRelation,
-          length <= 0
-        )
+  private def emptyResultPreImage(
+      res: CostEnrichedAutomatonBase
+  ): Iterator[Seq[Automaton]] = {
+    val emptyPreImage1 = BricsAutomatonWrapper.makeAnyString
+    // length <= 0
+    emptyPreImage1.regsRelation = and(
+      Seq(
+        emptyPreImage1.regsRelation,
+        length <= 0
       )
-      val preimageOfEmp2 = beginIdx match {
-        case Const(value) => {
-          automatonWithLenLessThan(value.intValueSafe)
-        }
-        case _ => {
-          val searchedStrLen = termGen.lenTerm
-          val preimage = LengthCEPreOp.lengthPreimage(searchedStrLen)
-          preimage.regsRelation = and(
-            Seq(
-              preimage.regsRelation,
-              searchedStrLen <= beginIdx
-            )
+    )
+    // length > 0
+    val emptyPreImage2 = beginIdx match {
+      case Const(value) => {
+        if (value.intValueSafe >= 0)
+          automatonWithLenLessThan(value.intValueSafe + 1)
+        else
+          BricsAutomatonWrapper.makeAnyString()
+      }
+      case _ => {
+        val argStrLen = termGen.lenTerm
+        val preimage = LengthCEPreOp.lengthPreimage(argStrLen)
+        preimage.regsRelation = and(
+          Seq(
+            preimage.regsRelation,
+            argStrLen <= beginIdx | beginIdx < 0
           )
-          preimage
+        )
+        preimage
+      }
+    }
+    // make sure all registers are 0
+    val zeroRegsitersFormula =
+      res.registers.map(_ === 0).reduceOption(_ & _).getOrElse(IBoolLit(true))
+    // transmit the result automaton's registers info
+    emptyPreImage1.regsRelation = and(
+      Seq(emptyPreImage1.regsRelation, res.regsRelation, zeroRegsitersFormula)
+    )
+    emptyPreImage2.regsRelation = and(
+      Seq(emptyPreImage2.regsRelation, res.regsRelation, zeroRegsitersFormula)
+    )
+    length match {
+      case Const(value) => {
+        if (value.intValueSafe <= 0) {
+          Iterator(Seq(emptyPreImage1))
+        } else {
+          Iterator()
         }
       }
-      for (r <- res.registers) {
-        // make sure all registers are 0
-        preimageOfEmp1.regsRelation = and(
-          Seq(preimageOfEmp1.regsRelation, r === 0)
-        )
-        preimageOfEmp2.regsRelation = and(
-          Seq(preimageOfEmp2.regsRelation, r === 0)
-        )
-      }
-      // transmit the result automaton's registers info
-      preimageOfEmp1.regsRelation = and(
-        Seq(preimageOfEmp1.regsRelation, res.regsRelation)
-      )
-      preimageOfEmp2.regsRelation = and(
-        Seq(preimageOfEmp2.regsRelation, res.regsRelation)
-      )
-      preimagesOfEmptyStr = Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
+      case _: ITerm => Iterator(Seq(emptyPreImage1), Seq(emptyPreImage2))
     }
+  }
 
+  private def nonEmptyResultPreImage(
+      res: CostEnrichedAutomatonBase
+  ): Iterator[Seq[Automaton]] = {
     val beginIdxPrefix = beginIdx match {
       case Const(value) => {
         automatonWithLen(value.intValueSafe)
@@ -127,26 +135,36 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
         smallLenSuffix
       }
     }
-    val anyStrSuffix = BricsAutomatonWrapper.makeAnyString
-    val preImgOfSubstrInMid = concatenate(
+    val SubstrInMidPreImage = concatenate(
       Seq(
         beginIdxPrefix,
         middleSubStr,
-        anyStrSuffix
+        BricsAutomatonWrapper.makeAnyString()
       )
     )
-    val preImgOfSubstrInSuffix = concatenate(
+    val SubstrInSuffixPreImage = concatenate(
       Seq(beginIdxPrefix, smallLenSuffix)
     )
-
-    preimages = Iterator(Seq(preImgOfSubstrInMid), Seq(preImgOfSubstrInSuffix))
-
+    // debug
     import SubStringCEPreOp.debugId
-    preImgOfSubstrInSuffix.toDot("suffixSubStr " + debugId)
-    preImgOfSubstrInMid.toDot("midSubStr " + debugId)
+    SubstrInSuffixPreImage.toDot("suffixSubStr " + debugId)
+    SubstrInMidPreImage.toDot("midSubStr " + debugId)
     debugId += 1
+    Iterator(Seq(SubstrInMidPreImage), Seq(SubstrInSuffixPreImage))
+  }
 
-    (preimagesOfEmptyStr ++ preimages, Seq())
+  def apply(
+      argumentConstraints: Seq[Seq[Automaton]],
+      resultConstraint: Automaton
+  ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
+    var preimagesOfEmptyStr = Iterator[Seq[Automaton]]()
+    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    // empty string result
+    if (res.isAccept(res.initialState)) {
+      preimagesOfEmptyStr = emptyResultPreImage(res)
+    }
+    val preimages = nonEmptyResultPreImage(res)
+    (preimages ++ preimagesOfEmptyStr, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
