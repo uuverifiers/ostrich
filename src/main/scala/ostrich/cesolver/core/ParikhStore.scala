@@ -104,24 +104,33 @@ class ParikhStore(
   private def checkConsistencyByNuxmv(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
+    if (flags.noAutomataProduct) return None
+    var productComplexity = 1
+    for (tmpAut <- aut +: constraints) {
+      productComplexity *= tmpAut.transitionsWithVec.size
+    }
+    if (productComplexity < 1000000) return checkConsistencyByProduct(aut)
     val backendSolver = new NuxmvBasedSolver(flags, inputFormula)
+    backendSolver.addConstraint(t, aut +: constraints.toSeq)
     backendSolver.setIntegerTerm(integerTerms)
     val syncRes =
       backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
+    ParikhUtil.debugPrintln("nuxmv check consistency result: " syncRes.getStatus)
     if (syncRes.getStatus == SimpleAPI.ProverStatus.Unsat) {
       // inconsistent, generate the minimal conflicted set
-      var tmpRes = Result.ceaSatResult
-      val tmpAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
-      while (tmpRes.getStatus ==  SimpleAPI.ProverStatus.Sat) {
-        backendSolver.cleanConstaints
-        for (consideredAut <- aut +: constraints) {
-          tmpAuts += consideredAut
-          backendSolver.addConstraint(t, tmpAuts.toSeq)
-          val tmpRes =
-            backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
+      val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
+      backendSolver.cleanConstaints
+      for (tmpAut <- aut +: constraints) {
+        consideredAuts += tmpAut
+        backendSolver.addConstraint(t, consideredAuts.toSeq)
+        val tmpRes =
+          backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
+        if (tmpRes.getStatus == SimpleAPI.ProverStatus.Unsat) {
+          // found the minimal conflicted set
+          return Some(consideredAuts.toSeq)
         }
+        backendSolver.cleanConstaints
       }
-      return Some(tmpAuts.toSeq)
     }
     None
   }
@@ -129,11 +138,10 @@ class ParikhStore(
   private def checkConsistency(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
-    if (flags.backend == OFlags.CEABackend.Nuxmv) {
+    if (flags.backend == OFlags.CEABackend.Nuxmv)
       checkConsistencyByNuxmv(aut)
-    } else {
+    else
       checkConsistencyByProduct(aut)
-    }
   }
 
   /** Add `aut` to the store if `aut` is consistent with the stored constraints

@@ -148,7 +148,6 @@ class BaselineFinalConstraints(
         )
 
     /////////////////////////////////////////////////////////////////////////////////
-    ParikhUtil.debugPrintln("regs relation: " + getRegsRelation)
     and(
       Seq(
         registerUpdateFormula,
