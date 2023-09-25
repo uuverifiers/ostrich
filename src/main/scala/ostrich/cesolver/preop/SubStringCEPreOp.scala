@@ -29,8 +29,7 @@ object SubStringCEPreOp {
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   private val termGen = TermGenerator()
-  ParikhUtil.debugPrintln(beginIdx + length)
-  ParikhUtil.debugPrintln((beginIdx +++ length))
+  ParikhUtil.debugPrintln("substring op index + length is : " + (beginIdx + length))
 
   override def toString(): String =
     "subStringCEPreOp"
