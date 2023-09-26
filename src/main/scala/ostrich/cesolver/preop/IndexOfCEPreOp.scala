@@ -122,7 +122,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       }
       case _ => {
         val searchedStrLen = termGen.lenTerm
-        val smallerThanStartPos = lengthPreimage(searchedStrLen)
+        val smallerThanStartPos = lengthPreimage(searchedStrLen, false)
         smallerThanStartPos.regsRelation = and(Seq(
           smallerThanStartPos.regsRelation,
           searchedStrLen < startPos | startPos < 0
@@ -142,7 +142,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
 
       case _ => {
         val searchedStrLen = termGen.lenTerm
-        val largerThanStartPos = lengthPreimage(searchedStrLen)
+        val largerThanStartPos = lengthPreimage(searchedStrLen, false)
         largerThanStartPos.regsRelation = and(Seq(
           largerThanStartPos.regsRelation,
           searchedStrLen >= startPos

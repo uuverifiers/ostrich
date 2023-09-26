@@ -2,5 +2,5 @@ set on_failure_script_quits 1;
 go_msat;
 build_boolean_model;
 bmc_setup;
-check_invar_inc_coi_bmc -k 30;
+check_invar_inc_coi_bmc -k 20;
 quit;

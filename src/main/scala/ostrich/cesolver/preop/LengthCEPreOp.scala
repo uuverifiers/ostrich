@@ -13,7 +13,10 @@ object LengthCEPreOp {
 
   def apply(length: ITerm): LengthCEPreOp = new LengthCEPreOp(length)
 
-  def lengthPreimage(length: ITerm) : CostEnrichedAutomatonBase = {
+  def lengthPreimage(
+      length: ITerm,
+      newReg: Boolean = true
+  ): CostEnrichedAutomatonBase = {
     val preimage = new CostEnrichedAutomaton
     val initalState = preimage.initialState
 
@@ -26,16 +29,17 @@ object LengthCEPreOp {
     )
     preimage.setAccept(initalState, true)
     // registers: (r0)
-    preimage.registers = Seq(termGen.registerTerm)
+    val reg = if (newReg) termGen.registerTerm else length
+    preimage.registers = Seq(reg)
     // intFormula : r0 === `length`
-    preimage.regsRelation = length === preimage.registers(0)
+    if (newReg) preimage.regsRelation = reg === length
     preimage
   }
 }
 
-/**
-  * Pre-op for length constraints. 
-  * @param length The length 
+/** Pre-op for length constraints.
+  * @param length
+  *   The length
   */
 class LengthCEPreOp(length: ITerm) extends CEPreOp {
 
