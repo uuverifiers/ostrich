@@ -13,6 +13,7 @@ import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.IBoolLit
 import ostrich.cesolver.automata.CEBasicOperations
+import ap.basetypes.IdealInt
 
 object SubStringCEPreOp {
   private var debugId = 0
@@ -41,7 +42,8 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
 
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val resLen = termGen.lenTerm
-    val resWithLen = intersection(res, LengthCEPreOp.lengthPreimage(resLen, false))
+    val resWithLen =
+      intersection(res, LengthCEPreOp.lengthPreimage(resLen, false))
     val prefixLen = termGen.lenTerm
     val prefix = LengthCEPreOp.lengthPreimage(prefixLen, false)
     val suffixLen = termGen.lenTerm
@@ -56,7 +58,27 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
       Seq(preimage.regsRelation, (epsilonResFormula | nonEpsilonResFormula))
     )
     preimage.toDot("substring" + SubStringCEPreOp.debugId)
-    (Iterator(Seq(preimage)), Seq())
+
+    (beginIdx, length) match {
+      case (Const(IdealInt(0)), Const(IdealInt(1))) => {
+        ParikhUtil.debugPrintln("special")
+        val epsResPreImage =
+          if (res.isAccept(res.initialState))
+            BricsAutomatonWrapper.makeEmptyString()
+          else BricsAutomatonWrapper.makeEmpty()
+        val nonEpsResPreImage = concatenate(
+          Seq(
+            intersection(res, LengthCEPreOp.lengthPreimage(1)),
+            BricsAutomatonWrapper.makeAnyString()
+          )
+        )
+        val preImageSpecial = CEBasicOperations.union(
+          Seq(epsResPreImage, nonEpsResPreImage)
+        )
+        (Iterator(Seq(preImageSpecial)), Seq())
+      }
+      case _ => (Iterator(Seq(preimage)), Seq())
+    }
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
