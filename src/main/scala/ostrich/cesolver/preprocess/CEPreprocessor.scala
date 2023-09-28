@@ -98,7 +98,7 @@ class CEPreprocessor(theory: CEStringTheory)
         (simplifiedBegin, simplifiedLen) match {
           // substr(x, 0, len(x) - 1)
           case (Const(IdealInt(0)), Difference(IFunApp(`str_len`, Seq(s)), Const(IdealInt(1)))) if s == bigStr => {
-            ParikhUtil.debugPrintln("todo: use a new function str_substr_case1")
+            ParikhUtil.debugPrintln("-------------------- substring special case 1")
             str_substr_0_lenMinus1(bigStr)
           }
           case _ => t

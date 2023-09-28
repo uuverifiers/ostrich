@@ -83,7 +83,7 @@ class NuxmvBasedSolver(
       if (flags.NuxmvBackend == OFlags.NuxmvBackend.Bmc)
         println(s"  $int : -1..20;")
       else
-        println(s"  $int : -1..20;")
+        println(s"  $int : integer;")
     }
 
     println("ASSIGN")
