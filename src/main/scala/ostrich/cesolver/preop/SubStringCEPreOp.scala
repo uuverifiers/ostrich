@@ -30,9 +30,6 @@ object SubStringCEPreOp {
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   private val termGen = TermGenerator()
-  ParikhUtil.debugPrintln(
-    "substring op index + length is : " + (beginIdx + length)
-  )
 
   override def toString(): String =
     "subStringCEPreOp"
@@ -66,7 +63,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     val beginIdx = arguments(1)(0)
     val length = arguments(2)(0)
     val bigString = arguments(0)
-    if (beginIdx < 0 || length < 0) {
+    if (beginIdx < 0 || length < 0 || beginIdx > bigString.length - 1) {
       Some(Seq()) // empty string
     } else {
       Some(bigString.slice(beginIdx, beginIdx + length))

@@ -45,75 +45,39 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     var preimages = Iterator[Seq[Automaton]]()
-    val startPosPrefix = startPos match {
-      case Const(value) => {
-        automatonWithLen(value.intValueSafe)
-      }
-      case _ => {
-        lengthPreimage(startPos)
-      }
-    }
-
+    val startPosPrefix = lengthPreimage(startPos)
     val notMatched = complement(
       concatenate(
         Seq(makeAnyString(), fromString(matchString), makeAnyString())
       )
     )
+    val notMatchedLen =
+      ((new ap.parser.Simplifier())(index + matchString.size - 1))
+    val notMatchedStr = concatenate(
+      Seq(
+        intersection(
+          lengthPreimage(notMatchedLen),
+          concatenate(Seq(startPosPrefix, notMatched))
+        ),
+        makeAnyString()
+      )
+    )
+    val matchedStr = concatenate(
+      Seq(
+        lengthPreimage(index),
+        fromString(matchString),
+        makeAnyString()
+      )
+    )
 
-    val notMatchedStr = index match {
-      case Const(value) => {
-        concatenate(
-          Seq(
-            intersection(
-              automatonWithLen(value.intValueSafe + matchString.size - 1),
-              concatenate(Seq(startPosPrefix, notMatched))
-            ),
-            makeAnyString()
-          )
-        )
-      }
-      case _ => {
-        concatenate(
-          Seq(
-            intersection(
-              lengthPreimage(index + matchString.size - 1),
-              concatenate(Seq(startPosPrefix, notMatched))
-            ),
-            makeAnyString()
-          )
-        )
-      }
-    }
+    // index >= 0, condition : len(argStr) >= startPos & stratPos >= 0
+    val nonEpsilonPosIdx = intersection(notMatchedStr, matchedStr)
+    nonEpsilonPosIdx.regsRelation = and(
+      Seq(nonEpsilonPosIdx.regsRelation, index >= startPos, startPos >= 0)
+    )
 
-    val matchedStr = index match {
-      case Const(value) => {
-        concatenate(
-          Seq(
-            automatonWithLen(value.intValueSafe),
-            fromString(matchString),
-            makeAnyString()
-          )
-        )
-      }
-      case _ => {
-        concatenate(
-          Seq(
-            lengthPreimage(index),
-            fromString(matchString),
-            makeAnyString()
-          )
-        )
-      }
-    }
-
-
-    // index >= 0
-    val positiveIndex = intersection(notMatchedStr, matchedStr)
-    positiveIndex.regsRelation = and(Seq(positiveIndex.regsRelation, index >= startPos, startPos >= 0))
-
-    // index = -1
-    // len(searchedStr) < startPos
-    val negtiveIndex1 = startPos match {
+    // index = -1, condition : len(argStr) < startPos | startPos < 0
+    val negIdx1 = startPos match {
       case Const(value) => {
         if (value.intValueSafe < 0) {
           makeAnyString()
@@ -121,80 +85,77 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
           automatonWithLenLessThan(value.intValueSafe)
       }
       case _ => {
-        val searchedStrLen = termGen.lenTerm
-        val smallerThanStartPos = lengthPreimage(searchedStrLen, false)
-        smallerThanStartPos.regsRelation = and(Seq(
-          smallerThanStartPos.regsRelation,
-          searchedStrLen < startPos | startPos < 0
-        ))
+        val argStrLen = termGen.lenTerm
+        val smallerThanStartPos = lengthPreimage(argStrLen, false)
+        smallerThanStartPos.regsRelation = and(
+          Seq(
+            smallerThanStartPos.regsRelation,
+            argStrLen < startPos | startPos < 0
+          )
+        )
         smallerThanStartPos
       }
     }
-    negtiveIndex1.regsRelation = and(Seq(negtiveIndex1.regsRelation, index === -1))
+    negIdx1.regsRelation = and(
+      Seq(negIdx1.regsRelation, index === -1)
+    )
 
-    // len(searchedStr) > startPos and no match after startPos
-    val negtiveIndex2 = startPos match {
-      case Const(value) => {
-        concatenate(
-          Seq(automatonWithLen(value.intValueSafe), notMatched)
-        )
-      }
+    // len(argStr) >= startPos and no match after startPos
+    val negIdx2 = concatenate(
+      Seq(lengthPreimage(startPos), notMatched)
+    )
+    negIdx2.regsRelation = and(
+      Seq(negIdx2.regsRelation, index === -1)
+    )
 
-      case _ => {
-        val searchedStrLen = termGen.lenTerm
-        val largerThanStartPos = lengthPreimage(searchedStrLen, false)
-        largerThanStartPos.regsRelation = and(Seq(
-          largerThanStartPos.regsRelation,
-          searchedStrLen >= startPos
-        ))
-        concatenate(
-          Seq(largerThanStartPos, notMatched)
-        )
-      }
-    }
-    negtiveIndex2.regsRelation = and(Seq(negtiveIndex2.regsRelation, index === -1))
-
-    // empty match string with index >= 0
-    val emptyPositiveIndex = concatenate(Seq(startPosPrefix, makeAnyString()))
-    emptyPositiveIndex.regsRelation = and(Seq(emptyPositiveIndex.regsRelation, index === startPos))
+    // epsilon match string with index >= 0
+    val epsilonResPosIdx = concatenate(Seq(startPosPrefix, makeAnyString()))
+    epsilonResPosIdx.regsRelation = and(
+      Seq(epsilonResPosIdx.regsRelation, index === startPos)
+    )
 
     index match {
       case Const(value) if !matchString.isEmpty => {
         if (value.intValueSafe == -1) {
-          preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2))
+          preimages = Iterator(Seq(negIdx1), Seq(negIdx2))
         } else {
-          preimages = Iterator(Seq(positiveIndex))
+          preimages = Iterator(Seq(nonEpsilonPosIdx))
         }
       }
 
       case Const(value) if matchString.isEmpty => {
         if (value.intValueSafe == -1) {
-          preimages = Iterator(Seq(negtiveIndex1), Seq(negtiveIndex2))
+          preimages = Iterator(Seq(negIdx1), Seq(negIdx2))
         } else {
-          preimages = Iterator(Seq(emptyPositiveIndex))
+          preimages = Iterator(Seq(epsilonResPosIdx))
         }
       }
 
       case _ if !matchString.isEmpty => {
-        preimages = Iterator(Seq(positiveIndex), Seq(negtiveIndex1), Seq(negtiveIndex2))
+        preimages =
+          Iterator(Seq(nonEpsilonPosIdx), Seq(negIdx1), Seq(negIdx2))
       }
 
       case _ if matchString.isEmpty => {
-        preimages = Iterator(Seq(emptyPositiveIndex), Seq(negtiveIndex1), Seq(negtiveIndex2))
+        preimages = Iterator(
+          Seq(epsilonResPosIdx),
+          Seq(negIdx1),
+          Seq(negIdx2)
+        )
       }
     }
     (preimages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
-    val searchedStr = arguments(0).map(_.toChar).mkString
+    val argStr = arguments(0).map(_.toChar).mkString
     val matchStr = arguments(1).map(_.toChar).mkString
     val startPos = arguments(2)(0)
     if (startPos < 0) {
       // the semantic of smtlb 2.6
       return Some(Seq(-1))
     }
-    Some(Seq(searchedStr.indexOfSlice(matchStr, startPos)))
+    Some(Seq(argStr.indexOfSlice(matchStr, startPos)))
 
   }
 

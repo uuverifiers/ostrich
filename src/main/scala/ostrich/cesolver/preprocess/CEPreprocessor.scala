@@ -82,6 +82,13 @@ class CEPreprocessor(theory: CEStringTheory)
       case (IFunApp(`str_at`, _), Seq(bigStr: ITerm, index: ITerm)) => {
         str_substr(bigStr, index, 1)
       }
+      case (IFunApp(`str_substr`, _),
+          Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
+            ParikhUtil.debugPrintln("str_substr begin : " + (begin))
+            ParikhUtil.debugPrintln("str_substr len : " + (len))
+            ParikhUtil.debugPrintln("str_substr simplify : " + (new ap.parser.Simplifier())(begin + len))
+            t
+          }
       case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
       case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
 
