@@ -5,6 +5,7 @@ import IExpression._
 import ap.theories.strings.StringTheory.ConcreteString
 import ostrich.cesolver.stringtheory.CEStringTheory
 import ostrich.cesolver.util.ParikhUtil
+import ap.basetypes.IdealInt
 
 class CEPreprocessor(theory: CEStringTheory)
     extends ContextAwareVisitor[Unit, IExpression] {
@@ -73,7 +74,7 @@ class CEPreprocessor(theory: CEStringTheory)
       //       IFunApp(`str_at`, _),
       //       Seq(
       //         bigStr: ITerm,
-      //         index@Difference(IFunApp(`str_len`, Seq(bigStr2)), offset)
+      //         index @ Difference(IFunApp(`str_len`, Seq(bigStr2)), offset)
       //       )
       //     ) if bigStr == bigStr2 =>
       //   ParikhUtil.todo("optimise str_at_right")
@@ -82,13 +83,27 @@ class CEPreprocessor(theory: CEStringTheory)
       case (IFunApp(`str_at`, _), Seq(bigStr: ITerm, index: ITerm)) => {
         str_substr(bigStr, index, 1)
       }
-      case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
-            ParikhUtil.debugPrintln("str_substr begin : " + (begin))
-            ParikhUtil.debugPrintln("str_substr len : " + (len))
-            ParikhUtil.debugPrintln("str_substr simplify : " + (new ap.parser.Simplifier())(begin + len))
-            t
+      case (
+            IFunApp(`str_substr`, _),
+            Seq(bigStr: ITerm, begin: ITerm, len: ITerm)
+          ) => {
+        ParikhUtil.debugPrintln("str_substr bigStr : " + (bigStr))
+        ParikhUtil.debugPrintln("str_substr begin : " + (begin))
+        ParikhUtil.debugPrintln("str_substr len : " + (len))
+        ParikhUtil.debugPrintln(
+          "str_substr simplify : " + (new ap.parser.Simplifier())(begin + len)
+        )
+        val simplifiedBegin = (new ap.parser.Simplifier())(begin)
+        val simplifiedLen = (new ap.parser.Simplifier())(len)
+        (simplifiedBegin, simplifiedLen) match {
+          // substr(x, 0, len(x) - 1)
+          case (Const(IdealInt(0)), Difference(IFunApp(`str_len`, Seq(s)), Const(IdealInt(1)))) if s == bigStr => {
+            ParikhUtil.debugPrintln("todo: use a new function str_substr_case1")
+            str_substr_0_lenMinus1(bigStr)
           }
+          case _ => t
+        }
+      }
       case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
       case (IFunApp(`str_++`, _), Seq(t, ConcreteString(""))) => t
 

@@ -202,6 +202,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          (str_match, 2),
          (str_extract, 1),
          (re_loop_?, 2))
+  
+  val str_substr_0_lenMinus1 = 
+    new MonoSortedIFunction("str_substr_0_lenMinus1", List(StringSort), StringSort, true, false)
+
+  val specialSubstrFucs = List(str_substr_0_lenMinus1)
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
@@ -243,7 +248,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     predefFunctions ++
     List(str_empty, str_cons, str_head, str_tail, str_char_count) ++
     (extraStringFunctions map (_._2)) ++
-    extraRegexFunctions ++ (extraIndexedFunctions map (_._1))
+    extraRegexFunctions ++ (extraIndexedFunctions map (_._1)) ++ specialSubstrFucs
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,

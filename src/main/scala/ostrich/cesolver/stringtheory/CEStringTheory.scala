@@ -61,6 +61,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
                    str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
+                   str_substr_0_lenMinus1,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
@@ -96,16 +97,6 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
 
         case Plugin.GoalState.Intermediate =>
           Seq()
-//           try {
-//             breakCyclicEquations(goal).getOrElse(List()) elseDo
-//               nielsenSplitter.decompSimpleEquations elseDo
-//               nielsenSplitter.decompEquations elseDo
-//               predToEq.reducePredicatesToEquations
-
-//           } catch {
-//             case t: ap.util.Timeout => throw t
-// //          case t : Throwable =>  { t.printStackTrace; throw t }
-//           }
 
         case Plugin.GoalState.Final =>
           try { //  Console.withOut(Console.err)

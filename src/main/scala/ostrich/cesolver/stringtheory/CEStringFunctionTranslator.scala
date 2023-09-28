@@ -53,6 +53,7 @@ import ostrich.cesolver.preop.ReplaceAllCEPreOp
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.Internal2InputAbsy
 import ostrich.OstrichStringFunctionTranslator
+import ostrich.cesolver.preop.SubString0LenMinus1
 
 /** Class for mapping string constraints to string functions.
   */
@@ -68,6 +69,7 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
     str_trim,
     str_len,
     str_substr,
+    str_substr_0_lenMinus1,
     str_indexof,
     str_replaceall,
     str_replace,
@@ -89,112 +91,123 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
       case _: theory.IllegalRegexException => None
     }
 
-  override def apply(a: Atom): Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
+  override def apply(a: Atom): Option[(() => PreOp, Seq[Term], Term)] =
+    a.pred match {
 
-    case FunPred(`str_len`) =>
-      Some((() => LengthCEPreOp(Internal2InputAbsy(a(1))), Seq(a(0)), a(1)))
+      case FunPred(`str_len`) =>
+        Some((() => LengthCEPreOp(Internal2InputAbsy(a(1))), Seq(a(0)), a(1)))
 
-    case FunPred(`str_++`) =>
-      Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
+      case FunPred(`str_++`) =>
+        Some((() => ConcatCEPreOp, List(a(0), a(1)), a(2)))
 
-    case FunPred(`str_substr`) =>
-      Some(
-        (
-          () =>
-            SubStringCEPreOp(
-              Internal2InputAbsy(a(1)),
-              Internal2InputAbsy(a(2))
-            ),
-          Seq(a(0), a(1), a(2)),
-          a(3)
+      case FunPred(`str_substr`) =>
+        Some(
+          (
+            () =>
+              SubStringCEPreOp(
+                Internal2InputAbsy(a(1)),
+                Internal2InputAbsy(a(2))
+              ),
+            Seq(a(0), a(1), a(2)),
+            a(3)
+          )
         )
-      )
 
-    case FunPred(`str_indexof`) if strDatabase isConcrete a(1) =>
-      val matchStr = strDatabase term2ListGet a(1)
-      Some(
-        (
-          () =>
-            IndexOfCEPreOp(
-              Internal2InputAbsy(a(2)),
-              Internal2InputAbsy(a(3)),
-              matchStr.map(_.toChar).mkString
-            ),
-          Seq(a(0), a(1), a(2)),
-          a(3)
+      case FunPred(`str_substr_0_lenMinus1`) =>
+        Some(
+          (
+            () =>
+              new SubString0LenMinus1(),
+            Seq(a(0)),
+            a(1)
+          )
         )
-      )
 
-    case FunPred(`str_replace`)
-        if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
-      val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
-      val patternStr = strDatabase term2ListGet a(1) map (_.toChar)
-      Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
+      case FunPred(`str_indexof`) if strDatabase isConcrete a(1) =>
+        val matchStr = strDatabase term2ListGet a(1)
+        Some(
+          (
+            () =>
+              IndexOfCEPreOp(
+                Internal2InputAbsy(a(2)),
+                Internal2InputAbsy(a(3)),
+                matchStr.map(_.toChar).mkString
+              ),
+            Seq(a(0), a(1), a(2)),
+            a(3)
+          )
+        )
 
-    case FunPred(`str_replacere`) if (strDatabase isConcrete a(2)) =>
-      val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
-      for (regex <- regexAsTerm(a(1))) yield {
-        val op = () => {
-          val aut = ceAutDatabase
-            .regex2Automaton(regex)
-            .asInstanceOf[CostEnrichedAutomatonBase]
-          ReplaceCEPreOp(aut, matchStr)
+      case FunPred(`str_replace`)
+          if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
+        val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
+        val patternStr = strDatabase term2ListGet a(1) map (_.toChar)
+        Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
+
+      case FunPred(`str_replacere`) if (strDatabase isConcrete a(2)) =>
+        val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
+        for (regex <- regexAsTerm(a(1))) yield {
+          val op = () => {
+            val aut = ceAutDatabase
+              .regex2Automaton(regex)
+              .asInstanceOf[CostEnrichedAutomatonBase]
+            ReplaceCEPreOp(aut, matchStr)
+          }
+          (op, List(a(0)), a(3))
         }
-        (op, List(a(0)), a(3))
-      }
-    case FunPred(`str_replaceall`)
-        if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
-      val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
-      val patternStr = strDatabase term2ListGet a(1) map (_.toChar)
-      Some((() => ReplaceAllCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
+      case FunPred(`str_replaceall`)
+          if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
+        val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
+        val patternStr = strDatabase term2ListGet a(1) map (_.toChar)
+        Some((() => ReplaceAllCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
 
-    case FunPred(`str_replaceallre`) if (strDatabase isConcrete a(2)) =>
-      val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
-      for (regex <- regexAsTerm(a(1))) yield {
-        val op = () => {
-          val aut = ceAutDatabase
-            .regex2Automaton(regex)
-            .asInstanceOf[CostEnrichedAutomatonBase]
-          ReplaceAllCEPreOp(aut, matchStr)
+      case FunPred(`str_replaceallre`) if (strDatabase isConcrete a(2)) =>
+        val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
+        for (regex <- regexAsTerm(a(1))) yield {
+          val op = () => {
+            val aut = ceAutDatabase
+              .regex2Automaton(regex)
+              .asInstanceOf[CostEnrichedAutomatonBase]
+            ReplaceAllCEPreOp(aut, matchStr)
+          }
+          (op, List(a(0)), a(3))
         }
-        (op, List(a(0)), a(3))
-      }
 
-    case FunPred(`str_trim`) => {
-      val op = () => {
-        val LinearCombination.Constant(IdealInt(trimLeft)) = a(1)
-        val LinearCombination.Constant(IdealInt(trimRight)) = a(2)
-        // TODO: generate length information
-        new TransducerPreOp(
-          BricsTransducer.getTrimTransducer(trimLeft, trimRight)
-        ) {
-          override def toString =
-            "str.trim[" + trimLeft + ", " + trimRight + "]"
-          override def lengthApproximation(
-              arguments: Seq[Term],
-              result: Term,
-              order: TermOrder
-          ): Formula = {
-            import TerForConvenience._
-            implicit val o = order
-            ((arguments(0) >= trimLeft + trimRight) &
-              result === arguments(0) - (trimLeft + trimRight)) |
-              ((arguments(0) < trimLeft + trimRight) &
-                result === 0)
+      case FunPred(`str_trim`) => {
+        val op = () => {
+          val LinearCombination.Constant(IdealInt(trimLeft)) = a(1)
+          val LinearCombination.Constant(IdealInt(trimRight)) = a(2)
+          // TODO: generate length information
+          new TransducerPreOp(
+            BricsTransducer.getTrimTransducer(trimLeft, trimRight)
+          ) {
+            override def toString =
+              "str.trim[" + trimLeft + ", " + trimRight + "]"
+            override def lengthApproximation(
+                arguments: Seq[Term],
+                result: Term,
+                order: TermOrder
+            ): Formula = {
+              import TerForConvenience._
+              implicit val o = order
+              ((arguments(0) >= trimLeft + trimRight) &
+                result === arguments(0) - (trimLeft + trimRight)) |
+                ((arguments(0) < trimLeft + trimRight) &
+                  result === 0)
+            }
           }
         }
+        Some((op, List(a(0)), a(3)))
       }
-      Some((op, List(a(0)), a(3)))
-    }
 
-    case FunPred(f) if theory.extraFunctionPreOps contains f => {
-      val (op, argSelector, resSelector) = theory.extraFunctionPreOps(f)
-      Some((() => op, argSelector(a), resSelector(a)))
+      case FunPred(f) if theory.extraFunctionPreOps contains f => {
+        val (op, argSelector, resSelector) = theory.extraFunctionPreOps(f)
+        Some((() => op, argSelector(a), resSelector(a)))
+      }
+      case pred if theory.transducerPreOps contains pred =>
+        Some((() => theory.transducerPreOps(pred), List(a(0)), a(1)))
+      case _ =>
+        None
     }
-    case pred if theory.transducerPreOps contains pred =>
-      Some((() => theory.transducerPreOps(pred), List(a(0)), a(1)))
-    case _ =>
-      None
-  }
 
 }
