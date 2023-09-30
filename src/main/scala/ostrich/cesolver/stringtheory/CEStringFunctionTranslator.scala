@@ -69,7 +69,7 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
     str_trim,
     str_len,
     str_substr,
-    str_substr_0_lenMinus1,
+    str_substr_0_lenMinus1, str_substr_lenMinus1_1,
     str_indexof,
     str_replaceall,
     str_replace,

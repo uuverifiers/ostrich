@@ -205,8 +205,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   
   val str_substr_0_lenMinus1 = 
     new MonoSortedIFunction("str_substr_0_lenMinus1", List(StringSort), StringSort, true, false)
+  val str_substr_lenMinus1_1 = 
+    new MonoSortedIFunction("str_substr_lenMinus1_0", List(StringSort), StringSort, true, false)
 
-  val specialSubstrFucs = List(str_substr_0_lenMinus1)
+  val specialSubstrFucs = List(str_substr_0_lenMinus1, str_substr_lenMinus1_1)
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)

@@ -81,7 +81,14 @@ class CEPreprocessor(theory: CEStringTheory)
       //   str_at_right(bigStr, offset)
 
       case (IFunApp(`str_at`, _), Seq(bigStr: ITerm, index: ITerm)) => {
-        str_substr(bigStr, index, 1)
+        val simplifiedIdx = (new ap.parser.Simplifier())(index)
+        simplifiedIdx match {
+          case Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(IdealInt(1)))
+              if bigStr == bigStr2 => {
+            str_substr_lenMinus1_1(bigStr)
+          }
+          case _ => str_substr(bigStr, index, 1)
+        }
       }
       case (
             IFunApp(`str_substr`, _),
@@ -97,8 +104,13 @@ class CEPreprocessor(theory: CEStringTheory)
         val simplifiedLen = (new ap.parser.Simplifier())(len)
         (simplifiedBegin, simplifiedLen) match {
           // substr(x, 0, len(x) - 1)
-          case (Const(IdealInt(0)), Difference(IFunApp(`str_len`, Seq(s)), Const(IdealInt(1)))) if s == bigStr => {
-            ParikhUtil.debugPrintln("-------------------- substring special case 1")
+          case (
+                Const(IdealInt(0)),
+                Difference(IFunApp(`str_len`, Seq(s)), Const(IdealInt(1)))
+              ) if s == bigStr => {
+            ParikhUtil.debugPrintln(
+              "-------------------- substring special case 1"
+            )
             str_substr_0_lenMinus1(bigStr)
           }
           case _ => t
