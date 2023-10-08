@@ -53,32 +53,16 @@ import ostrich.cesolver.preop.ReplaceAllCEPreOp
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.Internal2InputAbsy
 import ostrich.OstrichStringFunctionTranslator
-import ostrich.cesolver.preop.SubString0LenMinus1
+import ostrich.cesolver.preop.SubStr_0_lenMinus1
+import ostrich.cesolver.preop.SubStr_lenMinus1_1
+import ostrich.cesolver.preop.SubStr_0_indexofc0
+import ostrich.cesolver.util.ParikhUtil
 
 /** Class for mapping string constraints to string functions.
   */
 class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
     extends OstrichStringFunctionTranslator(theory, facts) {
-  import theory.{
-    FunPred,
-    strDatabase,
-    ceAutDatabase,
-    str_++,
-    str_at,
-    str_at_right,
-    str_trim,
-    str_len,
-    str_substr,
-    str_substr_0_lenMinus1, str_substr_lenMinus1_1,
-    str_indexof,
-    str_replaceall,
-    str_replace,
-    str_replaceallre,
-    str_replacere,
-    str_replaceallcg,
-    str_replacecg,
-    str_extract
-  }
+  import theory._
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
   private val cgTranslator =
@@ -117,9 +101,29 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
         Some(
           (
             () =>
-              new SubString0LenMinus1(),
+              new SubStr_0_lenMinus1(),
             Seq(a(0)),
             a(1)
+          )
+        )
+      case FunPred(`str_substr_lenMinus1_1`) =>
+        Some(
+          (
+            () =>
+              new SubStr_lenMinus1_1(),
+            Seq(a(0)),
+            a(1)
+          )
+        )
+      case FunPred(`str_substr_0_indexofc0`) if strDatabase isConcrete a(1) =>
+        val matchStr = strDatabase term2ListGet a(1)
+        assert(matchStr.length == 1)
+        Some(
+          (
+            () =>
+              new SubStr_0_indexofc0(matchStr.head.toChar),
+            Seq(a(0)),
+            a(2)
           )
         )
 

@@ -18,6 +18,7 @@ import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IExpression
 import ostrich.cesolver.util.TermGenerator
+import ap.parser.Simplifier
 
 object CEBasicOperations {
 
@@ -50,7 +51,9 @@ object CEBasicOperations {
       auts: Seq[CostEnrichedAutomatonBase]
   ): CostEnrichedAutomatonBase = {
     if (auts.isEmpty) return BricsAutomatonWrapper(BasicAutomata.makeEmpty)
-    if (auts.forall(_.registers.isEmpty))
+    for (aut <- auts)
+      ParikhUtil.debugPrintln(aut.regsRelation)
+    if (auts.forall(aut => aut.registers.isEmpty && ((new Simplifier)(aut.regsRelation)).isTrue))
       return unionWithoutRegs(auts)
     val ceAut = new CostEnrichedAutomaton
     val termGen = TermGenerator()
@@ -208,11 +211,12 @@ object CEBasicOperations {
     intersection(a1, complement(a2))
   }
 
-  def concatenate(
-      auts: Seq[CostEnrichedAutomatonBase]
+  def concatenateRemainAccept(
+    auts: Seq[CostEnrichedAutomatonBase],
+    remainAcceptingState: Boolean
   ): CostEnrichedAutomatonBase = {
     if (auts.isEmpty)
-      return BricsAutomatonWrapper(BasicAutomata.makeEmpty())
+      return BricsAutomatonWrapper.makeEmpty()
     val ceAut = new CostEnrichedAutomaton
     // val builder = CostEnrichedAutomatonTrait.getBuilder
     val old2new =
@@ -237,6 +241,8 @@ object CEBasicOperations {
 
     for (s <- auts.last.acceptingStates)
       ceAut.setAccept(old2new(s), true)
+    for (aut <- auts.reverse.tail; s <- aut.acceptingStates)
+      ceAut.setAccept(old2new(s), remainAcceptingState)
     for (
       i <- (0 until auts.size - 1).reverse;
       lastAccept <- auts(i).acceptingStates
@@ -246,6 +252,18 @@ object CEBasicOperations {
     ceAut.regsRelation = and(auts.map(_.regsRelation))
     // val a = builder.getAutomaton
     ceAut
+  }
+
+  def concatenate(
+      auts: Seq[CostEnrichedAutomatonBase]
+  ): CostEnrichedAutomatonBase = {
+    concatenateRemainAccept(auts, false)
+  }
+
+  def concatenateWithAccept(
+      auts: Seq[CostEnrichedAutomatonBase]
+  ): CostEnrichedAutomatonBase = {
+    concatenateRemainAccept(auts, true)
   }
 
   private def registersMustBeEmpty(aut: CostEnrichedAutomatonBase): Unit = {

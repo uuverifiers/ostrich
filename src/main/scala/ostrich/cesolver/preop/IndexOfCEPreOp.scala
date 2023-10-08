@@ -71,9 +71,9 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     )
 
     // index >= 0, condition : len(argStr) >= startPos & stratPos >= 0
-    val nonEpsilonPosIdx = intersection(notMatchedStr, matchedStr)
-    nonEpsilonPosIdx.regsRelation = and(
-      Seq(nonEpsilonPosIdx.regsRelation, index >= startPos, startPos >= 0)
+    val nonEpsMatchPosIdx = intersection(notMatchedStr, matchedStr)
+    nonEpsMatchPosIdx.regsRelation = and(
+      Seq(nonEpsMatchPosIdx.regsRelation, index >= startPos, startPos >= 0)
     )
 
     // index = -1, condition : len(argStr) < startPos | startPos < 0
@@ -109,9 +109,9 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     )
 
     // epsilon match string with index >= 0
-    val epsilonResPosIdx = concatenate(Seq(startPosPrefix, makeAnyString()))
-    epsilonResPosIdx.regsRelation = and(
-      Seq(epsilonResPosIdx.regsRelation, index === startPos)
+    val epsMatchPosIdx = concatenate(Seq(startPosPrefix, makeAnyString()))
+    epsMatchPosIdx.regsRelation = and(
+      Seq(epsMatchPosIdx.regsRelation, index === startPos)
     )
 
     index match {
@@ -119,7 +119,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
         if (value.intValueSafe == -1) {
           preimages = Iterator(Seq(negIdx1), Seq(negIdx2))
         } else {
-          preimages = Iterator(Seq(nonEpsilonPosIdx))
+          preimages = Iterator(Seq(nonEpsMatchPosIdx))
         }
       }
 
@@ -127,20 +127,20 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
         if (value.intValueSafe == -1) {
           preimages = Iterator(Seq(negIdx1), Seq(negIdx2))
         } else {
-          preimages = Iterator(Seq(epsilonResPosIdx))
+          preimages = Iterator(Seq(epsMatchPosIdx))
         }
       }
 
       case _ if !matchString.isEmpty => {
         preimages =
-          Iterator(Seq(nonEpsilonPosIdx), Seq(negIdx1), Seq(negIdx2))
+          Iterator(Seq(negIdx1), Seq(negIdx2), Seq(nonEpsMatchPosIdx))
       }
 
       case _ if matchString.isEmpty => {
         preimages = Iterator(
-          Seq(epsilonResPosIdx),
           Seq(negIdx1),
-          Seq(negIdx2)
+          Seq(negIdx2),
+          Seq(epsMatchPosIdx)
         )
       }
     }

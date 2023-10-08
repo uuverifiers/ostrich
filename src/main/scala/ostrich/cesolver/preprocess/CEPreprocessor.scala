@@ -6,6 +6,7 @@ import ap.theories.strings.StringTheory.ConcreteString
 import ostrich.cesolver.stringtheory.CEStringTheory
 import ostrich.cesolver.util.ParikhUtil
 import ap.basetypes.IdealInt
+import ap.theories.bitvectors.ModuloArithmetic
 
 class CEPreprocessor(theory: CEStringTheory)
     extends ContextAwareVisitor[Unit, IExpression] {
@@ -95,25 +96,30 @@ class CEPreprocessor(theory: CEStringTheory)
             Seq(bigStr: ITerm, begin: ITerm, len: ITerm)
           ) => {
         ParikhUtil.debugPrintln("str_substr bigStr : " + (bigStr))
-        ParikhUtil.debugPrintln("str_substr begin : " + (begin))
-        ParikhUtil.debugPrintln("str_substr len : " + (len))
-        ParikhUtil.debugPrintln(
-          "str_substr simplify : " + (new ap.parser.Simplifier())(begin + len)
-        )
+        ParikhUtil.debugPrintln("str_substr begin : " + (new ap.parser.Simplifier())(begin))
+        ParikhUtil.debugPrintln("str_substr len : " + (new ap.parser.Simplifier())(len))
         val simplifiedBegin = (new ap.parser.Simplifier())(begin)
         val simplifiedLen = (new ap.parser.Simplifier())(len)
         (simplifiedBegin, simplifiedLen) match {
-          // substr(x, 0, len(x) - 1)
           case (
                 Const(IdealInt(0)),
                 Difference(IFunApp(`str_len`, Seq(s)), Const(IdealInt(1)))
               ) if s == bigStr => {
-            ParikhUtil.debugPrintln(
-              "-------------------- substring special case 1"
-            )
+          // substr(x, 0, len(x) - 1)
             str_substr_0_lenMinus1(bigStr)
           }
-          case _ => t
+          case (
+            Const(IdealInt(0)),
+            IFunApp(`str_indexof`, Seq(s, constChar@IFunApp(`str_cons`,
+                                  Seq(IFunApp(ModuloArithmetic.mod_cast,
+                                              Seq(IIntLit(lower),IIntLit(upper),
+                                                  Const(c))),
+                                      IFunApp(`str_empty`, Seq()))), Const(IdealInt(0))))
+          ) if s == bigStr => {
+          // substr(x, 0, indexof_c(x,0))
+            str_substr_0_indexofc0(bigStr, constChar)
+          }
+          case _ => t update subres
         }
       }
       case (IFunApp(`str_++`, _), Seq(ConcreteString(""), t)) => t
@@ -150,7 +156,7 @@ class CEPreprocessor(theory: CEStringTheory)
           ) =>
         re_charrange(lower, upper)
 
-      case _ => // do nothing now
+      case (t, _) => // do nothing now
         t update subres
     }
   }

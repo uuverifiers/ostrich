@@ -73,6 +73,8 @@ class ParikhExploration(
 
   private val termGen = TermGenerator()
 
+  private var maybeUnknown = false
+
   def measure[A](op: String)(comp: => A): A =
     ParikhUtil.measure(op)(comp)(flags.debug)
 
@@ -244,6 +246,7 @@ class ParikhExploration(
 
     try {
       dfExplore(funAppList)
+      if (maybeUnknown) throw new Exception("--Unknown: can not find model using sound-but-not-complete solver")
       None
     } catch {
       case FoundModel(model) => Some(model)
@@ -382,7 +385,8 @@ class ParikhExploration(
           }
           case ProverStatus.Unsat => return trivalConflict
           case _ => 
-            throw UnknownException("backend solver failed")
+            maybeUnknown = true
+            return trivalConflict
         }
 
       }
