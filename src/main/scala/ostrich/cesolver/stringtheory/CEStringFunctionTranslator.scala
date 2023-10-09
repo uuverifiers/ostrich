@@ -44,18 +44,10 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.basetypes.IdealInt
-import ostrich.cesolver.preop.ConcatCEPreOp
-import ostrich.cesolver.preop.SubStringCEPreOp
-import ostrich.cesolver.preop.IndexOfCEPreOp
-import ostrich.cesolver.preop.LengthCEPreOp
-import ostrich.cesolver.preop.ReplaceCEPreOp
-import ostrich.cesolver.preop.ReplaceAllCEPreOp
+import ostrich.cesolver.preop._
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.Internal2InputAbsy
 import ostrich.OstrichStringFunctionTranslator
-import ostrich.cesolver.preop.SubStr_0_lenMinus1
-import ostrich.cesolver.preop.SubStr_lenMinus1_1
-import ostrich.cesolver.preop.SubStr_0_indexofc0
 import ostrich.cesolver.util.ParikhUtil
 
 /** Class for mapping string constraints to string functions.
@@ -97,11 +89,11 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
           )
         )
 
+      // substring special cases ----------------------------------------------
       case FunPred(`str_substr_0_lenMinus1`) =>
         Some(
           (
-            () =>
-              new SubStr_0_lenMinus1(),
+            () => new SubStr_0_lenMinus1(),
             Seq(a(0)),
             a(1)
           )
@@ -109,8 +101,7 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
       case FunPred(`str_substr_lenMinus1_1`) =>
         Some(
           (
-            () =>
-              new SubStr_lenMinus1_1(),
+            () => new SubStr_lenMinus1_1(),
             Seq(a(0)),
             a(1)
           )
@@ -120,12 +111,34 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
         assert(matchStr.length == 1)
         Some(
           (
-            () =>
-              new SubStr_0_indexofc0(matchStr.head.toChar),
+            () => new SubStr_0_indexofc0(matchStr.head.toChar),
             Seq(a(0)),
             a(2)
           )
         )
+      case FunPred(`str_substr_0_indexofc0Plus1`)
+          if strDatabase isConcrete a(1) =>
+        val matchStr = strDatabase term2ListGet a(1)
+        assert(matchStr.length == 1)
+        Some(
+          (
+            () => new SubStr_0_indexofc0Plus1(matchStr.head.toChar),
+            Seq(a(0)),
+            a(2)
+          )
+        )
+      case FunPred(`str_substr_indexofc0Plus1_tail`)
+          if strDatabase isConcrete a(1) =>
+        val matchStr = strDatabase term2ListGet a(1)
+        assert(matchStr.length == 1)
+        Some(
+          (
+            () => new SubStr_indexofc0Plus1_tail(matchStr.head.toChar),
+            Seq(a(0)),
+            a(2)
+          )
+        )
+      // substring special cases ----------------------------------------------
 
       case FunPred(`str_indexof`) if strDatabase isConcrete a(1) =>
         val matchStr = strDatabase term2ListGet a(1)

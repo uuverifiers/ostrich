@@ -202,15 +202,24 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          (str_match, 2),
          (str_extract, 1),
          (re_loop_?, 2))
-  
+  // substring special cases 
   val str_substr_0_lenMinus1 = 
     new MonoSortedIFunction("str_substr_0_lenMinus1", List(StringSort), StringSort, true, false)
   val str_substr_lenMinus1_1 = 
     new MonoSortedIFunction("str_substr_lenMinus1_1", List(StringSort), StringSort, true, false)
+  val str_substr_n_lenMinusM = 
+    new MonoSortedIFunction("str_substr_n_lenMinusM", List(StringSort), StringSort, true, false)
   val str_substr_0_indexofc0 = 
     new MonoSortedIFunction("str_substr_0_indexofc0", List(StringSort, StringSort), StringSort, true, false)
+  val str_substr_0_indexofc0Plus1 = 
+    new MonoSortedIFunction("str_substr_0_indexofc0Plus1", List(StringSort, StringSort), StringSort, true, false)
+  val str_substr_indexofc0Plus1_tail = 
+    new MonoSortedIFunction("str_substr_indexofc0Plus1_tail", List(StringSort, StringSort), StringSort, true, false)
 
-  val specialSubstrFucs = List(str_substr_0_lenMinus1, str_substr_lenMinus1_1, str_substr_0_indexofc0)
+  val specialSubstrFucs = List(
+    str_substr_0_lenMinus1, str_substr_lenMinus1_1, 
+    str_substr_0_indexofc0, str_substr_0_indexofc0Plus1, str_substr_indexofc0Plus1_tail
+  )
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)

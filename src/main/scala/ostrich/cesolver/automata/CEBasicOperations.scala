@@ -48,12 +48,16 @@ object CEBasicOperations {
   }
 
   def union(
-      auts: Seq[CostEnrichedAutomatonBase]
+      auts: Seq[CostEnrichedAutomatonBase],
+      autsFormulaIsSame: Boolean = false
   ): CostEnrichedAutomatonBase = {
     if (auts.isEmpty) return BricsAutomatonWrapper(BasicAutomata.makeEmpty)
-    for (aut <- auts)
-      ParikhUtil.debugPrintln(aut.regsRelation)
-    if (auts.forall(aut => aut.registers.isEmpty && ((new Simplifier)(aut.regsRelation)).isTrue))
+    if (
+      auts.forall(aut =>
+        aut.registers.isEmpty &&
+          (((new Simplifier)(aut.regsRelation)).isTrue || autsFormulaIsSame)
+      )
+    )
       return unionWithoutRegs(auts)
     val ceAut = new CostEnrichedAutomaton
     val termGen = TermGenerator()
@@ -212,8 +216,8 @@ object CEBasicOperations {
   }
 
   def concatenateRemainAccept(
-    auts: Seq[CostEnrichedAutomatonBase],
-    remainAcceptingState: Boolean
+      auts: Seq[CostEnrichedAutomatonBase],
+      remainAcceptingState: Boolean = false,
   ): CostEnrichedAutomatonBase = {
     if (auts.isEmpty)
       return BricsAutomatonWrapper.makeEmpty()
@@ -250,7 +254,6 @@ object CEBasicOperations {
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
     ceAut.regsRelation = and(auts.map(_.regsRelation))
-    // val a = builder.getAutomaton
     ceAut
   }
 
@@ -258,12 +261,6 @@ object CEBasicOperations {
       auts: Seq[CostEnrichedAutomatonBase]
   ): CostEnrichedAutomatonBase = {
     concatenateRemainAccept(auts, false)
-  }
-
-  def concatenateWithAccept(
-      auts: Seq[CostEnrichedAutomatonBase]
-  ): CostEnrichedAutomatonBase = {
-    concatenateRemainAccept(auts, true)
   }
 
   private def registersMustBeEmpty(aut: CostEnrichedAutomatonBase): Unit = {
