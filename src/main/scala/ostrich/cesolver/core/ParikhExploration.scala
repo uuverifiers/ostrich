@@ -43,6 +43,7 @@ import ap.parser.IIntLit
 import ap.parser.IConstant
 import ap.parser.SimplifyingConstantSubstVisitor
 import ap.parser.IExpression
+import ap.parser.Simplifier
 
 object ParikhExploration {
 
@@ -70,6 +71,8 @@ class ParikhExploration(
 ) {
 
   import ParikhExploration._
+
+  ParikhUtil.debugPrintln((new Simplifier)(inputFormula))
 
   private val termGen = TermGenerator()
 

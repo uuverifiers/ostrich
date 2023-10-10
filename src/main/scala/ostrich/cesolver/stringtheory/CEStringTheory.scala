@@ -99,11 +99,8 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
           Seq()
 
         case Plugin.GoalState.Final =>
-          try { //  Console.withOut(Console.err)
-            // nielsenSplitter.splitEquation elseDo
-            //   predToEq.lazyEnumeration elseDo
+          try { 
             callBackwardProp(goal)
-
           } catch {
             case t: ap.util.Timeout => throw t
             case t: Throwable       => { t.printStackTrace; throw t }

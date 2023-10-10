@@ -316,8 +316,7 @@ class CatraBasedSolver(
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-        case Failure(e) => // do nothing as unknown result
-        // throw e
+        case Failure(e) => // do nothing as unknown resultå
       }
     } finally {
       if (!ParikhUtil.debug)

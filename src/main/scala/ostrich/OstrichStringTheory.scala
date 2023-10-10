@@ -239,7 +239,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
       yield (name, Right(p))) ++
-     (for (f <- extraRegexFunctions.iterator)
+     (for (f <- extraRegexFunctions.iterator ++ specialSubstrFucs.iterator)
       yield (f.name, Left(f)))).toMap
 
   val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] =

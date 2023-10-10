@@ -7,6 +7,20 @@ import ap.parser.IExpression
 import ap.basetypes.IdealInt
 import ap.parser.IIntLit
 import ostrich.cesolver.automata.BricsAutomatonWrapper
+import ostrich.cesolver.util.ParikhUtil
+import ostrich.automata.BricsTLabelOps
+
+object SubStrPreImageUtil {
+  // An Automaton that accepts all strings not containing c
+  def noMatch(c: Char): CostEnrichedAutomatonBase = {
+    val noCLabels = BricsTLabelOps.subtractLetter(c, (0.toChar, 65535.toChar))
+    val ceAut = new CostEnrichedAutomatonBase
+    ceAut.setAccept(ceAut.initialState, true)
+    for (lbl <- noCLabels)
+      ceAut.addTransition(ceAut.initialState, lbl, ceAut.initialState, Seq())
+    ceAut
+  }
+}
 
 // substring(s, 0, len(s) - 1)
 class SubStr_0_lenMinus1 extends CEPreOp {
@@ -57,7 +71,7 @@ class SubStr_lenMinus1_1 extends CEPreOp {
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
-    Some(arguments(0).slice(arguments(0).length - 1, 1))
+    Some(arguments(0).slice(arguments(0).length - 1, arguments(0).length))
   }
 }
 
@@ -102,7 +116,10 @@ class SubStr_n_lenMinusM(beginIdx: Integer, offset: Integer) extends CEPreOp {
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
     Some(
       arguments(0)
-        .slice(beginIdx.intValue, arguments(0).length - offset.intValue)
+        .slice(
+          beginIdx.intValue,
+          arguments(0).length - offset.intValue + beginIdx.intValue
+        )
     )
   }
 }
@@ -117,13 +134,19 @@ class SubStr_0_indexofc0(c: Char) extends CEPreOp {
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val cAut = BricsAutomatonWrapper.fromString(c.toString)
-    val complement_c = CEBasicOperations.complement(cAut)
-    val resInterCompC = CEBasicOperations.intersection(res, complement_c)
-    val preImage = CEBasicOperations.concatenateRemainAccept(
-      Seq(resInterCompC, cAut, BricsAutomatonWrapper.makeAnyString()),
-      res.isAccept(res.initialState)
+    val resInterNoC =
+      CEBasicOperations.intersection(res, SubStrPreImageUtil.noMatch(c))
+    val nonEpsResPreImage = CEBasicOperations.concatenate(
+      Seq(resInterNoC, cAut, BricsAutomatonWrapper.makeAnyString())
     )
-    (Iterator(Seq(preImage)), Seq())
+    val epsResPreImage = SubStrPreImageUtil.noMatch(c)
+    for (r <- res.registers) {
+      epsResPreImage.regsRelation &= (r === 0)
+    }
+    val preImages =
+      if (res.isAccept(res.initialState)) Seq(nonEpsResPreImage, epsResPreImage)
+      else Seq(nonEpsResPreImage)
+    (Iterator(preImages), Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -142,19 +165,27 @@ class SubStr_0_indexofc0Plus1(c: Char) extends CEPreOp {
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val cAut = BricsAutomatonWrapper.fromString(c.toString)
-    val complement_c = CEBasicOperations.complement(cAut)
-    val resInterCompCC = CEBasicOperations.intersection(
+    val noMatchC = SubStrPreImageUtil.noMatch(c)
+    val resInterNoCC = CEBasicOperations.intersection(
       res,
-      CEBasicOperations.concatenate(Seq(complement_c, cAut))
+      CEBasicOperations.concatenate(Seq(noMatchC, cAut))
     )
-    val epsilonResPreImage = if (res.isAccept(res.initialState)) {
-      CEBasicOperations.intersection(res, complement_c)
-    } else BricsAutomatonWrapper.makeEmpty()
 
-    val preImage =
-      CEBasicOperations.union(Seq(resInterCompCC, epsilonResPreImage), true)
+    val nonEpsResPreImage = CEBasicOperations.concatenate(
+      Seq(resInterNoCC, BricsAutomatonWrapper.makeAnyString())
+    )
+    val epsilonResPreImage = SubStrPreImageUtil.noMatch(c)
+    for (r <- res.registers) {
+      epsilonResPreImage.regsRelation &= (r === 0)
+    }
 
-    (Iterator(Seq(CEBasicOperations.minimizeHopcroft(preImage))), Seq())
+    val preImages =
+      if (res.isAccept(res.initialState))
+        Seq(nonEpsResPreImage, epsilonResPreImage)
+      else
+        Seq(nonEpsResPreImage)
+
+    (Iterator(preImages), Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -173,18 +204,28 @@ class SubStr_indexofc0Plus1_tail(c: Char) extends CEPreOp {
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val cAut = BricsAutomatonWrapper.fromString(c.toString)
-    val complement_c = CEBasicOperations.complement(cAut)
-    val prefix = CEBasicOperations.concatenateRemainAccept(
-      Seq(complement_c, cAut), true
+    val noMatchC = SubStrPreImageUtil.noMatch(c)
+    val prefix = CEBasicOperations.concatenate(
+      Seq(noMatchC, cAut)
     )
-    val preImage = CEBasicOperations.concatenate(Seq(prefix, res))
-    (Iterator(Seq(preImage)), Seq())
+
+    val nonEpsResPreImage = CEBasicOperations.concatenate(Seq(prefix, res))
+    val epsResPreImage = BricsAutomatonWrapper.makeEmptyString()
+    for (r <- res.registers) {
+      epsResPreImage.regsRelation &= (r === 0)
+    }
+
+    val preImages =
+      if (res.isAccept(res.initialState))
+        Seq(nonEpsResPreImage, epsResPreImage)
+      else
+        Seq(nonEpsResPreImage)
+    (Iterator(preImages), Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
     val s = arguments(0)
     val index = s.indexOf(c)
-    Some(s.slice(index + 1, s.length - (index + 1)))
+    Some(s.slice(index + 1, s.length))
   }
 }
-

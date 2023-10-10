@@ -43,8 +43,7 @@ object CEBasicOperations {
       auts: Seq[CostEnrichedAutomatonBase]
   ): CostEnrichedAutomatonBase = {
     val bauts = auts.map(toBricsAutomaton)
-    val a = BricsAutomatonWrapper(BasicOperations.union(bauts.asJava))
-    a
+    BricsAutomatonWrapper(BasicOperations.union(bauts.asJava))
   }
 
   def union(
@@ -57,8 +56,11 @@ object CEBasicOperations {
         aut.registers.isEmpty &&
           (((new Simplifier)(aut.regsRelation)).isTrue || autsFormulaIsSame)
       )
-    )
-      return unionWithoutRegs(auts)
+    ) {
+      val res = unionWithoutRegs(auts)
+      res.regsRelation &= auts.head.regsRelation
+      return res
+    }
     val ceAut = new CostEnrichedAutomaton
     val termGen = TermGenerator()
     val initialS = ceAut.initialState
@@ -217,7 +219,7 @@ object CEBasicOperations {
 
   def concatenateRemainAccept(
       auts: Seq[CostEnrichedAutomatonBase],
-      remainAcceptingState: Boolean = false,
+      remainAcceptingState: Boolean = false
   ): CostEnrichedAutomatonBase = {
     if (auts.isEmpty)
       return BricsAutomatonWrapper.makeEmpty()
@@ -243,14 +245,14 @@ object CEBasicOperations {
       prefixlen += aut.registers.size
     }
 
+    for (aut <- auts; s <- aut.acceptingStates)
+      ceAut.setAccept(old2new(s), remainAcceptingState)
     for (s <- auts.last.acceptingStates)
       ceAut.setAccept(old2new(s), true)
-    for (aut <- auts.reverse.tail; s <- aut.acceptingStates)
-      ceAut.setAccept(old2new(s), remainAcceptingState)
     for (
       i <- (0 until auts.size - 1).reverse;
       lastAccept <- auts(i).acceptingStates
-    ) // Bug: should set accept first, add epsilon later
+    ) 
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
     ceAut.regsRelation = and(auts.map(_.regsRelation))
@@ -264,8 +266,10 @@ object CEBasicOperations {
   }
 
   private def registersMustBeEmpty(aut: CostEnrichedAutomatonBase): Unit = {
-    if (aut.registers.nonEmpty)
+    if (aut.registers.nonEmpty) {
+      aut.toDot("debug")
       throw new Exception("Registers must be empty")
+    }
   }
 
   def repeatUnwind(

@@ -35,12 +35,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
   override def toString(): String =
     "subStringCEPreOp"
 
-  def apply(
-      argumentConstraints: Seq[Seq[Automaton]],
-      resultConstraint: Automaton
-  ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-
-    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+  private def normalPreimage(res: CostEnrichedAutomatonBase): Automaton = {
     val resLen = termGen.lenTerm
     val resWithLen =
       intersection(res, LengthCEPreOp.lengthPreimage(resLen, false))
@@ -57,27 +52,30 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     preimage.regsRelation = and(
       Seq(preimage.regsRelation, (epsilonResFormula | nonEpsilonResFormula))
     )
-    preimage.toDot("substring" + SubStringCEPreOp.debugId)
+    preimage
+  }
 
+  def apply(
+      argumentConstraints: Seq[Seq[Automaton]],
+      resultConstraint: Automaton
+  ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
+
+    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     (beginIdx, length) match {
+      // substring(x, 0, 1)
       case (Const(IdealInt(0)), Const(IdealInt(1))) => {
-        ParikhUtil.debugPrintln("special")
-        val epsResPreImage =
-          if (res.isAccept(res.initialState))
-            BricsAutomatonWrapper.makeEmptyString()
-          else BricsAutomatonWrapper.makeEmpty()
-        val nonEpsResPreImage = concatenate(
+        val preImage = concatenate(
           Seq(
             intersection(res, LengthCEPreOp.lengthPreimage(1)),
             BricsAutomatonWrapper.makeAnyString()
           )
         )
-        val preImageSpecial = CEBasicOperations.union(
-          Seq(epsResPreImage, nonEpsResPreImage)
-        )
-        (Iterator(Seq(preImageSpecial)), Seq())
+        if (res.isAccept(res.initialState))
+          preImage.setAccept(preImage.initialState, true)
+        (Iterator(Seq(preImage)), Seq())
       }
-      case _ => (Iterator(Seq(preimage)), Seq())
+      // normal case
+      case _ => (Iterator(Seq(normalPreimage(res))), Seq())
     }
   }
 

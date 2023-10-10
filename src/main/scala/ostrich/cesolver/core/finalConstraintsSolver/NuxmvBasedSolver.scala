@@ -181,6 +181,7 @@ class NuxmvBasedSolver(
     }
     ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+    ParikhUtil.debugPrintln(lia)
     // val inputVars = SymbolCollector constants lia
     val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
     val name2ITerm =
@@ -234,7 +235,7 @@ class NuxmvBasedSolver(
 
   def solve: Result = {
     val result = solveWithoutGenerateModel(flags.NuxmvBackend)
-    ParikhUtil.todo("Generate model smarter. Unstable nuxmv implementation.")
+    ParikhUtil.todo("Generate model by nuxmv xml output.")
     // sat and generate model
     if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
       // integer model
@@ -247,7 +248,9 @@ class NuxmvBasedSolver(
       for (c <- constraints) {
         c.setRegTermsModel(integerModel)
         c.getModel match {
-          case Some(value) => result.updateModel(c.strDataBaseId, value)
+          case Some(value) => 
+            c.auts.reduce{(aut1, aut2) => aut1.asInstanceOf[CostEnrichedAutomatonBase] product aut2}.toDot(c.strDataBaseId.toString())
+            result.updateModel(c.strDataBaseId, value)
           case None        => // do nothing as unknown result
           // throw new Exception("fail to generate string model")
         }
