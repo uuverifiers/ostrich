@@ -284,6 +284,11 @@ class ResultRepository:
         rows = self._db.executeRet (query,(solver,))
         return [t[0] for t in rows]
 
+    def getAllTimeoutFilesForSolver(self,solver):
+        query = '''SELECT TrackInstance.filepath FROM Result,TrackInstance WHERE solver = ? and Result.timeouted IS TRUE AND Result.instanceid = TrackInstance.id ORDER BY time ASC '''
+        rows = self._db.executeRet (query,(solver,))
+        return [t[0] for t in rows]
+
     def getAllUnsolvedFilesForSolver(self,solver):
         query = '''SELECT TrackInstance.filepath FROM Result,TrackInstance WHERE solver = ? and Result.result IS NULL AND Result.instanceid = TrackInstance.id ORDER BY time ASC'''
         rows = self._db.executeRet (query,(solver,))
