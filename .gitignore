@@ -1,5 +1,5 @@
-/.bloop/
-/.metals/
+.bloop
+.metals
 target
 project/project
 project/target
@@ -7,8 +7,8 @@ project/build.properties
 project/metals.sbt
 *.swo
 *.swp
-/.bsp
-dot/
+.bsp
+dot
 
 1.*
 
@@ -23,4 +23,5 @@ zaligvinder/result_db
 
 # python cache
 __pycache__
-*.pyc
+**/__pycache__
+**/*.pyc
