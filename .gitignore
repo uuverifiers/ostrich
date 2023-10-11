@@ -21,5 +21,6 @@ zaligvinder/result_db
 *_result
 
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
+# python cache
+__pycache__
+*.pyc
