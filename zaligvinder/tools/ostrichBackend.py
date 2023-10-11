@@ -72,8 +72,9 @@ def addRunner(addto):
     from functools import partial
     params = {
         #   "unary-no-simplify": ["-ceaBackend=unary", "-simplify-aut"],
-        # "unary": ["+cea", "-ceaBackend=unary"],
-        "nuxmv_bmc": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=bmc"],
+        "unary": ["+cea", "-ceaBackend=unary", "+eager"],
+        "nuxmv_bmc": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=bmc", "+eager"],
+        "nuxmv_ic3": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=ic3", "+eager"],
         # "catra": ["+cea", "-ceaBackend=catra"],
         # "seq": ["+seq"]
     }

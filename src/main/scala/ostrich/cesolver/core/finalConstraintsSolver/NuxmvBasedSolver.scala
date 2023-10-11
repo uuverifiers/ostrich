@@ -181,7 +181,6 @@ class NuxmvBasedSolver(
     }
     ////////// end of dot file generation
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    ParikhUtil.debugPrintln(lia)
     // val inputVars = SymbolCollector constants lia
     val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
     val name2ITerm =

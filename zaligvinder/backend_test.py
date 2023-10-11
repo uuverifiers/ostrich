@@ -22,7 +22,6 @@ tracks = (
 
 solvers = {}
 for s in [
-    tools.cvc5,
     tools.ostrichBackend,
     # tools.ostrich
 ]:
@@ -32,9 +31,10 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("nuxmv_bmc_test")
+store = storage.SQLiteDB("pyex_sat")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = ["Cvc5"]
+# verifiers = ["Cvc5"]
+verifiers = []
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )

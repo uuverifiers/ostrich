@@ -160,6 +160,6 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
   }
 
   override def toString(): String = {
-    "IndexOfCEPreOp"
+    "indexOfCEPreOp"
   }
 }

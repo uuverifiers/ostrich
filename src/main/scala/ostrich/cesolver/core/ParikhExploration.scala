@@ -72,8 +72,6 @@ class ParikhExploration(
 
   import ParikhExploration._
 
-  ParikhUtil.debugPrintln((new Simplifier)(inputFormula))
-
   private val termGen = TermGenerator()
 
   private var maybeUnknown = false

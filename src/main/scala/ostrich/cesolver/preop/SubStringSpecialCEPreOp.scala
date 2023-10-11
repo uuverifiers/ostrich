@@ -24,7 +24,7 @@ object SubStrPreImageUtil {
 
 // substring(s, 0, len(s) - 1)
 class SubStr_0_lenMinus1 extends CEPreOp {
-  override def toString = "SubStr_0_lenMinus1"
+  override def toString = "subStr(0, len - 1)"
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
@@ -50,7 +50,7 @@ class SubStr_0_lenMinus1 extends CEPreOp {
 
 // substring(s, len(s) - 1, 1)
 class SubStr_lenMinus1_1 extends CEPreOp {
-  override def toString = "SubStr_lenMinus1_1"
+  override def toString = "subStr(len - 1, 1)"
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
@@ -59,15 +59,23 @@ class SubStr_lenMinus1_1 extends CEPreOp {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val suffix = CEBasicOperations.intersection(
       res,
-      PreOpUtil.automatonWithLenLessThan(2)
+      PreOpUtil.automatonWithLen(1)
     )
-    val preImage = CEBasicOperations.concatenate(
+    val nonEpsResPreImage = CEBasicOperations.concatenate(
       Seq(
         BricsAutomatonWrapper.makeAnyString(),
         suffix
       )
     )
-    (Iterator(Seq(preImage)), Seq())
+    val epsResPreImage = BricsAutomatonWrapper.makeEmptyString()
+    for (r <- res.registers) {
+      epsResPreImage.regsRelation &= (r === 0)
+    }
+    val preImages = if (res.isAccept(res.initialState))
+      Seq(nonEpsResPreImage, epsResPreImage)
+    else
+      Seq(nonEpsResPreImage)
+    (Iterator(preImages), Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -75,50 +83,48 @@ class SubStr_lenMinus1_1 extends CEPreOp {
   }
 }
 
-// substring(s, n, len(s) - m)
+// substring(s, n, len(s) - m), where n >= 0 and m >= 0
 class SubStr_n_lenMinusM(beginIdx: Integer, offset: Integer) extends CEPreOp {
-  override def toString = "SubStr_n_lenMinusM"
+
+  override def toString = s"subStr(${beginIdx}, len - ${offset})"
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    val nonEpsResPreImage = CEBasicOperations.concatenate(
-      Seq(
-        PreOpUtil.automatonWithLen(beginIdx),
-        res,
-        PreOpUtil.automatonWithLen(offset)
-      )
-    )
-    val epsResPreImage = if (res.isAccept(res.initialState)) {
-      val beginPlus1 = beginIdx.intValue + 1
-      val offsetPlus1 = offset.intValue + 1
-      val epsResPreImage =
-        PreOpUtil.automatonWithLenLessThan(beginPlus1.min(offsetPlus1))
-      for (r <- res.registers) {
-        epsResPreImage.regsRelation &= (r === 0)
-      }
-      epsResPreImage
-    } else {
-      BricsAutomatonWrapper.makeEmpty()
+    val nonEpsResPreImage =
+      if (beginIdx >= offset)
+        CEBasicOperations.concatenate(
+          Seq(PreOpUtil.automatonWithLen(beginIdx), res)
+        )
+      else 
+        CEBasicOperations.concatenate(
+          Seq(PreOpUtil.automatonWithLen(beginIdx), res, PreOpUtil.automatonWithLen(offset-beginIdx))
+        )
+    val beginPlus1 = beginIdx + 1
+    val offsetPlus1 = offset + 1
+    val epsResPreImage =
+      PreOpUtil.automatonWithLenLessThan(beginPlus1.min(offsetPlus1))
+    for (r <- res.registers) {
+      epsResPreImage.regsRelation &= (r === 0)
     }
 
-    val preImage =
-      CEBasicOperations.union(Seq(nonEpsResPreImage, epsResPreImage))
+    val preImages =
+      if (res.isAccept(res.initialState))
+        Seq(nonEpsResPreImage, epsResPreImage)
+      else
+        Seq(nonEpsResPreImage)
 
-    (
-      Iterator(Seq(preImage)),
-      Seq()
-    )
+    (Iterator(preImages), Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
     Some(
       arguments(0)
         .slice(
-          beginIdx.intValue,
-          arguments(0).length - offset.intValue + beginIdx.intValue
+          beginIdx,
+          arguments(0).length - offset + beginIdx
         )
     )
   }
@@ -126,7 +132,7 @@ class SubStr_n_lenMinusM(beginIdx: Integer, offset: Integer) extends CEPreOp {
 
 // substring(s, 0, indexof_c(s, 0))
 class SubStr_0_indexofc0(c: Char) extends CEPreOp {
-  override def toString = "SubStr_0_indexofc0"
+  override def toString = s"subStr(0, indexof_${c}0)"
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
@@ -158,7 +164,7 @@ class SubStr_0_indexofc0(c: Char) extends CEPreOp {
 
 // substring(s, 0, indexof_c(s, 0) + 1)
 class SubStr_0_indexofc0Plus1(c: Char) extends CEPreOp {
-  override def toString(): String = "SubStr_0_indexofc0Plus1"
+  override def toString(): String = s"subStr(0, indexof_${c}0 + 1)"
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
@@ -197,7 +203,7 @@ class SubStr_0_indexofc0Plus1(c: Char) extends CEPreOp {
 
 // substring(s, indexof_c(s, 0) + 1, len(s) - (indexof_c(s, 0) + 1))
 class SubStr_indexofc0Plus1_tail(c: Char) extends CEPreOp {
-  override def toString(): String = "SubStr_indexofc0Plus1_tail"
+  override def toString(): String = s"subStr(indexof_${c}0 + 1, tail)"
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton

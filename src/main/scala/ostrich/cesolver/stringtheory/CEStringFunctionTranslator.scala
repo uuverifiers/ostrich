@@ -42,7 +42,7 @@ import ap.parser.ITerm
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
-import ap.terfor.linearcombination.LinearCombination
+import ap.terfor.linearcombination.LinearCombination.Constant
 import ap.basetypes.IdealInt
 import ostrich.cesolver.preop._
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
@@ -98,6 +98,17 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
             a(1)
           )
         )
+      case FunPred(`str_substr_n_lenMinusM`) =>
+        val Constant(IdealInt(beginIdx)) = a(1)
+        val Constant(IdealInt(offset)) = a(2)
+        Some(
+          (
+            () => new SubStr_n_lenMinusM(beginIdx, offset),
+            Seq(a(0)),
+            a(3)
+          )
+        )
+
       case FunPred(`str_substr_lenMinus1_1`) =>
         Some(
           (
@@ -192,8 +203,8 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
 
       case FunPred(`str_trim`) => {
         val op = () => {
-          val LinearCombination.Constant(IdealInt(trimLeft)) = a(1)
-          val LinearCombination.Constant(IdealInt(trimRight)) = a(2)
+          val Constant(IdealInt(trimLeft)) = a(1)
+          val Constant(IdealInt(trimRight)) = a(2)
           // TODO: generate length information
           new TransducerPreOp(
             BricsTransducer.getTrimTransducer(trimLeft, trimRight)

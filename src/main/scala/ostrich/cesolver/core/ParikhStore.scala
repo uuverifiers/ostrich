@@ -116,9 +116,7 @@ class ParikhStore(
     val syncRes =
       backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
     if (syncRes.getStatus == SimpleAPI.ProverStatus.Unsat) {
-      ParikhUtil.debugPrintln(
-        "nuxmv check consistency result: " + syncRes.getStatus
-      )
+      ParikhUtil.debugPrintln("nuxmv check consistency unsat")
       // inconsistent, generate the minimal conflicted set
       val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
       backendSolver.cleanConstaints

@@ -156,6 +156,13 @@ class CEPreprocessor(theory: CEStringTheory)
               ) if equalIExps(s, bigStr) => {
             str_substr_0_lenMinus1(bigStr)
           }
+          // substr(x, n, len(x) - m)
+          case (
+            beginIdx@Const(_),
+            Difference(Length(s), offset@Const(_))
+          ) if equalIExps(s, bigStr) => {
+            str_substr_n_lenMinusM(bigStr, beginIdx, offset)
+          }
           // substr(x, 0, indexof_c(x,0))
           case (
                 Const(IdealInt(0)),
