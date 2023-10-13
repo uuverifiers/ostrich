@@ -139,13 +139,13 @@ class CEPreprocessor(theory: CEStringTheory)
             IFunApp(`str_substr`, _),
             Seq(bigStr: ITerm, begin: ITerm, len: ITerm)
           ) => {
-        ParikhUtil.debugPrintln("str_substr bigStr : " + (bigStr))
-        ParikhUtil.debugPrintln(
-          "str_substr begin : " + simplifier(begin)
-        )
-        ParikhUtil.debugPrintln(
-          "str_substr len : " + simplifier(len)
-        )
+        // ParikhUtil.debugPrintln("str_substr bigStr : " + (bigStr))
+        // ParikhUtil.debugPrintln(
+        //   "str_substr begin : " + simplifier(begin)
+        // )
+        // ParikhUtil.debugPrintln(
+        //   "str_substr len : " + simplifier(len)
+        // )
         val simplifiedBegin = simplifier(begin)
         val simplifiedLen = simplifier(len)
         (simplifiedBegin, simplifiedLen) match {

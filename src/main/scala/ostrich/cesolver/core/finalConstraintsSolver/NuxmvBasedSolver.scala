@@ -33,7 +33,10 @@ class NuxmvBasedSolver(
     val flags: OFlags,
     val inputFormula: IFormula
 ) extends FinalConstraintsSolver[NuxmvFinalConstraints] {
+
   private var count = 0 // for debug
+
+  ParikhUtil.debugPrintln("maybe more efficient to use simplified product automaton before nuxmv encoding")
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(FinalConstraints.nuxmvACs(t, auts))

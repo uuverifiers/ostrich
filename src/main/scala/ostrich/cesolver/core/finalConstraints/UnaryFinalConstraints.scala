@@ -39,13 +39,15 @@ class UnaryFinalConstraints(
     ceAut.removeDuplicatedReg()
     ceAut
   }
-    
+
+  ParikhUtil.debugPrintln("ISSUE: the product automaton is too large to minimize, for some timeout instances of pyex suite")  
 
   private  val checkSatAut =
     if (flags.simplifyAut) mostlySimplifiedAut else productAut
   private  val findModelAut =
     if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
 
+  simplifyButRemainLabelAut.toDot(strDataBaseId.toString + "_simplifyButRemainLabelAut")
   mostlySimplifiedAut.toDot(strDataBaseId.toString + "_mostlySimplifiedAut")
 
   override lazy val getCompleteLIA: IFormula = {

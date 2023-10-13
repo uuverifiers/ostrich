@@ -82,6 +82,7 @@ class ParikhStore(
   private def checkConsistencyByProduct(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
+    ParikhUtil.debugPrintln("TODO: maybe more efficient to consider inputLIA & regsRelations here")
     if (flags.noAutomataProduct) return None
     productAut = productAut product aut
     val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]

@@ -52,6 +52,7 @@ class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
     preimage.regsRelation = and(
       Seq(preimage.regsRelation, (epsilonResFormula | nonEpsilonResFormula))
     )
+    ParikhUtil.debugPrintln("TODO: maybe more efficient to use mutiple simpler preimages")
     preimage
   }
 
