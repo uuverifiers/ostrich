@@ -6,6 +6,7 @@ import storage
 import voting.majority as voting
 
 import models.pyex_sat as pyex_sat
+import models.PyEx_All as pyex
 import models.test as test
 
 import startwebserver
@@ -17,12 +18,14 @@ import tools.ostrich
 import summarygenerators
 
 tracks = (
-    pyex_sat.getTrackData()
+    pyex.getTrackData()
+    # pyex_sat.getTrackData()
 ) + []
 
 solvers = {}
 for s in [
     tools.ostrichBackend,
+    tools.cvc5
     # tools.ostrich
 ]:
     s.addRunner(solvers)
@@ -31,10 +34,9 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("pyex_sat")
+store = storage.SQLiteDB("pyex-unary_only")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-# verifiers = ["Cvc5"]
-verifiers = []
+verifiers = ["Cvc5"]
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )

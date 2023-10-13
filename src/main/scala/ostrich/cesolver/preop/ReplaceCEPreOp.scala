@@ -222,7 +222,6 @@ class ReplaceCEPreOp(tran: CETransducer, replacement: Seq[Char])
     val rc = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val internals = partition(rc, replacement)
     val newYCon = tran.preImage(rc, internals)
-    newYCon.toDot("replacePre " + this.hashCode())
     (Iterator(Seq(newYCon)), argumentConstraints)
   }
 

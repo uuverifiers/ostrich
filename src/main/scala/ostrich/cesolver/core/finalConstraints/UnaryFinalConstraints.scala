@@ -15,9 +15,10 @@ class UnaryFinalConstraints(
     override val auts: Seq[CostEnrichedAutomatonBase],
     flags : OFlags
 ) extends BaselineFinalConstraints(strDataBaseId, auts) {
+
   private val productAut = auts.reduce(_ product _)
 
-  private val mostlySimplifiedAut = {
+  private lazy val mostlySimplifiedAut = {
     val ceAut = CEBasicOperations.minimizeHopcroftByVec(
       CEBasicOperations.determinateByVec(
         CEBasicOperations.epsilonClosureByVec(
@@ -29,7 +30,7 @@ class UnaryFinalConstraints(
     ceAut
   }
 
-  private val simplifyButRemainLabelAut = {
+  private lazy val simplifyButRemainLabelAut = {
     val ceAut = CEBasicOperations.removeDuplicatedTrans(
       CEBasicOperations.minimizeHopcroft(
         productAut
@@ -44,6 +45,8 @@ class UnaryFinalConstraints(
     if (flags.simplifyAut) mostlySimplifiedAut else productAut
   private  val findModelAut =
     if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
+
+  mostlySimplifiedAut.toDot(strDataBaseId.toString + "_mostlySimplifiedAut")
 
   override lazy val getCompleteLIA: IFormula = {
     getCompleteLIA(checkSatAut)

@@ -10,7 +10,6 @@ import ap.types.SortedPredicate
 import ap.parameters.{Param, ReducerSettings}
 import ostrich.cesolver.stringtheory.CEStringTheory
 import ostrich.OFlags
-import ostrich.cesolver.stringtheory.CEStringFunctionTranslator
 import ostrich.cesolver.util.ParikhUtil
 
 class CEInternalPreprocessor(theory: CEStringTheory, flags: OFlags) {

@@ -47,8 +47,8 @@ class ParikhStore(
   }
 
   def pop: Unit = {
-    productAut = productAutStack.pop
-    val oldSize = constraintStack.pop
+    productAut = productAutStack.pop()
+    val oldSize = constraintStack.pop()
     Seqs.reduceToSize(constraints, oldSize)
   }
 

@@ -34,7 +34,7 @@ class SubStr_0_lenMinus1 extends CEPreOp {
     val preImage = CEBasicOperations.concatenate(
       Seq(
         res,
-        LengthCEPreOp.lengthPreimage(1)
+        PreOpUtil.automatonWithLen(1)
       )
     )
     if (res.isAccept(res.initialState))
@@ -71,11 +71,14 @@ class SubStr_lenMinus1_1 extends CEPreOp {
     for (r <- res.registers) {
       epsResPreImage.regsRelation &= (r === 0)
     }
-    val preImages = if (res.isAccept(res.initialState))
-      Seq(nonEpsResPreImage, epsResPreImage)
-    else
-      Seq(nonEpsResPreImage)
-    (Iterator(preImages), Seq())
+    epsResPreImage.regsRelation &= res.regsRelation
+    
+    val preImages =
+      if (res.isAccept(res.initialState))
+        Iterator(Seq(nonEpsResPreImage), Seq(epsResPreImage))
+      else
+        Iterator(Seq(nonEpsResPreImage))
+    (preImages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -93,30 +96,36 @@ class SubStr_n_lenMinusM(beginIdx: Integer, offset: Integer) extends CEPreOp {
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    val beginPlus1 = beginIdx + 1
+    val offsetPlus1 = offset + 1
     val nonEpsResPreImage =
       if (beginIdx >= offset)
         CEBasicOperations.concatenate(
           Seq(PreOpUtil.automatonWithLen(beginIdx), res)
         )
-      else 
+      else
         CEBasicOperations.concatenate(
-          Seq(PreOpUtil.automatonWithLen(beginIdx), res, PreOpUtil.automatonWithLen(offset-beginIdx))
+          Seq(
+            PreOpUtil.automatonWithLen(beginIdx),
+            res,
+            PreOpUtil.automatonWithLen(offset - beginIdx)
+          )
         )
-    val beginPlus1 = beginIdx + 1
-    val offsetPlus1 = offset + 1
+
     val epsResPreImage =
-      PreOpUtil.automatonWithLenLessThan(beginPlus1.min(offsetPlus1))
+      PreOpUtil.automatonWithLenLessThan(beginPlus1.max(offsetPlus1))
     for (r <- res.registers) {
       epsResPreImage.regsRelation &= (r === 0)
     }
+    epsResPreImage.regsRelation &= res.regsRelation
 
     val preImages =
       if (res.isAccept(res.initialState))
-        Seq(nonEpsResPreImage, epsResPreImage)
+        Iterator(Seq(nonEpsResPreImage), Seq(epsResPreImage))
       else
-        Seq(nonEpsResPreImage)
+        Iterator(Seq(nonEpsResPreImage))
 
-    (Iterator(preImages), Seq())
+    (preImages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -145,14 +154,26 @@ class SubStr_0_indexofc0(c: Char) extends CEPreOp {
     val nonEpsResPreImage = CEBasicOperations.concatenate(
       Seq(resInterNoC, cAut, BricsAutomatonWrapper.makeAnyString())
     )
-    val epsResPreImage = SubStrPreImageUtil.noMatch(c)
+    val epsResPreImage1 = SubStrPreImageUtil.noMatch(c)
+    val epsResPreImage2 = CEBasicOperations.concatenate(
+      Seq(cAut, BricsAutomatonWrapper.makeAnyString())
+    )
     for (r <- res.registers) {
-      epsResPreImage.regsRelation &= (r === 0)
+      epsResPreImage1.regsRelation &= (r === 0)
+      epsResPreImage2.regsRelation &= (r === 0)
     }
+    epsResPreImage1.regsRelation &= res.regsRelation
+    epsResPreImage2.regsRelation &= res.regsRelation
+
     val preImages =
-      if (res.isAccept(res.initialState)) Seq(nonEpsResPreImage, epsResPreImage)
-      else Seq(nonEpsResPreImage)
-    (Iterator(preImages), Seq())
+      if (res.isAccept(res.initialState))
+        Iterator(
+          Seq(nonEpsResPreImage),
+          Seq(epsResPreImage1),
+          Seq(epsResPreImage2)
+        )
+      else Iterator(Seq(nonEpsResPreImage))
+    (preImages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -180,18 +201,19 @@ class SubStr_0_indexofc0Plus1(c: Char) extends CEPreOp {
     val nonEpsResPreImage = CEBasicOperations.concatenate(
       Seq(resInterNoCC, BricsAutomatonWrapper.makeAnyString())
     )
-    val epsilonResPreImage = SubStrPreImageUtil.noMatch(c)
+    val epsResPreImage = SubStrPreImageUtil.noMatch(c)
     for (r <- res.registers) {
-      epsilonResPreImage.regsRelation &= (r === 0)
+      epsResPreImage.regsRelation &= (r === 0)
     }
+    epsResPreImage.regsRelation &= res.regsRelation
 
     val preImages =
       if (res.isAccept(res.initialState))
-        Seq(nonEpsResPreImage, epsilonResPreImage)
+        Iterator(Seq(nonEpsResPreImage), Seq(epsResPreImage))
       else
-        Seq(nonEpsResPreImage)
+        Iterator(Seq(nonEpsResPreImage))
 
-    (Iterator(preImages), Seq())
+    (preImages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
@@ -215,18 +237,20 @@ class SubStr_indexofc0Plus1_tail(c: Char) extends CEPreOp {
       Seq(noMatchC, cAut)
     )
 
-    val nonEpsResPreImage = CEBasicOperations.concatenate(Seq(prefix, res))
+    val nonEpsResPreImage1 = CEBasicOperations.concatenate(Seq(prefix, res))
+    val nonEpsResPreImage2 = CEBasicOperations.intersection(res, noMatchC)
     val epsResPreImage = BricsAutomatonWrapper.makeEmptyString()
     for (r <- res.registers) {
       epsResPreImage.regsRelation &= (r === 0)
     }
+    epsResPreImage.regsRelation &= res.regsRelation
 
     val preImages =
       if (res.isAccept(res.initialState))
-        Seq(nonEpsResPreImage, epsResPreImage)
+        Iterator(Seq(nonEpsResPreImage1), Seq(nonEpsResPreImage2), Seq(epsResPreImage))
       else
-        Seq(nonEpsResPreImage)
-    (Iterator(preImages), Seq())
+        Iterator(Seq(nonEpsResPreImage1), Seq(nonEpsResPreImage2))
+    (preImages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {

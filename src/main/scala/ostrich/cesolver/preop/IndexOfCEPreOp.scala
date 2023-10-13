@@ -101,6 +101,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     )
 
     // len(argStr) >= startPos and no match after startPos
+    // bug in negIdx2 ！！！！！！！！
     val negIdx2 = concatenate(
       Seq(lengthPreimage(startPos), notMatched)
     )
@@ -144,6 +145,7 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
         )
       }
     }
+    
     (preimages, Seq())
   }
 
