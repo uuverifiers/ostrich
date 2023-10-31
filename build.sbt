@@ -44,7 +44,7 @@ lazy val commonSettings = Seq(
                              )
                           ),
 //
-  scalaVersion          := "2.13.8",
+  scalaVersion          := "2.13.12",
   scalacOptions         += "-deprecation",
   // scalafix ----------------------------------
   scalacOptions         += "-Wunused",
