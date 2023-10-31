@@ -156,7 +156,7 @@ class CETransducer {
 
       // collect silent transitions during main loop and eliminate them
       // after (TODO: think of more efficient solution)
-      val silentTransitions = new MHashMap[State, MSet[State]]
+      new MHashMap[State, MSet[State]]
         with MMultiMap[State, State]
 
       def sumVec(v1: Seq[Int], v2: Seq[Int]) =
@@ -519,12 +519,12 @@ class CETransducer {
     }
 
     _acceptingStates.retain(bwdReach.contains(_))
-    _lblTrans.retain((k, v) => bwdReach.contains(k))
-    _eTrans.retain((k, v) => bwdReach.contains(k))
-    _lblTrans.foreach({ case (k, v) =>
+    _lblTrans.retain((k, _) => bwdReach.contains(k))
+    _eTrans.retain((k, _) => bwdReach.contains(k))
+    _lblTrans.foreach({ case (_, v) =>
       v.retain(t => bwdReach.contains(dest(t)))
     })
-    _eTrans.foreach({ case (k, v) =>
+    _eTrans.foreach({ case (_, v) =>
       v.retain(t => bwdReach.contains(edest(t)))
     })
   }

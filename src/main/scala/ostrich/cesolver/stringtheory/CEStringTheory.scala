@@ -1,40 +1,24 @@
 package ostrich.cesolver.stringtheory
 
 import ostrich.automata.{Transducer}
-import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
-import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
 
 import ap.Signature
 import ap.basetypes.IdealInt
-import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp}
+import ap.parser.{IFormula, IExpression}
 import IExpression.Predicate
-import ap.theories.strings._
-import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
-import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
-import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
+import ap.theories.Incompleteness
+import ap.terfor.{Term, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
 import ap.util.Seqs
 
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.collection.{Map => GMap}
 import ostrich.cesolver.preprocess.CEPreprocessor
-import ostrich.cesolver.core.finalConstraints.FinalConstraints
-import ostrich.cesolver.util.ParikhUtil
-import ap.parser.Internal2InputAbsy
 import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
 import ostrich.OstrichEqualityPropagator
-import ostrich.automata.AutDatabase
 import ostrich.cesolver.automata.CEAutDatabase
-import ostrich.OstrichInternalPreprocessor
-import ap.terfor.conjunctions.IdentityReducerPluginFactory
 import ostrich.cesolver.preprocess.CEInternalPreprocessor
-import ap.terfor.conjunctions.ReducerPlugin
-import ostrich.OstrichReducer
 import ostrich.cesolver.preprocess.CEReducerFactory
-import ap.terfor.conjunctions.ReducerPluginFactory
 
 object CEStringTheory {
   val alphabetSize = 0x10000

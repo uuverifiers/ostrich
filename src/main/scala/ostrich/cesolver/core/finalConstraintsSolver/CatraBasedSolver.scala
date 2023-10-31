@@ -32,8 +32,6 @@ package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.{SymbolCollector, PrincessLineariser}
-import ap.terfor.TerForConvenience._
-import ap.terfor.Term
 import ap.basetypes.IdealInt
 import uuverifiers.catra.CommandLineOptions
 import scala.io.Source
@@ -51,16 +49,11 @@ import uuverifiers.catra.Sat
 import uuverifiers.catra.OutOfMemory
 import uuverifiers.catra.Timeout
 import uuverifiers.catra.Unsat
-import ap.terfor.ConstantTerm
-import ap.terfor.linearcombination.LinearCombination
 import ostrich.OFlags
-import uuverifiers.catra.ChooseNuxmv
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.util.Random
 import java.io.File
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.{ITerm, IConstant, IIntLit, SimplifyingConstantSubstVisitor}
+import ap.parser.{ITerm, IConstant, IIntLit}
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.util.CatraWriter
@@ -68,8 +61,6 @@ import ap.parser.IExpression._
 import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraints.CatraFinalConstraints
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
-import ap.types.SortedConstantTerm
-import ostrich.OstrichStringTheory.OstrichStringSort
 
 class CatraBasedSolver(
     private val inputFormula: IFormula
@@ -229,9 +220,9 @@ class CatraBasedSolver(
       case Sat(assignments) => {
         ParikhUtil.debugPrintln("Catra assignment " + assignments)
         // update integer model
-        val sb = new StringBuilder
+        new StringBuilder
         // lia may contains some string term which should be ignored
-        val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+        and(inputFormula +: constraints.map(_.getRegsRelation))
         val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
         val name2Term = allIntTerms.map(t => (t.toString(), t)).toMap
 
@@ -316,7 +307,7 @@ class CatraBasedSolver(
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-        case Failure(e) => // do nothing as unknown resultå
+        case Failure(_) => // do nothing as unknown resultå
       }
     } finally {
       if (!ParikhUtil.debug)

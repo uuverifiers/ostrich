@@ -3,18 +3,13 @@ package ostrich.cesolver.core.finalConstraints
 
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
-import ap.parser.IConstant
 import ap.parser.IExpression._
 import ap.parser.IFormula
 import ap.parser.ITerm
-import ap.terfor.ConstantTerm
-import ap.terfor.OneTerm
 import ostrich.OFlags
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
 
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.{HashMap => MHashMap}
 
 object FinalConstraints {
   def unaryHeuristicACs(

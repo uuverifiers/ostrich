@@ -6,8 +6,6 @@ import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
-import ap.theories.TheoryBuilder
-import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ostrich.OFlags
 import OFlags.CEABackend.{Unary, Baseline, Catra, Nuxmv}
 import ostrich.cesolver.util.ParikhUtil
@@ -89,8 +87,6 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   }
 
   import StringTheoryBuilder._
-  import ap.parser._
-  import IExpression._
 
   lazy val getTransducerTheory: Option[StringTheory] =
     Some(SeqStringTheory(CEStringTheory.alphabetSize))

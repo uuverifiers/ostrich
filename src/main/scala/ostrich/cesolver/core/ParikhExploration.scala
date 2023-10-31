@@ -6,11 +6,9 @@ import ap.SimpleAPI
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
-  HashSet => MHashSet,
-  BitSet => MBitSet
+  HashSet => MHashSet
 }
 import ostrich.cesolver.automata.BricsAutomatonWrapper
-import ostrich.cesolver.convenience.CostEnrichedConvenience._
 import ostrich.cesolver.preop.LengthCEPreOp
 import ap.basetypes.IdealInt
 import SimpleAPI.ProverStatus
@@ -24,17 +22,13 @@ import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.core.finalConstraintsSolver.{BaselineSolver, CatraBasedSolver, UnaryBasedSolver}
 import ostrich.OFlags
 import OFlags.CEABackend.{Baseline, Unary, Catra, Nuxmv}
-import ap.terfor.linearcombination.LinearCombination
 import ap.parser.ITerm
 import ap.parser.InputAbsy2Internal
 import ap.terfor.Term
 import ap.terfor.TermOrder
 import ostrich.cesolver.util.{TermGenerator, ParikhUtil}
-import ap.terfor.SortedWithOrder
 import ostrich.OstrichSolver
 import ap.proof.theoryPlugins.Plugin
-import ap.parser.Internal2InputAbsy
-import ap.terfor.Formula
 import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
@@ -43,7 +37,6 @@ import ap.parser.IIntLit
 import ap.parser.IConstant
 import ap.parser.SimplifyingConstantSubstVisitor
 import ap.parser.IExpression
-import ap.parser.Simplifier
 
 object ParikhExploration {
 
@@ -231,7 +224,7 @@ class ParikhExploration(
 
     for ((t, aut) <- allInitialConstraints) {
       constraintStores(t).assertConstraint(aut) match {
-        case Some(conflictSet) =>
+        case Some(_) =>
           // println(conflictSet)
           return None
         case None => // nothing

@@ -1,16 +1,11 @@
 package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
-import ap.terfor.linearcombination.LinearCombination
-import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import scala.collection.mutable.ArrayBuffer
 import ostrich.cesolver.automata.BricsAutomatonWrapper.{
   makeAnyString,
-  fromString,
-  makeEmpty
+  fromString
 }
-import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
-import ostrich.cesolver.automata.BricsAutomatonWrapper
+import PreOpUtil.automatonWithLenLessThan
 import LengthCEPreOp.lengthPreimage
 import ostrich.cesolver.automata.CEBasicOperations.{
   concatenate,
@@ -21,7 +16,6 @@ import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IExpression.Const
 import ostrich.cesolver.util.TermGenerator
-import ostrich.cesolver.util.ParikhUtil
 
 object IndexOfCEPreOp {
   def apply(startPos: ITerm, index: ITerm, matchStr: String) =

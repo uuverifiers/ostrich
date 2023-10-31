@@ -4,7 +4,6 @@ import ap.parser._
 import IExpression._
 import ap.theories.strings.StringTheory.ConcreteString
 import ostrich.cesolver.stringtheory.CEStringTheory
-import ostrich.cesolver.util.ParikhUtil
 import ap.basetypes.IdealInt
 import ap.theories.bitvectors.ModuloArithmetic
 
@@ -19,7 +18,7 @@ class CEPreprocessor(theory: CEStringTheory)
             Seq(
               IFunApp(
                 ModuloArithmetic.mod_cast,
-                Seq(IIntLit(lower), IIntLit(upper), Const(c))
+                Seq(IIntLit(_), IIntLit(_), Const(c))
               ),
               IFunApp(`str_empty`, Seq())
             )
@@ -33,7 +32,7 @@ class CEPreprocessor(theory: CEStringTheory)
     def unapply(t: IExpression): Option[(ITerm, ITerm)] = t match {
       case IFunApp(
             `str_indexof`,
-            Seq(s, char @ ConstChar(c), Const(IdealInt(0)))
+            Seq(s, char @ ConstChar(_), Const(IdealInt(0)))
           ) =>
         Some((s, char))
       case _ => None
@@ -64,15 +63,9 @@ class CEPreprocessor(theory: CEStringTheory)
     case ts    => ts reduceLeft (re_++(_, _))
   }
 
-  private def reUnion(ts: ITerm*): ITerm = ts match {
-    case Seq() => re_none()
-    case ts    => ts reduceLeft (re_union(_, _))
-  }
+  
 
-  private def strCat(ts: ITerm*): ITerm = ts match {
-    case Seq() => str_empty()
-    case ts    => ts reduceLeft (str_++(_, _))
-  }
+  
 
   def apply(f: IFormula): IFormula =
     this.visit(f, Context(())).asInstanceOf[IFormula]

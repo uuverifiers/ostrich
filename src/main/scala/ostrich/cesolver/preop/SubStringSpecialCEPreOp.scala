@@ -3,11 +3,7 @@ package ostrich.cesolver.preop
 import ostrich.automata.Automaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.automata.CEBasicOperations
-import ap.parser.IExpression
-import ap.basetypes.IdealInt
-import ap.parser.IIntLit
 import ostrich.cesolver.automata.BricsAutomatonWrapper
-import ostrich.cesolver.util.ParikhUtil
 import ostrich.automata.BricsTLabelOps
 
 object SubStrPreImageUtil {

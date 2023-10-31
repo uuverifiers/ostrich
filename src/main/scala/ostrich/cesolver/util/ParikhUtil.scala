@@ -1,23 +1,14 @@
 package ostrich.cesolver.util
 
 import scala.collection.mutable.{
-  Map => MMap,
   HashSet => MHashSet,
-  HashMap => MHashMap,
   ArrayStack
 }
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 
 import ap.basetypes.IdealInt
-import scala.collection.mutable.ArrayBuffer
-import ap.api.SimpleAPI
-import ap.api.SimpleAPI.ProverStatus
-import ap.terfor.linearcombination.LinearCombination
-import ostrich.cesolver.core.finalConstraints.FinalConstraints
 import ap.parser.ITerm
-import ap.parser.IExpression._
 import ostrich.automata.BricsTLabelOps
-import java.io.File
 
 object ParikhUtil {
   type State = CostEnrichedAutomatonBase#State

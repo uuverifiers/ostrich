@@ -13,18 +13,8 @@ import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.api.SimpleAPI
 import ap.parser.SymbolCollector
 import ostrich.cesolver.util.ParikhUtil
-import java.io.PrintWriter
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.util.concurrent.TimeUnit
 import ap.basetypes.IdealInt
-import ap.parser.Internal2InputAbsy
 import ostrich.cesolver.core.Model
-import ap.parser.IExpression
-import java.time.LocalDate
-import ap.types.SortedConstantTerm
-import ostrich.OstrichStringTheory.OstrichStringSort
 import scala.sys.process._
 import ostrich.OFlags
 import ostrich.cesolver.util.UnknownException
@@ -53,7 +43,7 @@ class NuxmvBasedSolver(
       s"l$i"
     }.toSeq
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-    var emptyStingRegsUpdate = Boolean2IFormula(true)
+    Boolean2IFormula(true)
     val regsRelationAndInputLIA =
       lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
     val integers = (SymbolCollector constants lia)
@@ -183,7 +173,7 @@ class NuxmvBasedSolver(
       count += 1
     }
     ////////// end of dot file generation
-    val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+    and(inputFormula +: constraints.map(_.getRegsRelation))
     // val inputVars = SymbolCollector constants lia
     val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
     val name2ITerm =

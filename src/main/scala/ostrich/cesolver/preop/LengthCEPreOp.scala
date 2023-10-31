@@ -2,7 +2,6 @@ package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
 import ostrich.cesolver.automata.CostEnrichedAutomaton
-import ostrich.cesolver._
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
 import ostrich.cesolver.util.TermGenerator

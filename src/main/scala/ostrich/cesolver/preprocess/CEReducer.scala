@@ -2,7 +2,7 @@ package ostrich.cesolver.preprocess
 
 import ostrich.automata.{AutDatabase, BricsAutomaton}
 import ap.basetypes.IdealInt
-import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
+import ap.parser.{IFunApp, IIntLit, IExpression}
 import ap.terfor.{
   ComputationLogger,
   Formula,
@@ -13,17 +13,15 @@ import ap.terfor.{
 import ap.terfor.conjunctions.{
   Conjunction,
   NegatedConjunctions,
-  Quantifier,
   ReduceWithConjunction,
-  ReducerPlugin,
-  ReducerPluginFactory
+  ReducerPlugin
 }
 import ap.terfor.arithconj.ArithConj
-import ap.terfor.preds.{Atom, PredConj, Predicate}
+import ap.terfor.preds.{Atom, PredConj}
 import ap.util.PeekIterator
 import AutDatabase.{ComplementedAut, NamedAutomaton, PositiveAut}
 
-import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
+import scala.collection.mutable.ArrayBuffer
 
 import ostrich.cesolver.stringtheory.{
   CEStringTheory,
@@ -34,7 +32,6 @@ import ostrich.OstrichReducerFactory
 
 class CEReducerFactory(theory: CEStringTheory)
     extends OstrichReducerFactory(theory) {
-  import theory.{str_len, int_to_str, str_to_int, str_prefixof, FunPred}
 
   override def apply(conj: Conjunction, order: TermOrder) =
     new CEReducer(
@@ -408,7 +405,7 @@ class CEReducer(
 
           val newPos, newNeg, curPos, curNeg = new ArrayBuffer[Atom]
 
-          import ceAutDatabase.{isSubsetOf, isSubsetOfBE, emptyIntersection}
+          import ceAutDatabase.{isSubsetOfBE, emptyIntersection}
 
           def pickNextTerm: Term =
             if (posIt.hasNext) {

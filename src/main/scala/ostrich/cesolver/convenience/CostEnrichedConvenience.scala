@@ -2,10 +2,6 @@ package ostrich.cesolver.convenience
 
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.automata.Automaton
-import ap.parser.Internal2InputAbsy
-import ap.parser.ITerm
-import ap.terfor.ConstantTerm
-import ap.parser.IFormula
 import ostrich.automata.BricsAutomaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 object CostEnrichedConvenience {

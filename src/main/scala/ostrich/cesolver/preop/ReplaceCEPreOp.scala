@@ -2,25 +2,17 @@ package ostrich.cesolver.preop
 
 import scala.collection.mutable.{
   HashMap => MHashMap,
-  HashSet => MHashSet,
   Stack => MStack
 }
 
 import ostrich.automata.Automaton
 import ostrich.automata.Transducer
-import ostrich.automata.BricsTransducer
-import ostrich.automata.BricsTransducerBuilder
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import Transducer._
-import scala.collection.mutable.Stack
-import scala.collection.mutable.ArrayBuffer
-import ostrich.cesolver.util.ParikhUtil.TLabel
 import ostrich.cesolver.automata.CETransducer
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.automata.BricsTLabelOps
 import ostrich.automata.BricsTLabelEnumerator
 import ostrich.cesolver.util.ParikhUtil.{partition, State, getImage}
-import ostrich.cesolver.automata.BricsAutomatonWrapper
 
 object ReplaceCEPreOp {
   // pre-images of x = replace(y, e, u)

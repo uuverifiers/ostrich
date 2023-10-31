@@ -1,14 +1,11 @@
 package ostrich.cesolver.core.finalConstraints
 
-import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.automata.CEBasicOperations
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import scala.collection.mutable.ArrayBuffer
 import ostrich.OFlags
 import ap.parser.ITerm
 import ap.parser.IFormula
-import ap.parser.IExpression._
 
 class UnaryFinalConstraints(
     override val strDataBaseId: ITerm,

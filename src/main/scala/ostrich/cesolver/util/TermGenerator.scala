@@ -1,8 +1,6 @@
 package ostrich.cesolver.util
 
 import ap.parser.ITerm
-import ap.terfor.ConstantTerm
-import ap.terfor.TermOrder
 import ap.parser.IExpression._
 
 

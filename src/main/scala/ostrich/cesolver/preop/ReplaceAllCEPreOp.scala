@@ -4,8 +4,7 @@ import scala.collection.mutable.{HashSet => MHashSet, HashMap => MHashMap, Stack
 
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.automata.CETransducer
-import ostrich.automata.BricsTLabelOps
-import ostrich.cesolver.util.ParikhUtil.{State, partition, getImage}
+import ostrich.cesolver.util.ParikhUtil.{partition, getImage}
 import ostrich.automata.Automaton
 import ostrich.automata.Transducer._
 import ostrich.cesolver.util.ParikhUtil

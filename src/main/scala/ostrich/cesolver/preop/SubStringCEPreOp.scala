@@ -1,22 +1,17 @@
 package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
-import ostrich.cesolver.automata.CostEnrichedAutomaton
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
 import ostrich.cesolver.automata.CEBasicOperations.{intersection, concatenate}
-import ostrich.automata.BricsAutomaton
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.IBoolLit
-import ostrich.cesolver.automata.CEBasicOperations
 import ap.basetypes.IdealInt
 
 object SubStringCEPreOp {
-  private var debugId = 0
+  
 
   def apply(beginIdx: ITerm, length: ITerm) = {
     new SubStringCEPreOp(beginIdx, length)

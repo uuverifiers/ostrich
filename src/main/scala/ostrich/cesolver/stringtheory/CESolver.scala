@@ -1,21 +1,19 @@
 package ostrich.cesolver.stringtheory
 
 import ostrich.automata.{Automaton, BricsAutomaton}
-import ostrich.preop.{PreOp, ConcatPreOp}
+import ostrich.preop.PreOp
 
 import ap.SimpleAPI
 import ap.parser.IFunction
-import ap.terfor.{Term, Formula, TerForConvenience, ConstantTerm, OneTerm}
-import ap.terfor.preds.{PredConj, Atom}
+import ap.terfor.{Term, TerForConvenience, ConstantTerm, OneTerm}
+import ap.terfor.preds.Atom
 import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.conjunctions.Conjunction
 import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
 import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
-import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
 import scala.collection.mutable.{
   ArrayBuffer,
@@ -27,21 +25,14 @@ import ostrich.cesolver.preop.{SubStringCEPreOp, IndexOfCEPreOp}
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.cesolver.core.ParikhExploration
 import ap.parser.Internal2InputAbsy
-import ap.parser.ITerm
 import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
-import ostrich.cesolver.util.ParikhUtil
-import ostrich.cesolver.convenience.CostEnrichedConvenience
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
   import OstrichSolver._
   import theory.{
-    str_from_char,
     str_len,
-    str_empty,
-    str_cons,
-    str_++,
     str_in_re,
     str_char_count,
     str_in_re_id,
@@ -50,10 +41,6 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
     re_from_ecma2020,
     re_from_ecma2020_flags,
     re_case_insensitive,
-    str_replace,
-    str_replacere,
-    str_replaceall,
-    str_replaceallre,
     str_prefixof,
     re_none,
     re_all,
@@ -123,7 +110,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
     val order = goal.order
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
-    val eagerMode = flags.eagerAutomataOperations
+    flags.eagerAutomataOperations
 
     val useLength = flags.useLength match {
 
@@ -345,7 +332,6 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
             lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
           )
 
-        import TerForConvenience._
         implicit val o = lengthProver.order
         lengthProver
       }

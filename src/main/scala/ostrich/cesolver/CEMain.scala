@@ -3,7 +3,6 @@ package ostrich.cesolver
 import ap.ParallelFileProver
 import ap.parameters.Param
 import ostrich.cesolver.util.ParikhUtil
-import ap.CmdlMain
 
 /**
  * Wrapper around <code>ap.CmdlMain</code>, adding the option

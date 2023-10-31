@@ -3,7 +3,6 @@ package ostrich.cesolver.core.finalConstraintsSolver
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
-import ostrich.cesolver.convenience.CostEnrichedConvenience._
 import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
@@ -12,7 +11,6 @@ import ostrich.cesolver.core.finalConstraints.{
   UnaryFinalConstraints
 }
 import ostrich.OFlags
-import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._

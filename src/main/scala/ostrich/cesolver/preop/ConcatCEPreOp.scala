@@ -1,7 +1,6 @@
 package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
-import ostrich.cesolver.convenience.CostEnrichedConvenience._
 import ostrich.cesolver.automata.CostEnrichedInitFinalAutomaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression._

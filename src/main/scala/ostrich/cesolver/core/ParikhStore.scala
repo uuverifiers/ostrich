@@ -1,20 +1,16 @@
 package ostrich.cesolver.core
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack, HashMap => MHashMap}
-import ostrich.cesolver.convenience.CostEnrichedConvenience._
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ParikhExploration._
-import ostrich.Exploration.ConstraintStore
 import ap.util.Seqs
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ap.parser.ITerm
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.cesolver.automata.CostEnrichedAutomaton
 import ostrich.OFlags
 import ap.parser.IFormula
 import ostrich.cesolver.core.finalConstraintsSolver.NuxmvBasedSolver
 import ap.api.SimpleAPI
-import ostrich.cesolver.core.finalConstraintsSolver.Result
 
 class ParikhStore(
     t: ITerm,

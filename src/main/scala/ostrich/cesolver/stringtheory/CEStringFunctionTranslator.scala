@@ -33,7 +33,6 @@ package ostrich.cesolver.stringtheory
 import ostrich.automata.{
   Regex2PFA,
   JavascriptPrioAutomatonBuilder,
-  AtomicStateAutomaton,
   BricsTransducer
 }
 import ostrich.preop._
@@ -41,14 +40,13 @@ import ostrich.preop._
 import ap.parser.ITerm
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.{Atom, Predicate}
+import ap.terfor.preds.Atom
 import ap.terfor.linearcombination.LinearCombination.Constant
 import ap.basetypes.IdealInt
 import ostrich.cesolver.preop._
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.Internal2InputAbsy
 import ostrich.OstrichStringFunctionTranslator
-import ostrich.cesolver.util.ParikhUtil
 
 /** Class for mapping string constraints to string functions.
   */
@@ -57,8 +55,7 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
   import theory._
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
-  private val cgTranslator =
-    new Regex2PFA(theory, new JavascriptPrioAutomatonBuilder)
+  new Regex2PFA(theory, new JavascriptPrioAutomatonBuilder)
 
   private def regexAsTerm(t: Term): Option[ITerm] =
     try {

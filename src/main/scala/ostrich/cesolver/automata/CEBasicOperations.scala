@@ -11,12 +11,10 @@ import scala.collection.mutable.{
 import dk.brics.automaton.BasicAutomata
 import ap.parser.ITerm
 import ostrich.automata.BricsTLabelOps
-import ostrich.cesolver.util.ParikhUtil
 import dk.brics.automaton.Transition
 import scala.collection.JavaConverters._
 import ap.parser.IFormula
 import ap.parser.IExpression._
-import ap.parser.IExpression
 import ostrich.cesolver.util.TermGenerator
 import ap.parser.Simplifier
 

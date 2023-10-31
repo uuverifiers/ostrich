@@ -46,6 +46,12 @@ lazy val commonSettings = Seq(
 //
   scalaVersion          := "2.13.8",
   scalacOptions         += "-deprecation",
+  // scalafix ----------------------------------
+  scalacOptions         += "-Wunused",
+  semanticdbEnabled := true, // enable SemanticDB
+  semanticdbVersion := scalafixSemanticdb.revision, // only required for Scala 2.x
+  // scalafix ----------------------------------
+
   fork in run           := true,
   cancelable in Global  := true,
 //
