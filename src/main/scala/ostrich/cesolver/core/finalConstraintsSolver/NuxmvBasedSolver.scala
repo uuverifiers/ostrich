@@ -189,9 +189,9 @@ class NuxmvBasedSolver(
     try {
       val nuxmvCmd =
         if (nuxmvBackend == OFlags.NuxmvBackend.Bmc)
-          Seq("nuxmv", "-source", "bmc_source", nuxmvInputF.toString())
+          Seq("nuxmv", "-source", "bmc_source", nuxmvInputF.toString(), "2>/dev/null")
         else
-          Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString())
+          Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString(), "2>/dev/null")
       val nuxmvInput = printNUXMVModule(constraints).getBytes(StandardCharsets.UTF_8)
       Files.write(
         nuxmvInputF,
