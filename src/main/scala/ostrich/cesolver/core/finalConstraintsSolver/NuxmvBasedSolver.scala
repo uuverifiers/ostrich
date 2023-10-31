@@ -3,7 +3,8 @@ package ostrich.cesolver.core.finalConstraintsSolver
 import ap.parser.{ITerm, IFormula}
 import ap.parser.IExpression._
 
-import java.io.File
+import java.nio.file.{Files, StandardOpenOption, Paths}
+import java.nio.charset.StandardCharsets
 
 import ostrich.cesolver.core.finalConstraints.{
   FinalConstraints,
@@ -36,7 +37,8 @@ class NuxmvBasedSolver(
   private val Reachable = """^.* is false$""".r
   private val CounterValue = """^ {4}(.*) = (-?\d+)$""".r
 
-  private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) = {
+  private def printNUXMVModule(constraints: Seq[NuxmvFinalConstraints]) : String = {
+    val sb = new StringBuilder
     val constraintsIdx = constraints.zipWithIndex.toMap
     val autIdx = constraints.flatMap(_.auts).zipWithIndex.toMap
     val labels = constraintsIdx.map { case (_, i) =>
@@ -54,39 +56,38 @@ class NuxmvBasedSolver(
       maxStateIdx = idx max maxStateIdx
     }
     val trapState =
-      s"s${maxStateIdx + 1}" // trap state, stand for unique accepting state
-
-    println("MODULE main")
-
-    println("IVAR")
+      s"s${maxStateIdx + 1}" // trap state, stand for unique accepting state  
+    
+    sb.append("MODULE main\n")
+    sb.append("IVAR\n")
     // input label variable
     for (inputLbl <- labels)
-      println(s"  $inputLbl : 0..65536;")
+      sb.append(s"  $inputLbl : 0..65536;\n")
 
-    println("VAR")
+    sb.append("VAR\n")
     // state variable for each automaton
     for (c <- constraints; aut <- c.auts) {
-      println(
+      sb.append(
         s"  aut_${c.strDataBaseId}_${autIdx(aut)} : {${(aut.states.toSeq :+ trapState)
-            .mkString(", ")}};"
+            .mkString(", ")}};\n"
       )
     }
     // integer variable
     for (int <- integers) {
       if (flags.NuxmvBackend == OFlags.NuxmvBackend.Bmc)
-        println(s"  $int : -1..20;")
+        sb.append(s"  $int : -1..20;\n")
       else
-        println(s"  $int : integer;")
+        sb.append(s"  $int : integer;\n")
     }
 
-    println("ASSIGN")
+    sb.append("ASSIGN\n")
     // init integers (contains registers)
     for (int <- integers)
-      println(s"  init($int) := 0;")
+      sb.append(s"  init($int) := 0;\n")
     for (c <- constraints; aut <- c.auts) {
       // init states
-      println(
-        s"  init(aut_${c.strDataBaseId}_${autIdx(aut)}) := ${aut.initialState};"
+      sb.append(
+        s"  init(aut_${c.strDataBaseId}_${autIdx(aut)}) := ${aut.initialState};\n"
       )
     }
     // transitions for each automaton
@@ -99,24 +100,24 @@ class NuxmvBasedSolver(
       val identityUpdateRegsNuxmv =
         if (identityUpdateRegs.isEmpty) "TRUE"
         else identityUpdateRegs
-      print(s"TRANS  ")
+      sb.append(s"TRANS  ")
       if (aut.transitionsWithVec.isEmpty) {
         // special case: no transition
         if (aut.isAccept(aut.initialState)) {
-          print(
+          sb.append(
             s"((aut_${c.strDataBaseId}_${autIdx(aut)} = ${aut.initialState} & ${labels(
                 constraintsIdx(c)
               )} = 65536) & $identityUpdateRegsNuxmv & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = $trapState)"
           )
         } else {
-          print(
+          sb.append(
             s"((aut_${c.strDataBaseId}_${autIdx(aut)} = ${aut.initialState} & ${labels(
                 constraintsIdx(c)
               )} = 65536) & $identityUpdateRegsNuxmv & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = ${aut.initialState})"
           )
         }
       } else {
-        print(
+        sb.append(
           aut.transitionsWithVec
             .map {
               case (s, (min, max), t, v) => {
@@ -135,8 +136,8 @@ class NuxmvBasedSolver(
         )
         // epsilon transition from accepting state to unique accepting state (trap state), use 65536 as epsilon label
         if (aut.acceptingStates.nonEmpty) {
-          print(" | ")
-          print(
+          sb.append(" | ")
+          sb.append(
             aut.acceptingStates
               .map(s =>
                 s"((aut_${c.strDataBaseId}_${autIdx(aut)} = $s & ${labels(
@@ -148,7 +149,7 @@ class NuxmvBasedSolver(
         }
       }
       // self loop for trap state
-      print(
+      sb.append(
         s" | ((aut_${c.strDataBaseId}_${autIdx(aut)} = $trapState & ${labels(
             constraintsIdx(c)
           )} = 65536 & $identityUpdateRegsNuxmv) & next(aut_${c.strDataBaseId}_${autIdx(aut)}) = $trapState);\n"
@@ -162,8 +163,9 @@ class NuxmvBasedSolver(
         yield {
           s"aut_${c.strDataBaseId}_${autIdx(aut)} = $trapState"
         }).mkString(" & ")
-    println("INVARSPEC")
-    println(s"  ($accepting) -> !($regsRelationAndInputLIA);")
+    sb.append("INVARSPEC\n")
+    sb.append(s"  ($accepting) -> !($regsRelationAndInputLIA);\n")
+    sb.toString()
   }
 
   def solveWithoutGenerateModel(nuxmvBackend: OFlags.NuxmvBackend.Value): Result = {
@@ -181,20 +183,23 @@ class NuxmvBasedSolver(
     val result = new Result
     val nuxmvInputF =
       if (ParikhUtil.debug)
-        new File("nuxmv.smv")
+        Paths.get("nuxmv_input.smv")
       else
-        File.createTempFile("nuxmv", ".smv")
+        Files.createTempFile("nuxmv_input", ".smv")
     try {
-      val out = new java.io.FileOutputStream(nuxmvInputF)
       val nuxmvCmd =
         if (nuxmvBackend == OFlags.NuxmvBackend.Bmc)
           Seq("nuxmv", "-source", "bmc_source", nuxmvInputF.toString())
         else
           Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString())
-      Console.withOut(out) {
-        printNUXMVModule(constraints)
-      }
-      out.close()
+      val nuxmvInput = printNUXMVModule(constraints).getBytes(StandardCharsets.UTF_8)
+      Files.write(
+        nuxmvInputF,
+        nuxmvInput,
+        StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE,
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
 
       val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
       ap.util.Timeout.check
@@ -219,7 +224,7 @@ class NuxmvBasedSolver(
         throw UnknownException(e.toString())
     } finally {
       if (!ParikhUtil.debug) {
-        nuxmvInputF.delete()
+        Files.deleteIfExists(nuxmvInputF)
       }
     }
     result

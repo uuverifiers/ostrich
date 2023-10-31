@@ -50,7 +50,8 @@ import uuverifiers.catra.OutOfMemory
 import uuverifiers.catra.Timeout
 import uuverifiers.catra.Unsat
 import ostrich.OFlags
-import java.io.File
+import java.nio.file.{Files, StandardOpenOption, Paths}
+import java.nio.charset.StandardCharsets
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.{ITerm, IConstant, IIntLit}
@@ -269,14 +270,18 @@ class CatraBasedSolver(
     }
     var result = new Result
     val catraInputF =
-      if (ParikhUtil.debug) new File("catra_input.par")
-      else File.createTempFile("catra_input", ".par")
+      if (ParikhUtil.debug) Paths.get("catra_input.par")
+      else Files.createTempFile("catra_input", ".par")
     try {
       ParikhUtil.debugPrintln("Writing Catra input to " + catraInputF)
-
-      val writer = new CatraWriter(catraInputF.toString())
-      writer.write(toCatraInput)
-      writer.close()
+      val catraInput = toCatraInput.getBytes(StandardCharsets.UTF_8)
+      Files.write(
+        catraInputF,
+        catraInput,
+        StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE,
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
       val arguments = CommandLineOptions(
         inputFiles = Seq(catraInputF.toString()),
         timeout_ms = Some(OFlags.timeout),
@@ -311,7 +316,7 @@ class CatraBasedSolver(
       }
     } finally {
       if (!ParikhUtil.debug)
-        catraInputF.delete()
+        Files.deleteIfExists(catraInputF)
     }
     result
   }

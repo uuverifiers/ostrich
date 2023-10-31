@@ -34,7 +34,7 @@ summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("pyex-unary_only")
+store = storage.SQLiteDB("pyex-nuxmv_catra")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 testrunner(12).runTestSetup(
