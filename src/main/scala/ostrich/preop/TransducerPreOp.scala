@@ -55,7 +55,7 @@ class TransducerPreOp(t : Transducer) extends PreOp {
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton)
+            resultConstraint : Automaton, concreteWords : Seq[Option[List[Int]]])
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon

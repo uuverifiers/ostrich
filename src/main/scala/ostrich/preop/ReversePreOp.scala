@@ -41,7 +41,7 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton, ReverseAutomaton,
 object ReversePreOp extends PreOp {
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton)
+            resultConstraint : Automaton, concreteWords : Seq[Option[List[Int]]])
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) =
     resultConstraint match {
       case resultConstraint : AtomicStateAutomaton =>

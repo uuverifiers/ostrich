@@ -110,7 +110,7 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton)
+            resultConstraint : Automaton, concreteWords : Seq[Option[List[Int]]])
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon
@@ -547,7 +547,7 @@ class ReplaceAllPreOpTran(tran : Transducer) extends PreOp {
     tran.lengthApproximation(arguments(0), arguments(1), result, order)
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton)
+            resultConstraint : Automaton, concreteWords : Seq[Option[List[Int]]])
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val rc : AtomicStateAutomaton = resultConstraint match {
       case resCon : AtomicStateAutomaton => resCon

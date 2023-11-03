@@ -62,7 +62,7 @@ trait PreOp {
    * component.
    */
   def apply(argumentConstraints : Seq[Seq[Automaton]],
-            resultConstraint : Automaton)
+            resultConstraint : Automaton, concreteWords : Seq[Option[List[Int]]] = Seq())
           : (Iterator[Seq[Automaton]], Seq[Seq[Automaton]])
 
   /**
