@@ -370,7 +370,6 @@ class OstrichReducer protected[ostrich]
           a(0) === a(3)
 
         case `str_<=` if (isConcrete(a(1))) => {
-
           val autId = autDatabase.automaton2Id(BricsAutomaton.smallerEqAutomaton(term2Str(a(1)).get))
           str_in_re_id(List(a(0), l(autId)))
         }

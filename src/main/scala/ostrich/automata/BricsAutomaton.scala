@@ -185,7 +185,7 @@ object BricsAutomaton {
     builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
 
     val states =
-      (for (n <- 0 to str.length) yield builder.getNewState).toIndexedSeq
+      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
 
     // add transition to rest of the automaton
     builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states(0))
@@ -233,9 +233,9 @@ object BricsAutomaton {
     builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
 
     val states =
-      (for (n <- 0 to str.length) yield builder.getNewState).toIndexedSeq
+      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
 
-    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states(0))
+    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states.head)
     val remaining_str = str.tail
 
     for ((c,n) <- remaining_str.iterator.zipWithIndex) {
@@ -246,6 +246,7 @@ object BricsAutomaton {
       builder.setAccept(states(n), isAccepting = true)
     }
     // we are equal up to this point -> can read any letter afterwards and be bigger
+    builder.setAccept(states.last, isAccepting = true)
     builder.addTransition(states.last, builder.LabelOps.sigmaLabel, states.last)
 
     builder.getAutomaton
