@@ -439,4 +439,28 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/bug-56-replace-bug2.smt2", "sat")
   property("bug-58-replace-re") =
     checkFile("tests/bug-58-replace-re.smt2", "sat")
+  property("str-len") =
+    checkFile("tests/str-len.smt2", "unsat")
+  property("str-len2") =
+    checkFile("tests/str-len2.smt2", "sat")
+  property("str-len3") =
+    checkFile("tests/str-len3.smt2", "sat")
+  property("str-len4") =
+    checkFile("tests/str-len4.smt2", "unsat")
+  property("str-len5") =
+    checkFile("tests/str-len5.smt2", "sat")
+  property("str-len6") =
+    checkFile("tests/str-len6.smt2", "sat")
+  property("str-len7") =
+    checkFile("tests/str-len7.smt2", "sat")
+  property("str-len8") =
+    checkFile("tests/str-len8.smt2", "unsat")
+  property("str-len9") =
+    checkFile("tests/str-len9.smt2", "sat")
+  property("str-len10") =
+    checkFile("tests/str-len10.smt2", "unsat")
+  property("str-len11") =
+    checkFile("tests/str-len11.smt2", "sat")
+  property("str-len12") =
+    checkFile("tests/str-len12.smt2", "unsat")
 }

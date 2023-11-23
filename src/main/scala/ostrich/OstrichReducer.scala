@@ -107,7 +107,7 @@ class OstrichReducer protected[ostrich]
 
   import OstrichReducer._
 
-  import theory.{_str_empty, _str_cons, _str_++, _str_char_count,
+  import theory.{_str_empty, _str_cons, _str_++, str_<=, _str_char_count,
                  str_empty, str_cons, str_in_re_id, str_prefixof,
                  str_suffixof, str_contains,
                  str_replace, str_replaceall,
@@ -162,7 +162,7 @@ class OstrichReducer protected[ostrich]
 
     ReducerPlugin.rewritePreds(predConj,
                                (List(_str_empty, _str_cons,
-                                     str_in_re_id, _str_len, _str_char_count,
+                                     str_in_re_id, _str_len, _str_char_count, str_<=,
                                      _int_to_str, _str_to_int,
                                      str_prefixof, str_suffixof, str_contains,
                                      FunPred(str_replace),
@@ -368,6 +368,18 @@ class OstrichReducer protected[ostrich]
 
         case FunPred(`str_replaceall`) if hasValue(a(1), List()) =>
           a(0) === a(3)
+
+        case `str_<=` if (isConcrete(a(1))) => {
+
+          val autId = autDatabase.automaton2Id(BricsAutomaton.smallerEqAutomaton(term2Str(a(1)).get))
+          str_in_re_id(List(a(0), l(autId)))
+        }
+
+        case `str_<=` if (isConcrete(a(0))) => {
+
+          val autId = autDatabase.automaton2Id(BricsAutomaton.greaterEqAutomaton(term2Str(a(0)).get))
+          str_in_re_id(List(a(1), l(autId)))
+        }
 
         case p => {
           try {
