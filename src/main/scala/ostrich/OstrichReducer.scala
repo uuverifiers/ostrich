@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021-2022 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2023 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -162,7 +162,8 @@ class OstrichReducer protected[ostrich]
 
     ReducerPlugin.rewritePreds(predConj,
                                (List(_str_empty, _str_cons,
-                                     str_in_re_id, _str_len, _str_char_count, str_<=,
+                                     str_in_re_id, _str_len, _str_char_count,
+                                     str_<=,
                                      _int_to_str, _str_to_int,
                                      str_prefixof, str_suffixof, str_contains,
                                      FunPred(str_replace),
@@ -370,14 +371,22 @@ class OstrichReducer protected[ostrich]
           a(0) === a(3)
 
         case `str_<=` if (isConcrete(a(1))) => {
-          val autId = autDatabase.automaton2Id(BricsAutomaton.smallerEqAutomaton(term2Str(a(1)).get))
+          val autId =
+            autDatabase.automaton2Id(
+              BricsAutomaton.smallerEqAutomaton(term2Str(a(1)).get))
           str_in_re_id(List(a(0), l(autId)))
         }
 
         case `str_<=` if (isConcrete(a(0))) => {
-
-          val autId = autDatabase.automaton2Id(BricsAutomaton.greaterEqAutomaton(term2Str(a(0)).get))
+          val autId =
+            autDatabase.automaton2Id(
+              BricsAutomaton.greaterEqAutomaton(term2Str(a(0)).get))
           str_in_re_id(List(a(1), l(autId)))
+        }
+
+        case `str_<=` => {
+          // case we cannot handle yet
+          a
         }
 
         case p => {
