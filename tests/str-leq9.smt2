@@ -1,7 +1,6 @@
-(set-logic QF_)
+(set-logic QF_SLIA)
 
 (declare-fun x () String)
 (assert (= 1 (str.len x)))
-(assert (str.<= "a" x))
-(assert (str.<= x "b"))
+(assert (str.<= "" x))
 (check-sat)

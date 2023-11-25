@@ -1,4 +1,4 @@
-(set-logic QF_)
+(set-logic QF_SLIA)
 
 (declare-fun x () String)
 (assert (= "abc" x))

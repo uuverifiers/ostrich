@@ -1,7 +1,7 @@
-(set-logic QF_)
+(set-logic QF_SLIA)
 
 (declare-fun x () String)
 
-(assert (= x "cab"))
+(assert (= 4 (str.len x)))
 (assert (str.<= x "cba"))
 (check-sat)
