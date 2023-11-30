@@ -48,6 +48,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
+import ap.parameters.Param
 import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
@@ -384,7 +385,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           case Some(m) =>
             equalityPropagator.handleSolution(goal, m)
           case None =>
-            List(Plugin.AddFormula(Conjunction.TRUE))
+            if (Param.PROOF_CONSTRUCTION(goal.settings))
+              // TODO: only list the assumptions that were actually
+              // needed for the proof to close.
+              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
+                                       OstrichStringTheory.this))
+            else
+              List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
@@ -443,6 +450,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   }
 
   //////////////////////////////////////////////////////////////////////////////
+
+  override def toString : String = "OstrichStringTheory"
 
   override def isSoundForSat(
                  theories : Seq[Theory],
