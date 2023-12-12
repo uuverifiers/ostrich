@@ -481,7 +481,9 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
 
     sMap += (newInitState -> ((initialState, initAutState)))
     sMapRev += (initialState, initAutState) -> newInitState
-
+    if (isAccept(initialState) && aut.isAccept(initAutState)){
+      builder.setAccept(newInitState, isAccepting =  true)
+    }
     // collect silent transitions during main loop and eliminate them
     // after (TODO: think of more efficient solution)
     val silentTransitions = new MHashMap[aut.State, MSet[aut.State]]
