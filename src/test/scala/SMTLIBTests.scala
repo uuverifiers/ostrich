@@ -467,4 +467,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str-leq12.smt2", "sat")
   property("str-leq13") =
     checkFile("tests/str-leq13.smt2", "error")
+  property("str-lt") =
+    checkFile("tests/str-lt.smt2", "sat")
+  property("str-lt2") =
+    checkFile("tests/str-lt2.smt2", "unsat")
 }
