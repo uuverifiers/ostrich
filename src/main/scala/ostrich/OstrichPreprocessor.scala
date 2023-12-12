@@ -92,12 +92,10 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         IBoolLit(true)
     } */
 
-    case (IAtom(`str_suffixof`, _),
-    Seq(x,y)) if (x == y) => {
+    case (IAtom(`str_suffixof`, _), Seq(x,y)) if (x == y) => {
       IBoolLit(true)
     }
-    case (IAtom(`str_contains`, _),
-    Seq(x,y)) if (x == y) => {
+    case (IAtom(`str_contains`, _), Seq(x,y)) if (x == y) => {
       IBoolLit(true)
     }
 /*
@@ -344,6 +342,8 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case (IFunApp(`str_from_char`, _), Seq(c : ITerm)) =>
       str_cons(c, str_empty())
 
+    case (IAtom(`str_<`, _), Seq(s : ITerm, t : ITerm)) =>
+      str_<=(s, t) & (s =/= t)
 
 /*
     // Currently we just under-approximate and assume that the considered

@@ -105,6 +105,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
   property("failedProp.smt2") =
     checkFileOpts("tests/failedProp.smt2", "unknown", "", "-timeout=3000")
+  property("failedProp.smt2 +forward") =
+    checkFileOpts("tests/failedProp.smt2", "unsat", "+forward", "-timeout=3000")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
@@ -439,4 +441,34 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/bug-56-replace-bug2.smt2", "sat")
   property("bug-58-replace-re") =
     checkFile("tests/bug-58-replace-re.smt2", "sat")
+  property("str-leq") =
+    checkFile("tests/str-leq.smt2", "unsat")
+  property("str-leq2") =
+    checkFile("tests/str-leq2.smt2", "sat")
+  property("str-leq3") =
+    checkFile("tests/str-leq3.smt2", "sat")
+  property("str-leq4") =
+    checkFile("tests/str-leq4.smt2", "unsat")
+  property("str-leq5") =
+    checkFile("tests/str-leq5.smt2", "sat")
+  property("str-leq6") =
+    checkFile("tests/str-leq6.smt2", "sat")
+  property("str-leq7") =
+    checkFile("tests/str-leq7.smt2", "sat")
+  property("str-leq8") =
+    checkFile("tests/str-leq8.smt2", "unsat")
+  property("str-leq9") =
+    checkFile("tests/str-leq9.smt2", "sat")
+  property("str-leq10") =
+    checkFile("tests/str-leq10.smt2", "unsat")
+  property("str-leq11") =
+    checkFile("tests/str-leq11.smt2", "sat")
+  property("str-leq12") =
+    checkFile("tests/str-leq12.smt2", "sat")
+  property("str-leq13") =
+    checkFile("tests/str-leq13.smt2", "error")
+  property("str-lt") =
+    checkFile("tests/str-lt.smt2", "sat")
+  property("str-lt2") =
+    checkFile("tests/str-lt2.smt2", "unsat")
 }

@@ -48,6 +48,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
+import ap.parameters.Param
 import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
@@ -290,7 +291,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof, str_<=) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre,
@@ -384,7 +385,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           case Some(m) =>
             equalityPropagator.handleSolution(goal, m)
           case None =>
-            List(Plugin.AddFormula(Conjunction.TRUE))
+            if (Param.PROOF_CONSTRUCTION(goal.settings))
+              // TODO: only list the assumptions that were actually
+              // needed for the proof to close.
+              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
+                                       OstrichStringTheory.this))
+            else
+              List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
@@ -443,6 +450,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   }
 
   //////////////////////////////////////////////////////////////////////////////
+
+  override def toString : String = "OstrichStringTheory"
 
   override def isSoundForSat(
                  theories : Seq[Theory],
