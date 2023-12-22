@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -46,12 +46,19 @@ object OFlags {
    * Compile-time flag that can be used to switch on debugging output
    * throughout the theory.
    */
+  object CEABackend extends Enumeration {
+    val Baseline, Unary = Value
+  }
+
+  /** Compile-time flag that can be used to switch on debugging output
+    * throughout the theory.
+    */
   protected[ostrich] val debug = false
 
+  val timeout = 60000
 }
 
 case class OFlags(
-
   // Pre-image specific options
   eagerAutomataOperations : Boolean = false,
   measureTimes            : Boolean = false,
@@ -63,4 +70,11 @@ case class OFlags(
   regexTranslator         : OFlags.RegexTranslator.Value =
                               OFlags.RegexTranslator.Hybrid
 
+  // Options for the cost-enriched-automata solver
+  ceaBackend              : OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
+  useCostEnriched         : Boolean = false,
+  debug                   : Boolean = false,
+  underApprox             : Boolean = true,
+  underApproxBound        : Int = 15,
+  simplifyAut             : Boolean = true
 )

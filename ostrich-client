@@ -84,6 +84,7 @@ until [ $success -eq 0 ]; do
         tail -n1 "$portfile"
 
         # command line arguments
+        ostrichSolver=ostrich.OstrichStringTheory
         ostrichParams=""
 
         for var; do
@@ -95,6 +96,12 @@ until [ $success -eq 0 ]; do
                         ostrichParams=$ostrichParams,$var
                     fi
                     ;;
+                -cea)
+                    ostrichSolver=ostrich.OstrichStringTheory
+                    ;;
+                +cea)
+                    ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
+                    ;;
 		-*|+*)
 		    echo "$var"
 		    ;;
@@ -104,7 +111,7 @@ until [ $success -eq 0 ]; do
 	    esac
         done
 
-        echo "-stringSolver=ostrich.OstrichStringTheory:$ostrichParams"
+        echo "-stringSolver=$ostrichSolver:$ostrichParams"
 
         echo "PROVE_AND_EXIT"
 

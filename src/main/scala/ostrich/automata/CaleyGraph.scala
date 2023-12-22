@@ -174,7 +174,7 @@ object CaleyGraph {
       : Map[Box[A], Iterable[A#TLabel]] = {
     val ae = aut.labelEnumerator
     val boxes : Map[A#TLabel,Box[A]] =
-      ae.enumDisjointLabels.map(i => i -> new Box[A])(collection.breakOut)
+      ae.enumDisjointLabelsComplete.map(i => i -> new Box[A])(collection.breakOut)
 
     for ((q1, i, q2) <- aut.transitions;
          i2 <- ae.enumLabelOverlap(i))

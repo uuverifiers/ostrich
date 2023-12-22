@@ -16,6 +16,7 @@ JAVA=java
 export JAVA_OPTS="-Xss20000k -Xmx2000m"
 
 princessParams=()
+ostrichSolver=ostrich.OstrichStringTheory
 ostrichParams=""
 
 for p; do
@@ -27,6 +28,12 @@ for p; do
                 ostrichParams=$ostrichParams,$p
             fi
             ;;
+        -cea)
+            ostrichSolver=ostrich.OstrichStringTheory
+            ;;
+        +cea)
+            ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
+            ;;
         *)
             princessParams+=("$p")
             ;;
@@ -34,5 +41,5 @@ for p; do
 done
 
 exec $JAVA $JAVA_OPTS -cp $TARGET \
-     ostrich.OstrichMain -stringSolver=ostrich.OstrichStringTheory:$ostrichParams \
+     ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
      "${princessParams[@]}"

@@ -2,6 +2,6 @@
 
 (declare-fun x () String)
 
-(assert (str.in.re x (re.range (seq.unit #x0b) (seq.unit #xff))))
+(assert (str.in.re x (re.range (str.from_code (bv2nat #x0b)) (str.from_code (bv2nat #xff)))))
 
 (check-sat)

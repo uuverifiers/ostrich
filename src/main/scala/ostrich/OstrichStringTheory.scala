@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -48,6 +48,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
+import ap.parameters.Param
 import ap.util.Seqs
 
 import scala.collection.mutable.{HashMap => MHashMap}
@@ -149,6 +150,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("str.trim",
                         List(SSo, Sort.Integer, Sort.Integer), SSo, true, false)
 
+  // Replacement of the left-most, longest match
+  val str_replacere_longest =
+    new MonoSortedIFunction("str.replace_re_longest",
+                            List(SSo, RSo, SSo), SSo, true, false)
+  val str_replaceallre_longest =
+    new MonoSortedIFunction("str.replace_re_longest_all",
+                            List(SSo, RSo, SSo), SSo, true, false)
+
   // Replacement with regular expression and capture groups
   val str_replacecg =
     new MonoSortedIFunction("str.replace_cg",
@@ -194,6 +203,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          re_from_ecma2020, re_from_ecma2020_flags,
          re_case_insensitive,
          str_at_right, str_trim,
+         str_replacere_longest, str_replaceallre_longest,
          str_replacecg, str_replaceallcg,
          re_*?, re_+?, re_opt_?)
 
@@ -282,17 +292,19 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof, str_<=) ++
     (for (f <- Set(str_empty, str_cons, str_at,
                    str_++, str_replace, str_replaceall,
-                   str_replacere, str_replaceallre, str_replaceallcg,
-                   str_replacecg, str_to_re,
+                   str_replacere, str_replaceallre,
+                   str_replacere_longest, str_replaceallre_longest,
+                   str_replaceallcg, str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
-                   re_comp, re_loop, re_loop_?, re_from_str, re_capture, re_reference,
+                   re_comp, re_loop, re_loop_?, re_from_str, re_capture,
+                   re_reference,
                    re_begin_anchor, re_end_anchor,
                    re_from_ecma2020, re_from_ecma2020_flags,
                    re_case_insensitive))
@@ -339,6 +351,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       goalState(goal) match {
 
+        case Plugin.GoalState.Eager =>
+          List()
+
         case Plugin.GoalState.Intermediate => try {
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
@@ -371,7 +386,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           case Some(m) =>
             equalityPropagator.handleSolution(goal, m)
           case None =>
-            List(Plugin.AddFormula(Conjunction.TRUE))
+            if (Param.PROOF_CONSTRUCTION(goal.settings))
+              // TODO: only list the assumptions that were actually
+              // needed for the proof to close.
+              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
+                                       OstrichStringTheory.this))
+            else
+              List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
@@ -430,6 +451,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   }
 
   //////////////////////////////////////////////////////////////////////////////
+
+  override def toString : String = "OstrichStringTheory"
 
   override def isSoundForSat(
                  theories : Seq[Theory],

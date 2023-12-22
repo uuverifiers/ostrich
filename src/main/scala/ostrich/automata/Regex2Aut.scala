@@ -427,8 +427,10 @@ class Regex2Aut(theory : OstrichStringTheory) {
    */
   private def to2AFA(t : ITerm, parser: ECMARegexParser) : BAutomaton = {
     /*
-      Step 1: Building the symbolic extended 2AFA (the translation in the paper). This automaton
-      has eps transitions and accepts at the beginning and end of string (with two different kind of final states).
+      Step 1: Building the symbolic extended 2AFA (the translation in
+      the paper). This automaton has eps transitions and accepts at
+      the beginning and end of string (with two different kind of
+      final states).
     */
     var t1 = System.currentTimeMillis()
     val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
@@ -438,11 +440,14 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
     /*
     Step 2:
-    a) All epsilon transitions are removed: the existential with powerset construction and
-    the universal by adding forward and backward transitions reading any symbols (word markers included).
-    b) Also the resulting automaton accepts only at the right end of the word. This is done by adding
-    beginning and end markers of the word and by adding some states.
-    The result is therefore a symbolic2AFA (no eps trans, accepts only at the end, reads word markers)
+    a) All epsilon transitions are removed: the existential with
+    powerset construction and the universal by adding forward and
+    backward transitions reading any symbols (word markers included).
+    b) Also the resulting automaton accepts only at the right end of
+    the word. This is done by adding beginning and end markers of the
+    word and by adding some states.  The result is therefore a
+    symbolic2AFA (no eps trans, accepts only at the end, reads word
+    markers)
      */
     var t2 = System.currentTimeMillis()
     val epsRed = new SymbEpsReducer(theory, aut)
@@ -454,9 +459,11 @@ class Regex2Aut(theory : OstrichStringTheory) {
     //throw new RuntimeException("Stop here.")
 
     /*
-    Step 3: The symb2AFA, with ranges on the transitions, is transformed into a concrete one.
-    In order to do that, overlaps between ranges are eliminated and a map between ranges and concrete
-    symbols is kept. This is needed because the 2AFA -> NFA translation works only on concrete automata.
+    Step 3: The symb2AFA, with ranges on the transitions, is
+    transformed into a concrete one.  In order to do that, overlaps
+    between ranges are eliminated and a map between ranges and
+    concrete symbols is kept. This is needed because the 2AFA -> NFA
+    translation works only on concrete automata.
      */
     t2 = System.currentTimeMillis()
     val transl = new SymbToConcTranslator(reducedAut)
@@ -468,9 +475,11 @@ class Regex2Aut(theory : OstrichStringTheory) {
     var duration = (System.currentTimeMillis() - t1) // / 1000d
 
     /*
-    Step 4: Naive minimization of the automata. Essentially states with same outgoing labels going to
-    same states are merged. The procedure is iterative and reaches a fixpoint where no states can be merged
-    anymore. Output: 2AFA (concrete, only accepts at the end of word)
+    Step 4: Naive minimization of the automata. Essentially states
+    with same outgoing labels going to same states are merged. The
+    procedure is iterative and reaches a fixpoint where no states can
+    be merged anymore. Output: 2AFA (concrete, only accepts at the end
+    of word)
      */
     //println("Eliminating redundant states in progress...")
     val redConcAut = concAut.minimizeStates()
@@ -533,8 +542,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
       }
   }
 
-  private def toBAutomaton(t : ITerm,
-                           minimize : Boolean) : BAutomaton = t match {
+  protected def toBAutomaton(t : ITerm,
+                             minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
                  Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
@@ -848,7 +857,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     toBAutomaton(t, true)
 
   def buildAut(t : ITerm,
-               minimize : Boolean = true) : AtomicStateAutomaton =
+               minimize : Boolean = true) : Automaton =
     new BricsAutomaton(toBAutomaton(t, minimize))
 
   private def numToUnicode(num : Int) : String =

@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "1.2",
+  version               := "1.3",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
@@ -40,11 +40,17 @@ lazy val commonSettings = Seq(
                                name  = "Oliver Markgraf",
                                email = "markgraf@cs.uni-kl.de",
                                url   = url("https://arg.cs.uni-kl.de/gruppe/markgraf/")
+                             ),
+                             Developer(
+                               id    = "denghang.hu",
+                               name  = "Denghang Hu",
+                               email = "hudh@ios.ac.cn",
+                               url   = url("https://tis.ios.ac.cn/?page_id=2451")
                              )
                           ),
 //
   scalaVersion          := "2.11.12",
-  crossScalaVersions    := Seq("2.11.12", "2.12.16"),
+  crossScalaVersions    := Seq("2.11.12", "2.12.17"),
   scalacOptions         += "-deprecation",
   fork in run           := true,
   cancelable in Global  := true,
@@ -78,9 +84,9 @@ lazy val root = (project in file(".")).
 //
     resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
 //
-//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2022-07-01",
     libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-//    libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
+//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2023-06-19",
+  //  libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
