@@ -68,7 +68,7 @@ case class OFlags(
   forwardApprox           : Boolean = false,
   minimizeAutomata        : Boolean = false,
   regexTranslator         : OFlags.RegexTranslator.Value =
-                              OFlags.RegexTranslator.Hybrid
+                              OFlags.RegexTranslator.Hybrid,
 
   // Options for the cost-enriched-automata solver
   ceaBackend              : OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
