@@ -80,6 +80,7 @@ lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
     mainClass in Compile := Some("ostrich.OstrichMain"),
+    test in assembly := {},
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
     resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),

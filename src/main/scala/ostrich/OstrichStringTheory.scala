@@ -473,12 +473,86 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
+    printEquations(f)
+
     val visitor1 = new OstrichPreprocessor (this)
     val visitor2 = new OstrichRegexEncoder (this)
     // Added by Riccardo
     val visitor3 = new OstrichStringEncoder(this)
 
     (visitor3(visitor2(visitor1(f))), signature)
+  }
+
+  private def printEquations(f : IFormula) : Unit = {
+    import ap.parser._
+    import IExpression._
+    import ap.types.Sort
+    import Sort.:::
+    import ostrich.automata.Regex2Aut
+
+    val conjuncts =
+      (for (INamedPart(_, g) <- PartExtractor(f);
+            h <- LineariseVisitor(Transform2NNF(~g), IBinJunctor.And))
+       yield h).toList
+
+    val equations =
+      for (Eq(s ::: StringSort, t ::: StringSort) <- conjuncts) yield (s, t)
+
+    val variables =
+      (for ((s, t) <- equations.iterator;
+            c      <- SymbolCollector.constantsSorted(s) ++
+                      SymbolCollector.constantsSorted(t))
+       yield c).toList.distinct
+
+    val varNames =
+      (for ((c, n) <- variables.iterator.zipWithIndex)
+       yield (c -> niceVarName(n))).toMap
+
+    val characterCodes =
+      new MHashMap[IdealInt, Int]
+
+    def toCode(n : IdealInt) : Int =
+      characterCodes.getOrElseUpdate(n, characterCodes.size)
+
+    def term2String(t : ITerm) : String = t match {
+      case IFunApp(`str_empty`, _) =>
+        ""
+      case IFunApp(`str_cons`, Seq(Regex2Aut.SmartConst(n), tail)) =>
+        niceTerminal(toCode(n)) + term2String(tail)
+      case IFunApp(`str_++`, Seq(left, right)) =>
+        term2String(left) + term2String(right)
+      case IConstant(c) =>
+        varNames(c)
+    }
+
+    val equationStrings =
+      for ((s, t) <- equations) yield {
+        (term2String(s), term2String(t)) match {
+          case ("", str) =>
+            niceTerminal(0) + " = " + niceTerminal(0) + str
+          case (str, "") =>
+            niceTerminal(0) + str + " = " + niceTerminal(0)
+          case (str1, str2) =>
+            str1 + " = " + str2
+        }
+      }
+
+    println(s"Variables {${variables.map(varNames).mkString("")}}")
+    println(s"Terminals {${(for (k <- 0 until characterCodes.size) yield niceTerminal(k)).mkString("")}}")
+
+    for (s <- equationStrings)
+      println(s"Equation: $s")
+
+    println("SatGlucose(0)")
+  }
+
+  private def niceVarName(index : Int) : String = {
+    assert(index >= 0 && index <= 25, "too many variables")
+    ('A'.toInt + index).toChar.toString
+  }
+  private def niceTerminal(index : Int) : String = {
+    assert(index >= 0 && index <= 25, "too many letters")
+    ('a'.toInt + index).toChar.toString
   }
 
   override val reducerPlugin = new OstrichReducerFactory(this)
