@@ -33,44 +33,39 @@
 package ostrich.automata.afa2
 
 /*
-Class for representing transitions.
+ * Class for representing transitions.
  */
 
-  abstract class Transition(val targets: Seq[Int])
+sealed abstract class Transition(val targets: Seq[Int])
 
-
-
-  case class EpsTransition(_targets: Seq[Int])
+case class EpsTransition(_targets: Seq[Int])
     extends Transition(_targets) {
 
-    override def toString: String = "eps " + _targets
+  override def toString: String = "eps " + _targets
 
-    def isExistential() = this.targets.size == 1
-  }
-
-
+  def isExistential() = this.targets.size == 1
+}
 
 case class StepTransition(label: Int,
-                                              step: Step,
-                                              _targets: Seq[Int])
+                          step: Step,
+                          _targets: Seq[Int])
   extends Transition(_targets) {
 
   override def toString: String = {
     step + "[" + label + "] " + _targets
   }
-
 }
 
 
 case class SymbTransition(symbLabel: Range, //Range is what changes here.
-                                              step: Step,
-                                              _targets: Seq[Int])
+                          step: Step,
+                          _targets: Seq[Int])
   extends Transition(_targets) {
 
   override def toString: String = step + toStringLabel + " " + targets
 
-  def toStringLabel(): String = "[" + symbLabel.start + "-" + (symbLabel.end) + "]"
-
+  def toStringLabel(): String =
+    "[" + symbLabel.start + "-" + (symbLabel.end) + "]"
 }
 
 

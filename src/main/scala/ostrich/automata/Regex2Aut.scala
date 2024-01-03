@@ -374,7 +374,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
         // TODO: this translation has to be checked more carefully, there might
         // be problems due to escaping. The processing of regexes can also
         // only be done correctly within a proper regex parser.
-
+  
         ShortCutResult(jsRegex2BricsRegex(StringTheory.term2String(a)))
       }
 
@@ -543,7 +543,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
   }
 
   protected def toBAutomaton(t : ITerm,
-                             minimize : Boolean) : BAutomaton = t match {
+                           minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
                  Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
@@ -560,7 +560,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       // TODO: this translation has to be checked more carefully, there might
       // be problems due to escaping. The processing of regexes can also
       // only be done correctly within a proper regex parser.
-
+  
       val bricsPattern = jsRegex2BricsRegex(str)
       new RegExp(bricsPattern).toAutomaton(minimize)
     }

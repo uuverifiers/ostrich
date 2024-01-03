@@ -38,18 +38,19 @@ import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, HashSet => MHashSet}
 
 /*
-Existential nondeterminism is implemented by having multiple transitions in the sequence.
-Universal   nondeterminism is implemented by having multiple target states in Transition.
+ * Existential nondeterminism is implemented by having multiple
+ * transitions in the sequence.  Universal nondeterminism is
+ * implemented by having multiple target states in Transition.
  */
 
 
 /*
-Class AFA2 implements a concrete 2AFA with:
-- only concrete transitions;
-- no epsilon transitions;
-- accepting only at the end of the string.
-
-This class is used as input for the 2AFA -> NFA translation.
+ * Class AFA2 implements a concrete 2AFA with:
+ * - only concrete transitions;
+ * - no epsilon transitions;
+ * - accepting only at the end of the string.
+ * 
+ * This class is used as input for the 2AFA -> NFA translation.
  */
 case class AFA2(initialStates : Seq[Int],
                 finalStates   : Seq[Int],
@@ -124,8 +125,10 @@ case class AFA2(initialStates : Seq[Int],
 
 
   /*
-  Minimizes the states by merging states that have the same outgoing transitions to the same states.
-  It performs minimizeStatesStep until the fixpoint (of not being able to remove any more states) is reached.
+   * Minimizes the states by merging states that have the same
+   * outgoing transitions to the same states.  It performs
+   * minimizeStatesStep until the fixpoint (of not being able to
+   * remove any more states) is reached.
    */
   def minimizeStates() : AFA2 = {
 
@@ -331,7 +334,7 @@ case class AFA2(initialStates : Seq[Int],
   }
 
 /*
-Eliminates non-forward reachable and non-backward reachable states.
+ * Eliminates non-forward reachable and non-backward reachable states.
  */
   def restrictToReachableStates : AFA2 =
     if (reachableStates.size == states.size) {

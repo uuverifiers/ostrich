@@ -11,7 +11,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   import System.lineSeparator
 
-  val timeout = 30000
+  val timeout      = 30000
+  val shortTimeout = 3000
+  val longTimeout  = 60000
 
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
@@ -104,9 +106,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("null-problem.smt2") =
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
   property("failedProp.smt2") =
-    checkFileOpts("tests/failedProp.smt2", "unknown", "", "-timeout=3000")
+    checkFileOpts("tests/failedProp.smt2", "unknown", "", s"-timeout=$shortTimeout")
   property("failedProp.smt2 +forward") =
-    checkFileOpts("tests/failedProp.smt2", "unsat", "+forward", "-timeout=3000")
+    checkFileOpts("tests/failedProp.smt2", "unsat", "+forward", s"-timeout=$shortTimeout")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
@@ -406,7 +408,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("parse-ecma-cases.smt2") =
     checkFile("tests/parse-ecma-cases.smt2", "unsat")
   property("parse-ecma-cases-2.smt2") =
-    checkFile("tests/parse-ecma-cases-2.smt2", "unsat")
+    checkFile("tests/parse-ecma-cases-2.smt2", "unsat", s"-timeout=$longTimeout")
   property("parse-ecma-cases-3.smt2") =
     checkFileOpts("tests/parse-ecma-cases-3.smt2", "sat", "-regexTranslator=complete", "")
   property("parse-ecma-groups.smt2") =

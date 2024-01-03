@@ -42,10 +42,6 @@ object OFlags {
     val Approx, Complete, Hybrid = Value
   }
 
-  /**
-   * Compile-time flag that can be used to switch on debugging output
-   * throughout the theory.
-   */
   object CEABackend extends Enumeration {
     val Baseline, Unary = Value
   }

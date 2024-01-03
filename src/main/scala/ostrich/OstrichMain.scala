@@ -45,7 +45,7 @@ object OstrichMain {
 
   private val ostrichStringTheory =
     "ostrich.OstrichStringTheory"
-  private val ceaStringTheory =
+  private val ceaStringTheory     =
     "ostrich.cesolver.stringtheory.CEStringTheory"
 
   /**

@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2022 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2023 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -129,6 +129,11 @@ class ECMARegexParser(theory : OstrichStringTheory,
     visitor.visit (pat, true)
   }
 
+  /**
+   * Translate the given pattern, dropping assertions that cannot be
+   * handled using standard automata operations. The second result
+   * component tells whether this kind of approximation took place.
+   */
   private def applyTranslationVisitorRed(pat : Pattern) : (ITerm, Boolean) = {
     val visitor = new TranslationVisitor(true)
     val rawRes = visitor.visit (pat, true)
@@ -184,7 +189,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
   /**
    * Visitor to translate a regex AST to a term.
    */
-  class TranslationVisitor(APPROX : Boolean) extends FoldVisitor[ITerm, VisitorArg] {
+  private class TranslationVisitor(approxAssertions : Boolean)
+                extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
 
@@ -200,7 +206,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
                        outermost : VisitorArg) = {
       val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
 
-      if (outermost && APPROX) {
+      if (outermost && approxAssertions) {
         // handle leading look-aheads and trailing look-behinds
 
         var midTerms = terms filterNot (_ == EPS)
@@ -337,58 +343,46 @@ class ECMARegexParser(theory : OstrichStringTheory,
       reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
 
     override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) = {
-      APPROX match {
-        case true => LookAhead(
+      if (approxAssertions)
+        LookAhead(
           translateLookAhead(
             reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*)))
-
-        case false => {
-          //println("Inside lookahead: " + p.listalternativec_)
-          LookAhead(
-            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
-        }
-      }
+      else
+        LookAhead(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
     }
 
     override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) = {
-      APPROX match {
-        case true =>
-          NegLookAhead(
-            re_comp(translateLookAhead(reUnionStar(
-              p.listalternativec_ map (_.accept(this, arg)): _*))))
-
-        case false =>
-          NegLookAhead(
-            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
-      }
+      if (approxAssertions)
+        NegLookAhead(
+          re_comp(translateLookAhead(reUnionStar(
+            p.listalternativec_ map (_.accept(this, arg)): _*))))
+      else
+        NegLookAhead(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
     }
 
     override def visit(p : ecma2020regex.Absyn.PosLookbehind,
                        arg : VisitorArg) = {
-      APPROX match {
-        case true => LookBehind(
+      if (approxAssertions)
+        LookBehind(
           translateLookBehind(reUnionStar(
             p.listalternativec_ map (_.accept(this, arg)): _*)))
-        case false => {
-          //println("Inside lookbehind: " + (p.listalternativec_ map (_.accept(this, arg))) )
-          LookBehind(
-            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
-        }
-      }
+      else
+        LookBehind(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
     }
 
     override def visit(p : ecma2020regex.Absyn.NegLookbehind, arg : VisitorArg) = {
-      APPROX match {
-        case true =>
-          NegLookBehind (
-            re_comp (
-              translateLookBehind (
-                reUnionStar (
-                  p.listalternativec_ map (_.accept (this, arg) ): _*) ) ) )
-        case false =>
-          NegLookBehind(
-            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
-      }
+      if (approxAssertions)
+        NegLookBehind (
+          re_comp (
+            translateLookBehind (
+              reUnionStar (
+                p.listalternativec_ map (_.accept (this, arg) ): _*) ) ) )
+      else
+        NegLookBehind(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
     }
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
@@ -724,12 +718,6 @@ class ECMARegexParser(theory : OstrichStringTheory,
   lazy val uppCaseChars = re_charrange(65, 90)
   lazy val lowCaseChars = re_charrange(97, 122)
   lazy val underscore = re_charrange(95, 95)
-
-  lazy val alphabet: Set[Int] = (48 to 57).toSet ++ (65 to 90).toSet ++ (97 to 122).toSet ++ Set(95) ++ Set(9, 10, 11, 12, 13, 32, 160, 0xFEFF, 0x2028, 0x2029)
-
-  lazy val alphabetDebug = (97 to 101).toSet
-
-  //lazy val alphabet: Set[Int] = (0 to 255).toSet
 
   private lazy val whitespace =
     charSet(9,          // TAB,   \t
