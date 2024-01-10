@@ -82,7 +82,7 @@ lazy val root = (project in file(".")).
     mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
-    resolvers             += ("uuverifiers" at "http://logicrunch.research.it.uu.se/maven/").withAllowInsecureProtocol(true),
+    resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
 //
     libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
 //    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2023-06-19",
