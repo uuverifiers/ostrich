@@ -32,35 +32,36 @@
 
 package ostrich.cesolver.stringtheory
 
-import ostrich.automata.{Transducer}
-import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
-import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
-
 import ap.Signature
 import ap.basetypes.IdealInt
-import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp}
+import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp,
+                  Internal2InputAbsy}
 import IExpression.Predicate
 import ap.theories.strings._
 import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
 import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
 import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
-import ap.terfor.conjunctions.Conjunction
+import ap.terfor.conjunctions.{Conjunction, IdentityReducerPluginFactory}
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
+import ap.parameters.Param
 import ap.util.Seqs
 
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.collection.{Map => GMap}
+import ostrich.automata.{Transducer, AutDatabase}
+import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
+import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
+import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
+import ostrich.OstrichEqualityPropagator
+
+import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.cesolver.preprocess.CEPreprocessor
 import ostrich.cesolver.core.FinalConstraints
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.Internal2InputAbsy
-import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
-import ostrich.OstrichEqualityPropagator
-import ostrich.automata.AutDatabase
-import ostrich.cesolver.automata.CEAutDatabase
-import ap.terfor.conjunctions.IdentityReducerPluginFactory
+
+import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.{Map => GMap}
+
 
 object CEStringTheory {
   val alphabetSize = 0x10000
@@ -155,7 +156,13 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
           case Some(m) =>
             equalityPropagator.handleSolution(goal, m)
           case None =>
-            List(Plugin.AddFormula(Conjunction.TRUE))
+            if (Param.PROOF_CONSTRUCTION(goal.settings))
+              // TODO: only list the assumptions that were actually
+              // needed for the proof to close.
+              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
+                                       CEStringTheory.this))
+            else
+              List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions

@@ -61,6 +61,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   protected var eager, forward, forwardOnly, forwardBackward, minimizeAuts, useParikh = false
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -81,6 +82,12 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forwardBackward = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+    case CmdlParser.ValueOpt("regexTranslator", "approx") =>
+      regexTrans = OFlags.RegexTranslator.Approx
+    case CmdlParser.ValueOpt("regexTranslator", "complete") =>
+      regexTrans = OFlags.RegexTranslator.Complete
+    case CmdlParser.ValueOpt("regexTranslator", "hybrid") =>
+      regexTrans = OFlags.RegexTranslator.Hybrid
     case str =>
       super.parseParameter(str)
   }
@@ -120,7 +127,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     forwardApprox           = forward,
                                     forwardOnly = forwardOnly,
                                     forwardBackward = forwardBackward,
-                                    minimizeAutomata        = minimizeAuts))
+                                    minimizeAutomata        = minimizeAuts,
+                                    regexTranslator         = regexTrans))
   }
 
 }

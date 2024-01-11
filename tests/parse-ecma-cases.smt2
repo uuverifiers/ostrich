@@ -101,6 +101,18 @@
         (= (str.in_re w (re.from_ecma2020 '_'))
            (= w "_"))
 
+        (= (str.in_re w (re.from_ecma2020 '[\-0-9a-zA-Z\.\  ]+'))
+           (str.in_re w (re.from_ecma2020 '[\-0-9a-zA-Z.  ]+')))
+
+        (= (str.in_re w (re.from_ecma2020 '[0-9\ы═ы║ы╒ыёыєы╔ыіыїы╗ы╘]'))
+           (str.in_re w (re.from_ecma2020 '[0-9ы═ы║ы╒ыёыєы╔ыіыїы╗ы╘]')))
+
+        (= (str.in_re w (re.from_ecma2020 '[\-\_\@]'))
+           (or (= w "-") (= w "_") (= w "@")))
+
+        (= (str.in_re w (re.from_ecma2020 '\-\d{2}'))
+           (str.in_re w (re.from_ecma2020 '-\d{2}')))
+
  )))
 
 (check-sat)

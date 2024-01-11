@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2023 Riccado De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,49 +30,45 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.automata.afa2
 
-object OFlags {
+/*
+ * Class for representing transitions.
+ */
 
-  object LengthOptions extends Enumeration {
-    val Off, On, Auto = Value
-  }
+sealed abstract class Transition(val targets: Seq[Int])
 
-  object RegexTranslator extends Enumeration {
-    val Approx, Complete, Hybrid = Value
-  }
+case class EpsTransition(_targets: Seq[Int])
+    extends Transition(_targets) {
 
-  object CEABackend extends Enumeration {
-    val Baseline, Unary = Value
-  }
+  override def toString: String = "eps " + _targets
 
-  /** Compile-time flag that can be used to switch on debugging output
-    * throughout the theory.
-    */
-  protected[ostrich] val debug = false
-
-  val timeout = 60000
+  def isExistential() = this.targets.size == 1
 }
 
-case class OFlags(
-  // Pre-image specific options
-  eagerAutomataOperations : Boolean = false,
-  measureTimes            : Boolean = false,
-  useLength               : OFlags.LengthOptions.Value =
-                              OFlags.LengthOptions.Auto,
-  useParikhConstraints    : Boolean = true,
-  forwardApprox           : Boolean = false,
-  minimizeAutomata        : Boolean = false,
-  forwardOnly             : Boolean = false,
-  forwardBackward         : Boolean = false,
-  regexTranslator         : OFlags.RegexTranslator.Value =
-                              OFlags.RegexTranslator.Hybrid,
+case class StepTransition(label: Int,
+                          step: Step,
+                          _targets: Seq[Int])
+  extends Transition(_targets) {
 
-  // Options for the cost-enriched-automata solver
-  ceaBackend              : OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
-  useCostEnriched         : Boolean = false,
-  debug                   : Boolean = false,
-  underApprox             : Boolean = true,
-  underApproxBound        : Int = 15,
-  simplifyAut             : Boolean = true
-)
+  override def toString: String = {
+    step + "[" + label + "] " + _targets
+  }
+}
+
+
+case class SymbTransition(symbLabel: Range, //Range is what changes here.
+                          step: Step,
+                          _targets: Seq[Int])
+  extends Transition(_targets) {
+
+  override def toString: String = step + toStringLabel + " " + targets
+
+  def toStringLabel(): String =
+    "[" + symbLabel.start + "-" + (symbLabel.end) + "]"
+}
+
+
+
+
+
