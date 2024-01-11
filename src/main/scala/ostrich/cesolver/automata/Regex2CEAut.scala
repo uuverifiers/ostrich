@@ -9,6 +9,7 @@ import scala.collection.mutable.ArrayStack
 import scala.collection.immutable.VectorBuilder
 import ostrich.automata.Automaton
 import ostrich.OstrichStringTheory
+import ostrich.cesolver.util.ParikhUtil
 
 class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   import theory.{
@@ -31,10 +32,11 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
   private def translateLeaves(
       t: ITerm,
-      unwind: Boolean
+      unwind: Boolean,
+      minimize: Boolean
   ): Seq[CostEnrichedAutomatonBase] = {
     val leaves = collectLeaves(t, re_++)
-    val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind)
+    val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind, minimize)
     leaveAuts
   }
 
@@ -56,10 +58,17 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     res.result
   }
 
-  def toCEAutomaton(t: ITerm, unwind: Boolean): CostEnrichedAutomatonBase =
+  private def maybeMin(aut: CostEnrichedAutomatonBase, minimize: Boolean) =
+    if (minimize) {
+      minimizeHopcroft(aut)
+    } else {
+      aut
+    }
+
+  def toCEAutomaton(t: ITerm, unwind: Boolean, minimize: Boolean): CostEnrichedAutomatonBase =
     t match {
       case IFunApp(`re_++`, _) =>
-        concatenate(translateLeaves(t, unwind))
+        concatenate(translateLeaves(t, unwind, minimize))
 
       case IFunApp(`re_union`, _) => {
         val leaves = collectLeaves(t, re_union)
@@ -83,7 +92,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
           }
 
         val nonSingletonAuts =
-          for (s <- nonSingletons) yield toCEAutomaton(s, unwind)
+          for (s <- nonSingletons) yield toCEAutomaton(s, unwind, minimize)
 
         (singletonAuts, nonSingletonAuts) match {
           case (Seq(aut), Seq()) => aut
@@ -95,46 +104,45 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
       case IFunApp(`re_inter`, _) => {
         val leaves = collectLeaves(t, re_inter)
-        val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind)
+        val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind, minimize)
         leaveAuts reduceLeft { (aut1, aut2) =>
           intersection(aut1, aut2)
         }
       }
 
       case IFunApp(`re_diff`, Seq(t1, t2)) =>
-        diff(toCEAutomaton(t1, false), toCEAutomaton(t2, true))
+        maybeMin(diff(toCEAutomaton(t1, unwind, minimize), toCEAutomaton(t2, true, minimize)), minimize)
 
       case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
-        optional(toCEAutomaton(t, unwind))
+        maybeMin(optional(toCEAutomaton(t, unwind, minimize)), minimize)
 
       case IFunApp(`re_comp`, Seq(t)) =>
-        complement(toCEAutomaton(t, true))
+        maybeMin(complement(toCEAutomaton(t, true, minimize)), minimize)
 
       case IFunApp(
             `re_loop` | `re_loop_?`,
             Seq(IExpression.Const(IdealInt(n1)), IExpression.Const(IdealInt(n2)), t)
           ) =>
         if (unwind) {
-          repeatUnwind(toCEAutomaton(t, true), n1, n2)
-        } else repeat(toCEAutomaton(t, true), n1, n2)
+          maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), n1, n2), minimize)
+        } else maybeMin(repeat(toCEAutomaton(t, true, minimize), n1, n2), minimize)
       case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
-        repeatUnwind(toCEAutomaton(t, true), 0)
+        maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), 0), minimize)
 
       case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
-        repeatUnwind(toCEAutomaton(t, true), 1)
+        maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), 1), minimize)
 
       case _ => BricsAutomatonWrapper(toBAutomaton(t, true))
     }
 
   override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
-    // minimize always, not use the parameter `minimize`
-    toCEAutomaton(t, false)
-
+    ParikhUtil.log("Regex2CEAut.buildAut: build automaton for regex " + t)
+    toCEAutomaton(t, false, minimize)
   }
 
-  def buildComplementAut(t: ITerm): Automaton = {
-    // minimize always, not use the parameter `minimize`
-    complement(toCEAutomaton(t, true))
+  def buildComplementAut(t: ITerm, minimize: Boolean): Automaton = {
+    ParikhUtil.log("Regex2CEAut.buildComplementAut: build complement automaton for regex " + t)
+    complement(toCEAutomaton(t, true, minimize))
   }
 
 }

@@ -27,6 +27,7 @@ import ostrich.cesolver.core.ParikhExploration
 import ap.parser.Internal2InputAbsy
 import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
+import ostrich.cesolver.util.ParikhUtil
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
@@ -106,6 +107,10 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
   def findStringModel(
       goal: Goal
   ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+    ParikhUtil.log("CESolver.findStringModel")
+    ParikhUtil.log("  goal.arithConj ... " + goal.facts.arithConj)
+    ParikhUtil.log("  goal.predConj  ... " + goal.facts.predConj)
+
     val atoms = goal.facts.predConj
     val order = goal.order
 

@@ -251,13 +251,11 @@ class CostEnrichedAutomatonBase extends Automaton {
     None
   }
 
-  // not implement methods
   def unary_! = {
     if (registers.nonEmpty) throw new UnsupportedOperationException
     BricsAutomatonWrapper(BasicOperations.complement(toBricsAutomaton(this)))
   }
   def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
-  // def isEmpty: Boolean = throw new UnsupportedOperationException
 
   def product(that: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     CEBasicOperations.intersection(this, that)
@@ -278,8 +276,8 @@ class CostEnrichedAutomatonBase extends Automaton {
   def regsRelation_=(f: IFormula) = _regsRelation = f
   /////////////////////////////
 
-  // optimization and minimization ////
   def removeDuplicatedReg(): Unit = {
+    ParikhUtil.log("remove duplicated registers")
     def removeValuesInIdxs[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
       val res = ArrayBuffer[A]()
       for (i <- 0 until s.size) {
@@ -331,7 +329,6 @@ class CostEnrichedAutomatonBase extends Automaton {
       }
     }
   }
-  /////////////////////////////////////
 
   override def toString: String = {
     val s2str = states.zipWithIndex.map { case (state, int) =>

@@ -70,6 +70,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       debug = value
       ParikhUtil.debug = value
       CmdlMain.stackTraces = value
+    case CmdlParser.Opt("log", value) =>
+      ParikhUtil.needlog = value
     case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("ceaBackend", "unary") =>
@@ -113,7 +115,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         )
         (name, aut)
       }
-
+    
     new CEStringTheory(
       symTransducers.toSeq,
       OFlags(

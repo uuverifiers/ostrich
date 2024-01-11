@@ -27,7 +27,7 @@ class NuxmvBasedSolver(
 
   private var count = 0 // for debug
 
-  ParikhUtil.debugPrintln("maybe more efficient to use simplified product automaton before nuxmv encoding")
+  ParikhUtil.debugPrintln("NOTE: In some cases, it is more efficient to use simplified product automaton before nuxmv encoding")
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(FinalConstraints.nuxmvACs(t, auts))

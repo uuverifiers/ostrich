@@ -14,7 +14,7 @@ object ParikhUtil {
   type State = CostEnrichedAutomatonBase#State
   type TLabel = CostEnrichedAutomatonBase#TLabel
 
-  var debug = false
+  var debug, needlog = false
 
   def measure[A](
       op: String
@@ -132,6 +132,11 @@ object ParikhUtil {
   }
   def bug(s: Any) = {
       println("Bug:" + s)
+  }
+
+  def log(s: Any) = {
+    if (needlog)
+      println("Log: " + s)
   }
 
   def throwWithStackTrace(e: Throwable) = {

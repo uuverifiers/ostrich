@@ -3,6 +3,7 @@ package ostrich.cesolver.automata
 import ostrich.OstrichStringTheory
 import ostrich.automata.AutDatabase
 import ostrich.automata.Automaton
+import ostrich.cesolver.util.ParikhUtil
 
 class CEAutDatabase(theory: OstrichStringTheory, minimizeAutomata: Boolean)
     extends AutDatabase(theory, minimizeAutomata) {
@@ -17,7 +18,7 @@ class CEAutDatabase(theory: OstrichStringTheory, minimizeAutomata: Boolean)
           (id2Regex get id) match {
             case Some(regex) => {
               val aut =
-                regex2Aut.buildComplementAut(regex)
+                regex2Aut.buildComplementAut(regex, minimizeAutomata)
               id2CompAut.put(id, aut)
               Some(aut)
             }
