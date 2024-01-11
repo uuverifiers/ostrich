@@ -338,7 +338,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
     }
-    if (flags.forwardApprox || flags.forwardBackward){
+    if (flags.forwardApprox || flags.forwardOnly || flags.forwardBackward){
       var result = addForwardConstraints
       if (result.isDefined){
         return None
