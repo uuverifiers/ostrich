@@ -10,24 +10,23 @@ import ap.parser.IFormula
 class UnaryFinalConstraints(
     override val strDataBaseId: ITerm,
     override val auts: Seq[CostEnrichedAutomatonBase],
-    flags : OFlags
+    flags: OFlags
 ) extends BaselineFinalConstraints(strDataBaseId, auts) {
 
   private val productAut = auts.reduce(_ product _)
 
-  private lazy val mostlySimplifiedAut = {
-    val ceAut = CEBasicOperations.minimizeHopcroftByVec(
-      CEBasicOperations.determinateByVec(
-        CEBasicOperations.epsilonClosureByVec(
-          productAut
-        )
+  private lazy val simplifiedByVec = {
+    if (productAut.registers.isEmpty) simplified
+    else {
+      val ceAut = CEBasicOperations.minimizeHopcroftByVec(
+        productAut
       )
-    )
-    ceAut.removeDuplicatedReg()
-    ceAut
+      ceAut.removeDuplicatedReg()
+      ceAut
+    }
   }
 
-  private lazy val simplifyButRemainLabelAut = {
+  private lazy val simplified = {
     val ceAut = CEBasicOperations.removeDuplicatedTrans(
       CEBasicOperations.minimizeHopcroft(
         productAut
@@ -37,15 +36,17 @@ class UnaryFinalConstraints(
     ceAut
   }
 
-  ParikhUtil.debugPrintln("ISSUE: the product automaton is too large to minimize, for some timeout instances of pyex suite")  
+  ParikhUtil.debugPrintln(
+    "ISSUE: In some cases, the product of automata is too large to minimize"
+  )
 
-  private  val checkSatAut =
-    if (flags.simplifyAut) mostlySimplifiedAut else productAut
-  private  val findModelAut =
-    if (flags.simplifyAut) simplifyButRemainLabelAut else productAut
+  private val checkSatAut =
+    if (flags.simplifyAut) simplifiedByVec else productAut
+  private val findModelAut =
+    if (flags.simplifyAut) simplified else productAut
 
-  simplifyButRemainLabelAut.toDot(strDataBaseId.toString + "_simplifyButRemainLabelAut")
-  mostlySimplifiedAut.toDot(strDataBaseId.toString + "_mostlySimplifiedAut")
+  simplified.toDot(strDataBaseId.toString + "_simplified")
+  simplifiedByVec.toDot(strDataBaseId.toString + "_simplifiedByVec")
 
   override lazy val getCompleteLIA: IFormula = {
     getCompleteLIA(checkSatAut)

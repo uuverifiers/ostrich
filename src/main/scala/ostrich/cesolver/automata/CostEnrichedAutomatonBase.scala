@@ -278,6 +278,7 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   def removeDuplicatedReg(): Unit = {
     ParikhUtil.log("remove duplicated registers")
+    if (registers.isEmpty) return
     def removeValuesInIdxs[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
       val res = ArrayBuffer[A]()
       for (i <- 0 until s.size) {
