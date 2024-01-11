@@ -58,7 +58,8 @@ case class OFlags(
     useParikhConstraints: Boolean = true,
     forwardApprox: Boolean = false,
     minimizeAutomata: Boolean = false,
-
+    forwardOnly : Boolean = false,
+    forwardBackward : Boolean = false,
     // Options for the cost-enriched-automata solver
     ceaBackend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
     useCostEnriched: Boolean = false,
