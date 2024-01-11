@@ -59,7 +59,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  protected var eager, forward, forwardOnly, forwardBackward, minimizeAuts, useParikh = false
+  protected var eager, forward, forwardOnly, forwardBackward, backwardOnly, minimizeAuts, useParikh = false
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
@@ -80,6 +80,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forwardOnly = value
     case CmdlParser.Opt("forwardBackward", value) =>
       forwardBackward = value
+    case CmdlParser.Opt("forwardOnly", value) =>
+      backwardOnly = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
@@ -125,8 +127,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
-                                    forwardOnly = forwardOnly,
-                                    forwardBackward = forwardBackward,
+                                    forwardOnly             = forwardOnly,
+                                    forwardBackward         = forwardBackward,
+                                    backwardOnly            = backwardOnly,
                                     minimizeAutomata        = minimizeAuts,
                                     regexTranslator         = regexTrans))
   }
