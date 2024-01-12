@@ -90,13 +90,14 @@ object OstrichStringTheory {
  * The entry class of the Ostrich string solver.
  */
 class OstrichStringTheory(transducers : Seq[(String, Transducer)],
-                          flags : OFlags) extends {
+                          _flags : OFlags) extends {
 
   val StringSort   = new OstrichStringTheory.OstrichStringSort
   val alphabetSize = OstrichStringTheory.alphabetSize
   val upperBound   = IdealInt(alphabetSize - 1)
   val CharSort     = ModuloArithmetic.ModSort(IdealInt.ZERO, upperBound)
   val RegexSort    = Sort.createInfUninterpretedSort("RegLan")
+  val theoryFlags = _flags
 
 } with AbstractStringTheory {
 
@@ -240,7 +241,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   //////////////////////////////////////////////////////////////////////////////
 
-  val autDatabase = new AutDatabase(this, flags.minimizeAutomata)
+  val autDatabase = new AutDatabase(this, theoryFlags.minimizeAutomata)
 
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
@@ -308,7 +309,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    re_from_ecma2020, re_from_ecma2020_flags,
                    re_case_insensitive))
      yield functionPredicateMap(f)) ++
-    (for (f <- List(str_len); if flags.useLength != OFlags.LengthOptions.Off)
+    (for (f <- List(str_len); if theoryFlags.useLength != OFlags.LengthOptions.Off)
      yield functionPredicateMap(f)) ++
     (for ((_, e) <- extraOps.iterator) yield e match {
        case Left(f) => functionPredicateMap(f)
@@ -324,14 +325,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
    * some assertion.
    */
   def lengthNeeded(f : Conjunction) : Boolean = {
-    flags.useLength match {
+    theoryFlags.useLength match {
       case OFlags.LengthOptions.Off  => false
       case OFlags.LengthOptions.On   => true
       case OFlags.LengthOptions.Auto => f.predicates contains _str_len
     }
   }
 
-  private val ostrichSolver      = new OstrichSolver (this, flags)
+  private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
   def plugin = Some(new Plugin {
@@ -343,10 +344,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal)
                        : Seq[Plugin.Action] = {
       lazy val nielsenSplitter =
-        new OstrichNielsenSplitter(goal, OstrichStringTheory.this, flags)
+        new OstrichNielsenSplitter(goal, OstrichStringTheory.this, theoryFlags)
 
       lazy val predToEq =
-        new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, flags)
+        new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, theoryFlags)
 
       goalState(goal) match {
 
@@ -466,7 +467,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
 
-    val preprocessor = new OstrichInternalPreprocessor(this, flags)
+    val preprocessor = new OstrichInternalPreprocessor(this, theoryFlags)
     preprocessor.preprocess(f, order)
   }
 

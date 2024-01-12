@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -61,6 +61,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   protected var eager, forward, minimizeAuts, useParikh = false
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -77,6 +78,12 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forward = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+    case CmdlParser.ValueOpt("regexTranslator", "approx") =>
+      regexTrans = OFlags.RegexTranslator.Approx
+    case CmdlParser.ValueOpt("regexTranslator", "complete") =>
+      regexTrans = OFlags.RegexTranslator.Complete
+    case CmdlParser.ValueOpt("regexTranslator", "hybrid") =>
+      regexTrans = OFlags.RegexTranslator.Hybrid
     case str =>
       super.parseParameter(str)
   }
@@ -114,7 +121,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
-                                    minimizeAutomata        = minimizeAuts))
+                                    minimizeAutomata        = minimizeAuts,
+                                    regexTranslator         = regexTrans))
   }
 
 }

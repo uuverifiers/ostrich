@@ -88,16 +88,17 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
       symTransducers.toSeq,
       OFlags(
         eagerAutomataOperations = eager,
-        useLength = useLen,
-        useParikhConstraints = useParikh,
-        forwardApprox = forward,
-        minimizeAutomata = minimizeAuts,
-        ceaBackend = backend,
-        useCostEnriched = useCostEnriched,
-        debug = debug,
-        underApprox = underApprox,
-        underApproxBound = underApproxBound,
-        simplifyAut = simplifyAut
+        useLength               = useLen,
+        useParikhConstraints    = useParikh,
+        forwardApprox           = forward,
+        minimizeAutomata        = minimizeAuts,
+        regexTranslator         = regexTrans,
+        ceaBackend              = backend,
+        useCostEnriched         = useCostEnriched,
+        debug                   = debug,
+        underApprox             = underApprox,
+        underApproxBound        = underApproxBound,
+        simplifyAut             = simplifyAut
       )
     )
   }

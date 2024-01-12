@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,21 +32,24 @@
 
 package ostrich.automata
 
-import ostrich.{OstrichStringTheory, ECMARegexParser}
-
+import ostrich.{ECMARegexParser, OFlags, OstrichStringTheory}
 import ap.basetypes.IdealInt
+import ap.parser.IExpression.Const
 import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
-
-import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp,
-                           Automaton => BAutomaton}
+import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
+import ostrich.automata.afa2.concrete.{AFA2, AFA2StateDuplicator, NFATranslator}
+import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2, SymbToConcTranslator}
+import ostrich.automata.afa2.AFA2PrintingUtils
 
 import scala.collection.mutable.{ArrayBuffer, ArrayStack}
 import scala.collection.immutable.VectorBuilder
 import collection.JavaConverters._
 
 object Regex2Aut {
+
+  val debug = false
 
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
   private val LookAheadBehind = """\(\?[=!<]""".r
@@ -139,6 +142,186 @@ object Regex2Aut {
       case t => t
     }
 
+  }
+
+
+  class SyntacticTransformations(theory: OstrichStringTheory, parser: ECMARegexParser) {
+
+    import IExpression._
+    import theory._
+    import theory.strDatabase.EncodedString
+
+    val isWordChar = re_union(parser.decimal,
+                        re_union(parser.uppCaseChars,
+                          re_union(parser.lowCaseChars, parser.underscore)))
+
+    def apply(t: ITerm) = {
+      val diffElimin = new Regex2Aut.DiffEliminator(theory)
+      val de = diffElimin(t)
+      if (debug)
+        Console.err.println("After diff elimination:\n" + de + "\n")
+      val res = transformNF(de)
+      if (debug)
+        Console.err.println("After transformation:\n" + res + "\n")
+      res
+    }
+
+    /*
+    It transform the input formula in NF for the 2AFA transformation.
+    It reverses the lookbehinds and eliminate redundant operators.
+     */
+    def transformNF(t: ITerm, reverse: Boolean=false): ITerm = t match {
+      //Base cases
+      case IFunApp(`re_none` | `re_charrange` | `re_eps` | `re_all` | `re_allchar` | `re_range`,  _) => t
+
+      // Recursive cases
+      case IFunApp(`re_++`, Seq(l, r)) => if (reverse)
+                                            re_++(transformNF(r, reverse), transformNF(l, reverse))
+                                          else
+                                            re_++(transformNF(l, reverse), transformNF(r, reverse))
+
+      case IFunApp(parser.LookAhead, Seq(t)) => IFunApp(parser.LookAhead, Seq(transformNF(t, false)))
+
+      case IFunApp(parser.NegLookAhead, Seq(t)) => IFunApp(parser.NegLookAhead, Seq(transformNF(t, false)))
+
+      case IFunApp(parser.LookBehind, Seq(t)) => IFunApp(parser.LookBehind, Seq(transformNF(t, true)))
+
+      case IFunApp(parser.NegLookBehind, Seq(t)) => IFunApp(parser.NegLookBehind, Seq(transformNF(t, true)))
+
+      // Ad hoc, optimised translation. DOES NOT WORK!
+      case IFunApp(parser.WordBoundary, x) => IFunApp(parser.WordBoundary, x)
+      case IFunApp(parser.NonWordBoundary, x) => IFunApp(parser.NonWordBoundary, x)
+
+      // Old, textbook translation
+      /*
+      case IFunApp(parser.WordBoundary, _) => transformNF(
+
+        re_union(
+          re_++(IFunApp(parser.LookAhead, Seq(isWordChar)), IFunApp(parser.NegLookBehind, Seq(isWordChar))),
+          re_++(IFunApp(parser.NegLookAhead, Seq(isWordChar)), IFunApp(parser.LookBehind, Seq(isWordChar)))
+        )
+
+        ,reverse)
+
+      case IFunApp(parser.NonWordBoundary, _) => transformNF(
+
+          re_union(
+            re_++(IFunApp(parser.LookAhead, Seq(isWordChar)), IFunApp(parser.LookBehind, Seq(isWordChar))),
+            re_++(IFunApp(parser.NegLookAhead, Seq(isWordChar)), IFunApp(parser.NegLookBehind, Seq(isWordChar)))
+          )
+
+          ,reverse)
+        */
+
+      case IFunApp(`re_opt`, Seq(t)) => IFunApp(`re_union`, Seq(IFunApp(`re_eps`, Seq()), transformNF(t)))
+
+      case IFunApp(`re_begin_anchor`, Seq()) => transformNF(IFunApp(parser.NegLookBehind, Seq(re_all())), reverse)
+
+      case IFunApp(`re_end_anchor`, _) => transformNF(IFunApp(parser.NegLookAhead, Seq(re_all())), reverse)
+
+      case IFunApp(`re_capture`, Seq(_, t)) =>
+        Console.err.println("Warning: ignoring capture groups")
+        transformNF(t, reverse)
+
+      case IFunApp(`re_*?`, Seq(t)) =>
+        Console.err.println("Warning: ignoring lazy star")
+        IFunApp(`re_*`, Seq(transformNF(t, reverse)))
+
+      case IFunApp(`re_+` | `re_+?`, Seq(t)) => transformNF(re_++(t, re_*(t)))
+
+      case IFunApp(`re_loop` | `re_loop_?`, Seq(IIntLit(n1), IIntLit(n2), t)) => IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), transformNF(t, reverse)))
+
+      case IFunApp(`str_to_re`, Seq(EncodedString(_str))) => {
+        val str = if (reverse) _str.reverse else _str
+        val charRegexes = for (c <- str) yield re_charrange(c, c)
+        if (str.isEmpty) re_eps() else charRegexes.reduceLeft(re_++(_, _))
+      }
+
+      case IFunApp(x@(`re_*` | `re_union` | `re_inter`), y) =>
+        IFunApp(x, y.map(transformNF(_, reverse)))
+
+      case t =>
+        throw new RuntimeException("Cannot normalize regular expression: " + t)
+    }
+
+  }
+
+}
+
+
+class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
+
+  import ostrich.automata.afa2._
+  import theory.{
+    re_none, re_all, re_eps, re_allchar, re_charrange, re_range,
+    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
+    re_opt_?, re_loop_?,
+    re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
+    re_begin_anchor, re_end_anchor,
+    re_from_ecma2020, re_from_ecma2020_flags,
+    re_case_insensitive
+  }
+
+  val builder = new SymbAFA2Builder(theory)
+
+  // Just calls toMutableAFA2 with AFA2.Right direction and converts the result.
+  def toSymbExt2AFA(t: ITerm) : SymbExtAFA2 = {
+    val symbMutAut = toSymbMutableAFA2(Right, t)
+    //println("Builder automaton:\n" + mutAut)
+    val extSymbAFA2 = symbMutAut.builderToSymbExtAFA()
+    //println("Ext2AFA automaton:\n" + extAFA2)
+    extSymbAFA2
+  }
+
+
+  private def toSymbMutableAFA2(dir: Step, t: ITerm) : SymbMutableAFA2 = {
+    //ap.util.Timeout.check
+    t match {
+
+      case IFunApp(`re_eps`, _) =>
+        builder.epsAtomic2AFA(dir)
+
+      case IFunApp(`re_none`, _) =>
+        builder.emptyAtomic2AFA(dir)
+
+      case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
+        builder.charrangeAtomic2AFA(dir, new Range(l.intValue, u.intValue+1, 1))
+
+      case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
+
+      case IFunApp(`re_all`, _) => builder.allAtomic2AFA(dir)
+
+      case IFunApp(parser.WordBoundary, _) => builder.wordBoundary2AFA(dir)
+
+      case IFunApp(parser.NonWordBoundary, _) => builder.nonWordBoundary2AFA(dir)
+
+      case IFunApp(`re_++`, Seq(l, r)) =>
+        builder.concat2AFA(dir, toSymbMutableAFA2(dir, l), toSymbMutableAFA2(dir, r))
+
+      case IFunApp(`re_union`, Seq(l, r)) =>
+        builder.alternation2AFA(dir, toSymbMutableAFA2(dir, l), toSymbMutableAFA2(dir, r))
+
+      case IFunApp(`re_*`, Seq(t)) =>
+        builder.star2AFA(dir, toSymbMutableAFA2(dir, t))
+
+      case IFunApp(parser.LookAhead, Seq(t)) =>
+        // Watch out here with the directions!
+        builder.lookaround2AFA(dir, toSymbMutableAFA2(Right, t))
+
+      case IFunApp(parser.LookBehind, Seq(t)) =>
+        builder.lookaround2AFA(dir, toSymbMutableAFA2(Left, t))
+
+      case IFunApp(parser.NegLookAhead, Seq(t)) =>
+        builder.negLookaround2AFA(dir, toSymbMutableAFA2(Right, t))
+
+      case IFunApp(parser.NegLookBehind, Seq(t)) =>
+        builder.negLookaround2AFA(dir, toSymbMutableAFA2(Left, t))
+
+      case IFunApp(`re_loop`, Seq(IIntLit(n1), IIntLit(n2), t)) =>
+        builder.loop3Aut2AFA(dir, n1.intValue, n2.intValue, toSymbMutableAFA2(dir, t))
+
+      case t => throw new RuntimeException("Cannot translate to 2AFA: " + t)
+    }
   }
 
 }
@@ -239,6 +422,126 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   import theory.strDatabase.EncodedString
 
+  /*
+  New transformation from ECMARegex to 2AFA and then NFA.
+   */
+  private def to2AFA(t : ITerm, parser: ECMARegexParser) : BAutomaton = {
+    /*
+      Step 1: Building the symbolic extended 2AFA (the translation in
+      the paper). This automaton has eps transitions and accepts at
+      the beginning and end of string (with two different kind of
+      final states).
+    */
+    var t1 = System.currentTimeMillis()
+    val ecmaAFA = new ECMAToSymbAFA2(theory, parser)
+    val aut = ecmaAFA.toSymbExt2AFA(t)
+    if (debug)
+      AFA2PrintingUtils.printAutDotToFile(aut, "extSymbAFA2.dot")
+
+    /*
+    Step 2:
+    a) All epsilon transitions are removed: the existential with
+    powerset construction and the universal by adding forward and
+    backward transitions reading any symbols (word markers included).
+    b) Also the resulting automaton accepts only at the right end of
+    the word. This is done by adding beginning and end markers of the
+    word and by adding some states.  The result is therefore a
+    symbolic2AFA (no eps trans, accepts only at the end, reads word
+    markers)
+     */
+    var t2 = System.currentTimeMillis()
+    val epsRed = new SymbEpsReducer(theory, aut)
+    val reducedAut = epsRed.afa
+    var duration2 = (System.currentTimeMillis() - t2) / 1000d
+    //println("Time for eps-reduction: " + duration2)
+
+    // Used sometime for debugging...
+    //throw new RuntimeException("Stop here.")
+
+    /*
+    Step 3: The symb2AFA, with ranges on the transitions, is
+    transformed into a concrete one.  In order to do that, overlaps
+    between ranges are eliminated and a map between ranges and
+    concrete symbols is kept. This is needed because the 2AFA -> NFA
+    translation works only on concrete automata.
+     */
+    t2 = System.currentTimeMillis()
+    val transl = new SymbToConcTranslator(reducedAut)
+    val concAut = transl.forth()
+    duration2 = (System.currentTimeMillis() - t2) // / 1000d
+    //println("Time for symbolic to concrete: " + duration2)
+    if (debug)
+      AFA2PrintingUtils.printAutDotToFile(concAut, "concAut.dot")
+    var duration = (System.currentTimeMillis() - t1) // / 1000d
+
+    /*
+    Step 4: Naive minimization of the automata. Essentially states
+    with same outgoing labels going to same states are merged. The
+    procedure is iterative and reaches a fixpoint where no states can
+    be merged anymore. Output: 2AFA (concrete, only accepts at the end
+    of word)
+     */
+    //println("Eliminating redundant states in progress...")
+    val redConcAut = concAut.minimizeStates()
+    //val redConcAut = concAut
+    //println("Total time for regex -> 2AFA translation: " + duration)
+    if (debug)
+      AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
+    if (debug)
+      Console.err.println("2AFA #states: " + redConcAut.states.size + " #transitions: " + redConcAut.transitions.values.size)
+
+    /*
+    Step 5: 2AFA -> NFA translation
+     */
+    t1 = System.currentTimeMillis()
+    val concNFA = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap)))
+    duration = (System.currentTimeMillis() - t1) // / 1000d
+    //println("Time for 2AFA -> NFA translation: " + duration)
+    //println("BricsAutomaton:\n" + res)
+
+    val symbNFA = transl.bricsBack(concNFA, Set(epsRed.beginMarker, epsRed.endMarker))
+
+    symbNFA.underlying
+  }
+
+  private def regex2Automaton(parser   : ECMARegexParser,
+                              str      : String,
+                              minimize : Boolean) = {
+      theory.theoryFlags.regexTranslator match {
+
+        case OFlags.RegexTranslator.Hybrid => {
+          val (s, incomplete) =
+            Console.withErr(ap.CmdlMain.NullStream) {
+              parser.string2TermWithReduction(str)
+            }
+          if (incomplete) {
+            //println("Using complete method.")
+            val s2 = parser.string2TermExact(str)
+            val st = new SyntacticTransformations(theory, parser)
+            val r = st(s2)
+            to2AFA(r, parser)
+          } else {
+            //println("Partial method is exact, using it.")
+            toBAutomaton(s, minimize)
+          }
+        }
+
+        case OFlags.RegexTranslator.Approx => {
+          //println("Using partial method.")
+          val (s, _) = parser.string2TermWithReduction(str)
+          toBAutomaton(s, minimize)
+        }
+
+        case OFlags.RegexTranslator.Complete => {
+          //println("Using complete method.")
+          val s = parser.string2TermExact(str)
+          val st = new SyntacticTransformations(theory, parser)
+          val r = st(s)
+          to2AFA(r, parser)
+        }
+      }
+  }
+
   protected def toBAutomaton(t : ITerm,
                            minimize : Boolean) : BAutomaton = t match {
     case IFunApp(`re_charrange`,
@@ -264,15 +567,13 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
     case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
       val parser = new ECMARegexParser(theory)
-      val s = parser.string2Term(str)
-      toBAutomaton(s, minimize)
+      regex2Automaton(parser, str, minimize)
     }
 
     case IFunApp(`re_from_ecma2020_flags`,
                  Seq(EncodedString(str), EncodedString(flags))) => {
       val parser = new ECMARegexParser(theory, flags)
-      val s = parser.string2Term(str)
-      toBAutomaton(s, minimize)
+      regex2Automaton(parser, str, minimize)
     }
 
     case IFunApp(`re_case_insensitive`, Seq(a)) => {

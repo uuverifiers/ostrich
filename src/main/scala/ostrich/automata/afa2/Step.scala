@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2023 Riccado De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,49 +30,19 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.automata.afa2
 
-object OFlags {
+/*
+ * Trait used to represent which symbol (left or right to the current
+ * head in the string) the two-way (alternating) automata should read
+ * on a specific transition.
+ */
+sealed abstract class Step
 
-  object LengthOptions extends Enumeration {
-    val Off, On, Auto = Value
-  }
-
-  object RegexTranslator extends Enumeration {
-    val Approx, Complete, Hybrid = Value
-  }
-
-  object CEABackend extends Enumeration {
-    val Baseline, Unary = Value
-  }
-
-  /**
-   * Compile-time flag that can be used to switch on debugging output
-   * throughout the theory.
-   */
-  protected[ostrich] val debug = false
-
-  val timeout = 60000
-
+case object Left extends Step {
+  override def toString: String = "<-"
 }
 
-case class OFlags(
-  // Pre-image specific options
-  eagerAutomataOperations : Boolean = false,
-  measureTimes            : Boolean = false,
-  useLength               : OFlags.LengthOptions.Value =
-                              OFlags.LengthOptions.Auto,
-  useParikhConstraints    : Boolean = true,
-  forwardApprox           : Boolean = false,
-  minimizeAutomata        : Boolean = false,
-  regexTranslator         : OFlags.RegexTranslator.Value =
-                              OFlags.RegexTranslator.Hybrid,
-
-  // Options for the cost-enriched-automata solver
-  ceaBackend              : OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
-  useCostEnriched         : Boolean = false,
-  debug                   : Boolean = false,
-  underApprox             : Boolean = true,
-  underApproxBound        : Int = 15,
-  simplifyAut             : Boolean = true
-)
+case object Right extends Step {
+  override def toString: String = "->"
+}
