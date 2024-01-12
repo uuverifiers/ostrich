@@ -80,7 +80,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forwardOnly = value
     case CmdlParser.Opt("forwardBackward", value) =>
       forwardBackward = value
-    case CmdlParser.Opt("forwardOnly", value) =>
+    case CmdlParser.Opt("backwardOnly", value) =>
       backwardOnly = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
