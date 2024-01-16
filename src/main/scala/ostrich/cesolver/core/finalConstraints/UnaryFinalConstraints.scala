@@ -16,37 +16,34 @@ class UnaryFinalConstraints(
   private val productAut = auts.reduce(_ product _)
 
   private lazy val simplifiedByVec = {
-    if (productAut.registers.isEmpty) simplified
-    else {
-      val ceAut = CEBasicOperations.minimizeHopcroftByVec(
+    if (productAut.registers.isEmpty) {
+      findModelAut
+    } else {
+      CEBasicOperations.minimizeHopcroftByVec(
         productAut
       )
-      ceAut.removeDuplicatedReg()
-      ceAut
     }
   }
 
   private lazy val simplified = {
-    val ceAut = CEBasicOperations.removeDuplicatedTrans(
-      CEBasicOperations.minimizeHopcroft(
-        productAut
-      )
+    CEBasicOperations.minimizeHopcroft(
+      productAut
     )
-    ceAut.removeDuplicatedReg()
-    ceAut
   }
 
-  ParikhUtil.debugPrintln(
-    "ISSUE: In some cases, the product of automata is too large to minimize"
+  ParikhUtil.log(
+    s"NOTE: Always minimize automata: ${flags.simplifyAut}."
   )
 
-  private val checkSatAut =
+  private lazy val checkSatAut =
     if (flags.simplifyAut) simplifiedByVec else productAut
-  private val findModelAut =
+  private lazy val findModelAut =
     if (flags.simplifyAut) simplified else productAut
 
-  simplified.toDot(strDataBaseId.toString + "_simplified")
-  simplifiedByVec.toDot(strDataBaseId.toString + "_simplifiedByVec")
+  simplified.toDot(strDataBaseId.toString + "_unary_simplified")
+  simplifiedByVec.toDot(strDataBaseId.toString + "_unary_simplifiedByVec")
+  ParikhUtil.log("The checkSatAut: " + checkSatAut)
+  ParikhUtil.log("The findModelAut: " + findModelAut)
 
   override lazy val getCompleteLIA: IFormula = {
     getCompleteLIA(checkSatAut)

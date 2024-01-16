@@ -9,6 +9,7 @@ import ap.parser.IExpression._
 import scala.collection.mutable.ArrayBuffer
 import ostrich.cesolver.util.TermGenerator
 import scala.collection.mutable.{HashSet => MHashSet}
+import ostrich.cesolver.util.ParikhUtil
 
 
 class BaselineFinalConstraints(
@@ -23,6 +24,7 @@ class BaselineFinalConstraints(
   }
 
   def getCompleteLIA(aut: CostEnrichedAutomatonBase): IFormula = {
+    ParikhUtil.log(s"Computing Parikh image of the automaton A${aut.hashCode()}...")
     lazy val transtion2Term =
       aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
     def outFlowTerms(from: State): Seq[ITerm] = {
@@ -147,7 +149,7 @@ class BaselineFinalConstraints(
         )
 
     /////////////////////////////////////////////////////////////////////////////////
-    and(
+    val parikhImage = and(
       Seq(
         registerUpdateFormula,
         consistentFlowFormula,
@@ -155,5 +157,7 @@ class BaselineFinalConstraints(
         getRegsRelation
       )
     )
+    ParikhUtil.log(s"Parikh image of the automaton A${aut.hashCode()} computed. The formula is: " + parikhImage)
+    parikhImage
   }
 }

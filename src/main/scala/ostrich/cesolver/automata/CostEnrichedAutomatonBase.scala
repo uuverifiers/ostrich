@@ -276,81 +276,22 @@ class CostEnrichedAutomatonBase extends Automaton {
   def regsRelation_=(f: IFormula) = _regsRelation = f
   /////////////////////////////
 
-  def removeDuplicatedReg(): Unit = {
-    ParikhUtil.log("remove duplicated registers")
-    if (registers.isEmpty) return
-    def removeValuesInIdxs[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
-      val res = ArrayBuffer[A]()
-      for (i <- 0 until s.size) {
-        if (!idxs.contains(i)) {
-          res += s(i)
-        }
-      }
-      res.toSeq
-    }
-    // transpose the vectors, so that each vector is a column containing all updates of a register
-    val vectorsT =
-      transitionsWithVec
-        .map { case (_, _, _, v) => v }
-        .toSeq
-        .transpose
-        .zipWithIndex
-    val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
-    // map the transposed vectors to their updated register
-    for ((v, i) <- vectorsT) {
-      if (!vectors2Idxs.contains(v)) {
-        vectors2Idxs += (v -> Set[Int]())
-      }
-      vectors2Idxs(v) += i
-    }
-    // if a transposed vector map to more than one register, then these registers are duplicated
-    val duplicatedRegs =
-      vectors2Idxs.map { case (_, idxs) => idxs }.filter(_.size > 1)
-    if (duplicatedRegs.nonEmpty) {
-      // remove the duplicated registers and add lia constraints to ensure they are equal
-      val removeIdxs = new MHashSet[Int]()
-      duplicatedRegs.foreach { regidxs =>
-        val baseidx = regidxs.head
-        regidxs.tail.foreach { idx =>
-          _regsRelation =
-            and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
-        }
-        removeIdxs ++= regidxs.tail
-
-      }
-      _registers = removeValuesInIdxs(_registers, removeIdxs.toSet)
-      val newTransitionWithVec = transitionsWithVec.map {
-        case (from, lbl, to, vec) =>
-          (from, lbl, to, removeValuesInIdxs(vec, removeIdxs.toSet))
-      }.toSeq
-      _state2transtions.clear()
-      _state2incomingTranstions.clear()
-      for ((from, lbl, to, vec) <- newTransitionWithVec) {
-        addTransition(from, lbl, to, vec)
-      }
-    }
-  }
-
   override def toString: String = {
-    val s2str = states.zipWithIndex.map { case (state, int) =>
-      (state, s"s${int}")
-    }.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
       val (s, (left, right), t, vec) = transition
-      s"${s2str(s)} -> ${s2str(t)} [${left.toInt}, ${right.toInt}] $vec"
+      s"${s} -> ${t} [${left.toInt}, ${right.toInt}] $vec"
     }
 
-    val random = new scala.util.Random
-
     s"""
-    automaton A${random.nextInt(10000)} {
-      init ${s2str(initialState)};
+    automaton A${hashCode()} {
+      init ${initialState};
       ${transitionsWithVec.toSeq
         .sortBy(_._1)
         .map(transition2Str)
         .mkString("\n    ")}
-      accepting ${acceptingStates.map(s => s"${s2str(s)}").mkString(", ")};
+      accepting ${acceptingStates.map(s => s"${s}").mkString(", ")};
       Registers ${registers.mkString(", ")};
+      RegsRelation ${regsRelation};
     };
     """
   }

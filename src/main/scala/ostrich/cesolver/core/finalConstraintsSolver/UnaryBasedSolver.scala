@@ -14,6 +14,7 @@ import ostrich.OFlags
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
+import ostrich.cesolver.util.ParikhUtil
 
 class UnaryBasedSolver(
     flags: OFlags,
