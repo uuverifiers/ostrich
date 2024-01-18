@@ -35,12 +35,9 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   def setAlphabetSize(w: Int): Unit = ()
 
   ParikhUtil.todo("add noAutomataProduct option, to disable automata product when using catra and nuxmv backend")
-  private var eager, forward, minimizeAuts, useParikh, useCostEnriched, debug, noAutomataProduct =
-    false
-  private var useLen: OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  private var eager, minimizeAuts, useCostEnriched, debug = false
   private var backend: OFlags.CEABackend.Value = Unary
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
-  private var simplifyAut = true
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -48,22 +45,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       eager = value
     case CmdlParser.Opt("minimizeAutomata", value) =>
       minimizeAuts = value
-    case CmdlParser.ValueOpt("length", "off") =>
-      useLen = OFlags.LengthOptions.Off
-    case CmdlParser.ValueOpt("length", "on") =>
-      useLen = OFlags.LengthOptions.On
-    case CmdlParser.ValueOpt("length", "auto") =>
-      useLen = OFlags.LengthOptions.Auto
-    case CmdlParser.Opt("forward", value) =>
-      forward = value
-    case CmdlParser.Opt("parikh", value) =>
-      useParikh = value
-
+  
     // Options for cost-enriched-automata based solver
-    case CmdlParser.Opt("product", value) => 
-      noAutomataProduct = !value
-    case CmdlParser.Opt("simplify-aut", value) =>
-      simplifyAut = value
     case CmdlParser.Opt("costenriched", value) =>
       useCostEnriched = value
     case CmdlParser.Opt("debug", value) =>
@@ -120,15 +103,11 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       symTransducers.toSeq,
       OFlags(
         eagerAutomataOperations = eager,
-        useLength = useLen,
-        useParikhConstraints = useParikh,
-        forwardApprox = forward,
+        useLength = OFlags.LengthOptions.On,
         minimizeAutomata = minimizeAuts,
         backend = backend,
         useCostEnriched = useCostEnriched,
         debug = debug,
-        simplifyAut = simplifyAut,
-        noAutomataProduct = noAutomataProduct,
         NuxmvBackend = nuxmvBackend
       )
     )

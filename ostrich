@@ -19,14 +19,37 @@ princessParams=()
 ostrichSolver=ostrich.OstrichStringTheory
 ostrichParams=""
 
+help() {
+    echo "Usage: $0 [options]* [file]*"
+    echo "Options:"
+    echo "  [+-]incremental: enable incremental solving                               (default:-)"
+    echo "  [+-]model: print model                                                    (default:-)"
+    echo "  -timeout=val: set timeout to val milliseconds                             (default:infy)"
+    echo "  [+-]cea: use the cost-enriched automata solver                            (default:-)"
+    echo "  [+-]seq: use the sequential string solver"
+    echo "  [+-]eager: eagerly intersect automata                                     (default:-)"
+    echo "  [+-]minimizeAutomata: minimize automata                                   (default:-)"
+    echo "  -ceaBackend=<backend>: use <backend> for cost-enriched automata solver:   (default:unary)"
+    echo "                                            (unary, nuxmv, catra)"
+    echo "  -nuxmvBackend=<backend>: use <backend> for cost-enriched automata solver: (default:ic3)"
+    echo "                                            (ic3, bmc)"
+    echo "  [+-]debug: enable debugging                                               (default:-)"
+    echo "  [+-]log: enable logging                                                   (default:-)"
+    echo "  -h: print this help message"
+}
+
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -ceaBackend=* | -nuxmvBackend=* | [+-]debug | [+-]simplify-aut | [+-]product)
+        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | [+-]debug | [+-]log)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else
                 ostrichParams=$ostrichParams,$p
             fi
+            ;;
+        -h)
+            help
+            exit 0
             ;;
         -cea)
             ostrichSolver=ostrich.OstrichStringTheory
@@ -42,10 +65,6 @@ for p; do
             ;;
     esac
 done
-
-echo $JAVA $JAVA_OPTS -cp $TARGET \
-     ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
-     "${princessParams[@]}"
 
 exec $JAVA $JAVA_OPTS -cp $TARGET \
      ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \

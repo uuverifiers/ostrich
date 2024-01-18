@@ -66,7 +66,6 @@ case class OFlags(
     backend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
     useCostEnriched: Boolean = false,
     debug: Boolean = false,
-    simplifyAut: Boolean = true,
     noAutomataProduct: Boolean = false,
     NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
 

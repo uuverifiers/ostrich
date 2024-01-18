@@ -3,7 +3,7 @@ package ostrich.cesolver.core.finalConstraintsSolver
 import ap.parser.{ITerm, IFormula}
 import ap.parser.IExpression._
 
-import java.nio.file.{Files, StandardOpenOption, Paths}
+import java.nio.file.{Files, StandardOpenOption, Paths, Path}
 import java.nio.charset.StandardCharsets
 
 import ostrich.cesolver.core.finalConstraints.{
@@ -187,11 +187,15 @@ class NuxmvBasedSolver(
       else
         Files.createTempFile("nuxmv_input", ".smv")
     try {
+      val root = new java.io.File(".").getCanonicalPath
+      val bmcPath = Paths.get(root, "nuxmv_config", "bmc_source")
+      val ic3Path = Paths.get(root, "nuxmv_config", "ic3_source")
       val nuxmvCmd =
         if (nuxmvBackend == OFlags.NuxmvBackend.Bmc)
-          Seq("nuxmv", "-source", "bmc_source", nuxmvInputF.toString(), "2>/dev/null")
+          Seq("nuxmv", "-source", bmcPath.toString(), nuxmvInputF.toString())
         else
-          Seq("nuxmv", "-source", "ic3_source", nuxmvInputF.toString(), "2>/dev/null")
+          Seq("nuxmv", "-source", ic3Path.toString(), nuxmvInputF.toString())
+      ParikhUtil.debugPrintln(nuxmvCmd)
       val nuxmvInput = printNUXMVModule(constraints).getBytes(StandardCharsets.UTF_8)
       Files.write(
         nuxmvInputF,
@@ -201,7 +205,9 @@ class NuxmvBasedSolver(
         StandardOpenOption.TRUNCATE_EXISTING
       )
 
-      val nuxmvResLines = nuxmvCmd.!!.split(System.lineSeparator())
+      val errLogger = ProcessLogger(_ => (), _ => ())
+
+      val nuxmvResLines = nuxmvCmd.!!(errLogger).split(System.lineSeparator())
       ap.util.Timeout.check
 
       for (line <- nuxmvResLines) {
@@ -232,7 +238,6 @@ class NuxmvBasedSolver(
 
   def solve: Result = {
     val result = solveWithoutGenerateModel(flags.NuxmvBackend)
-    ParikhUtil.todo("Generate model by nuxmv xml output.")
     // sat and generate model
     if (result.getStatus == SimpleAPI.ProverStatus.Sat) {
       // integer model

@@ -32,13 +32,13 @@ class UnaryFinalConstraints(
   }
 
   ParikhUtil.log(
-    s"NOTE: Always minimize automata: ${flags.simplifyAut}."
+    s"NOTE: Always minimize automata: ${flags.minimizeAutomata}."
   )
 
   private lazy val checkSatAut =
-    if (flags.simplifyAut) simplifiedByVec else productAut
+    if (flags.minimizeAutomata) simplifiedByVec else productAut
   private lazy val findModelAut =
-    if (flags.simplifyAut) simplified else productAut
+    if (flags.minimizeAutomata) simplified else productAut
 
   simplified.toDot(strDataBaseId.toString + "_unary_simplified")
   simplifiedByVec.toDot(strDataBaseId.toString + "_unary_simplifiedByVec")
