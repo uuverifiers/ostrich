@@ -108,8 +108,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
       goal: Goal
   ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     ParikhUtil.log("CESolver.findStringModel")
-    ParikhUtil.log("  goal.arithConj ... " + goal.facts.arithConj)
-    ParikhUtil.log("  goal.predConj  ... " + goal.facts.predConj)
+    ParikhUtil.log("  goal.arithConj is: " + goal.facts.arithConj)
+    ParikhUtil.log("  goal.predConj is: " + goal.facts.predConj)
 
     val atoms = goal.facts.predConj
     val order = goal.order

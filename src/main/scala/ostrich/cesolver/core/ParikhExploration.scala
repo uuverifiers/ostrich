@@ -352,7 +352,7 @@ class ParikhExploration(
               (for ((IConstant(c), value) <- intModel)
                yield (c, IIntLit(value))).toMap
 
-            ParikhUtil.debugPrintln("model of leaf term: " + model)
+            ParikhUtil.log("model of leaf term: " + model)
             for (i <- integerTerms) {
               i match {
                 case _ if !model.contains(i) => // lia, update the lia result valut in model
@@ -449,7 +449,6 @@ class ParikhExploration(
             ) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-              ParikhUtil.debugPrintln("backjump !")
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)

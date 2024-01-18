@@ -27,8 +27,6 @@ class NuxmvBasedSolver(
 
   private var count = 0 // for debug
 
-  ParikhUtil.debugPrintln("NOTE: In some cases, it is more efficient to use simplified product automaton before nuxmv encoding")
-
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
     addConstraint(FinalConstraints.nuxmvACs(t, auts))
   }
@@ -195,7 +193,6 @@ class NuxmvBasedSolver(
           Seq("nuxmv", "-source", bmcPath.toString(), nuxmvInputF.toString())
         else
           Seq("nuxmv", "-source", ic3Path.toString(), nuxmvInputF.toString())
-      ParikhUtil.debugPrintln(nuxmvCmd)
       val nuxmvInput = printNUXMVModule(constraints).getBytes(StandardCharsets.UTF_8)
       Files.write(
         nuxmvInputF,
@@ -245,7 +242,7 @@ class NuxmvBasedSolver(
         case (i, Model.IntValue(v)) => i -> v
         case _                      => throw new Exception("not integer model")
       }.toMap
-      ParikhUtil.debugPrintln(s"integerModel: $integerModel")
+      ParikhUtil.log(s"Nuxmv backend solver integerModel: $integerModel")
       // string model
       for (c <- constraints) {
         c.setRegTermsModel(integerModel)

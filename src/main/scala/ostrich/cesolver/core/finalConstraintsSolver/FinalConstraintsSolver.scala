@@ -56,9 +56,9 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def measureTimeSolve: Result =
     measure(s"${this.getClass.getSimpleName}::solve") {
-      ParikhUtil.debugPrintln("begin solve")
+      ParikhUtil.log("begin to solve the final constraints")
       val res = solve
-      ParikhUtil.debugPrintln("end solve")
+      ParikhUtil.log("end to solve the final constraints")
       res
     }
 

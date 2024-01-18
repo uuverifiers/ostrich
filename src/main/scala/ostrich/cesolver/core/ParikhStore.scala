@@ -64,7 +64,6 @@ class ParikhStore(
       val potentialConflicts = inconsistentAutomata(potentialConflictsIdx)
       if (potentialConflicts.forall((constraints :+ aut).contains(_))) {
         // constraints have become inconsistent!
-        ParikhUtil.debugPrintln("Stored conflict applies!")
         return Some(
           for (a <- potentialConflicts.toList)
             yield TermConstraint(t, a)
@@ -78,7 +77,6 @@ class ParikhStore(
   private def checkConsistencyByProduct(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
-    ParikhUtil.debugPrintln("NOTE: maybe more efficient to consider inputLIA & regsRelations here")
     if (flags.noAutomataProduct) return None
     productAut = productAut product aut
     val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
@@ -106,14 +104,12 @@ class ParikhStore(
       aut.transitionsWithVec.size * productAut.transitionsWithVec.size
     if (productComplexity < 100_000 || flags.eagerAutomataOperations)
       return checkConsistencyByProduct(aut)
-    ParikhUtil.debugPrintln("nuxmv check consistency")
     val backendSolver = new NuxmvBasedSolver(flags, inputFormula)
     backendSolver.addConstraint(t, aut +: constraints.toSeq)
     backendSolver.setIntegerTerm(integerTerms)
     val syncRes =
       backendSolver.solveWithoutGenerateModel(OFlags.NuxmvBackend.Ic3)
     if (syncRes.getStatus == SimpleAPI.ProverStatus.Unsat) {
-      ParikhUtil.debugPrintln("nuxmv check consistency unsat")
       // inconsistent, generate the minimal conflicted set
       val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
       backendSolver.cleanConstaints

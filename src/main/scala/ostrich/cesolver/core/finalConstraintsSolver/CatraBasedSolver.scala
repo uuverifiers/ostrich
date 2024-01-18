@@ -219,7 +219,6 @@ class CatraBasedSolver(
     val result = new Result
     res match {
       case Sat(assignments) => {
-        ParikhUtil.debugPrintln("Catra assignment " + assignments)
         // update integer model
         new StringBuilder
         // lia may contains some string term which should be ignored
@@ -273,7 +272,6 @@ class CatraBasedSolver(
       if (ParikhUtil.debug) Paths.get("catra_input.par")
       else Files.createTempFile("catra_input", ".par")
     try {
-      ParikhUtil.debugPrintln("Writing Catra input to " + catraInputF)
       val catraInput = toCatraInput.getBytes(StandardCharsets.UTF_8)
       Files.write(
         catraInputF,
@@ -302,8 +300,6 @@ class CatraBasedSolver(
         randomSeed = 1234567,
         printProof = false
       )
-
-      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
 
       val catraRes = ParikhUtil.measure(
         s"${this.getClass().getSimpleName()}::findIntegerModel"
