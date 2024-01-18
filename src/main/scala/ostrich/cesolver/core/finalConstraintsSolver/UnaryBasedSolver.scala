@@ -15,6 +15,7 @@ import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IConstant
 
 class UnaryBasedSolver(
     flags: OFlags,
@@ -32,17 +33,20 @@ class UnaryBasedSolver(
   )
 
   def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {
-    val res = new Result
 
+    val res = new Result
     val finalArith = f & additionalLia
 
     lProver.push
-    val internalInt =
+    val integerInConstraints =
       (for (t <- integerTerms) yield SymbolCollector constants t).flatten
-    val newConsts =
+    val allConsts =
       (SymbolCollector.constants(
         finalArith
-      ) ++ internalInt) &~ lProver.order.orderedConstants
+      ) ++ integerInConstraints)
+
+    val newConsts = allConsts &~ lProver.order.orderedConstants
+
     lProver.addConstantsRaw(newConsts)
     lProver !! finalArith
     val status = measure(
@@ -67,8 +71,8 @@ class UnaryBasedSolver(
 
         }
         // update integer model
-        for (term <- integerTerms) {
-          val value = FinalConstraints.evalTerm(term, partialModel)
+        for (term <- allConsts) {
+          val value = FinalConstraints.evalTerm(IConstant(term), partialModel)
           res.updateModel(term, value)
         }
       case _ => //do nothing

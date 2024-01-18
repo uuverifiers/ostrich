@@ -157,7 +157,7 @@ class BaselineFinalConstraints(
         getRegsRelation
       )
     )
-    ParikhUtil.log(s"Parikh image of the automaton A${aut.hashCode()} computed. The formula is: " + parikhImage)
+    ParikhUtil.log(s"Parikh image of the automaton A${aut.hashCode()} computed.")
     parikhImage
   }
 }

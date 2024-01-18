@@ -16,6 +16,7 @@ import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IExpression.Const
 import ostrich.cesolver.util.TermGenerator
+import ostrich.cesolver.util.ParikhUtil
 
 object IndexOfCEPreOp {
   def apply(startPos: ITerm, index: ITerm, matchStr: String) =

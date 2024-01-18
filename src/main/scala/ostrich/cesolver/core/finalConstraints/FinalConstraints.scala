@@ -42,7 +42,7 @@ object FinalConstraints {
   }
 
   def evalTerm(t: ITerm, model: PartialModel): IdealInt = {
-    var value = evalTerm(t)(model)
+    val value = evalTerm(t)(model)
     if (!value.isDefined) {
       // TODO: NEED NEW FEATURE!
       // Do not generate model of variables without constraints now
