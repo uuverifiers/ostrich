@@ -1,8 +1,0 @@
-;test regex \sn{1}\gn{2}\gn{3}\sn{4}\sn{5}\gn{6}\gn{7}\sn{8}\yr{2012}
-(declare-const X String)
-(assert (str.in_re X (re.++ (re.union (str.to_re " ") (re.union (str.to_re "\u{0b}") (re.union (str.to_re "\u{0a}") (re.union (str.to_re "\u{0d}") (re.union (str.to_re "\u{09}") (str.to_re "\u{0c}")))))) (re.++ ((_ re.loop 1 1) (str.to_re "n")) (re.++ (str.to_re "g") (re.++ ((_ re.loop 2 2) (str.to_re "n")) (re.++ (str.to_re "g") (re.++ ((_ re.loop 3 3) (str.to_re "n")) (re.++ (re.union (str.to_re " ") (re.union (str.to_re "\u{0b}") (re.union (str.to_re "\u{0a}") (re.union (str.to_re "\u{0d}") (re.union (str.to_re "\u{09}") (str.to_re "\u{0c}")))))) (re.++ ((_ re.loop 4 4) (str.to_re "n")) (re.++ (re.union (str.to_re " ") (re.union (str.to_re "\u{0b}") (re.union (str.to_re "\u{0a}") (re.union (str.to_re "\u{0d}") (re.union (str.to_re "\u{09}") (str.to_re "\u{0c}")))))) (re.++ ((_ re.loop 5 5) (str.to_re "n")) (re.++ (str.to_re "g") (re.++ ((_ re.loop 6 6) (str.to_re "n")) (re.++ (str.to_re "g") (re.++ ((_ re.loop 7 7) (str.to_re "n")) (re.++ (re.union (str.to_re " ") (re.union (str.to_re "\u{0b}") (re.union (str.to_re "\u{0a}") (re.union (str.to_re "\u{0d}") (re.union (str.to_re "\u{09}") (str.to_re "\u{0c}")))))) (re.++ ((_ re.loop 8 8) (str.to_re "n")) (re.++ (str.to_re "y") ((_ re.loop 2012 2012) (str.to_re "r")))))))))))))))))))))
-; sanitize danger characters:  < > ' " &
-(assert (not (str.in_re X (re.++ re.all (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{26}")) re.all))))
-(assert (< 10 (str.len X)))
-(check-sat)
-(get-model)
