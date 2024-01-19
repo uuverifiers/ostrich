@@ -1,40 +1,29 @@
 #!/usr/bin/python
 
 from runners.multi import TheRunner as testrunner
-import utils
-import storage
+import utils,storage,argparse, summarygenerators
 import voting.majority as voting
-
-import models.pyex_sat as pyex_sat
-import models.PyEx_All as pyex
 import models.test as test
-
+import models.all_counting_bench as counting_bench
 import startwebserver
-
 import tools.ostrichBackend
 import tools.cvc5
-import tools.ostrich
-
-import summarygenerators
 
 tracks = (
-    pyex.getTrackData()
-    # pyex_sat.getTrackData()
+    counting_bench.getTrackData()
 ) + []
 
 solvers = {}
 for s in [
     tools.ostrichBackend,
     tools.cvc5
-    # tools.ostrich
 ]:
     s.addRunner(solvers)
 
-summaries = [summarygenerators.terminalResult]
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("pyex-nuxmv_catra")
+store = storage.SQLiteDB("counting-ostrich_unary")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 testrunner(12).runTestSetup(

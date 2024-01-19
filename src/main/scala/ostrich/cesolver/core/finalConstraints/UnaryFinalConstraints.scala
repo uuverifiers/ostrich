@@ -17,7 +17,7 @@ class UnaryFinalConstraints(
 
   private lazy val simplifiedByVec = {
     if (productAut.registers.isEmpty) {
-      findModelAut
+      simplified
     } else {
       CEBasicOperations.minimizeHopcroftByVec(
         productAut
@@ -31,12 +31,9 @@ class UnaryFinalConstraints(
     )
   }
 
-  ParikhUtil.log(
-    s"NOTE: Always minimize automata: ${flags.minimizeAutomata}."
-  )
+  ParikhUtil.debugPrintln("The productAut: " + productAut)
 
-  private lazy val checkSatAut =
-    if (flags.minimizeAutomata) simplifiedByVec else productAut
+  private lazy val checkSatAut = simplifiedByVec
   private lazy val findModelAut =
     if (flags.minimizeAutomata) simplified else productAut
 

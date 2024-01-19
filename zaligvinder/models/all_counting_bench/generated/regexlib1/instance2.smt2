@@ -1,0 +1,8 @@
+;test regex ^09(73|74|05|06|15|16|17|26|27|35|36|37|79|38|07|08|09|10|12|18|19|20|21|28|29|30|38|39|89|99|22|23|32|33)\d{3}\s?\d{4} 
+(declare-const X String)
+(assert (str.in_re X (re.++ (str.to_re "") (re.++ (str.to_re "09") (re.++ (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (re.union (str.to_re "73") (str.to_re "74")) (str.to_re "05")) (str.to_re "06")) (str.to_re "15")) (str.to_re "16")) (str.to_re "17")) (str.to_re "26")) (str.to_re "27")) (str.to_re "35")) (str.to_re "36")) (str.to_re "37")) (str.to_re "79")) (str.to_re "38")) (str.to_re "07")) (str.to_re "08")) (str.to_re "09")) (str.to_re "10")) (str.to_re "12")) (str.to_re "18")) (str.to_re "19")) (str.to_re "20")) (str.to_re "21")) (str.to_re "28")) (str.to_re "29")) (str.to_re "30")) (str.to_re "38")) (str.to_re "39")) (str.to_re "89")) (str.to_re "99")) (str.to_re "22")) (str.to_re "23")) (str.to_re "32")) (str.to_re "33")) (re.++ ((_ re.loop 3 3) (re.range "0" "9")) (re.++ (re.opt (re.union (str.to_re " ") (re.union (str.to_re "\u{0b}") (re.union (str.to_re "\u{0a}") (re.union (str.to_re "\u{0d}") (re.union (str.to_re "\u{09}") (str.to_re "\u{0c}"))))))) (re.++ ((_ re.loop 4 4) (re.range "0" "9")) (str.to_re " ")))))))))
+; sanitize danger characters:  < > ' " &
+(assert (not (str.in_re X (re.++ re.all (re.union (str.to_re "\u{3c}") (str.to_re "\u{3e}") (str.to_re "\u{27}") (str.to_re "\u{22}") (str.to_re "\u{26}")) re.all))))
+(assert (< 10 (str.len X)))
+(check-sat)
+(get-model)

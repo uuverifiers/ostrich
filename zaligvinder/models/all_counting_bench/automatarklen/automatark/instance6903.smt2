@@ -1,0 +1,7 @@
+(set-logic QF_SLIA)
+(set-option :produce-models true)
+(declare-const X String)
+; (t|T)(o|O)\s\d{4}($|\D)
+(assert (str.in_re X (re.++ (re.union (str.to_re "t") (str.to_re "T")) (re.union (str.to_re "o") (str.to_re "O")) (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) ((_ re.loop 4 4) (re.range "0" "9")) (re.comp (re.range "0" "9")) (str.to_re "\u{0a}"))))
+(assert (> (str.len X) 10))
+(check-sat)

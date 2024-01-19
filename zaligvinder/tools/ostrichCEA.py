@@ -34,7 +34,7 @@ def run(eq, timeout, ploc, wd):
                     "+incremental",
                     "-inputFormat=smtlib",
                     "-timeout=" + str(timeout) + "000",
-                    "+cea",
+                    "+cea", "+eager", "+minimizeAutomata",
                     smtfile,
                 ],
                 timeout=timeout,

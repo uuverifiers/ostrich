@@ -1,0 +1,13 @@
+(set-logic QF_SLIA)
+(set-option :produce-models true)
+(declare-const X String)
+; (\d+)([,|.\d])*\d
+(assert (not (str.in_re X (re.++ (re.+ (re.range "0" "9")) (re.* (re.union (str.to_re ",") (str.to_re "|") (str.to_re ".") (re.range "0" "9"))) (re.range "0" "9") (str.to_re "\u{0a}")))))
+; CUSTOM\swww\x2Elocators\x2Ecom\d+Seconds\-
+(assert (not (str.in_re X (re.++ (str.to_re "CUSTOM") (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) (str.to_re "www.locators.com") (re.+ (re.range "0" "9")) (str.to_re "Seconds-\u{0a}")))))
+; User-Agent\x3A\d+Desktop\sIDENTIFY666User-Agent\x3A\x5BStatic
+(assert (str.in_re X (re.++ (str.to_re "User-Agent:") (re.+ (re.range "0" "9")) (str.to_re "Desktop") (re.union (str.to_re " ") (str.to_re "\u{09}") (str.to_re "\u{0a}") (str.to_re "\u{0c}") (str.to_re "\u{0d}")) (str.to_re "IDENTIFY666User-Agent:[Static\u{0a}"))))
+; (^(5[0678])\d{11,18}$)|(^(6[^05])\d{11,18}$)|(^(601)[^1]\d{9,16}$)|(^(6011)\d{9,11}$)|(^(6011)\d{13,16}$)|(^(65)\d{11,13}$)|(^(65)\d{15,18}$)|(^(49030)[2-9](\d{10}$|\d{12,13}$))|(^(49033)[5-9](\d{10}$|\d{12,13}$))|(^(49110)[1-2](\d{10}$|\d{12,13}$))|(^(49117)[4-9](\d{10}$|\d{12,13}$))|(^(49118)[0-2](\d{10}$|\d{12,13}$))|(^(4936)(\d{12}$|\d{14,15}$))
+(assert (not (str.in_re X (re.union (re.++ ((_ re.loop 11 18) (re.range "0" "9")) (str.to_re "5") (re.union (str.to_re "0") (str.to_re "6") (str.to_re "7") (str.to_re "8"))) (re.++ ((_ re.loop 11 18) (re.range "0" "9")) (str.to_re "6") (re.union (str.to_re "0") (str.to_re "5"))) (re.++ (str.to_re "601") (re.comp (str.to_re "1")) ((_ re.loop 9 16) (re.range "0" "9"))) (re.++ (str.to_re "6011") ((_ re.loop 9 11) (re.range "0" "9"))) (re.++ (str.to_re "6011") ((_ re.loop 13 16) (re.range "0" "9"))) (re.++ (str.to_re "65") ((_ re.loop 11 13) (re.range "0" "9"))) (re.++ (str.to_re "65") ((_ re.loop 15 18) (re.range "0" "9"))) (re.++ (str.to_re "49030") (re.range "2" "9") (re.union ((_ re.loop 10 10) (re.range "0" "9")) ((_ re.loop 12 13) (re.range "0" "9")))) (re.++ (str.to_re "49033") (re.range "5" "9") (re.union ((_ re.loop 10 10) (re.range "0" "9")) ((_ re.loop 12 13) (re.range "0" "9")))) (re.++ (str.to_re "49110") (re.range "1" "2") (re.union ((_ re.loop 10 10) (re.range "0" "9")) ((_ re.loop 12 13) (re.range "0" "9")))) (re.++ (str.to_re "49117") (re.range "4" "9") (re.union ((_ re.loop 10 10) (re.range "0" "9")) ((_ re.loop 12 13) (re.range "0" "9")))) (re.++ (str.to_re "49118") (re.range "0" "2") (re.union ((_ re.loop 10 10) (re.range "0" "9")) ((_ re.loop 12 13) (re.range "0" "9")))) (re.++ (str.to_re "\u{0a}4936") (re.union ((_ re.loop 12 12) (re.range "0" "9")) ((_ re.loop 14 15) (re.range "0" "9"))))))))
+(assert (> (str.len X) 10))
+(check-sat)
