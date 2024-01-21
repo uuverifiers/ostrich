@@ -8,7 +8,7 @@ import ostrich.cesolver.util.ParikhUtil
 
 class CEInternalPreprocessor(theory: CEStringTheory, flags: OFlags) {
   def preprocess(f: Conjunction, order: TermOrder): Conjunction = {
-    ParikhUtil.todo("CEInternalPreprocessor")
+    ParikhUtil.todo("CEInternalPreprocessor does nothing now")
     f
   }
 }

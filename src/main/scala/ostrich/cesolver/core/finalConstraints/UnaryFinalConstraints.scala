@@ -15,30 +15,21 @@ class UnaryFinalConstraints(
 
   private val productAut = auts.reduce(_ product _)
 
-  private lazy val simplifiedByVec = {
-    if (productAut.registers.isEmpty) {
-      simplified
-    } else {
-      CEBasicOperations.minimizeHopcroftByVec(
+  private lazy val findModelAut =
+    if (flags.minimizeAutomata)
+      CEBasicOperations.minimizeHopcroft(
         productAut
       )
-    }
-  }
-
-  private lazy val simplified = {
-    CEBasicOperations.minimizeHopcroft(
+    else productAut
+    
+  private lazy val checkSatAut = if (productAut.registers.isEmpty) {
+    findModelAut
+  } else {
+    CEBasicOperations.minimizeHopcroftByVec(
       productAut
     )
   }
 
-  ParikhUtil.debugPrintln("The productAut: " + productAut)
-
-  private lazy val checkSatAut = simplifiedByVec
-  private lazy val findModelAut =
-    if (flags.minimizeAutomata) simplified else productAut
-
-  simplified.toDot(strDataBaseId.toString + "_unary_simplified")
-  simplifiedByVec.toDot(strDataBaseId.toString + "_unary_simplifiedByVec")
   ParikhUtil.log("The checkSatAut: " + checkSatAut)
   ParikhUtil.log("The findModelAut: " + findModelAut)
 

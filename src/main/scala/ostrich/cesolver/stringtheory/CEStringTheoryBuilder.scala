@@ -34,7 +34,6 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  ParikhUtil.todo("add noAutomataProduct option, to disable automata product when using catra and nuxmv backend")
   private var eager, minimizeAuts, useCostEnriched, debug = false
   private var backend: OFlags.CEABackend.Value = Unary
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3

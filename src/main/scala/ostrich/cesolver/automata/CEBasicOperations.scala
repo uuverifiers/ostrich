@@ -558,9 +558,6 @@ object CEBasicOperations {
       ceAut.setAccept(s2representive(s), true)
     ceAut.regsRelation = afterDetermine.regsRelation
     ceAut.registers = afterDetermine.registers
-    ParikhUtil.debugPrintln(
-      "CEBasicOperations.minimizeHopcroftByVec: ceAut = " + ceAut
-    )
     removeDuplicatedReg(ceAut)
   }
   // ---------------------------------------------------------------------------------------------------------------------
@@ -641,9 +638,6 @@ object CEBasicOperations {
         }
       }
     }
-    ParikhUtil.debugPrintln(
-      "CEBasicOperations.partitionStates: pair2dependingList = " + pair2dependingList
-    )
     val distinguishedPairs = new MHashSet[Set[State]]()
     val baseDistinguishedPairs = new MHashSet[Set[State]]()
     for (pair <- pairs) {
