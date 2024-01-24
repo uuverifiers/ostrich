@@ -9,9 +9,11 @@ After installing [the Scala Build tool (SBT)](https://www.scala-sbt.org/), you c
 
 See `./ostrich -help` for more options.
 
+The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](https://eldarica.org/ostrich-popl24/)
+
 ## Web Interface
 
-For experiments, OSTRICH can also be used through the [Princess web interface.](http://logicrunch.it.uu.se:4096/~wv/princess/) Select the string solver option "OSTRICH" on the web interface for this purpose.
+For experiments, OSTRICH can also be used through its [web interface.](https://eldarica.org/ostrich/)
 
 ## Input Format
 
