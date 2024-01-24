@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022-2023 Riccado De Masellis. All rights reserved.
+ * Copyright (c) 2022-2024 Riccado De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -36,7 +36,7 @@ import ostrich.automata.afa2.concrete.{AFA2}
 import ostrich.automata.afa2.symbolic.{EpsAFA2, SymbAFA2, SymbExtAFA2}
 
 import java.io.{BufferedWriter, File, FileWriter}
-import scala.collection.{breakOut, mutable}
+import scala.collection.mutable
 
 /*
 Classes for printing to dot file the several different versions of 2AFA
@@ -137,7 +137,8 @@ object AFA2PrintingUtils {
       if (t.targets.length > 1) res.append(",color=" + color)
       res.append("]\n")
     }
-    res.append("}\n") toString()
+    res.append("}\n")
+    res.toString()
   }
 
   def toDot(aut: EpsAFA2): String = {
@@ -175,7 +176,8 @@ object AFA2PrintingUtils {
       if (t.targets.length > 1) res.append(",color=" + color)
       res.append("]\n")
     }
-    res.append("}\n") toString()
+    res.append("}\n")
+    res.toString()
   }
 
 
@@ -213,7 +215,8 @@ object AFA2PrintingUtils {
       if (t.targets.length > 1) res.append(",color=" + color)
       res.append("]\n")
     }
-    res.append("}\n") toString()
+    res.append("}\n")
+    res.toString()
   }
 
 
@@ -249,7 +252,8 @@ object AFA2PrintingUtils {
       if (t.targets.length > 1) res.append(",color=" + color)
       res.append("]\n")
     }
-    res.append("}\n") toString()
+    res.append("}\n")
+    res.toString()
   }
 
 
