@@ -101,6 +101,6 @@ class AFA2StateDuplicator(afa : AFA2) {
   }
 
   val result =
-    new AFA2(newInitial, newFinal, newTransitions).restrictToReachableStates
+    new AFA2(newInitial, newFinal, newTransitions.toMap).restrictToReachableStates
 
 }

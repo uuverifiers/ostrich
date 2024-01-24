@@ -104,7 +104,7 @@ object SymbToConcTranslator {
 
     //println("New flat trans:\n"+ newTransFlat.map{t=>t._2})
 
-    newTransFlat.groupBy(_._1).mapValues(l => l map (_._2))
+    newTransFlat.groupBy(_._1).mapValues(l => l.map(_._2).toSeq).toMap
   }
 
 

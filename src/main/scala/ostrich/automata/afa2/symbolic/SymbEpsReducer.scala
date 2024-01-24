@@ -141,8 +141,8 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
           val newTargets = for (_ <- targets) yield newState
           epsBackwardsSteps ++= newTargets zip targets
           Seq(
-            SymbTransition(new Range(0, theory.alphabetSize, 1), Right, newTargets),
-            SymbTransition(new Range(endMarker, endMarker + 1, 1), Right, newTargets)
+            SymbTransition(Range(0, theory.alphabetSize, 1), Right, newTargets),
+            SymbTransition(Range(endMarker, endMarker + 1, 1), Right, newTargets)
           )
       }
 
@@ -153,10 +153,10 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
       yield (source -> trans2)
 
     val extraTransitions: Seq[(Int, SymbTransition)] =
-      (for ((source, target) <- epsBackwardsSteps) yield
+      (for ((source, target) <- epsBackwardsSteps.toSeq) yield
         Seq(
-          (source, SymbTransition(new Range(0, theory.alphabetSize, 1), Left, Seq(target))),
-          (source, SymbTransition(new Range(endMarker, endMarker + 1, 1), Left, Seq(target)))
+          (source, SymbTransition(Range(0, theory.alphabetSize, 1), Left, Seq(target))),
+          (source, SymbTransition(Range(endMarker, endMarker + 1, 1), Left, Seq(target)))
         )).flatten
 
     val newFlatTransitions = newFlatPreTransitions ++ extraTransitions
@@ -164,7 +164,7 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
     val newTransitions =
       newFlatTransitions groupBy (_._1) mapValues { l => l map (_._2) }
 
-    SymbAFA2(Seq(epsafa.initialState), epsafa.finalStates, newTransitions)
+    SymbAFA2(Seq(epsafa.initialState), epsafa.finalStates, newTransitions.toMap)
   }
 
 
@@ -185,22 +185,22 @@ class SymbEpsReducer(theory: OstrichStringTheory, extafa: SymbExtAFA2) {
 
     newFlatTransWEps ++= (
       for (s <- extafa.initialStates)
-        yield (newInitialState -> SymbTransition(new Range(beginMarker, beginMarker + 1, 1), Right, Seq(s)))
+        yield (newInitialState -> SymbTransition(Range(beginMarker, beginMarker + 1, 1), Right, Seq(s)))
       ) ++ (
       for (s <- extafa.finalRightStates)
-        yield (s -> SymbTransition(new Range(endMarker, endMarker + 1, 1), Right, Seq(newFinalEndState)))
+        yield (s -> SymbTransition(Range(endMarker, endMarker + 1, 1), Right, Seq(newFinalEndState)))
       ) ++ Seq(
-      (newFinalBeginState -> SymbTransition(new Range(0, theory.alphabetSize, 1), Right, Seq(newFinalBeginState))),
-      (newFinalBeginState -> SymbTransition(new Range(beginMarker, beginMarker + 1, 1), Right, Seq(newFinalBeginState))),
-      (newFinalBeginState -> SymbTransition(new Range(endMarker, endMarker + 1, 1), Right, Seq(newFinalBeginState)))
+      (newFinalBeginState -> SymbTransition(Range(0, theory.alphabetSize, 1), Right, Seq(newFinalBeginState))),
+      (newFinalBeginState -> SymbTransition(Range(beginMarker, beginMarker + 1, 1), Right, Seq(newFinalBeginState))),
+      (newFinalBeginState -> SymbTransition(Range(endMarker, endMarker + 1, 1), Right, Seq(newFinalBeginState)))
     ) ++ (
       for (s <- extafa.finalLeftStates)
-        yield (s -> SymbTransition(new Range(beginMarker, beginMarker + 1, 1), Left, Seq(newFinalBeginState)))
+        yield (s -> SymbTransition(Range(beginMarker, beginMarker + 1, 1), Left, Seq(newFinalBeginState)))
       )
 
     val transWEps = newFlatTransWEps.toList.groupBy (_._1) mapValues { l => l map (_._2) }
 
-    EpsAFA2(newInitialState, Seq(newFinalEndState, newFinalBeginState), transWEps)
+    EpsAFA2(newInitialState, Seq(newFinalEndState, newFinalBeginState), transWEps.toMap)
   }
 
 
@@ -251,7 +251,7 @@ symbolic MacrostateAFA2, which has still universal epsilon transitions.
         case concStep: StepTransition =>
           throw new RuntimeException(
             "Unexpected transition in epsilon elimination: " + concStep)
-      }))
+      })).toMap
 
       // We do not need the starting states of those transitions anymore (as they are all in mst)
       val outTrans = outms.values.flatten
@@ -284,9 +284,9 @@ symbolic MacrostateAFA2, which has still universal epsilon transitions.
 
     val finMStates = analysed.filter(x => x.states.intersect(epsafa.finalStates.toSet) != Set.empty)
 
-    val mtransMap = macroTrans.groupBy(_._1).mapValues(l => l map (_._2))
+    val mtransMap = macroTrans.groupBy(_._1).mapValues(l => l.map(_._2).toSeq)
 
-    SymbMAFA2(initMState, analysed.toSet, finMStates.toSet, mtransMap)
+    SymbMAFA2(initMState, analysed.toSet, finMStates.toSet, mtransMap.toMap)
   }
 
 
@@ -304,9 +304,9 @@ It transforms a MAFA2 with universal eps transitions back into an epsAFA2 which 
       case et: SymbMEpsTransition => (stMap.get(st).get, EpsTransition(et._targets.map(stMap).toList))
       case str: SymbMStepTransition => (stMap.get(st).get, SymbTransition(str.label, str.step, str.targets.map(stMap).toList))
     }
-    val trans = flatTrans.toList.groupBy(_._1).mapValues(l => l map (_._2))
+    val trans = flatTrans.toList.groupBy(_._1).mapValues(l => l.map(_._2).toSeq)
 
-    EpsAFA2(initState, finalStates.toSeq, trans)
+    EpsAFA2(initState, finalStates.toSeq, trans.toMap)
   }
 
 

@@ -39,13 +39,20 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 
+object OstrichStringTheoryBuilder {
+
+  val version = "1.3.5"
+
+}
+
 /**
  * The entry class of the Ostrich string solver.
  */
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
+  import OstrichStringTheoryBuilder._
+
   val name = "OSTRICH"
-  val version = "1.3.5"
 
   Console.withOut(Console.err) {
     println
