@@ -527,9 +527,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
     val defLetter = 0
 
-    if (characterCodes.isEmpty)
-      characterCodes.put(0, 0)
-
     val equationStrings =
       for ((s, t) <- equations) yield {
         (term2String(s), term2String(t)) match {
@@ -541,6 +538,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
             str1 + " = " + str2
         }
       }
+
+    if (characterCodes.isEmpty)
+      characterCodes.put(0, 0)
 
     println(s"Variables {${variables.map(varNames).mkString("")}}")
     println(s"Terminals {${(for (k <- 0 until characterCodes.size) yield niceTerminal(k)).mkString("")}}")
