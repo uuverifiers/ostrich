@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -41,7 +41,9 @@ import ap.parameters.Param
  */
 object OstrichMain {
 
-  val version = "1.3 (Princess: " + ap.CmdlMain.version + ")"
+  val version =
+    OstrichStringTheoryBuilder.version +
+    " (Princess: " + ap.CmdlMain.version + ")"
 
   private val ostrichStringTheory =
     "ostrich.OstrichStringTheory"
