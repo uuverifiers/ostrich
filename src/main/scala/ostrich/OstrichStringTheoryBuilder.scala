@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -39,28 +39,19 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 
-object OstrichStringTheoryBuilder {
-
-  val version = "1.3.5"
-
-  PortfolioSetup
-
-}
-
 /**
  * The entry class of the Ostrich string solver.
  */
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
-  import OstrichStringTheoryBuilder._
-
   val name = "OSTRICH"
+  val version = "1.3"
 
   Console.withOut(Console.err) {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2024")
+    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2023")
     println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
@@ -68,7 +59,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  protected var eager, forward, minimizeAuts, useParikh = false
+  protected var eager, forward, forwardOnly, forwardBackward, backwardOnly, minimizeAuts, useParikh = false
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
@@ -85,6 +76,12 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.Auto
     case CmdlParser.Opt("forward", value) =>
       forward = value
+    case CmdlParser.Opt("forwardOnly", value) =>
+      forwardOnly = value
+    case CmdlParser.Opt("forwardBackward", value) =>
+      forwardBackward = value
+    case CmdlParser.Opt("backwardOnly", value) =>
+      backwardOnly = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
@@ -130,6 +127,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
+                                    forwardOnly             = forwardOnly,
+                                    forwardBackward         = forwardBackward,
+                                    backwardOnly            = backwardOnly,
                                     minimizeAutomata        = minimizeAuts,
                                     regexTranslator         = regexTrans))
   }

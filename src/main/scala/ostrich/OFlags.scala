@@ -63,6 +63,9 @@ case class OFlags(
   useParikhConstraints    : Boolean = true,
   forwardApprox           : Boolean = false,
   minimizeAutomata        : Boolean = false,
+  forwardOnly             : Boolean = false,
+  forwardBackward         : Boolean = false,
+  backwardOnly            : Boolean = false,
   regexTranslator         : OFlags.RegexTranslator.Value =
                               OFlags.RegexTranslator.Hybrid,
 
