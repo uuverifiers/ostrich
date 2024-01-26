@@ -211,7 +211,7 @@ case class AFA2(initialStates : Seq[Int],
       //println("Reduced trans:\n" + reducedTrans)
       val newTrans = reducedTrans.mapValues(_.map(x => StepTransition(x.label, x.step, x.targets.map(stateMap))))
 
-      val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans)
+      val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans.toMap)
 
       newAut.restrictToReachableStates
     }
@@ -317,7 +317,7 @@ case class AFA2(initialStates : Seq[Int],
         (st, newTS)
       }
 
-      val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans)
+      val newAut = AFA2(aut.initialStates, aut.finalStates, newTrans.toMap)
 
       newAut.restrictToReachableStates
     }

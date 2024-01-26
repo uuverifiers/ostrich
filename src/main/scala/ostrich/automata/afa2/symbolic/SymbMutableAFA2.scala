@@ -58,12 +58,12 @@ object SymbMutableAFA2 {
     if (newSeq.nonEmpty) {
       while (currInd < newSeq.length) {
         if (currInd + 1 < newSeq.length && newSeq(currInd + 1) != newSeq(currInd) + 1) {
-          newRanges += (new Range(newSeq(lastInd), newSeq(currInd) + 1, 1))
+          newRanges += Range(newSeq(lastInd), newSeq(currInd) + 1, 1)
           lastInd = currInd + 1
         }
         currInd += 1
       }
-      newRanges += (new Range(newSeq(lastInd), newSeq(currInd - 1) + 1, 1))
+      newRanges += Range(newSeq(lastInd), newSeq(currInd - 1) + 1, 1)
     }
     newRanges.toSet
   }
@@ -137,7 +137,7 @@ the ECMAregex cases.
   def allcharAtomic2AFA(dir: Step): SymbMutableAFA2 = {
     val iniState = new BState(dir)
     val finState = new BState(dir)
-    val allCharrange = new Range(min_char, alphabet_size, 1)
+    val allCharrange = Range(min_char, alphabet_size, 1)
 
     val trans: ArrayBuffer[(BState, SymbBTransition)] =
       ArrayBuffer[(BState, SymbBTransition)]() += ((iniState, SymbBStepTransition(allCharrange, dir, Seq(finState))))
@@ -526,7 +526,7 @@ the ECMAregex cases.
       direction should the loop be? It does not really matter, because it is a final sink state. For consistency,
       I have chosen to be the same direction of the state direction.
     */
-    aut.transitions += ((aut.mainFinState, SymbBStepTransition(new Range(min_char, alphabet_size, 1), aut.mainFinState.dir, Seq(aut.mainFinState))))
+    aut.transitions += ((aut.mainFinState, SymbBStepTransition(Range(min_char, alphabet_size, 1), aut.mainFinState.dir, Seq(aut.mainFinState))))
 
     // The mainFinal state becomes secondary final state.
     aut.finStates += aut.mainFinState
@@ -557,7 +557,7 @@ the ECMAregex cases.
           I have chosen to be the same direction of the state direction.
         */
     aut.transitions +=
-      ((aut.mainFinState, SymbBStepTransition(new Range(min_char, alphabet_size, 1), aut.mainFinState.dir, Seq(aut.mainFinState))))
+      ((aut.mainFinState, SymbBStepTransition(Range(min_char, alphabet_size, 1), aut.mainFinState.dir, Seq(aut.mainFinState))))
 
     // The mainFinal state becomes secondary final state.
     aut.finStates += aut.mainFinState
@@ -627,7 +627,7 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
     Set.empty ++ allStates
   }
 
-  private def transToMap(): Map[BState, Seq[SymbBTransition]] = transitions.groupBy(_._1).mapValues(l => l map (_._2))
+  private def transToMap(): Map[BState, Seq[SymbBTransition]] = transitions.groupBy(_._1).mapValues(l => l.map(_._2).toSeq).toMap
 
 
   def builderToSymbExtAFA(): SymbExtAFA2 = {
@@ -643,9 +643,9 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
           case et: SymbBEpsTransition => EpsTransition(et._targets.map(stMap))
         })
 
-    val transMap = trans.groupBy(_._1).mapValues(l => l map (_._2))
+    val transMap = trans.groupBy(_._1).mapValues(l => l.map(_._2).toSeq)
 
-    SymbExtAFA2(Seq(initialState), finalLeftStates.toSeq, finalRightStates.toSeq, transMap)
+    SymbExtAFA2(Seq(initialState), finalLeftStates.toSeq, finalRightStates.toSeq, transMap.toMap)
   }
 
 
@@ -657,7 +657,7 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
          ts <- transMap.get(s).iterator;
           t <- ts;
          if (t.isInstanceOf[SymbBStepTransition] &&
-           t.asInstanceOf[SymbBStepTransition].label==new Range(builder.min_char, builder.alphabet_size, 1) &&
+           t.asInstanceOf[SymbBStepTransition].label== Range(builder.min_char, builder.alphabet_size, 1) &&
            t.targets==Seq(s)))
       yield s
   }
@@ -697,7 +697,8 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
 
     for (state <- allStepStates) {
       // Compute the set of ranges NOT appearing in outgoing transitions
-      var outRanges = Set(new Range(builder.min_char, builder.alphabet_size, 1))
+      var outRanges : Set[Range] =
+        Set(Range(builder.min_char, builder.alphabet_size))
       for (ts <- transMap.get(state);
            t <- ts) t match {
         case SymbBStepTransition(label, _, _) => {
@@ -813,7 +814,7 @@ case class SymbMutableAFA2(builder: SymbAFA2Builder,
       transitions.filter(x => x._2.isInstanceOf[SymbBStepTransition]).asInstanceOf[ArrayBuffer[(BState, SymbBStepTransition)]]
 
     var transMapStep: Map[(BState, Range), Seq[Seq[BState]]] =
-      transBufNotEps.groupBy(x => (x._1, x._2.label)).mapValues(x => x map (y => y._2.targets))
+      transBufNotEps.groupBy(x => (x._1, x._2.label)).mapValues(x => x.map(y => y._2.targets).toSeq).toMap
 
 
     // check (1)

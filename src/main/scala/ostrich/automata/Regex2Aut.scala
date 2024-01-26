@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -285,7 +285,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
         builder.emptyAtomic2AFA(dir)
 
       case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
-        builder.charrangeAtomic2AFA(dir, new Range(l.intValue, u.intValue+1, 1))
+        builder.charrangeAtomic2AFA(dir, Range(l.intValue, u.intValue+1, 1))
 
       case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
 

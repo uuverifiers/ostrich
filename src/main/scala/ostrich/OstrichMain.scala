@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -41,12 +41,12 @@ import ap.parameters.Param
  */
 object OstrichMain {
 
-  val version = "1.3 (Princess: " + ap.CmdlMain.version + ")"
+  val version =
+    OstrichStringTheoryBuilder.version +
+    " (Princess: " + ap.CmdlMain.version + ")"
 
   private val ostrichStringTheory =
     "ostrich.OstrichStringTheory"
-  private val ceaStringTheory     =
-    "ostrich.cesolver.stringtheory.CEStringTheory"
 
   /**
    * The options forwarded to Princess. They will be overwritten by options
@@ -54,6 +54,18 @@ object OstrichMain {
    * string solver options on the command line.
    */
   val options = List("-stringSolver=" + ostrichStringTheory, "-logo")
+
+  PortfolioSetup
+
+  def main(args: Array[String]) : Unit =
+    ap.CmdlMain.main((options ++ args).toArray)
+
+}
+
+object PortfolioSetup {
+
+  private val ceaStringTheory =
+    "ostrich.cesolver.stringtheory.CEStringTheory"
 
   // Run the BW, ADT, and CEA solvers
   ParallelFileProver.addPortfolio(
@@ -124,8 +136,5 @@ object OstrichMain {
                                     prelResultPrinter,
                                     threadNum)
                })
-
-  def main(args: Array[String]) : Unit =
-    ap.CmdlMain.main((options ++ args).toArray)
 
 }
