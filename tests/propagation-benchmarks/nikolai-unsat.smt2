@@ -27,8 +27,8 @@
 
 (assert  (= (str.++ "mongodb://" V35) (str.++ V33 "/" V34 k!3)))
 
-(assert (str.in.re V31 (re.* (str.to.re "a"))))
-(assert (str.in.re V32 (re.* (str.to.re "b"))))
+(assert (str.in_re V31 (re.* (str.to_re "a"))))
+(assert (str.in_re V32 (re.* (str.to_re "b"))))
 
 (check-sat)
 (get-model)
