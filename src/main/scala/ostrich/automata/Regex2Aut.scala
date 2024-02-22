@@ -32,7 +32,7 @@
 
 package ostrich.automata
 
-import ostrich.{ECMARegexParser, OFlags, OstrichStringTheory}
+import ostrich.{AutomatonParser, ECMARegexParser, OFlags, OstrichStringTheory}
 import ap.basetypes.IdealInt
 import ap.parser.IExpression.Const
 import ap.parser._
@@ -333,7 +333,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  re_opt_?, re_loop_?,
                  re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
                  re_begin_anchor, re_end_anchor,
-                 re_from_ecma2020, re_from_ecma2020_flags,
+                 re_from_ecma2020, re_from_ecma2020_flags, re_from_automaton,
                  re_case_insensitive}
 
   import Regex2Aut._
@@ -857,9 +857,21 @@ class Regex2Aut(theory : OstrichStringTheory) {
     toBAutomaton(t, true)
 
   def buildAut(t : ITerm,
-               minimize : Boolean = true) : Automaton =
-    new BricsAutomaton(toBAutomaton(t, minimize))
+               minimize : Boolean = true) : Automaton = t match
+  {
+    case IFunApp(`re_from_automaton`, Seq(EncodedString(str))) => {
+      val parser = new AutomatonParser()
+      val res = parser.parseAutomaton(str)
+      res match {
+        case Left(a) => throw new Exception("Automata parsing re.from_automata went wrong " + a)
+        case Right(b) => b
 
+      }
+    }
+    case _ => {
+      new BricsAutomaton(toBAutomaton(t, minimize))
+    }
+  }
   private def numToUnicode(num : Int) : String =
     new String(Character.toChars(num))
 
