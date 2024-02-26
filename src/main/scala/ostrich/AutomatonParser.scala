@@ -53,7 +53,7 @@ class AutomatonParser {
 
 
     val result = builder.getAutomaton
-    println("resulta at \n ", result)
+    Console.err.println("resulta at \n ", result)
     return result
   }
 }
