@@ -53,8 +53,8 @@ class AutomatonParser {
 
 
     val result = builder.getAutomaton
-    println("resulta at \n ", result)
-    return result
+    Console.err.println("Result at \n ", result)
+    result
   }
 }
 
@@ -62,7 +62,7 @@ class AutomatonParser {
 /*
 // Example usage
 val exampleInput = """automaton value_0 {
-  init s0,s1;
+  init s0;
   s0 -> s0 [0, 31];
   s0 -> s1 [32, 32];
   s0 -> s0 [33, 65535];
