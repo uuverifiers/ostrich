@@ -24,7 +24,7 @@ object ReplaceAllCEPreOp {
   }
 
   private def buildTransducer(aut: CostEnrichedAutomatonBase) : CETransducer = {
-    ParikhUtil.todo("ReplaceAllCEPreOp: not handle empty match in pattern")
+    ParikhUtil.todo("ReplaceAllCEPreOp: not handle empty match in pattern", 3)
     abstract class Mode
     // not matching
     case object NotMatching extends Mode

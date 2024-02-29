@@ -50,10 +50,10 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       useCostEnriched = value
     case CmdlParser.Opt("debug", value) =>
       debug = value
-      ParikhUtil.debug = value
+      ParikhUtil.debugOpt = value
       CmdlMain.stackTraces = value
     case CmdlParser.Opt("log", value) =>
-      ParikhUtil.needlog = value
+      ParikhUtil.logOpt = value
     case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("ceaBackend", "unary") =>

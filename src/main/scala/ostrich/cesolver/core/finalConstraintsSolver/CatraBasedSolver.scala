@@ -269,7 +269,7 @@ class CatraBasedSolver(
     }
     var result = new Result
     val catraInputF =
-      if (ParikhUtil.debug) Paths.get("catra_input.par")
+      if (ParikhUtil.debugOpt) Paths.get("catra_input.par")
       else Files.createTempFile("catra_input", ".par")
     try {
       val catraInput = toCatraInput.getBytes(StandardCharsets.UTF_8)
@@ -311,7 +311,7 @@ class CatraBasedSolver(
         case Failure(_) => // do nothing as unknown resultå
       }
     } finally {
-      if (!ParikhUtil.debug)
+      if (!ParikhUtil.debugOpt)
         Files.deleteIfExists(catraInputF)
     }
     result

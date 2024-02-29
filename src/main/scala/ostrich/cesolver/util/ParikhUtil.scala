@@ -14,7 +14,7 @@ object ParikhUtil {
   type State = CostEnrichedAutomatonBase#State
   type TLabel = CostEnrichedAutomatonBase#TLabel
 
-  var debug, needlog = false
+  var debugOpt, logOpt = false
 
   def measure[A](
       op: String
@@ -122,26 +122,26 @@ object ParikhUtil {
   }
 
   def debugPrintln(s: Any) = {
-    if (debug)
+    if (debugOpt)
       println("Debug: " + s)
   }
 
-  def todo(s: Any) = {
-    if (debug)
-      println("TODO:" + s)
+  def todo(s: Any, urgency: Int) = {
+    if (logOpt)
+      println(s"TODO (urgency level $urgency):" + s + "  (lower level is more urgent)")
   }
   def bug(s: Any) = {
       println("Bug:" + s)
   }
 
   def log(s: Any) = {
-    if (needlog)
+    if (logOpt)
       println("Log: " + s)
   }
 
   def throwWithStackTrace(e: Throwable) = {
     throw e
-    if (debug)
+    if (debugOpt)
       e.printStackTrace
   }
 }

@@ -16,6 +16,7 @@ import ap.parser.IFormula
 import ap.parser.IExpression._
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.IConstant
+import ap.util.Timeout
 
 class UnaryBasedSolver(
     flags: OFlags,
@@ -49,9 +50,13 @@ class UnaryBasedSolver(
 
     lProver.addConstantsRaw(newConsts)
     lProver !! finalArith
+    lProver.checkSat(false)
     val status = measure(
       s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
     ) {
+      while (lProver.getStatus(100) == ProverStatus.Running) {
+        Timeout.check
+      }
       lProver.???
     }
     status match {

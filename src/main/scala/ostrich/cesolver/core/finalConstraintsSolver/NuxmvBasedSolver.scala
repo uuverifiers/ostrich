@@ -168,7 +168,7 @@ class NuxmvBasedSolver(
 
   def solveWithoutGenerateModel(nuxmvBackend: OFlags.NuxmvBackend.Value): Result = {
     if (constraints.isEmpty) return Result.ceaSatResult
-    for (c <- constraints; aut <- c.auts; if ParikhUtil.debug) {
+    for (c <- constraints; aut <- c.auts; if ParikhUtil.debugOpt) {
       aut.toDot(s"nuxmv_aut_${c.strDataBaseId}_${count}")
       count += 1
     }
@@ -180,7 +180,7 @@ class NuxmvBasedSolver(
       allIntTerms.map(v => v.toString -> v).toMap
     val result = new Result
     val nuxmvInputF =
-      if (ParikhUtil.debug)
+      if (ParikhUtil.debugOpt)
         Paths.get("nuxmv_input.smv")
       else
         Files.createTempFile("nuxmv_input", ".smv")
@@ -226,7 +226,7 @@ class NuxmvBasedSolver(
       case e: Throwable =>
         throw UnknownException(e.toString())
     } finally {
-      if (!ParikhUtil.debug) {
+      if (!ParikhUtil.debugOpt) {
         Files.deleteIfExists(nuxmvInputF)
       }
     }

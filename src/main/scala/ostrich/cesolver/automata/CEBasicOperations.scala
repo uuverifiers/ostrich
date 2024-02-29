@@ -19,6 +19,7 @@ import ostrich.cesolver.util.TermGenerator
 import ap.parser.Simplifier
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.automata.BricsTLabelEnumerator
+import ap.util.Timeout
 
 object CEBasicOperations {
 
@@ -137,6 +138,7 @@ object CEBasicOperations {
     ParikhUtil.log(
       "CEBasicOperations.complement: compute the complement of automata"
     )
+    ParikhUtil.todo("Complement CEFAs that contain registers", 1)
     registersMustBeEmpty(aut)
     complementWithoutRegs(aut)
   }
