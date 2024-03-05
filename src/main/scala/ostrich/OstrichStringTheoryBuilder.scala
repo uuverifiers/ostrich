@@ -43,6 +43,8 @@ object OstrichStringTheoryBuilder {
 
   val version = "1.3.5"
 
+  PortfolioSetup
+
 }
 
 /**
