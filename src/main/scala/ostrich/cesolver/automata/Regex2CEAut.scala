@@ -30,15 +30,6 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   }
   import theory.strDatabase.EncodedString
 
-  private def translateLeaves(
-      t: ITerm,
-      unwind: Boolean,
-      minimize: Boolean
-  ): Seq[CostEnrichedAutomatonBase] = {
-    val leaves = collectLeaves(t, re_++)
-    val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind, minimize)
-    leaveAuts
-  }
 
   private def collectLeaves(t: ITerm, op: IFunction): Seq[ITerm] = {
     val todo = new ArrayStack[ITerm]
@@ -65,10 +56,20 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       aut
     }
 
-  def toCEAutomaton(t: ITerm, unwind: Boolean, minimize: Boolean): CostEnrichedAutomatonBase =
+  def toCEAutomaton(
+      t: ITerm,
+      unwind: Boolean,
+      minimize: Boolean
+  ): CostEnrichedAutomatonBase =
     t match {
       case IFunApp(`re_++`, _) =>
-        concatenate(translateLeaves(t, unwind, minimize))
+        {
+          val leaves = collectLeaves(t, re_++)
+          val leaveAuts =
+            for (s <- leaves) yield toCEAutomaton(s, unwind, minimize)
+          concatenate(leaveAuts)
+          
+        }
 
       case IFunApp(`re_union`, _) => {
         val leaves = collectLeaves(t, re_union)
@@ -104,14 +105,21 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
       case IFunApp(`re_inter`, _) => {
         val leaves = collectLeaves(t, re_inter)
-        val leaveAuts = for (s <- leaves) yield toCEAutomaton(s, unwind, minimize)
+        val leaveAuts =
+          for (s <- leaves) yield toCEAutomaton(s, unwind, minimize)
         leaveAuts reduceLeft { (aut1, aut2) =>
           intersection(aut1, aut2)
         }
       }
 
       case IFunApp(`re_diff`, Seq(t1, t2)) =>
-        maybeMin(diff(toCEAutomaton(t1, unwind, minimize), toCEAutomaton(t2, true, minimize)), minimize)
+        maybeMin(
+          diff(
+            toCEAutomaton(t1, unwind, minimize),
+            toCEAutomaton(t2, true, minimize)
+          ),
+          minimize
+        )
 
       case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
         maybeMin(optional(toCEAutomaton(t, unwind, minimize)), minimize)
@@ -121,11 +129,19 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
 
       case IFunApp(
             `re_loop` | `re_loop_?`,
-            Seq(IExpression.Const(IdealInt(n1)), IExpression.Const(IdealInt(n2)), t)
+            Seq(
+              IExpression.Const(IdealInt(n1)),
+              IExpression.Const(IdealInt(n2)),
+              t
+            )
           ) =>
         if (unwind) {
-          maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), n1, n2), minimize)
-        } else maybeMin(repeat(toCEAutomaton(t, true, minimize), n1, n2), minimize)
+          maybeMin(
+            repeatUnwind(toCEAutomaton(t, true, minimize), n1, n2),
+            minimize
+          )
+        } else
+          maybeMin(repeat(toCEAutomaton(t, true, minimize), n1, n2), minimize)
       case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
         maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), 0), minimize)
 
@@ -141,7 +157,9 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   }
 
   def buildComplementAut(t: ITerm, minimize: Boolean): Automaton = {
-    ParikhUtil.log("Regex2CEAut.buildComplementAut: build complement automaton for regex " + t)
+    ParikhUtil.log(
+      "Regex2CEAut.buildComplementAut: build complement automaton for regex " + t
+    )
     complement(toCEAutomaton(t, true, minimize))
   }
 
