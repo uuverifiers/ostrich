@@ -1,16 +1,15 @@
 #!/usr/bin/python
 
 from runners.multi import TheRunner as testrunner
-import utils,storage,argparse, summarygenerators
+import utils,storage, summarygenerators
 import voting.majority as voting
-import models.test as test
-import models.all_counting_bench as counting_bench
+import models.benchmarks_ca_main_smt2 as ca_bench
 import startwebserver
 import tools.ostrichBackend
 import tools.cvc5
 
 tracks = (
-    counting_bench.getTrackData()
+    ca_bench.getTrackData()
 ) + []
 
 solvers = {}
@@ -23,7 +22,7 @@ for s in [
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("counting-ostrich_unary")
+store = storage.SQLiteDB("ca_bench-ostrich_unary")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 testrunner(12).runTestSetup(

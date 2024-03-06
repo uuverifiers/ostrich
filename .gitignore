@@ -16,8 +16,8 @@ dot
 *.conf
 *.par
 *.smv
-zaligvinder/models
-zaligvinder/result_db
+zaligvinder/models/
+zaligvinder/result_db/
 *_result
 
 
