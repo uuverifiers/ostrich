@@ -20,6 +20,7 @@ import ap.parser.Simplifier
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.automata.BricsTLabelEnumerator
 import ap.util.Timeout
+import ostrich.cesolver.automata
 
 object CEBasicOperations {
 
@@ -231,7 +232,6 @@ object CEBasicOperations {
     if (auts.isEmpty)
       return BricsAutomatonWrapper.makeEmpty()
     val ceAut = new CostEnrichedAutomaton
-    // val builder = CostEnrichedAutomatonTrait.getBuilder
     val old2new =
       auts.map(_.states).flatten.map(s => (s -> ceAut.newState())).toMap
     val finalVecLen = auts.map(_.registers.size).sum
@@ -297,22 +297,51 @@ object CEBasicOperations {
     ParikhUtil.log(
       "CEBasicOperations.repeatUnwind: unwindly repeat automata, min = " + min + ", max = " + max
     )
-    registersMustBeEmpty(aut)
-    BricsAutomatonWrapper(
-      BasicOperations.repeat(
-        toBricsAutomaton(aut),
-        min,
-        max
-      )
+    if (min > max) return BricsAutomatonWrapper.makeEmpty()
+    val auts = Seq.fill(max)(aut.clone())
+    val ceAut = new CostEnrichedAutomaton
+    val old2new =
+      auts.map(_.states).flatten.map(s => (s -> ceAut.newState())).toMap
+    val finalVecLen = auts.map(_.registers.size).sum
+
+    ceAut.initialState = old2new(auts(0).initialState)
+
+    var prefixlen = 0
+    for (aut <- auts) {
+      for ((s, l, t, v) <- aut.transitionsWithVec)
+        ceAut.addTransition(
+          old2new(s),
+          l,
+          old2new(t),
+          Seq.fill(prefixlen)(0) ++ v ++ Seq.fill(
+            finalVecLen - prefixlen - v.size
+          )(0)
+        )
+      prefixlen += aut.registers.size
+    }
+
+    for (aut <- auts; s <- aut.acceptingStates)
+      ceAut.setAccept(old2new(s), false)
+    for ((aut, i) <- auts.zipWithIndex; if (i >= min-1); s <- aut.acceptingStates)
+      ceAut.setAccept(old2new(s), true)
+    for (
+      i <- (0 until auts.size - 1).reverse;
+      lastAccept <- auts(i).acceptingStates
     )
+      ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
+    ceAut.registers = auts.flatMap(_.registers)
+    ceAut.regsRelation = and(auts.map(_.regsRelation))
+    ParikhUtil.debugPrintln("the ceAut is " + ceAut)
+    ceAut
   }
 
   def repeat(
       aut: CostEnrichedAutomatonBase,
       min: Int,
-      max: Int
+      max: Int,
+      unwind: Boolean
   ): CostEnrichedAutomatonBase = {
-    if (aut.registers.nonEmpty) {
+    if (unwind) {
       return repeatUnwind(aut, min, max)
     }
 

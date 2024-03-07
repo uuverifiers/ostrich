@@ -21,6 +21,9 @@ import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IExpression
 import ostrich.cesolver.util.ParikhUtil
+import ap.terfor.inequalities.InEqConj
+import ostrich.cesolver.util.TermGenerator
+import ostrich.cesolver.util.ConstSubstVisitor
 
 /** This is the implementation of cost-enriched finite automaton(CEFA). Each
   * transition of CEFA contains a vector of integers, which is used to record
@@ -106,6 +109,22 @@ class CostEnrichedAutomatonBase extends Automaton {
       Some(lengths.filter(_ != None).map(_.get).toSeq)
     else
       None
+  }
+
+  override def clone(): CostEnrichedAutomatonBase = {
+    val newAut = new CostEnrichedAutomatonBase
+    val old2new = states.map(s => s -> newAut.newState()).toMap
+    newAut.initialState = old2new(initialState)
+    val regSubst = registers.map{case t => t -> TermGenerator().registerTerm}.toMap
+    newAut.registers = regSubst.values.toSeq
+    newAut.regsRelation = new ConstSubstVisitor().apply(regsRelation, regSubst)
+    for ((from, lbl, to, vec) <- transitionsWithVec) {
+      newAut.addTransition(old2new(from), lbl, old2new(to), vec)
+    }
+    for (s <- acceptingStates) {
+      newAut.setAccept(old2new(s), true)
+    }
+    newAut
   }
 
   def newState(): State = synchronized {
