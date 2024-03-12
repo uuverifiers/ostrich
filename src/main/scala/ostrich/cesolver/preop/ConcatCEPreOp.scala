@@ -4,6 +4,7 @@ import ostrich.automata.Automaton
 import ostrich.cesolver.automata.CostEnrichedInitFinalAutomaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression._
+import ap.parser.IBinJunctor
 
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "concatCEPreOp"
@@ -16,13 +17,14 @@ object ConcatCEPreOp extends CEPreOp {
     val leftRegs = concatLeft.registers
     val rightRegs = concatRight.registers
     val resultRegs = result.registers
-    val derivedRegsRelation = and(leftRegs.zipWithIndex.map { case (reg, i) =>
+    val derivedRegsRelation = connectSimplify(leftRegs.zipWithIndex.map { case (reg, i) =>
       (reg + rightRegs(i)) === resultRegs(i)
-    })
+    }, IBinJunctor.And)
     val letfRegsRelation = concatLeft.regsRelation
     val resRegsRelation = result.regsRelation
-    concatLeft.regsRelation = and(
-      Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation)
+    concatLeft.regsRelation = connectSimplify(
+      Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation),
+      IBinJunctor.And
     )
   }
 

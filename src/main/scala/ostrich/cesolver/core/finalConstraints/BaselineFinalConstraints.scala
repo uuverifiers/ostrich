@@ -10,6 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 import ostrich.cesolver.util.TermGenerator
 import scala.collection.mutable.{HashSet => MHashSet}
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IBinJunctor
 
 
 class BaselineFinalConstraints(
@@ -72,14 +73,14 @@ class BaselineFinalConstraints(
                   else outFlowTerms(s).reduceLeftOption(_ + _).getOrElse(i(0))
                 inFlow === outFlow
               }
-          and(consistentFormulas)
+          connectSimplify(consistentFormulas, IBinJunctor.And)
         }
     )
 
     // every transtion term should greater than 0
     val transtionTerms = transtion2Term.map(_._2).toSeq
     transtionTerms.foreach { term =>
-      consistentFlowFormula = and(Seq(consistentFlowFormula, term >= 0))
+      consistentFlowFormula = connectSimplify(Seq(consistentFlowFormula, term >= 0), IBinJunctor.And)
     }
     /////////////////////////////////////////////////////////////////////////////////
 
@@ -99,21 +100,22 @@ class BaselineFinalConstraints(
         (zTerm(s) === 0) | or(
           preStatesWithTTerm(s).map { case (from, tTerm) =>
             if (from == aut.initialState)
-              and(Seq(tTerm > 0, zTerm(s) === 1))
+              connectSimplify(Seq(tTerm > 0, zTerm(s) === 1), IBinJunctor.And)
             else
-              and(
+              connectSimplify(
                 Seq(
                   zTerm(from) > 0,
                   tTerm > 0,
                   zTerm(s) === zTerm(from) + 1
-                )
+                ),
+                IBinJunctor.And
               )
           }
         )
       case _ => IExpression.Boolean2IFormula(true)
     }
 
-    val connectionFormula = and(zVarInitFormulas ++ connectFormulas)
+    val connectionFormula = connectSimplify(zVarInitFormulas ++ connectFormulas, IBinJunctor.And)
     /////////////////////////////////////////////////////////////////////////////////
 
     // registers update formula ////////////////////////////////////////////////////
@@ -139,23 +141,25 @@ class BaselineFinalConstraints(
 
     val registerUpdateFormula =
       if (registerUpdateMap.size == 0) // empty automaton
-        and(for (r <- aut.registers) yield r === 0)
+        connectSimplify(for (r <- aut.registers) yield r === 0, IBinJunctor.And)
       else
-        and(
+        connectSimplify(
           for ((r, update) <- registerUpdateMap)
             yield {
               r === update.reduce { (t1, t2) => sum(Seq(t1, t2)) }
-            }
+            },
+          IBinJunctor.And
         )
 
     /////////////////////////////////////////////////////////////////////////////////
-    val parikhImage = and(
+    val parikhImage = connectSimplify(
       Seq(
         registerUpdateFormula,
         consistentFlowFormula,
         connectionFormula,
         getRegsRelation
-      )
+      ),
+      IBinJunctor.And
     )
     ParikhUtil.log(s"Parikh image of the automaton A${aut.hashCode()} computed.")
     parikhImage

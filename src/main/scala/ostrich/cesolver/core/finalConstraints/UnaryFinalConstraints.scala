@@ -40,9 +40,12 @@ class UnaryFinalConstraints(
   override def getRegsRelation: IFormula = checkSatAut.regsRelation
 
   override def getModel: Option[Seq[Int]] = {
-    ParikhUtil.findAcceptedWordByRegisters(
+    ParikhUtil.log("Get model of string term " + strDataBaseId)
+    val res = ParikhUtil.findAcceptedWordByRegisters(
       Seq(findModelAut),
       regTermsModel
     )
+    ParikhUtil.log(s"the model of ${strDataBaseId} is ${res}")
+    res
   }
 }

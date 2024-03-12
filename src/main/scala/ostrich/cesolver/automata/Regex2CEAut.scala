@@ -5,11 +5,12 @@ import ap.parser._
 import dk.brics.automaton.BasicAutomata
 import ap.basetypes.IdealInt
 import CEBasicOperations._
-import scala.collection.mutable.{ArrayStack, HashMap => MHashMap}
+import scala.collection.mutable.{Stack, HashMap => MHashMap, HashSet => MHashSet}
 import scala.collection.immutable.VectorBuilder
 import ostrich.automata.Automaton
 import ostrich.OstrichStringTheory
 import ostrich.cesolver.util.ParikhUtil
+import scala.collection.mutable.ArrayBuffer
 
 class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   import theory.{
@@ -34,21 +35,31 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   // 1. use a hashmap to map each counting iterm to a boolean value, where the counting term with true boolean value need to be unwinded
   // 2. to get the hashmap, we need to map each counting iterm in the nested counting to its max counting, and only the largest counting does not need to be unwinded
 
-  private val counting2unwind = new MHashMap[ITerm, Boolean]()
+  private val notUnwindSet = new MHashSet[ITerm]
+  private var id = 0
+  private val counting2id = new MHashMap[ITerm, Int]
 
-  private def traverseRegex(t: ITerm) {
+  private def traverseRegex(t: ITerm) = {
     ParikhUtil.log(
       "Traverse the counting iterms in the regex t and check if it is nested. Use heuritic algorithm to find the unwinded counting terms and update counting2unwind map"
     )
 
-    val todo = new ArrayStack[ITerm]
+    initCounting2id(t)
+
+    ParikhUtil.debugPrintln(counting2id.values.size)
+
+    val todo = new Stack[ITerm]
     todo push t
 
     while (!todo.isEmpty) {
       val a = todo.pop()
       a match {
-        case IFunApp(`re_loop` | `re_loop_?`, _) =>
-          traverseCounting(a)
+        case IFunApp(`re_loop` | `re_loop_?`, _) => {
+          val countingTree = buildCountingTree(a)
+          val tree2max = buildTree2Max(countingTree, a)
+          val notUnwind = buildNotUnwindList(countingTree, tree2max, a)
+          notUnwindSet ++= notUnwind
+        }
           
         case IFunApp(`re_*` | `re_*?` | `re_+` | `re_+?` | `re_comp` , _) => {}
 
@@ -57,50 +68,86 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
         case _ =>
       }
     }
+  }
 
-    def traverseCounting(t: ITerm) {
-      val counting2max = MHashMap[ITerm, Int]()
-      val todo = new ArrayStack[ITerm]
-      todo push t
+  private def initCounting2id(t: ITerm) = {
+     val todo = new Stack[ITerm]
+    todo push t
 
-      while (!todo.isEmpty) {
-        val a = todo.pop()
-        a match {
-          case IFunApp(
-                `re_loop` | `re_loop_?`,
-                Seq(
-                  IExpression.Const(IdealInt(n1)),
-                  IExpression.Const(IdealInt(n2)),
-                  t1
-                )
-              ) => {
-            counting2max += a -> n2
-            todo push t1
-          }
-          case IFunApp(`re_*` | `re_*?` | `re_+` | `re_+?` | `re_comp` , _) => {}
-
-          case IFunApp(_, args) =>
-            for (arg <- args) todo push arg
-            
-          case _ =>
+    while (!todo.isEmpty) {
+      val a = todo.pop()
+      a match {
+        case IFunApp(`re_loop` | `re_loop_?`, args) => {
+          counting2id += a -> id
+          id += 1
+          todo push args(2)
         }
-      }
-      var (nonUnwindT, max) = counting2max.head
-      for ((countingterm, cmax) <- counting2max; if cmax >= max) {
-        nonUnwindT = countingterm
-        max = cmax
-      }
-      for ((countingterm, cmax) <- counting2max) {
-        if (countingterm == nonUnwindT)
-          counting2unwind += countingterm -> false
-        else
-          counting2unwind += countingterm -> true
+          
+        case IFunApp(_, args) =>
+          for (arg <- args) todo push arg
+        case _ =>
       }
     }
   }
 
+  private def buildCountingTree(countingParent: ITerm): Map[ITerm, Seq[ITerm]] = {
+    val countingTree = MHashMap[ITerm, Seq[ITerm]]()
+    val todo = new Stack[ITerm]
+    countingParent match {
+      case IFunApp(`re_loop` | `re_loop_?`, args) => todo push args(2)
+    }
+    while (!todo.isEmpty) {
+      val a = todo.pop()
+      a match {
+        case IFunApp(`re_loop`|`re_loop_?`, _) => {
+          countingTree(countingParent) = countingTree.getOrElse(countingParent, Seq()) :+ a
+          countingTree ++= buildCountingTree(a)
+        }
+        case IFunApp(`re_*` | `re_*?` | `re_+` | `re_+?` | `re_comp` , _) => {}
+        case IFunApp(_, args) =>
+          for (arg <- args) todo push arg
+        case _ =>
+      }
+    }
+    countingTree.toMap
+  }
+
+  private def buildTree2Max(tree: Map[ITerm, Seq[ITerm]], root: ITerm): Map[ITerm, Int] = {
+    ParikhUtil.debugPrintln(s"buildTree2Max tree is ${tree.map{case (key, values) => counting2id(key) -> values.map(counting2id(_))}}, root is ${counting2id{root}}")
+    val tree2max = MHashMap[ITerm, Int]()
+    val rootUpperBound = root match {
+        case IFunApp(`re_loop` | `re_loop_?`, Seq(_ , IExpression.Const(IdealInt(n)), _)) =>
+          n
+        case _ => throw new Exception("The root is not a counting term")
+      }
+    if (!tree.contains(root)) {
+      tree2max(root) = rootUpperBound
+    } else {
+      var subtreeMaxSum = 0
+      for (sub <- tree(root)){
+        val subTree2max = buildTree2Max(tree, sub)
+        subtreeMaxSum += subTree2max(sub)
+        tree2max ++= subTree2max
+      }
+      tree2max(root) = rootUpperBound max subtreeMaxSum
+    }
+    tree2max.toMap
+  }
+
+  private def buildNotUnwindList(tree: Map[ITerm, Seq[ITerm]], tree2max: Map[ITerm, Int], root: ITerm): Seq[ITerm] = {
+    ParikhUtil.debugPrintln(s"tree2max is ${tree2max.map{case (t, i) => counting2id(t) -> i}}, tree is ${tree.map{case (key, values) => counting2id(key) -> values.map(counting2id(_))}}, root is ${counting2id{root}}")
+    root match {
+      case IFunApp(`re_loop` | `re_loop_?`, Seq(_ , IExpression.Const(IdealInt(n)), _)) =>
+        if (n == tree2max(root) | !tree.contains(root)) Seq(root)
+        else {
+          tree(root).map(buildNotUnwindList(tree, tree2max, _)).flatten
+        }
+      case _ => throw new Exception("The root is not a counting term")
+    }
+  }
+
   private def collectLeaves(t: ITerm, op: IFunction): Seq[ITerm] = {
-    val todo = new ArrayStack[ITerm]
+    val todo = new Stack[ITerm]
     todo push t
 
     val res = new VectorBuilder[ITerm]
@@ -179,36 +226,36 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
         }
       }
 
-      case IFunApp(`re_diff`, Seq(t1, t2)) =>
+      case IFunApp(`re_diff`, Seq(subt1, subt2)) =>
         maybeMin(
           diff(
-            toCEAutomaton(t1, mustUnwind, minimize),
-            toCEAutomaton(t2, true, minimize)
+            toCEAutomaton(subt1, mustUnwind, minimize),
+            toCEAutomaton(subt2, true, minimize)
           ),
           minimize
         )
 
-      case IFunApp(`re_opt` | `re_opt_?`, Seq(t)) =>
-        maybeMin(optional(toCEAutomaton(t, mustUnwind, minimize)), minimize)
+      case IFunApp(`re_opt` | `re_opt_?`, Seq(subt)) =>
+        maybeMin(optional(toCEAutomaton(subt, mustUnwind, minimize)), minimize)
 
-      case IFunApp(`re_comp`, Seq(t)) =>
-        maybeMin(complement(toCEAutomaton(t, true, minimize)), minimize)
+      case IFunApp(`re_comp`, Seq(subt)) =>
+        maybeMin(complement(toCEAutomaton(subt, true, minimize)), minimize)
 
       case IFunApp(
             `re_loop` | `re_loop_?`,
             Seq(
               IExpression.Const(IdealInt(n1)),
               IExpression.Const(IdealInt(n2)),
-              t1
+              subt
             )
           ) =>
-        val currentUnwind = if (mustUnwind) true else counting2unwind(t)
-        maybeMin(repeat(toCEAutomaton(t1, mustUnwind, minimize), n1, n2, currentUnwind), minimize)
-      case IFunApp(`re_*` | `re_*?`, Seq(t)) =>
-        maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), 0), minimize)
+        val needUnwind = mustUnwind | !notUnwindSet.contains(t)
+        maybeMin(repeat(toCEAutomaton(subt, mustUnwind, minimize), n1, n2, needUnwind), minimize)
+      case IFunApp(`re_*` | `re_*?`, Seq(subt)) =>
+        maybeMin(repeatUnwind(toCEAutomaton(subt, true, minimize), 0), minimize)
 
-      case IFunApp(`re_+` | `re_+?`, Seq(t)) =>
-        maybeMin(repeatUnwind(toCEAutomaton(t, true, minimize), 1), minimize)
+      case IFunApp(`re_+` | `re_+?`, Seq(subt)) =>
+        maybeMin(repeatUnwind(toCEAutomaton(subt, true, minimize), 1), minimize)
 
       case _ => BricsAutomatonWrapper(toBAutomaton(t, true))
     }

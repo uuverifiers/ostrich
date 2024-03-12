@@ -9,6 +9,7 @@ import ap.parser.ITerm
 import ostrich.OFlags
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IBinJunctor
 
 
 object FinalConstraints {
@@ -72,7 +73,7 @@ trait FinalConstraints {
   // accessors and mutators-------------------------------------------
   def getModel: Option[Seq[Int]] =  ParikhUtil.findAcceptedWordByRegisters(auts, regTermsModel)
 
-  def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
+  def getRegsRelation: IFormula = connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
 
   def getRegisters = auts.flatMap(_.registers)
 

@@ -17,6 +17,7 @@ import ap.parser.IExpression._
 import ap.parser.IExpression.Const
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IBinJunctor
 
 object IndexOfCEPreOp {
   def apply(startPos: ITerm, index: ITerm, matchStr: String) =
@@ -67,8 +68,9 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
 
     // index >= 0, condition : len(argStr) >= startPos & stratPos >= 0
     val nonEpsMatchPosIdx = intersection(notMatchedStr, matchedStr)
-    nonEpsMatchPosIdx.regsRelation = and(
-      Seq(nonEpsMatchPosIdx.regsRelation, index >= startPos, startPos >= 0)
+    nonEpsMatchPosIdx.regsRelation = connectSimplify(
+      Seq(nonEpsMatchPosIdx.regsRelation, index >= startPos, startPos >= 0),
+      IBinJunctor.And
     )
 
     // index = -1, condition : len(argStr) < startPos | startPos < 0
@@ -82,17 +84,19 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
       case _ => {
         val argStrLen = termGen.lenTerm
         val smallerThanStartPos = lengthPreimage(argStrLen, false)
-        smallerThanStartPos.regsRelation = and(
+        smallerThanStartPos.regsRelation = connectSimplify(
           Seq(
             smallerThanStartPos.regsRelation,
             argStrLen < startPos | startPos < 0
-          )
+          ),
+          IBinJunctor.And
         )
         smallerThanStartPos
       }
     }
-    negIdx1.regsRelation = and(
-      Seq(negIdx1.regsRelation, index === -1)
+    negIdx1.regsRelation = connectSimplify(
+      Seq(negIdx1.regsRelation, index === -1),
+      IBinJunctor.And
     )
 
     // len(argStr) >= startPos and no match after startPos
@@ -100,14 +104,16 @@ class IndexOfCEPreOp(startPos: ITerm, index: ITerm, matchString: String)
     val negIdx2 = concatenate(
       Seq(lengthPreimage(startPos), notMatched)
     )
-    negIdx2.regsRelation = and(
-      Seq(negIdx2.regsRelation, index === -1)
+    negIdx2.regsRelation = connectSimplify(
+      Seq(negIdx2.regsRelation, index === -1),
+      IBinJunctor.And
     )
 
     // epsilon match string with index >= 0
     val epsMatchPosIdx = concatenate(Seq(startPosPrefix, makeAnyString()))
-    epsMatchPosIdx.regsRelation = and(
-      Seq(epsMatchPosIdx.regsRelation, index === startPos)
+    epsMatchPosIdx.regsRelation = connectSimplify(
+      Seq(epsMatchPosIdx.regsRelation, index === startPos),
+      IBinJunctor.And
     )
 
     index match {

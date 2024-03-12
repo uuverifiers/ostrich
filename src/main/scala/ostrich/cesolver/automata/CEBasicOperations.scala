@@ -21,6 +21,7 @@ import ostrich.cesolver.util.ParikhUtil
 import ostrich.automata.BricsTLabelEnumerator
 import ap.util.Timeout
 import ostrich.cesolver.automata
+import ap.parser.IBinJunctor
 
 object CEBasicOperations {
 
@@ -115,8 +116,9 @@ object CEBasicOperations {
       finalDisjList += partitionFormula(aut) & aut.regsRelation
     }
     // all register equal to 0 and disj(epsilonSatisfied)
-    finalDisjList += and(
-      ((oldRegsiters ++ newRegisters).map(_ === 0)) :+ or(epsilonSatisfied)
+    finalDisjList += connectSimplify(
+      ((oldRegsiters ++ newRegisters).map(_ === 0)) :+ or(epsilonSatisfied),
+      IBinJunctor.And
     )
 
     ceAut.regsRelation = or(finalDisjList)
@@ -198,7 +200,7 @@ object CEBasicOperations {
         }
       }
     }
-    ceAut.regsRelation = and(Seq(aut1.regsRelation, aut2.regsRelation))
+    ceAut.regsRelation = connectSimplify(Seq(aut1.regsRelation, aut2.regsRelation), IBinJunctor.And)
     ceAut.registers = aut1.registers ++ aut2.registers
     // removeDeadState(ceAut)
     ceAut
@@ -262,7 +264,7 @@ object CEBasicOperations {
     )
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    ceAut.regsRelation = and(auts.map(_.regsRelation))
+    ceAut.regsRelation = connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
     ceAut
   }
 
@@ -295,7 +297,7 @@ object CEBasicOperations {
       max: Int
   ): CostEnrichedAutomatonBase = {
     ParikhUtil.log(
-      "CEBasicOperations.repeatUnwind: unwindly repeat automata, min = " + min + ", max = " + max
+      "CEBasicOperations.repeatUnwind: directly unwind automata, min = " + min + ", max = " + max
     )
     if (min > max) return BricsAutomatonWrapper.makeEmpty()
     val auts = Seq.fill(max)(aut.clone())
@@ -330,8 +332,7 @@ object CEBasicOperations {
     )
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    ceAut.regsRelation = and(auts.map(_.regsRelation))
-    ParikhUtil.debugPrintln("the ceAut is " + ceAut)
+    ceAut.regsRelation = connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
     ceAut
   }
 
@@ -345,7 +346,7 @@ object CEBasicOperations {
       return repeatUnwind(aut, min, max)
     }
 
-    ParikhUtil.log("CEBasicOperations.repeat: symbolicly repeat automata")
+    ParikhUtil.log("CEBasicOperations.repeat: symbolicly repeat automata, min = " + min + ", max = " + max)
 
     if (max < min || min < 0 || aut.isEmpty)
       return new BricsAutomatonWrapper(BasicAutomata.makeEmpty())
@@ -785,11 +786,12 @@ object CEBasicOperations {
     val removeIdxs = new MHashSet[Int]()
     duplicatedRegs.foreach { regidxs =>
       regidxs.tail.foreach { idx =>
-        newRegsRelation = and(
+        newRegsRelation = connectSimplify(
           Seq(
             newRegsRelation,
             (newRegisters(regidxs.head) === newRegisters(idx))
-          )
+          ),
+          IBinJunctor.And
         )
       }
       removeIdxs ++= regidxs.tail

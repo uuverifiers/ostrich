@@ -17,6 +17,7 @@ import ap.parser.IExpression._
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.IConstant
 import ap.util.Timeout
+import ap.parser.IBinJunctor
 
 class UnaryBasedSolver(
     flags: OFlags,
@@ -30,7 +31,7 @@ class UnaryBasedSolver(
   def solve: Result = solveCompleteLIA
 
   def solveCompleteLIA: Result = solveFormula(
-    and(constraints.map(_.getCompleteLIA))
+    connectSimplify(constraints.map(_.getCompleteLIA), IBinJunctor.And)
   )
 
   def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {

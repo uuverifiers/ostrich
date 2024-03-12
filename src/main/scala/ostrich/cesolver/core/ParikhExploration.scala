@@ -240,7 +240,7 @@ class ParikhExploration(
 
     try {
       dfExplore(funAppList)
-      if (maybeUnknown) throw new Exception("--Unknown: can not find model using sound-but-not-complete solver")
+      if (maybeUnknown) throw new Exception("--Unknown: can not find model or unsat core using sound-but-not-complete solver")
       None
     } catch {
       case FoundModel(model) => Some(model)
@@ -379,6 +379,7 @@ class ParikhExploration(
           }
           case ProverStatus.Unsat => return trivalConflict
           case _ => 
+            ParikhUtil.log("One search branch is unknow: " + res.getStatus)
             maybeUnknown = true
             return trivalConflict
         }

@@ -19,6 +19,7 @@ import ostrich.cesolver.core.Model
 import scala.sys.process._
 import ostrich.OFlags
 import ostrich.cesolver.util.UnknownException
+import ap.parser.IBinJunctor
 
 class NuxmvBasedSolver(
     val flags: OFlags,
@@ -42,7 +43,7 @@ class NuxmvBasedSolver(
     val labels = constraintsIdx.map { case (_, i) =>
       s"l$i"
     }.toSeq
-    val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+    val lia = connectSimplify(inputFormula +: constraints.map(_.getRegsRelation), IBinJunctor.And)
     Boolean2IFormula(true)
     val regsRelationAndInputLIA =
       lia.toString.replaceAll("true", "TRUE").replaceAll("false", "FALSE")
@@ -173,7 +174,7 @@ class NuxmvBasedSolver(
       count += 1
     }
     ////////// end of dot file generation
-    and(inputFormula +: constraints.map(_.getRegsRelation))
+    connectSimplify(inputFormula +: constraints.map(_.getRegsRelation), IBinJunctor.And)
     // val inputVars = SymbolCollector constants lia
     val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
     val name2ITerm =
