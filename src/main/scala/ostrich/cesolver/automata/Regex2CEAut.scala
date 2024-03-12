@@ -36,17 +36,17 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   // 2. to get the hashmap, we need to map each counting iterm in the nested counting to its max counting, and only the largest counting does not need to be unwinded
 
   private val notUnwindSet = new MHashSet[ITerm]
-  private var id = 0
-  private val counting2id = new MHashMap[ITerm, Int]
+  // private var id = 0
+  // private val counting2id = new MHashMap[ITerm, Int]
 
   private def traverseRegex(t: ITerm) = {
     ParikhUtil.log(
       "Traverse the counting iterms in the regex t and check if it is nested. Use heuritic algorithm to find the unwinded counting terms and update counting2unwind map"
     )
 
-    initCounting2id(t)
+    // initCounting2id(t)
 
-    ParikhUtil.debugPrintln(counting2id.values.size)
+    // ParikhUtil.debugPrintln(counting2id.values.size)
 
     val todo = new Stack[ITerm]
     todo push t
@@ -70,25 +70,25 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
     }
   }
 
-  private def initCounting2id(t: ITerm) = {
-     val todo = new Stack[ITerm]
-    todo push t
+  // private def initCounting2id(t: ITerm) = {
+  //    val todo = new Stack[ITerm]
+  //   todo push t
 
-    while (!todo.isEmpty) {
-      val a = todo.pop()
-      a match {
-        case IFunApp(`re_loop` | `re_loop_?`, args) => {
-          counting2id += a -> id
-          id += 1
-          todo push args(2)
-        }
+  //   while (!todo.isEmpty) {
+  //     val a = todo.pop()
+  //     a match {
+  //       case IFunApp(`re_loop` | `re_loop_?`, args) => {
+  //         counting2id += a -> id
+  //         id += 1
+  //         todo push args(2)
+  //       }
           
-        case IFunApp(_, args) =>
-          for (arg <- args) todo push arg
-        case _ =>
-      }
-    }
-  }
+  //       case IFunApp(_, args) =>
+  //         for (arg <- args) todo push arg
+  //       case _ =>
+  //     }
+  //   }
+  // }
 
   private def buildCountingTree(countingParent: ITerm): Map[ITerm, Seq[ITerm]] = {
     val countingTree = MHashMap[ITerm, Seq[ITerm]]()
@@ -113,7 +113,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   }
 
   private def buildTree2Max(tree: Map[ITerm, Seq[ITerm]], root: ITerm): Map[ITerm, Int] = {
-    ParikhUtil.debugPrintln(s"buildTree2Max tree is ${tree.map{case (key, values) => counting2id(key) -> values.map(counting2id(_))}}, root is ${counting2id{root}}")
+    // ParikhUtil.debugPrintln(s"buildTree2Max tree is ${tree.map{case (key, values) => counting2id(key) -> values.map(counting2id(_))}}, root is ${counting2id{root}}")
     val tree2max = MHashMap[ITerm, Int]()
     val rootUpperBound = root match {
         case IFunApp(`re_loop` | `re_loop_?`, Seq(_ , IExpression.Const(IdealInt(n)), _)) =>
@@ -135,7 +135,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   }
 
   private def buildNotUnwindList(tree: Map[ITerm, Seq[ITerm]], tree2max: Map[ITerm, Int], root: ITerm): Seq[ITerm] = {
-    ParikhUtil.debugPrintln(s"tree2max is ${tree2max.map{case (t, i) => counting2id(t) -> i}}, tree is ${tree.map{case (key, values) => counting2id(key) -> values.map(counting2id(_))}}, root is ${counting2id{root}}")
+    // ParikhUtil.debugPrintln(s"tree2max is ${tree2max.map{case (t, i) => counting2id(t) -> i}}, tree is ${tree.map{case (key, values) => counting2id(key) -> values.map(counting2id(_))}}, root is ${counting2id{root}}")
     root match {
       case IFunApp(`re_loop` | `re_loop_?`, Seq(_ , IExpression.Const(IdealInt(n)), _)) =>
         if (n == tree2max(root) | !tree.contains(root)) Seq(root)

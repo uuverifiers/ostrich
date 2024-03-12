@@ -25,6 +25,7 @@ import ap.parser.IBinJunctor
 
 object CEBasicOperations {
 
+  private val directlyUnwindUpper = 20
   private val termGen = TermGenerator()
 
   def toBricsAutomaton(aut: CostEnrichedAutomatonBase): BAutomaton = {
@@ -342,7 +343,7 @@ object CEBasicOperations {
       max: Int,
       unwind: Boolean
   ): CostEnrichedAutomatonBase = {
-    if (unwind) {
+    if (unwind | aut.states.size * max < directlyUnwindUpper) {
       return repeatUnwind(aut, min, max)
     }
 
