@@ -98,14 +98,6 @@ class OstrichSolver(theory : OstrichStringTheory,
                     : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
     val order = goal.order
-    println("atoms", atoms)
-    print("arith", goal.facts.arithConj)
-
-    /*
-    1. Check that each str_len(Z, var) has only one var on the right and there is no other (Y, var) with same var
-    2. check that in every arithmetic eq, var only appears once
-
-     */
 
     val pos_length = atoms.positiveLitsWithPred(p(str_len))
     val length_vars = new MHashSet[Atom]()
@@ -114,9 +106,14 @@ class OstrichSolver(theory : OstrichStringTheory,
     val regex_ineq_vars = new MHashSet[Term]()
     val lower_bounds = new MHashMap[Term, Int]()
     val upper_bounds = new MHashMap[Term, Int]()
-    var is_monadic = false
+    var is_monadic = true
     breakable {
       for (atom <- pos_length) {
+        if (atom(1).head._1.intValueSafe != 1){
+          // TODO handle case if the variable inside str_len is not 1
+          is_monadic = false
+          break
+        }
         if (!atom(1).isConstant) {
           length_vars.add(atom)
           if (atom(1).length > 1){
@@ -131,30 +128,25 @@ class OstrichSolver(theory : OstrichStringTheory,
 
 
             for (ineq <- ineqs) {
-
               if (ineq.length > 2) {
+                is_monadic = false
                 break
               }
-              println(ineq.isConstant)
-              println(ineq.head._2.constants)
-              println(ineq.last._2.constants)
+              // More than one variable appears in the ineq
               if (!(ineq.head._2.constants.isEmpty || ineq.last._2.constants.isEmpty)){
-                println("two vars in the ineq")
+                is_monadic = false
+                break
               }
               if (ineq.head._1.intValueSafe < 0) {
-
-                println(goal.facts.arithConj)
-                println("assert here", ineq.length, ineq)
-
-                assert(ineq.length == 2)
                 if (ineq.length == 2) {
                   upper_bounds.put(atom(0), ineq.last._1.intValueSafe)
                   regex_ineq_vars.add(atom(0))
                 }
                 // if ineq length == 1, then unsat -- this should have been detected by preprocess
-                // if ineq length > 2 -- not possible by construction of length constraints
               }
               else {
+
+                // if ineq length == 1, then default lower bound = 0
                 if (ineq.length == 2) {
                   regex_ineq_vars.add(atom(0))
                   lower_bounds.put(atom(0), ineq.last._1.intValueSafe * -1)
@@ -162,15 +154,12 @@ class OstrichSolver(theory : OstrichStringTheory,
                 if (ineq.length == 1){
                   lower_bounds.put(atom(0), 0)
                 }
-                // if ineq length == 1, then default lower bound = 0
-                // if ineq length > 2 -- not possible by construction of length constraints
               }
 
             }
 
           }
           else {
-            println("is not monadic", atom)
             is_monadic = false
             break
           }
@@ -181,13 +170,6 @@ class OstrichSolver(theory : OstrichStringTheory,
         }
       }
     }
-    if (regex_ineq_vars.size + regex_length_vars.size == pos_length.size){
-      println("is monadic")
-      is_monadic = true
-    }
-
-    createBoundedLengthRegex(regex_ineq_vars, lower_bounds,upper_bounds)
-    createEqRegex(regex_length_vars)
 
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty && !is_monadic
@@ -215,7 +197,6 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
 
     }
-    println("use length", useLength)
     val regexExtractor =
       theory.RegexExtractor(goal)
     val stringFunctionTranslator =
@@ -445,8 +426,6 @@ class OstrichSolver(theory : OstrichStringTheory,
   def createEqRegex(atoms: MHashSet[Atom]): ArrayBuffer[(Term, Automaton)] = {
     val regexes = new ArrayBuffer[(Term,Automaton)]
     for (atom <- atoms){
-      println(atom(1).isConstant)
-      println("assert here?")
       assert(atom(1).isConstant)
       regexes += ((atom(0),BricsAutomaton.eqLengthAutomata(atom(1).head._1.intValueSafe)))
     }
