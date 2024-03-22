@@ -33,24 +33,22 @@
 package ostrich
 
 import ostrich.automata.{Automaton, BricsAutomaton}
-import ostrich.preop.{PreOp, ConcatPreOp}
-
+import ostrich.preop.{ConcatPreOp, PreOp}
 import ap.SimpleAPI
 import ap.parser.IFunction
-import ap.terfor.{Term, Formula, TerForConvenience, ConstantTerm, OneTerm}
-import ap.terfor.preds.{PredConj, Atom}
+import ap.terfor.{ConstantTerm, Formula, OneTerm, TerForConvenience, Term}
+import ap.terfor.preds.{Atom, PredConj}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.conjunctions.Conjunction
 import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
-
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
 import scala.collection.breakOut
-import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
-                                 HashSet => MHashSet}
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, HashSet => MHashSet}
+import scala.util.control.Breaks.{break, breakable}
 
 object OstrichSolver {
 
@@ -100,9 +98,102 @@ class OstrichSolver(theory : OstrichStringTheory,
                     : Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
     val atoms = goal.facts.predConj
     val order = goal.order
+    println("atoms", atoms)
+    print("arith", goal.facts.arithConj)
 
-    val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
+    /*
+    1. Check that each str_len(Z, var) has only one var on the right and there is no other (Y, var) with same var
+    2. check that in every arithmetic eq, var only appears once
+
+     */
+
+    val pos_length = atoms.positiveLitsWithPred(p(str_len))
+    val length_vars = new MHashSet[Atom]()
+    val regex_length_vars = new MHashSet[Atom]()
+
+    val regex_ineq_vars = new MHashSet[Term]()
+    val lower_bounds = new MHashMap[Term, Int]()
+    val upper_bounds = new MHashMap[Term, Int]()
+    var is_monadic = false
+    breakable {
+      for (atom <- pos_length) {
+        if (!atom(1).isConstant) {
+          length_vars.add(atom)
+          if (atom(1).length > 1){
+            is_monadic = false
+            break
+          }
+          // Constraint is monadic and of the form int <= |str| <= int
+          // (Z, var) and (Y, var) appear -> Z and Y not monadic
+          if (!pos_length.exists(atom1 => atom1(1) == atom(1) && atom1(0) != atom(0))) {
+            val ineqs = goal.facts.arithConj.inEqs
+              .filter(ineq => ineq.head._2 == atom(1).head._2)
+
+
+            for (ineq <- ineqs) {
+
+              if (ineq.length > 2) {
+                break
+              }
+              println(ineq.isConstant)
+              println(ineq.head._2.constants)
+              println(ineq.last._2.constants)
+              if (!(ineq.head._2.constants.isEmpty || ineq.last._2.constants.isEmpty)){
+                println("two vars in the ineq")
+              }
+              if (ineq.head._1.intValueSafe < 0) {
+
+                println(goal.facts.arithConj)
+                println("assert here", ineq.length, ineq)
+
+                assert(ineq.length == 2)
+                if (ineq.length == 2) {
+                  upper_bounds.put(atom(0), ineq.last._1.intValueSafe)
+                  regex_ineq_vars.add(atom(0))
+                }
+                // if ineq length == 1, then unsat -- this should have been detected by preprocess
+                // if ineq length > 2 -- not possible by construction of length constraints
+              }
+              else {
+                if (ineq.length == 2) {
+                  regex_ineq_vars.add(atom(0))
+                  lower_bounds.put(atom(0), ineq.last._1.intValueSafe * -1)
+                }
+                if (ineq.length == 1){
+                  lower_bounds.put(atom(0), 0)
+                }
+                // if ineq length == 1, then default lower bound = 0
+                // if ineq length > 2 -- not possible by construction of length constraints
+              }
+
+            }
+
+          }
+          else {
+            println("is not monadic", atom)
+            is_monadic = false
+            break
+          }
+        }
+        else {
+          // Constraint is equality int = |str|
+          regex_length_vars.add(atom)
+        }
+      }
+    }
+    if (regex_ineq_vars.size + regex_length_vars.size == pos_length.size){
+      println("is monadic")
+      is_monadic = true
+    }
+
+    createBoundedLengthRegex(regex_ineq_vars, lower_bounds,upper_bounds)
+    createEqRegex(regex_length_vars)
+
+
+    val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty && !is_monadic
     val eagerMode = flags.eagerAutomataOperations
+
+
 
     val useLength = flags.useLength match {
 
@@ -124,7 +215,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
 
     }
-
+    println("use length", useLength)
     val regexExtractor =
       theory.RegexExtractor(goal)
     val stringFunctionTranslator =
@@ -138,6 +229,11 @@ class OstrichSolver(theory : OstrichStringTheory,
     val lengthVars = new MHashMap[Term, Term]
 
     ////////////////////////////////////////////////////////////////////////////
+
+    if (is_monadic){
+      regexes ++= createBoundedLengthRegex(regex_ineq_vars, lower_bounds,upper_bounds)
+      regexes ++= createEqRegex(regex_length_vars)
+    }
 
     def decodeRegexId(a : Atom, complemented : Boolean) : Unit = a(1) match {
       case LinearCombination.Constant(id) => {
@@ -344,5 +440,24 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       result
     }
+  }
+
+  def createEqRegex(atoms: MHashSet[Atom]): ArrayBuffer[(Term, Automaton)] = {
+    val regexes = new ArrayBuffer[(Term,Automaton)]
+    for (atom <- atoms){
+      println(atom(1).isConstant)
+      println("assert here?")
+      assert(atom(1).isConstant)
+      regexes += ((atom(0),BricsAutomaton.eqLengthAutomata(atom(1).head._1.intValueSafe)))
+    }
+    regexes
+  }
+
+  def createBoundedLengthRegex(terms: MHashSet[Term], lowerBounds :MHashMap[Term, Int], upperBounds: MHashMap[Term, Int]): ArrayBuffer[(Term, Automaton)] = {
+    val regexes = new ArrayBuffer[(Term,Automaton)]
+    for (variable <- terms){
+      regexes += ((variable, BricsAutomaton.boundedLengthAutomata(lowerBounds.getOrElse(variable, 0),upperBounds.get(variable))))
+    }
+    regexes
   }
 }
