@@ -109,12 +109,12 @@ class OstrichSolver(theory : OstrichStringTheory,
     var is_monadic = true
     breakable {
       for (atom <- pos_length) {
-        if (atom(1).head._1.intValueSafe != 1){
-          // TODO handle case if the variable inside str_len is not 1
-          is_monadic = false
-          break
-        }
         if (!atom(1).isConstant) {
+          if (atom(1).head._1.intValueSafe != 1){
+            // TODO handle case if the variable inside str_len is not 1
+            is_monadic = false
+            break
+          }
           length_vars.add(atom)
           if (atom(1).length > 1){
             is_monadic = false
@@ -171,8 +171,7 @@ class OstrichSolver(theory : OstrichStringTheory,
       }
     }
 
-
-    val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty && !is_monadic
+    val containsLength = (atoms positiveLitsWithPred p(str_len)).nonEmpty && !is_monadic
     val eagerMode = flags.eagerAutomataOperations
 
 
