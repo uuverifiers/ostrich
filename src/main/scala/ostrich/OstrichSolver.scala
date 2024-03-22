@@ -210,6 +210,7 @@ class OstrichSolver(theory : OstrichStringTheory,
 
     ////////////////////////////////////////////////////////////////////////////
 
+    // If no len constraints needed, add the computed length regexes and add them
     if (is_monadic){
       regexes ++= createBoundedLengthRegex(regex_ineq_vars, lower_bounds,upper_bounds)
       regexes ++= createEqRegex(regex_length_vars)
