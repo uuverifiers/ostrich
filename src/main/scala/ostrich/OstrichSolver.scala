@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Oliver Markgraf. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@ package ostrich
 
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{ConcatPreOp, PreOp}
+
 import ap.SimpleAPI
 import ap.parser.IFunction
 import ap.terfor.{ConstantTerm, Formula, OneTerm, TerForConvenience, Term}
@@ -44,11 +45,13 @@ import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
+import ap.util.Seqs
+
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
 import scala.collection.breakOut
-import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, HashSet => MHashSet}
-import scala.util.control.Breaks.{break, breakable}
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
+                                 HashSet => MHashSet, LinkedHashMap}
 
 object OstrichSolver {
 
@@ -65,6 +68,12 @@ object OstrichSolver {
 
   protected[ostrich] case class BlockingActions(actions : Seq[Plugin.Action])
                      extends BackwardException
+
+  /**
+   * Up to which length are monadic length constraints turned into
+   * finite-state automata.
+   */
+  private val lengthToRegexBound = 100000
 
 }
 
@@ -99,82 +108,25 @@ class OstrichSolver(theory : OstrichStringTheory,
     val atoms = goal.facts.predConj
     val order = goal.order
 
-    val pos_length = atoms.positiveLitsWithPred(p(str_len))
-    val length_vars = new MHashSet[Atom]()
-    val regex_length_vars = new MHashSet[Atom]()
+    // extract regex constraints and function applications from the
+    // literals
+    val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
+    val regexes    = new ArrayBuffer[(Term, Automaton)]
+    val negEqs     = new ArrayBuffer[(Term, Term)]
+    val lengthVars = new MHashMap[Term, Term]
 
-    val regex_ineq_vars = new MHashSet[Term]()
-    val lower_bounds = new MHashMap[Term, Int]()
-    val upper_bounds = new MHashMap[Term, Int]()
-    var is_monadic = true
-    breakable {
-      for (atom <- pos_length) {
-        if (!atom(1).isConstant) {
-          if (atom(1).head._1.intValueSafe != 1){
-            // TODO handle case if the variable inside str_len is not 1
-            is_monadic = false
-            break
-          }
-          length_vars.add(atom)
-          if (atom(1).length > 1){
-            is_monadic = false
-            break
-          }
-          // Constraint is monadic and of the form int <= |str| <= int
-          // (Z, var) and (Y, var) appear -> Z and Y not monadic
-          if (!pos_length.exists(atom1 => atom1(1) == atom(1) && atom1(0) != atom(0))) {
-            val ineqs = goal.facts.arithConj.inEqs
-              .filter(ineq => ineq.head._2 == atom(1).head._2)
-
-
-            for (ineq <- ineqs) {
-              if (ineq.length > 2) {
-                is_monadic = false
-                break
-              }
-              // More than one variable appears in the ineq
-              if (!(ineq.head._2.constants.isEmpty || ineq.last._2.constants.isEmpty)){
-                is_monadic = false
-                break
-              }
-              if (ineq.head._1.intValueSafe < 0) {
-                if (ineq.length == 2) {
-                  upper_bounds.put(atom(0), ineq.last._1.intValueSafe)
-                  regex_ineq_vars.add(atom(0))
-                }
-                // if ineq length == 1, then unsat -- this should have been detected by preprocess
-              }
-              else {
-
-                // if ineq length == 1, then default lower bound = 0
-                if (ineq.length == 2) {
-                  regex_ineq_vars.add(atom(0))
-                  lower_bounds.put(atom(0), ineq.last._1.intValueSafe * -1)
-                }
-                if (ineq.length == 1){
-                  lower_bounds.put(atom(0), 0)
-                }
-              }
-
-            }
-
-          }
-          else {
-            is_monadic = false
-            break
-          }
-        }
-        else {
-          // Constraint is equality int = |str|
-          regex_length_vars.add(atom)
-        }
+    val is_monadic = lengthToRegexConverter(goal.facts) match {
+      case Some(rex) => {
+        regexes ++= rex
+        true
       }
+      case None =>
+        false
     }
 
-    val containsLength = (atoms positiveLitsWithPred p(str_len)).nonEmpty && !is_monadic
+    val containsLength =
+      (atoms positiveLitsWithPred p(str_len)).nonEmpty && !is_monadic
     val eagerMode = flags.eagerAutomataOperations
-
-
 
     val useLength = flags.useLength match {
 
@@ -201,20 +153,7 @@ class OstrichSolver(theory : OstrichStringTheory,
     val stringFunctionTranslator =
       new OstrichStringFunctionTranslator(theory, goal.facts)
 
-    // extract regex constraints and function applications from the
-    // literals
-    val funApps    = new ArrayBuffer[(PreOp, Seq[Term], Term)]
-    val regexes    = new ArrayBuffer[(Term, Automaton)]
-    val negEqs     = new ArrayBuffer[(Term, Term)]
-    val lengthVars = new MHashMap[Term, Term]
-
     ////////////////////////////////////////////////////////////////////////////
-
-    // If no len constraints needed, add the computed length regexes and add them
-    if (is_monadic){
-      regexes ++= createBoundedLengthRegex(regex_ineq_vars, lower_bounds,upper_bounds)
-      regexes ++= createEqRegex(regex_length_vars)
-    }
 
     def decodeRegexId(a : Atom, complemented : Boolean) : Unit = a(1) match {
       case LinearCombination.Constant(id) => {
@@ -423,20 +362,102 @@ class OstrichSolver(theory : OstrichStringTheory,
     }
   }
 
-  def createEqRegex(atoms: MHashSet[Atom]): ArrayBuffer[(Term, Automaton)] = {
-    val regexes = new ArrayBuffer[(Term,Automaton)]
-    for (atom <- atoms){
-      assert(atom(1).isConstant)
-      regexes += ((atom(0),BricsAutomaton.eqLengthAutomata(atom(1).head._1.intValueSafe)))
-    }
-    regexes
-  }
+  private def lengthToRegexConverter(facts : Conjunction)
+                                   : Option[Seq[(Term, Automaton)]] = {
+    val atoms         = facts.predConj
 
-  def createBoundedLengthRegex(terms: MHashSet[Term], lowerBounds :MHashMap[Term, Int], upperBounds: MHashMap[Term, Int]): ArrayBuffer[(Term, Automaton)] = {
-    val regexes = new ArrayBuffer[(Term,Automaton)]
-    for (variable <- terms){
-      regexes += ((variable, BricsAutomaton.boundedLengthAutomata(lowerBounds.getOrElse(variable, 0),upperBounds.get(variable))))
+    val pos_length    = atoms.positiveLitsWithPred(p(str_len))
+    val regexes       = new ArrayBuffer[(Term,Automaton)]
+
+    // We can only have monadic length constraints if length variables
+    // are related to unique string variables
+    val lenVar2strVar = new LinkedHashMap[ConstantTerm, Term]
+
+    object SmallInt {
+      def unapply(v : IdealInt) : Option[Int] =
+        if (v.abs <= lengthToRegexBound)
+          Some(v.intValueSafe)
+        else
+          None
     }
-    regexes
+
+    for (atom <- pos_length) (atom(0), atom(1)) match {
+      case (LinearCombination.Constant(_), _) => {
+        // Constant string, can be ignored, it will be handled by the
+        // reducer
+      }
+
+      case (strVar@LinearCombination.SingleTerm(_),
+            LinearCombination.Constant(SmallInt(len))) => {
+        // Constraint is equality int = |str|
+        regexes += ((strVar, BricsAutomaton.eqLengthAutomata(len)))
+      }
+
+      case (strVar@LinearCombination.SingleTerm(_),
+            LinearCombination.SingleTerm(lenVar : ConstantTerm))
+        if !(lenVar2strVar contains lenVar) => {
+        // more complicated length constraint, but might still be monadic
+        lenVar2strVar.put(lenVar, strVar)
+      }
+
+      case _ =>
+        return None
+    }
+
+    if (lenVar2strVar.isEmpty)
+      return Some(regexes.toSeq)
+
+    // Now we have to check that constraints about the length
+    // variables are monadic
+
+    for (f <- facts.arithConj.iterator)
+      if (!Seqs.disjoint(f.constants, lenVar2strVar.keySet)) {
+        if (f.constants.size != 1)
+          return None
+
+        val strVar = lenVar2strVar(f.constants.iterator.next)
+
+        def addRegex(const : IdealInt,
+                     aut : Int => Automaton) : Boolean = const match {
+          case SmallInt(smallConst) => {
+            regexes += ((strVar, aut(-smallConst)))
+            true
+          }
+          case _ => {
+            // then the constraint is not considered monadic
+            false
+          }
+        }
+
+        if (!f.positiveEqs.isTrue) {
+          // Constraint is equality int = |str|
+          if (!addRegex(f.positiveEqs.head.constant,
+                        BricsAutomaton.eqLengthAutomata(_)))
+            return None
+        }
+        if (!f.negativeEqs.isTrue) {
+          // Constraint is disequality int != |str|
+          if (!addRegex(f.negativeEqs.head.constant,
+                        !BricsAutomaton.eqLengthAutomata(_)))
+            return None
+        }
+        if (!f.inEqs.isTrue) {
+          val lc = f.inEqs.head
+          val success = lc.leadingCoeff.signum match {
+            case 1 =>
+              // Constraint is inequality int <= |str| ...
+              addRegex(lc.constant,
+                       len => BricsAutomaton.boundedLengthAutomata(len, None))
+            case -1 =>
+              // ... or int >= |str|
+              addRegex(-lc.constant,
+                       len => BricsAutomaton.boundedLengthAutomata(0,Some(len)))
+          }
+          if (!success)
+            return None
+        }
+      }
+
+    Some(regexes.toSeq)
   }
 }

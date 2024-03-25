@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Oliver Markgraf. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -168,7 +168,8 @@ object BricsAutomaton {
     builder.getAutomaton
   }
 
-  def boundedLengthAutomata(lowerBound : Int, upperBound : Option[Int]) : BricsAutomaton = {
+  def boundedLengthAutomata(lowerBound : Int,
+                            upperBound : Option[Int]) : BricsAutomaton = {
     val upperBoundValue = upperBound.getOrElse(-1)
     val numberOfStates = math.max(lowerBound,upperBoundValue)
 
@@ -188,7 +189,8 @@ object BricsAutomaton {
     builder.setAccept(states(numberOfStates), isAccepting = true)
     // no upper bound -> last state has loop
     if (upperBoundValue == -1){
-      builder.addTransition(states(numberOfStates), BricsTLabelOps.sigmaLabel,states(numberOfStates))
+      builder.addTransition(states(numberOfStates),
+                            BricsTLabelOps.sigmaLabel,states(numberOfStates))
     }
     builder.getAutomaton
   }
