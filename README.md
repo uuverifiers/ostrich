@@ -17,7 +17,7 @@ For experiments, OSTRICH can also be used through its [web interface.](https://e
 
 ## Input Format
 
-OSTRICH accepts constraints written using the [SMT-LIB theory of strings](http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml). At this point, most of the operators in the theory are supported, but inputs need to be straightline; see [this paper](https://dblp.uni-trier.de/rec/journals/pacmpl/ChenHLRW19.html?view=bibtex) for a definition.
+OSTRICH accepts constraints written using the [SMT-LIB theory of strings](http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml).
 
 In addition to the standardized SMT-LIB operators, OSTRICH can handle a number of further functions.
 
