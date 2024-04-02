@@ -13,7 +13,7 @@ TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
 LIBDIR=$BASEDIR/lib
 SCALA=scala
 JAVA=java
-export JAVA_OPTS="-Xss20000k -Xmx2000m"
+export JAVA_OPTS="-Xss100m -Xmx2000m"
 
 princessParams=()
 ostrichSolver=ostrich.OstrichStringTheory

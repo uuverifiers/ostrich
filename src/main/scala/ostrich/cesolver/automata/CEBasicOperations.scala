@@ -301,6 +301,7 @@ object CEBasicOperations {
       "CEBasicOperations.repeatUnwind: directly unwind automata, min = " + min + ", max = " + max
     )
     if (min > max) return BricsAutomatonWrapper.makeEmpty()
+    if (max == 0) return BricsAutomatonWrapper.makeAnyString()
     val auts = Seq.fill(max)(aut.clone())
     val ceAut = new CostEnrichedAutomaton
     val old2new =

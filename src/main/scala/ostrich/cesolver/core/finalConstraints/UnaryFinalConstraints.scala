@@ -45,7 +45,7 @@ class UnaryFinalConstraints(
       Seq(findModelAut),
       regTermsModel
     )
-    ParikhUtil.log(s"the model of ${strDataBaseId} is ${res}")
+    ParikhUtil.log(s"the model of ${strDataBaseId} is generated")
     res
   }
 }
