@@ -7,6 +7,8 @@ import ap.parser.ITerm
 import ostrich.cesolver.util.TermGenerator
 import ap.parser.IExpression
 import ap.basetypes.IdealInt
+import ostrich.cesolver.automata.BricsAutomatonWrapper
+import ostrich.cesolver.util.ParikhUtil
 
 object LengthCEPreOp {
 

@@ -162,6 +162,8 @@ class CostEnrichedAutomatonBase extends Automaton {
     seenlist.toSeq
   }
 
+  def size(): Int = _state2transtions.values.flatten.size
+
   /** Ask if state is accepting
     */
   def isAccept(q: State): Boolean = q.isAccept

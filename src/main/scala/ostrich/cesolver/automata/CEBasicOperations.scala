@@ -203,8 +203,7 @@ object CEBasicOperations {
     }
     ceAut.regsRelation = connectSimplify(Seq(aut1.regsRelation, aut2.regsRelation), IBinJunctor.And)
     ceAut.registers = aut1.registers ++ aut2.registers
-    // removeDeadState(ceAut)
-    ceAut
+    removeDeadState(ceAut)
   }
 
   def diffWithoutRegs(
@@ -281,7 +280,7 @@ object CEBasicOperations {
       min: Int
   ): CostEnrichedAutomatonBase = {
     ParikhUtil.log(
-      "CEBasicOperations.repeatUnwind: unwindly repeat automata, min = " + min + ", max = " + "inf"
+      "CEBasicOperations.repeatUnwind: directly unwind repeat automata, min = " + min + ", max = " + "inf"
     )
     registersMustBeEmpty(aut)
     BricsAutomatonWrapper(
@@ -578,11 +577,12 @@ object CEBasicOperations {
   ): CostEnrichedAutomatonBase = {
     if (aut.registers.isEmpty) return aut
     ParikhUtil.log(
-      "CEBasicOperations.minimizeHopcroftByVec: minimize automata according to registers updates"
+      "CEBasicOperations.minimizeHopcroftByVec: minimize automata according to registers updates (do not minimize if the automata is much larger after determinization)"
     )
     val afterEpsilonClosure = epsilonClosureByVec(aut)
-    val afterRemoveDead = removeDeadState(afterEpsilonClosure)
-    val afterDetermine = determinateByVec(afterRemoveDead)
+    val afterDetermine = determinateByVec(afterEpsilonClosure)
+    if (afterDetermine.size / 5 > aut.size)
+      return aut
     val s2representive = partitionStatesByVec(afterDetermine)
     val ceAut = new CostEnrichedAutomaton
     ceAut.initialState = s2representive(afterDetermine.initialState)
@@ -730,8 +730,7 @@ object CEBasicOperations {
     ParikhUtil.log(
       "CEBasicOperations.minimizeHopcroft: minimize automata"
     )
-    val afterRemoveDead = removeDeadState(aut)
-    val afterDetermine = determinate(afterRemoveDead)
+    val afterDetermine = determinate(aut)
     val s2representive = partitionStates(afterDetermine)
     val ceAut = new CostEnrichedAutomaton
     ceAut.initialState = s2representive(afterDetermine.initialState)
