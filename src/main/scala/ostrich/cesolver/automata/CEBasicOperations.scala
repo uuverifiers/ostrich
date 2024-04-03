@@ -344,7 +344,7 @@ object CEBasicOperations {
       max: Int,
       unwind: Boolean
   ): CostEnrichedAutomatonBase = {
-    if (unwind | aut.states.size * max < directlyUnwindUpper) {
+    if (unwind | max < directlyUnwindUpper / aut.states.size) {
       return repeatUnwind(aut, min, max)
     }
 
