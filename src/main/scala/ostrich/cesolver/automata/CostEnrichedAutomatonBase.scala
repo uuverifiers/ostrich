@@ -38,6 +38,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   type State = BState
   type TLabel = (Char, Char)
   type Update = Seq[Int]
+  type Transition = (State, TLabel, State, Update)
 
   private var stateidx = 0
 
@@ -175,7 +176,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   ): Iterable[(State, (Char, Char), Seq[Int])] =
     _state2transtions.get(s) match {
       case None      => Iterable.empty
-      case Some(set) => set
+      case Some(transSet) => transSet
     }
 
   def incomingTransitionsWithVec(
@@ -184,7 +185,7 @@ class CostEnrichedAutomatonBase extends Automaton {
     _state2incomingTranstions.get(t) match {
       case None => Iterable.empty
       // incoming states may not be reachable from initial state, filter them out
-      case Some(set) => set.filter(trans => states.toSet.contains(trans._1))
+      case Some(transSet) => transSet.filter(trans => states.toSet.contains(trans._1))
     }
 
   def transitionsWithVec: Iterable[(State, TLabel, State, Seq[Int])] = {

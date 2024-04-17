@@ -30,6 +30,15 @@ def unsat(db, solver):
     for file in unsat_files:
         print(file)
 
+def sat(db, solver):
+    trackinstance_db = storage.sqlitedb.TrackInstanceRepository(db)
+    track_db = storage.sqlitedb.TrackRepository(db, trackinstance_db)
+    result_db = storage.sqlitedb.ResultRepository(
+        db, track_db, trackinstance_db)
+    sat_files = result_db.getAllSatFilesForSolver(solver)
+    for file in sat_files:
+        print(file)
+
 def timeout(db, solver):
     trackinstance_db = storage.sqlitedb.TrackInstanceRepository(db)
     track_db = storage.sqlitedb.TrackRepository(db, trackinstance_db)
@@ -60,6 +69,7 @@ argparser.add_argument("--error", action=argparse.BooleanOptionalAction)
 argparser.add_argument("--unknown", action=argparse.BooleanOptionalAction)
 argparser.add_argument("--timeout", action=argparse.BooleanOptionalAction)
 argparser.add_argument("--unsat", action=argparse.BooleanOptionalAction)
+argparser.add_argument("--sat", action=argparse.BooleanOptionalAction)
 args = argparser.parse_args()
 db = storage.sqlitedb.DB(args.database)
 if(args.error):
@@ -70,3 +80,5 @@ if(args.unsat):
     unsat(db, args.solver)
 if(args.timeout):
     timeout(db, args.solver)
+if(args.sat):
+    sat(db, args.solver)

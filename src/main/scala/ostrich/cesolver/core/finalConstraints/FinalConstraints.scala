@@ -71,7 +71,7 @@ trait FinalConstraints {
   protected var regTermsModel: Map[ITerm, IdealInt] = Map()
 
   // accessors and mutators-------------------------------------------
-  def getModel: Option[Seq[Int]] =  ParikhUtil.findAcceptedWordByRegisters(auts, regTermsModel)
+  def getModel: Option[Seq[Int]] =  ParikhUtil.findAcceptedWord(auts, regTermsModel)
 
   def getRegsRelation: IFormula = connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
 

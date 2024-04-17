@@ -71,7 +71,7 @@ def run(params, eq, timeout, ploc, wd):
 def addRunner(addto):
     from functools import partial
     params = {
-        "unary": ["+cea"],
+        "unary": ["+cea", "+eager"],
         # "nuxmv-bmc": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=bmc", "+eager"],
         # "nuxmv-ic3": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=ic3", "+eager"],
         # "catra": ["+cea", "-ceaBackend=catra"],

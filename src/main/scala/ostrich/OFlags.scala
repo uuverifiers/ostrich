@@ -46,6 +46,10 @@ object OFlags {
     val Bmc, Ic3 = Value
   }
 
+  object findModelBased extends Enumeration {
+    val RegistersBased, TransBased = Value
+  } 
+
   /** Compile-time flag that can be used to switch on debugging output
     * throughout the theory.
     */
@@ -66,7 +70,7 @@ case class OFlags(
     backend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
     useCostEnriched: Boolean = false,
     debug: Boolean = false,
-    noAutomataProduct: Boolean = false,
+    lazyCheckConsistency: Boolean = false,
     NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
-
+    findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.RegistersBased
 )

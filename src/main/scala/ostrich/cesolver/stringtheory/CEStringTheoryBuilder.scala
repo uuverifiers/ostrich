@@ -37,6 +37,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   private var eager, minimizeAuts, useCostEnriched, debug = false
   private var backend: OFlags.CEABackend.Value = Unary
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
+  private var findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.RegistersBased
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -54,6 +55,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       CmdlMain.stackTraces = value
     case CmdlParser.Opt("log", value) =>
       ParikhUtil.logOpt = value
+
     case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("ceaBackend", "unary") =>
@@ -62,10 +64,17 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       backend = Catra
     case CmdlParser.ValueOpt("ceaBackend", "nuxmv") =>
       backend = Nuxmv
+
     case CmdlParser.ValueOpt("nuxmvBackend", "bmc") =>
       nuxmvBackend = OFlags.NuxmvBackend.Bmc
     case CmdlParser.ValueOpt("nuxmvBackend", "ic3") =>
       nuxmvBackend = OFlags.NuxmvBackend.Ic3
+
+    case CmdlParser.ValueOpt("findModelBased", "registers") =>
+      findModelBased = OFlags.findModelBased.RegistersBased
+    case CmdlParser.ValueOpt("findModelBased", "transitions") =>
+      findModelBased = OFlags.findModelBased.TransBased
+    
     case str =>
       super.parseParameter(str)
   }
@@ -107,7 +116,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         backend = backend,
         useCostEnriched = useCostEnriched,
         debug = debug,
-        NuxmvBackend = nuxmvBackend
+        NuxmvBackend = nuxmvBackend,
+        findModelBased = findModelBased
       )
     )
   }
