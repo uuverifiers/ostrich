@@ -34,6 +34,8 @@ help() {
     echo "  [+-]seq:                 Use the sequential string solver"
     echo "  -ceaBackend=<backend>:   Use <backend> for cost-enriched automata solver:   (default:unary)"
     echo "                                            (unary, nuxmv, catra)"
+    echo "  -findModelBased=<val>:   Use <val> for finding models:                      (default:registers)"
+    echo "                                            (registers, transitions)"
     echo "  -nuxmvBackend=<backend>: Use <backend> for cost-enriched automata solver:   (default:ic3)"
     echo "                                            (ic3, bmc)"
     echo " "
@@ -45,7 +47,7 @@ help() {
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | [+-]debug | [+-]log)
+        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | -findModelBased=* | [+-]debug | [+-]log)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else
