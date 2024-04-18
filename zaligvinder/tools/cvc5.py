@@ -64,7 +64,7 @@ def run(eq, timeout, ploc, wd, solver="1", param="60"):
                     "--lang=smt2",
                     "--strings-exp",
                     "--dump-models",
-                    "--tlimit-per",
+                    "--tlimit",
                     str(timeout) + "000",
                     smtfile,
                 ],

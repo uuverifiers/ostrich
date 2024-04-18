@@ -73,28 +73,36 @@ object ParikhUtil {
     None
   }
 
-
   private def findAcceptedWordByTransitionTimes(
-    aut: CostEnrichedAutomatonBase,
-    transModel: Map[Transition, IdealInt]
-  ) : Option[Seq[Int]] = {
-    val transTimes = transModel.map{case (tran, value) => (tran, value.intValue)}.filterNot(_._2 == 0)
+      aut: CostEnrichedAutomatonBase,
+      transModel: Map[Transition, IdealInt]
+  ): Option[Seq[Int]] = {
+    log("Finding the accepted word by transition times")
+    val transTimes = transModel
+      .map { case (tran, value) => (tran, value.intValue) }
+      .filterNot(_._2 == 0)
     val todoList = new ArrayStack[(State, Map[Transition, Int], Seq[Char])]
     val visited = new MHashSet[(State, Map[Transition, Int])]
     todoList.push((aut.initialState, transTimes, ""))
     visited.add((aut.initialState, transTimes))
-    while(!todoList.isEmpty){
+    while (!todoList.isEmpty) {
       ap.util.Timeout.check
       val (state, lastTransTimes, word) = todoList.pop()
-      if(aut.isAccept(state) && lastTransTimes.forall(_._2 == 0)){
+      if (aut.isAccept(state) && lastTransTimes.forall(_._2 == 0)) {
         return Some(word.map(_.toInt))
       }
-      for ((t, l, v) <- aut.outgoingTransitionsWithVec(state); if lastTransTimes.getOrElse((state, l, t, v), 0) > 0){
+      val sortedByVecSum =
+        aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum)
+      for (
+        (t, l, v) <- sortedByVecSum;
+        if lastTransTimes.getOrElse((state, l, t, v), 0) > 0
+      ) {
         val currentTrans = (state, l, t, v)
-        val newTransTimes = lastTransTimes.updated(currentTrans, lastTransTimes(currentTrans) - 1)
+        val newTransTimes =
+          lastTransTimes.updated(currentTrans, lastTransTimes(currentTrans) - 1)
         val newWord = word :+ l._1
         val newState = t
-        if(!visited.contains((newState, newTransTimes))){
+        if (!visited.contains((newState, newTransTimes))) {
           todoList.push((newState, newTransTimes, newWord))
           visited.add((newState, newTransTimes))
         }
@@ -108,17 +116,17 @@ object ParikhUtil {
       aut: CostEnrichedAutomatonBase,
       registersModel: Map[ITerm, IdealInt]
   ): Option[Seq[Int]] = {
-    log("Finding the accepted word by transition times")
     val termGen = TermGenerator()
-    val trans2Term = aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
-    val registerFormulas = aut.registers.map(r => r === registersModel(r)) 
+    val trans2Term =
+      aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
+    val registerFormulas = aut.registers.map(r => r === registersModel(r))
     val findingTransTimesF = connectSimplify(
       registerFormulas :+ parikhImage(aut, trans2Term),
       IBinJunctor.And
     )
     SimpleAPI.withProver(enableAssert = false) { p =>
       val consts = SymbolCollector.constants(findingTransTimesF)
-      p.addConstantsRaw(consts)  
+      p.addConstantsRaw(consts)
       p !! findingTransTimesF
       p.checkSat(false)
       val status = measure("findAcceptedWordByTransTimesComplete") {
@@ -130,25 +138,30 @@ object ParikhUtil {
       status match {
         case SimpleAPI.ProverStatus.Sat =>
           val model = p.partialModel
-          val transModel = aut.transitionsWithVec.map(t => (t, model.eval(trans2Term(t)).get)).toMap
+          val transModel = aut.transitionsWithVec
+            .map(t => (t, model.eval(trans2Term(t)).get))
+            .toMap
           return findAcceptedWordByTransitionTimes(aut, transModel)
-        case _ => throw new Exception("Cannot find the transtions model when finding the accepted word by transition times")
+        case _ =>
+          throw new Exception(
+            "Cannot find the transtions model when finding the accepted word by transition times"
+          )
       }
     }
     None
   }
 
-
   def findAcceptedWord(
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: Map[ITerm, IdealInt],
-      findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.RegistersBased
+      findModelBased: OFlags.findModelBased.Value =
+        OFlags.findModelBased.RegistersBased
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
     findModelBased match {
       case OFlags.findModelBased.RegistersBased =>
         findAcceptedWordByRegistersComplete(aut, registersModel)
-      case OFlags.findModelBased.TransBased => 
+      case OFlags.findModelBased.TransBased =>
         findAcceptedWordByTransTimesComplete(aut, registersModel)
       case _ => throw new Exception("Unsupported find model based method")
     }
@@ -162,7 +175,7 @@ object ParikhUtil {
     ParikhUtil.log(
       s"Computing the parikh image of the automaton A${aut.hashCode()}..."
     )
-    val termGen = TermGenerator() 
+    val termGen = TermGenerator()
     lazy val transtion2Term =
       if (explicitTrans2Term.nonEmpty) explicitTrans2Term
       else
@@ -282,13 +295,16 @@ object ParikhUtil {
     }
 
     val registerUpdateFormula =
-        connectSimplify(
-          for (r <- aut.registers; update <- Some(registerUpdateMap.getOrElse(r, Seq(i(0)))))
-            yield {
-              r === update.reduce{ (t1, t2) => t1 + t2 }
-            },
-          IBinJunctor.And
+      connectSimplify(
+        for (
+          r <- aut.registers;
+          update <- Some(registerUpdateMap.getOrElse(r, Seq(i(0))))
         )
+          yield {
+            r === update.reduce { (t1, t2) => t1 + t2 }
+          },
+        IBinJunctor.And
+      )
 
     /////////////////////////////////////////////////////////////////////////////////
     val parikhImage = connectSimplify(
@@ -305,8 +321,8 @@ object ParikhUtil {
     parikhImage
   }
 
-  /** find all states vec triple (s, t, v) such that s ---str--> t and vec is the sum of
-    * updates on the path
+  /** find all states vec triple (s, t, v) such that s ---str--> t and vec is
+    * the sum of updates on the path
     */
   def partition(
       aut: CostEnrichedAutomatonBase,
@@ -349,7 +365,7 @@ object ParikhUtil {
       yield t).toSet
   }
 
-    // check if the aut only accepts empty string
+  // check if the aut only accepts empty string
   def isEmptyString(aut: CostEnrichedAutomatonBase): Boolean = {
     aut.isAccept(aut.initialState) && aut.transitionsWithVec.isEmpty
   }
@@ -361,10 +377,12 @@ object ParikhUtil {
 
   def todo(s: Any, urgency: Int) = {
     if (logOpt)
-      println(s"TODO (urgency level $urgency):" + s + "  (lower level is more urgent)")
+      println(
+        s"TODO (urgency level $urgency):" + s + "  (lower level is more urgent)"
+      )
   }
   def bug(s: Any) = {
-      println("Bug:" + s)
+    println("Bug:" + s)
   }
 
   def log(s: Any) = {
