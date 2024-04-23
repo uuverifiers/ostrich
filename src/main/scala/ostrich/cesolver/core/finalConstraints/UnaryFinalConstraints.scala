@@ -59,9 +59,6 @@ class UnaryFinalConstraints(
   ParikhUtil.log("The checkSatAut: " + checkSatAut)
   ParikhUtil.log("The findModelAut: " + findModelAut)
 
-  if (ParikhUtil.debugOpt)
-    findModelAut.toDot("findModelAut" + strDataBaseId)
-
   override lazy val getCompleteLIA: IFormula = {
     connectSimplify(
       Seq(ParikhUtil.parikhImage(checkSatAut), checkSatAut.regsRelation),

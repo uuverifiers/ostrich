@@ -142,7 +142,6 @@ object CEBasicOperations {
     ParikhUtil.log(
       "CEBasicOperations.complement: compute the complement of automata"
     )
-    ParikhUtil.todo("Complement CEFAs that contain registers", 1)
     registersMustBeEmpty(aut)
     complementWithoutRegs(aut)
   }

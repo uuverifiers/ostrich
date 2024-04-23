@@ -350,7 +350,14 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         }
 
         val inputCEAs = inputRegexes.map{case (id, aut) => (id, automaton2CostEnriched(aut))}
-        val approxExp = new ParikhExploration(
+        ParikhUtil.todo("Add function to compute the size of the automaton before complement, and decide if use underapproximation or overapproximation", 0)
+        // val underApprox = ....
+        // val overApprox = ....
+        // if (needApproxForComplement(regexes) == true) {
+        //    if (underApprox.findModel) underApprox.findModel
+        //    else overApprox.findModel
+        // }
+        val decidableExp = new ParikhExploration(
           inputFuns.toSeq,
           inputCEAs.toSeq,
           strDatabase,
@@ -358,7 +365,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
           lProver,
           Internal2InputAbsy(goal.facts.arithConj)
         )
-        approxExp.findModel
+        decidableExp.findModel
       }
 
       ////////////////////////////////////////////////////////////////////////////
