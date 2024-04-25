@@ -11,8 +11,9 @@ import ostrich.automata.Automaton
 import ostrich.OstrichStringTheory
 import ostrich.cesolver.util.ParikhUtil
 import scala.collection.mutable.ArrayBuffer
+import ostrich.OFlags
 
-class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
+class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags) extends Regex2Aut(theory) {
   import theory.{
     re_inter,
     re_union,
@@ -31,7 +32,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
   }
   import theory.strDatabase.EncodedString
 
-  // TODO: heuristic algorithm for unwinding nested counting
+  // Heuristic algorithm for unwinding nested counting
   // 1. use a hashmap to map each counting iterm to a boolean value, where the counting term with true boolean value need to be unwinded
   // 2. to get the hashmap, we need to map each counting iterm in the nested counting to its max counting, and only the largest counting does not need to be unwinded
 
@@ -53,10 +54,16 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       val a = todo.pop()
       a match {
         case IFunApp(`re_loop` | `re_loop_?`, _) => {
-          val countingTree = buildCountingTree(a)
-          val tree2max = buildTree2Max(countingTree, a)
-          val notUnwind = buildNotUnwindList(countingTree, tree2max, a)
-          notUnwindSet ++= notUnwind
+          flags.countUnwindStrategy match {
+            case OFlags.NestedCountUnwindBy.MeetFirst => 
+              notUnwindSet += a
+            case OFlags.NestedCountUnwindBy.MinFisrt => {
+              val countingTree = buildCountingTree(a)
+              val tree2max = buildTree2Max(countingTree, a)
+              val notUnwind = buildNotUnwindList(countingTree, tree2max, a)
+              notUnwindSet ++= notUnwind
+            }
+          }
         }
           
         case IFunApp(`re_*` | `re_*?` | `re_+` | `re_+?` | `re_comp` , _) => {}

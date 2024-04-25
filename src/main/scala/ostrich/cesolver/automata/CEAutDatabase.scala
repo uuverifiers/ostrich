@@ -4,11 +4,12 @@ import ostrich.OstrichStringTheory
 import ostrich.automata.AutDatabase
 import ostrich.automata.Automaton
 import ostrich.cesolver.util.ParikhUtil
+import ostrich.OFlags
 
-class CEAutDatabase(theory: OstrichStringTheory, minimizeAutomata: Boolean)
-    extends AutDatabase(theory, minimizeAutomata) {
+class CEAutDatabase(theory: OstrichStringTheory, flags: OFlags)
+    extends AutDatabase(theory, flags.minimizeAutomata) {
 
-  override val regex2Aut = new Regex2CEAut(theory)
+  override val regex2Aut = new Regex2CEAut(theory, flags)
 
   override def id2ComplementedAutomaton(id: Int): Option[Automaton] =
     synchronized {
@@ -18,7 +19,7 @@ class CEAutDatabase(theory: OstrichStringTheory, minimizeAutomata: Boolean)
           (id2Regex get id) match {
             case Some(regex) => {
               val aut =
-                regex2Aut.buildComplementAut(regex, minimizeAutomata)
+                regex2Aut.buildComplementAut(regex, flags.minimizeAutomata)
               id2CompAut.put(id, aut)
               Some(aut)
             }

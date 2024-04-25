@@ -19,14 +19,14 @@ tracks = (
 solvers = {}
 for s in [
     tools.cvc5,
-    tools.ostrichCEA,
+    tools.ostrichBackend,
 ]:
     s.addRunner(solvers)
 
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("ca_bench+ostrich_cea")
+store = storage.SQLiteDB("ca_bench+ostrich_unary_all_backend")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 # verifiers = [""]

@@ -13,6 +13,6 @@ class CatraFinalConstraints(
     flags: OFlags
 ) extends BaselineFinalConstraints(strDataBaseId, auts, flags) {
     def getModel(termModel: Map[ITerm, IdealInt]): Option[Seq[Int]] = {
-        ParikhUtil.findAcceptedWord(auts, termModel, flags.findModelBased)
+        ParikhUtil.findAcceptedWord(auts, termModel, flags.findModelStrategy)
     }
 }

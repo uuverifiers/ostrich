@@ -46,9 +46,13 @@ object OFlags {
     val Bmc, Ic3 = Value
   }
 
-  object findModelBased extends Enumeration {
-    val RegistersBased, TransBased, Mixed = Value
+  object FindModelBy extends Enumeration {
+    val Registers, Transtions, Mixed = Value
   } 
+
+  object NestedCountUnwindBy extends Enumeration {
+    val MinFisrt, MeetFirst = Value
+  }
 
   /** Compile-time flag that can be used to switch on debugging output
     * throughout the theory.
@@ -72,6 +76,7 @@ case class OFlags(
     debug: Boolean = false,
     lazyCheckConsistency: Boolean = false,
     NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
-    findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.Mixed,
-    compApprox: Boolean = false
+    findModelStrategy: OFlags.FindModelBy.Value = OFlags.FindModelBy.Mixed,
+    countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt,
+    compApprox: Boolean = false,
 )

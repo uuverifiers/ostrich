@@ -156,18 +156,18 @@ object ParikhUtil {
   def findAcceptedWord(
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: Map[ITerm, IdealInt],
-      findModelBased: OFlags.findModelBased.Value
+      findModelStrategy: OFlags.FindModelBy.Value
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
     val useTransBasedLowerBound = 15
     val registersLogrithmSum =
       registersModel.map(_._2.intValue).filter(_ > 0).map(math.log(_)).sum
-    findModelBased match {
-      case OFlags.findModelBased.RegistersBased =>
+    findModelStrategy match {
+      case OFlags.FindModelBy.Registers =>
         findAcceptedWordByRegistersComplete(aut, registersModel)
-      case OFlags.findModelBased.TransBased =>
+      case OFlags.FindModelBy.Transtions =>
         findAcceptedWordByTransTimesComplete(aut, registersModel)
-      case OFlags.findModelBased.Mixed =>
+      case OFlags.FindModelBy.Mixed =>
         if (registersLogrithmSum > useTransBasedLowerBound)
           findAcceptedWordByTransTimesComplete(aut, registersModel)
         else

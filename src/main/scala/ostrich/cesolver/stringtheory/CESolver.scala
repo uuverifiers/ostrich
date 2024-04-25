@@ -421,6 +421,14 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         }
       }
 
+      def noCompApprox(regex: ITerm): Boolean = {
+        ParikhUtil.todo(
+          "Compute the approximate size of automaton for the regex, and give whether the complement of the regex need approximation",
+          0
+        )
+        return false
+      }
+
       val result = {
         ParikhUtil.todo(
           "Add function to compute the size of the automaton before complement, and decide if use underapproximation or overapproximation",
@@ -429,7 +437,11 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         lazy val underRes = checkSat(ApproxType.Under)
         lazy val overRes = checkSat(ApproxType.Over)
         lazy val decidableRes = checkSat(ApproxType.None)
-        if (negativeRegexes.isEmpty || !flags.compApprox) decidableRes
+        if (
+          negativeRegexes.isEmpty ||
+          !flags.compApprox ||
+          negativeRegexes.map(_._2).forall(noCompApprox)
+        ) decidableRes
         else if (underRes.isDefined) underRes
         else if (!overRes.isDefined) overRes
         else decidableRes

@@ -34,10 +34,12 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, minimizeAuts, useCostEnriched, debug, compApprox = false
+  private var eager, minimizeAuts, useCostEnriched, debug = false
+  private var compApprox = true
   private var backend: OFlags.CEABackend.Value = Unary
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
-  private var findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.Mixed
+  private var findModelStrategy: OFlags.FindModelBy.Value = OFlags.FindModelBy.Mixed
+  private var countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -72,13 +74,18 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.ValueOpt("nuxmvBackend", "ic3") =>
       nuxmvBackend = OFlags.NuxmvBackend.Ic3
 
-    case CmdlParser.ValueOpt("findModelBased", "registers") =>
-      findModelBased = OFlags.findModelBased.RegistersBased
-    case CmdlParser.ValueOpt("findModelBased", "transitions") =>
-      findModelBased = OFlags.findModelBased.TransBased
-    case CmdlParser.ValueOpt("findModelBased", "mixed") =>
-      findModelBased = OFlags.findModelBased.Mixed
+    case CmdlParser.ValueOpt("findModelBy", "registers") =>
+      findModelStrategy = OFlags.FindModelBy.Registers
+    case CmdlParser.ValueOpt("findModelBy", "transitions") =>
+      findModelStrategy = OFlags.FindModelBy.Transtions
+    case CmdlParser.ValueOpt("findModelBy", "mixed") =>
+      findModelStrategy = OFlags.FindModelBy.Mixed
     
+    case CmdlParser.ValueOpt("countUnwindBy", "minFirst") =>
+      countUnwindStrategy = OFlags.NestedCountUnwindBy.MinFisrt
+    case CmdlParser.ValueOpt("countUnwindBy", "meetFirst") =>
+      countUnwindStrategy = OFlags.NestedCountUnwindBy.MeetFirst
+
     case str =>
       super.parseParameter(str)
   }
@@ -121,7 +128,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         useCostEnriched = useCostEnriched,
         debug = debug,
         NuxmvBackend = nuxmvBackend,
-        findModelBased = findModelBased,
+        findModelStrategy = findModelStrategy,
+        countUnwindStrategy = countUnwindStrategy,
         compApprox = compApprox
       )
     )

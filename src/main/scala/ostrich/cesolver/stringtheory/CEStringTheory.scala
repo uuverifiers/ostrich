@@ -34,7 +34,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
   private val ceSolver = new CESolver(this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
-  lazy val ceAutDatabase = new CEAutDatabase(this, flags.minimizeAutomata)
+  lazy val ceAutDatabase = new CEAutDatabase(this, flags)
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
