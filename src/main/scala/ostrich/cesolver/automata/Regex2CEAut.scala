@@ -172,7 +172,7 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       aut
     }
 
-  def toCEAutomaton(
+  private def toCEAutomaton(
       t: ITerm,
       mustUnwind: Boolean,
       minimize: Boolean
@@ -261,6 +261,97 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       case _ => BricsAutomatonWrapper(toBAutomaton(t, true))
     }
 
+  private def toOverCEAutomaton(t: ITerm, noOver: Boolean, minimize: Boolean) : CostEnrichedAutomatonBase = t match {
+    case IFunApp(`re_++`, _) => {
+        val leaves = collectLeaves(t, re_++)
+        val leaveAuts =
+          for (s <- leaves) yield toOverCEAutomaton(s, false, minimize)
+        concatenate(leaveAuts)
+
+      }
+
+      case IFunApp(`re_union`, _) => {
+        val leaves = collectLeaves(t, re_union)
+        val (singletons, nonSingletons) = leaves partition {
+          case IFunApp(`str_to_re`, _) => true
+          case _                       => false
+        }
+
+        val singletonAuts =
+          if (singletons.isEmpty) {
+            List()
+          } else {
+            val strings =
+              (for (IFunApp(_, Seq(EncodedString(str))) <- singletons)
+                yield str).toArray
+            List(
+              BricsAutomatonWrapper(
+                BasicAutomata.makeStringUnion(strings: _*)
+              )
+            )
+          }
+
+        val nonSingletonAuts =
+          for (s <- nonSingletons) yield toOverCEAutomaton(s, false, minimize)
+
+        (singletonAuts, nonSingletonAuts) match {
+          case (Seq(aut), Seq()) => aut
+          case (Seq(), Seq(aut)) => aut
+          case (auts1, auts2) =>
+            union(auts1 ++ auts2)
+        }
+      }
+
+      case IFunApp(`re_inter`, _) => {
+        val leaves = collectLeaves(t, re_inter)
+        val leaveAuts =
+          for (s <- leaves) yield toOverCEAutomaton(s, false, minimize)
+        leaveAuts reduceLeft { (aut1, aut2) =>
+          intersection(aut1, aut2)
+        }
+      }
+
+      case IFunApp(`re_diff`, Seq(subt1, subt2)) =>
+        maybeMin(
+          diff(
+            toOverCEAutomaton(subt1, false, minimize),
+            toOverCEAutomaton(subt2, true, minimize)
+          ),
+          minimize
+        )
+
+      case IFunApp(`re_opt` | `re_opt_?`, Seq(subt)) =>
+        maybeMin(optional(toOverCEAutomaton(subt, false, minimize)), minimize)
+
+      case IFunApp(`re_comp`, Seq(subt)) =>
+        maybeMin(complement(toOverCEAutomaton(subt, true, minimize)), minimize)
+
+      case IFunApp(
+            `re_loop` | `re_loop_?`,
+            Seq(
+              IExpression.Const(IdealInt(n1)),
+              IExpression.Const(IdealInt(n2)),
+              subt
+            )
+          ) => {
+        val noOverUpper = 10
+        if (noOver || n2 < noOverUpper) {
+          maybeMin(repeatUnwind(toOverCEAutomaton(subt, true, minimize), n1, n2), minimize)
+        } else {
+          // over approximation
+          maybeMin(repeatUnwind(toOverCEAutomaton(subt, false, minimize), 0), minimize)
+        }
+      }
+      case IFunApp(`re_*` | `re_*?`, Seq(subt)) =>
+        maybeMin(repeatUnwind(toOverCEAutomaton(subt, false, minimize), 0), minimize)
+
+      case IFunApp(`re_+` | `re_+?`, Seq(subt)) =>
+        maybeMin(repeatUnwind(toOverCEAutomaton(subt, false, minimize), 1), minimize)
+
+      case _ => BricsAutomatonWrapper(toBAutomaton(t, minimize))
+
+  }
+
   override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
     ParikhUtil.log("Regex2CEAut.buildAut: build automaton for regex " + t)
     traverseRegex(t)
@@ -272,6 +363,21 @@ class Regex2CEAut(theory: OstrichStringTheory) extends Regex2Aut(theory) {
       "Regex2CEAut.buildComplementAut: build complement automaton for regex " + t
     )
     complement(toCEAutomaton(t, true, minimize))
+  }
+
+  def buildUnderComplementAut(t: ITerm, minimize: Boolean): Automaton = {
+    ParikhUtil.log(
+      "Regex2CEAut.buildOverComplementAut: build under approxismation complement automaton for regex " + t
+    )
+    complement(toOverCEAutomaton(t, false, minimize))
+  }
+
+  def buildOverComplementAut(t: ITerm, minimize: Boolean): Automaton = {
+    ParikhUtil.log(
+      "Regex2CEAut.buildOverComplementAut: build over approxismation complement automaton for regex " + t
+    )
+    traverseRegex(t)
+    overComplement(toCEAutomaton(t, false, minimize))
   }
 
 }

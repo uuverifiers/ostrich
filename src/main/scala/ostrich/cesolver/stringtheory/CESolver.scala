@@ -14,7 +14,6 @@ import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
 import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
-
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
@@ -28,6 +27,7 @@ import ap.parser.Internal2InputAbsy
 import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.ITerm
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
@@ -115,7 +115,6 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
     val order = goal.order
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
-    flags.eagerAutomataOperations
 
     val useLength = flags.useLength match {
 
@@ -206,12 +205,13 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
 
     ////////////////////////////////////////////////////////////////////////////
     // Collect negative literals
-
+    val negativeRegexes = new ArrayBuffer[(ITerm, ITerm)]
     for (a <- atoms.negativeLits) a.pred match {
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2ComplementedAutomaton(regex)
-        regexes += ((a.head, aut))
+        negativeRegexes += ((Internal2InputAbsy(a.head), regex))
+        // val aut = autDatabase.regex2ComplementedAutomaton(regex)
+        // regexes += ((a.head, aut))
       }
       case `str_in_re_id` =>
         decodeRegexId(a, true)
@@ -314,12 +314,12 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
       }
     }
 
-    val interestingTerms =
-      ((for ((t, _) <- regexes.iterator) yield t) ++
-        (for (
-          (_, args, res) <- funApps.iterator;
-          t <- args.iterator ++ Iterator(res)
-        ) yield t)).toSet
+    // val interestingTerms =
+    //   ((for ((t, _) <- regexes.iterator) yield t) ++
+    //     (for (
+    //       (_, args, res) <- funApps.iterator;
+    //       t <- args.iterator ++ Iterator(res)
+    //     ) yield t)).toSet
 
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
@@ -331,41 +331,108 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
 
         lengthProver addAssertion goal.facts.arithConj
 
-        for (t <- interestingTerms)
-          lengthVars.getOrElseUpdate(
-            t,
-            lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
-          )
+        // for (t <- interestingTerms)
+        //   lengthVars.getOrElseUpdate(
+        //     t,
+        //     lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
+        //   )
 
         implicit val o = lengthProver.order
         lengthProver
       }
 
-      val result = {
-        val inputFuns = funApps.map { case (op, args, result) =>
-          (op, args.map(Internal2InputAbsy(_)), Internal2InputAbsy(result))
-        }
-        val inputRegexes = regexes.map { case (t, aut) =>
-          (Internal2InputAbsy(t), aut)
-        }
+      val inputFuns = funApps.map { case (op, args, result) =>
+        (op, args.map(Internal2InputAbsy(_)), Internal2InputAbsy(result))
+      }
+      val inputPosRegexes = regexes.map { case (t, aut) =>
+        (Internal2InputAbsy(t), aut)
+      }
 
-        val inputCEAs = inputRegexes.map{case (id, aut) => (id, automaton2CostEnriched(aut))}
-        ParikhUtil.todo("Add function to compute the size of the automaton before complement, and decide if use underapproximation or overapproximation", 0)
-        // val underApprox = ....
-        // val overApprox = ....
-        // if (needApproxForComplement(regexes) == true) {
-        //    if (underApprox.findModel) underApprox.findModel
-        //    else overApprox.findModel
-        // }
-        val decidableExp = new ParikhExploration(
-          inputFuns.toSeq,
-          inputCEAs.toSeq,
-          strDatabase,
-          flags,
-          lProver,
-          Internal2InputAbsy(goal.facts.arithConj)
+      val inputPosCEFAs = inputPosRegexes.map { case (id, aut) =>
+        (id, automaton2CostEnriched(aut))
+      }
+      object ApproxType extends Enumeration {
+        val Under, Over, None = Value
+      }
+      def checkSat(approxT: ApproxType.Value) = approxT match {
+        case ApproxType.Under => {
+          lProver.push
+          val inputNegUnderCEFAs = negativeRegexes.map { case (t, regex) =>
+            (
+              t,
+              automaton2CostEnriched(
+                autDatabase.regex2Aut.buildUnderComplementAut(regex, false)
+              )
+            )
+          }
+          val inputUnderCEFAs = inputPosCEFAs ++ inputNegUnderCEFAs
+          val underApproxRes = new ParikhExploration(
+            inputFuns.toSeq,
+            inputUnderCEFAs.toSeq,
+            strDatabase,
+            flags,
+            lProver,
+            Internal2InputAbsy(goal.facts.arithConj)
+          ).findModel
+          lProver.pop
+          underApproxRes
+        }
+        case ApproxType.Over => {
+          lProver.push
+          val inputNegOverCEFAs = negativeRegexes.map { case (t, regex) =>
+            (
+              t,
+              automaton2CostEnriched(
+                autDatabase.regex2Aut.buildOverComplementAut(regex, false)
+              )
+            )
+          }
+          val inputOverCEFAs = inputPosCEFAs ++ inputNegOverCEFAs
+          val overApproxRes = new ParikhExploration(
+            inputFuns.toSeq,
+            inputOverCEFAs.toSeq,
+            strDatabase,
+            flags,
+            lProver,
+            Internal2InputAbsy(goal.facts.arithConj)
+          ).findModel
+          lProver.pop
+          overApproxRes
+        }
+        case ApproxType.None => {
+          val inputNegCEFAs = negativeRegexes.map { case (t, regex) =>
+            (
+              t,
+              automaton2CostEnriched(
+                autDatabase.regex2Aut.buildComplementAut(regex, false)
+              )
+            )
+          }
+          val inputCEFAs = inputPosCEFAs ++ inputNegCEFAs
+          val decidableExp = new ParikhExploration(
+            inputFuns.toSeq,
+            inputCEFAs.toSeq,
+            strDatabase,
+            flags,
+            lProver,
+            Internal2InputAbsy(goal.facts.arithConj)
+          )
+          decidableExp.findModel
+        }
+      }
+
+      val result = {
+        ParikhUtil.todo(
+          "Add function to compute the size of the automaton before complement, and decide if use underapproximation or overapproximation",
+          0
         )
-        decidableExp.findModel
+        lazy val underRes = checkSat(ApproxType.Under)
+        lazy val overRes = checkSat(ApproxType.Over)
+        lazy val decidableRes = checkSat(ApproxType.None)
+        if (negativeRegexes.isEmpty) decidableRes
+        else if (underRes.isDefined) underRes
+        else if (!overRes.isDefined) overRes
+        else decidableRes
       }
 
       ////////////////////////////////////////////////////////////////////////////

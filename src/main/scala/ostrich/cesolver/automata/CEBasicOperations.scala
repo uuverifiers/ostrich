@@ -22,6 +22,8 @@ import ostrich.automata.BricsTLabelEnumerator
 import ap.util.Timeout
 import ostrich.cesolver.automata
 import ap.parser.IBinJunctor
+import ap.parser.IBoolLit
+import ap.parser.IBinFormula
 
 object CEBasicOperations {
 
@@ -146,6 +148,70 @@ object CEBasicOperations {
     complementWithoutRegs(aut)
   }
 
+  def overComplement(
+      aut: CostEnrichedAutomatonBase
+  ): CostEnrichedAutomatonBase = {
+    ParikhUtil.log(
+      "CEBasicOperations.overComplement: compute the over complement of automata"
+    )
+    val afterDetermine = determinate(aut)
+    // totalize
+    val overCompAut = new CostEnrichedAutomatonBase
+    val alwaysAccpetS = overCompAut.newState()
+    val mergedOldAcceptStates = overCompAut.newState()
+    val old2new =
+      afterDetermine.states.map(s => (s, overCompAut.newState())).toMap
+    overCompAut.initialState = old2new(afterDetermine.initialState)
+    for ((s, l, t, vec) <- afterDetermine.transitionsWithVec) {
+      overCompAut.addTransition(old2new(s), l, old2new(t), vec :+ 0)
+      if (afterDetermine.isAccept(t)) 
+        overCompAut.addTransition(old2new(s), l, mergedOldAcceptStates, vec :+ 1)
+    }
+    for (s <- afterDetermine.states; if !afterDetermine.isAccept(s)) {
+      overCompAut.setAccept(old2new(s), true)
+    }
+    overCompAut.setAccept(alwaysAccpetS, true)
+    overCompAut.setAccept(mergedOldAcceptStates, true)
+    if (afterDetermine.isAccept(afterDetermine.initialState))
+      overCompAut.setAccept(overCompAut.initialState, true)
+    val totalizeNewTVec = Seq.fill(afterDetermine.registers.size)(0) :+ 0
+    overCompAut.addTransition(
+      alwaysAccpetS,
+      BricsTLabelOps.sigmaLabel,
+      alwaysAccpetS,
+      totalizeNewTVec
+    )
+    for (state <- overCompAut.states) {
+      val outLabelsSorted =
+        overCompAut.outgoingTransitionsWithVec(state).map(_._2).toSeq.sorted
+      var maxi = Char.MinValue
+      for ((min, max) <- outLabelsSorted) {
+        if (maxi < min)
+          overCompAut.addTransition(
+            state,
+            (maxi, (min.toInt - 1).toChar),
+            alwaysAccpetS,
+            totalizeNewTVec
+          )
+        if (max.toInt + 1 > maxi.toInt)
+          maxi = (max.toInt + 1).toChar
+        if (maxi <= Char.MaxValue)
+          overCompAut.addTransition(
+            state,
+            (maxi, Char.MaxValue),
+            alwaysAccpetS,
+            totalizeNewTVec
+          )
+      }
+    }
+    val totalizeNewReg = termGen.registerTerm
+    overCompAut.registers = afterDetermine.registers :+ totalizeNewReg
+    ParikhUtil.debugPrintln(totalizeNewReg)
+    ParikhUtil.debugPrintln(overCompAut.registers)
+    overCompAut.regsRelation = ((totalizeNewReg === 1) ===> !afterDetermine.regsRelation)
+    overCompAut
+  }
+
   def intersection[A <: CostEnrichedAutomatonBase](
       aut1: A,
       aut2: A
@@ -200,7 +266,10 @@ object CEBasicOperations {
         }
       }
     }
-    ceAut.regsRelation = connectSimplify(Seq(aut1.regsRelation, aut2.regsRelation), IBinJunctor.And)
+    ceAut.regsRelation = connectSimplify(
+      Seq(aut1.regsRelation, aut2.regsRelation),
+      IBinJunctor.And
+    )
     ceAut.registers = aut1.registers ++ aut2.registers
     removeDeadState(ceAut)
   }
@@ -263,7 +332,8 @@ object CEBasicOperations {
     )
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    ceAut.regsRelation = connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
+    ceAut.regsRelation =
+      connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
     ceAut
   }
 
@@ -324,7 +394,9 @@ object CEBasicOperations {
 
     for (aut <- auts; s <- aut.acceptingStates)
       ceAut.setAccept(old2new(s), false)
-    for ((aut, i) <- auts.zipWithIndex; if (i >= min-1); s <- aut.acceptingStates)
+    for (
+      (aut, i) <- auts.zipWithIndex; if (i >= min - 1); s <- aut.acceptingStates
+    )
       ceAut.setAccept(old2new(s), true)
     for (
       i <- (0 until auts.size - 1).reverse;
@@ -332,7 +404,8 @@ object CEBasicOperations {
     )
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    ceAut.regsRelation = connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
+    ceAut.regsRelation =
+      connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
     ceAut
   }
 
@@ -346,7 +419,9 @@ object CEBasicOperations {
       return repeatUnwind(aut, min, max)
     }
 
-    ParikhUtil.log("CEBasicOperations.repeat: symbolicly repeat automata, min = " + min + ", max = " + max)
+    ParikhUtil.log(
+      "CEBasicOperations.repeat: symbolicly repeat automata, min = " + min + ", max = " + max
+    )
 
     if (max < min || min < 0 || aut.isEmpty)
       return new BricsAutomatonWrapper(BasicAutomata.makeEmpty())
@@ -540,7 +615,9 @@ object CEBasicOperations {
     while (lastDistinguishedPairs.nonEmpty) {
       distinguishedPairs ++= lastDistinguishedPairs
       val newDistinguishedPairs = new MHashSet[Set[State]]()
-      for (pair <- lastDistinguishedPairs; if pair2dependingList.contains(pair)) {
+      for (
+        pair <- lastDistinguishedPairs; if pair2dependingList.contains(pair)
+      ) {
         for (dependingPair <- pair2dependingList(pair)) {
           if (!distinguishedPairs.contains(dependingPair)) {
             newDistinguishedPairs.add(dependingPair)
@@ -622,7 +699,8 @@ object CEBasicOperations {
         s <- curPowerSet; (t, l, v) <- aut.outgoingTransitionsWithVec(s);
         splitlbl <- outLabelsEnumerator.enumLabelOverlap(l)
       ) {
-        val newGoToStates = curTrans.getOrElse((splitlbl, v), MHashSet()).union(Set(t))
+        val newGoToStates =
+          curTrans.getOrElse((splitlbl, v), MHashSet()).union(Set(t))
         curTrans += ((splitlbl, v) -> newGoToStates)
       }
       for (((splitlbl, v), set) <- curTrans) {

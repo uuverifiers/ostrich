@@ -57,7 +57,9 @@ object ParikhUtil {
       if (aut.isAccept(state) && regsVal == registersValue) {
         return Some(word.map(_.toInt))
       }
-      for ((t, l, v) <- aut.outgoingTransitionsWithVec(state)) {
+      val sortedByVecSum =
+        aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum)
+      for ((t, l, v) <- sortedByVecSum) {
         val newRegsVal = sumVec(regsVal, v)
         val newWord = word :+ l._1
         val newState = t
