@@ -156,15 +156,22 @@ object ParikhUtil {
   def findAcceptedWord(
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: Map[ITerm, IdealInt],
-      findModelBased: OFlags.findModelBased.Value =
-        OFlags.findModelBased.RegistersBased
+      findModelBased: OFlags.findModelBased.Value
   ): Option[Seq[Int]] = {
     val aut = auts.reduce(_ product _)
+    val useTransBasedLowerBound = 15
+    val registersLogrithmSum =
+      registersModel.map(_._2.intValue).filter(_ > 0).map(math.log(_)).sum
     findModelBased match {
       case OFlags.findModelBased.RegistersBased =>
         findAcceptedWordByRegistersComplete(aut, registersModel)
       case OFlags.findModelBased.TransBased =>
         findAcceptedWordByTransTimesComplete(aut, registersModel)
+      case OFlags.findModelBased.Mixed =>
+        if (registersLogrithmSum > useTransBasedLowerBound)
+          findAcceptedWordByTransTimesComplete(aut, registersModel)
+        else
+          findAcceptedWordByRegistersComplete(aut, registersModel)
       case _ => throw new Exception("Unsupported find model based method")
     }
   }

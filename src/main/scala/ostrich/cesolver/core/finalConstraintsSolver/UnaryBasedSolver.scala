@@ -66,10 +66,9 @@ class UnaryBasedSolver(
         val partialModel = lProver.partialModel
         // update string model
         for (singleString <- constraints) {
-          singleString.setRegTermsModel(partialModel)
           val value = measure(
             s"${this.getClass.getSimpleName}::findStringModel"
-          )(singleString.getModel)
+          )(singleString.getModel(partialModel))
           value match {
             case Some(v) => res.updateModel(singleString.strDataBaseId, v)
             case None    => throw UnknownException("Cannot find string model")

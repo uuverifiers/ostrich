@@ -206,8 +206,6 @@ object CEBasicOperations {
     }
     val totalizeNewReg = termGen.registerTerm
     overCompAut.registers = afterDetermine.registers :+ totalizeNewReg
-    ParikhUtil.debugPrintln(totalizeNewReg)
-    ParikhUtil.debugPrintln(overCompAut.registers)
     overCompAut.regsRelation = ((totalizeNewReg === 1) ===> !afterDetermine.regsRelation)
     overCompAut
   }

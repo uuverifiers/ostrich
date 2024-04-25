@@ -326,8 +326,8 @@ class ParikhExploration(
         val backendSolver =
           flags.backend match {
             case Nuxmv    => new NuxmvBasedSolver(flags, inputFormula & freshIntegerTermFormula)
-            case Catra    => new CatraBasedSolver(inputFormula & freshIntegerTermFormula)
-            case Baseline => new BaselineSolver(lProver)
+            case Catra    => new CatraBasedSolver(flags, inputFormula & freshIntegerTermFormula)
+            case Baseline => new BaselineSolver(flags, lProver)
             case Unary =>    new UnaryBasedSolver(flags, lProver, freshIntegerTermFormula)
           }
 

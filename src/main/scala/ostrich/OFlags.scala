@@ -47,7 +47,7 @@ object OFlags {
   }
 
   object findModelBased extends Enumeration {
-    val RegistersBased, TransBased = Value
+    val RegistersBased, TransBased, Mixed = Value
   } 
 
   /** Compile-time flag that can be used to switch on debugging output
@@ -72,5 +72,6 @@ case class OFlags(
     debug: Boolean = false,
     lazyCheckConsistency: Boolean = false,
     NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
-    findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.RegistersBased
+    findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.Mixed,
+    compApprox: Boolean = false
 )

@@ -34,10 +34,10 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w: Int): Unit = ()
 
-  private var eager, minimizeAuts, useCostEnriched, debug = false
+  private var eager, minimizeAuts, useCostEnriched, debug, compApprox = false
   private var backend: OFlags.CEABackend.Value = Unary
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
-  private var findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.RegistersBased
+  private var findModelBased: OFlags.findModelBased.Value = OFlags.findModelBased.Mixed
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -55,6 +55,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       CmdlMain.stackTraces = value
     case CmdlParser.Opt("log", value) =>
       ParikhUtil.logOpt = value
+    case CmdlParser.Opt("compApprox", value) =>
+      compApprox = value
 
     case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
@@ -74,6 +76,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       findModelBased = OFlags.findModelBased.RegistersBased
     case CmdlParser.ValueOpt("findModelBased", "transitions") =>
       findModelBased = OFlags.findModelBased.TransBased
+    case CmdlParser.ValueOpt("findModelBased", "mixed") =>
+      findModelBased = OFlags.findModelBased.Mixed
     
     case str =>
       super.parseParameter(str)
@@ -117,7 +121,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         useCostEnriched = useCostEnriched,
         debug = debug,
         NuxmvBackend = nuxmvBackend,
-        findModelBased = findModelBased
+        findModelBased = findModelBased,
+        compApprox = compApprox
       )
     )
   }

@@ -29,7 +29,7 @@ class NuxmvBasedSolver(
   private var count = 0 // for debug
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    addConstraint(FinalConstraints.nuxmvACs(t, auts))
+    addConstraint(FinalConstraints.nuxmvACs(t, auts, flags))
   }
 
   private val Unreachable = """^.* is true$""".r
@@ -246,8 +246,7 @@ class NuxmvBasedSolver(
       ParikhUtil.log(s"Nuxmv backend solver integerModel: $integerModel")
       // string model
       for (c <- constraints) {
-        c.setRegTermsModel(integerModel)
-        c.getModel match {
+        c.getModel(integerModel) match {
           case Some(value) => 
             c.auts.reduce{(aut1, aut2) => aut1.asInstanceOf[CostEnrichedAutomatonBase] product aut2}.toDot(c.strDataBaseId.toString())
             result.updateModel(c.strDataBaseId, value)

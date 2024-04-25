@@ -429,7 +429,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         lazy val underRes = checkSat(ApproxType.Under)
         lazy val overRes = checkSat(ApproxType.Over)
         lazy val decidableRes = checkSat(ApproxType.None)
-        if (negativeRegexes.isEmpty) decidableRes
+        if (negativeRegexes.isEmpty || !flags.compApprox) decidableRes
         else if (underRes.isDefined) underRes
         else if (!overRes.isDefined) overRes
         else decidableRes

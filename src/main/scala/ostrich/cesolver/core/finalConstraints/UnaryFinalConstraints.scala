@@ -8,12 +8,14 @@ import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
 import ap.parser.IBinJunctor
+import ap.api.PartialModel
+import ap.basetypes.IdealInt
 
 class UnaryFinalConstraints(
-    override val strDataBaseId: ITerm,
-    override val auts: Seq[CostEnrichedAutomatonBase],
+    strDataBaseId: ITerm,
+    auts: Seq[CostEnrichedAutomatonBase],
     flags: OFlags
-) extends BaselineFinalConstraints(strDataBaseId, auts) {
+) extends BaselineFinalConstraints(strDataBaseId, auts, flags) {
 
   private def removeDupTransitions(aut: CostEnrichedAutomatonBase) : CostEnrichedAutomatonBase = {
     val ceAut = new CostEnrichedAutomatonBase
@@ -68,11 +70,14 @@ class UnaryFinalConstraints(
 
   override def getRegsRelation: IFormula = checkSatAut.regsRelation
 
-  override def getModel: Option[Seq[Int]] = {
+  override def getModel(partialModel: PartialModel): Option[Seq[Int]] = {
     ParikhUtil.log("Get model of string term " + strDataBaseId)
+    var registersModel = Map[ITerm, IdealInt]()
+    for (term <- auts.flatMap(_.registers))
+      registersModel += (term -> FinalConstraints.evalTerm(term, partialModel))
     val res = ParikhUtil.findAcceptedWord(
       Seq(findModelAut),
-      regTermsModel,
+      registersModel,
       flags.findModelBased
     )
     ParikhUtil.log(s"The model of ${strDataBaseId} is generated")

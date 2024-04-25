@@ -31,11 +31,12 @@ help() {
     echo " "
     echo " String solver options:"
     echo "  [+-]cea:                 Use the cost-enriched automata solver              (default:-)"
-    echo "  [+-]seq:                 Use the sequential string solver"
+    echo "  [+-]seq:                 Use the sequential string solver                   (default:-)"
+    echo "  [+-]compApprox:          Use the approximate solver for complement          (default:-)"
     echo "  -ceaBackend=<backend>:   Use <backend> for cost-enriched automata solver:   (default:unary)"
     echo "                                            (unary, nuxmv, catra)"
-    echo "  -findModelBased=<val>:   Use <val> for finding models:                      (default:registers)"
-    echo "                                            (registers, transitions)"
+    echo "  -findModelBased=<val>:   Use <val> for finding models:                      (default:mixed)"
+    echo "                                            (registers, transitions, mixed)"
     echo "  -nuxmvBackend=<backend>: Use <backend> for cost-enriched automata solver:   (default:ic3)"
     echo "                                            (ic3, bmc)"
     echo " "
@@ -47,7 +48,7 @@ help() {
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | -findModelBased=* | [+-]debug | [+-]log)
+        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | -findModelBased=* | [+-]debug | [+-]log | [+-]compApprox)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else

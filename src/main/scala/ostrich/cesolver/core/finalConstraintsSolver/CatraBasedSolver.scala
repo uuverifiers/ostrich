@@ -64,11 +64,12 @@ import ostrich.cesolver.core.finalConstraints.CatraFinalConstraints
 import ostrich.cesolver.core.finalConstraints.FinalConstraints
 
 class CatraBasedSolver(
+    flags: OFlags,
     private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    addConstraint(FinalConstraints.catraACs(t, auts))
+    addConstraint(FinalConstraints.catraACs(t, auts, flags))
   }
 
   def runInstances(arguments: CommandLineOptions): Try[CatraResult] = {
@@ -239,10 +240,9 @@ class CatraBasedSolver(
 
         // update string model
         for (singleString <- constraints) {
-          singleString.setRegTermsModel(termModel)
           val value = ParikhUtil.measure(
             s"${this.getClass().getSimpleName()}::findStringModel"
-          )(singleString.getModel)
+          )(singleString.getModel(termModel))
           value match {
             case Some(v) => result.updateModel(singleString.strDataBaseId, v)
             case None    => throw UnknownException("Cannot find string model")

@@ -4,8 +4,10 @@ package ostrich.cesolver.core.finalConstraints
 import ap.parser.ITerm
 
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ostrich.OFlags
 
 class NuxmvFinalConstraints(
-    override val strDataBaseId: ITerm,
-    override val auts: Seq[CostEnrichedAutomatonBase]
-) extends FinalConstraints 
+    strDataBaseId: ITerm,
+    auts: Seq[CostEnrichedAutomatonBase],
+    flags: OFlags
+) extends CatraFinalConstraints(strDataBaseId, auts, flags)
