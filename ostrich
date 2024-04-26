@@ -35,10 +35,12 @@ help() {
     echo "  [+-]compApprox:          Use the approximate solver for complement          (default:+)"
     echo "  -ceaBackend=<backend>:   Use <backend> for cost-enriched automata solver:   (default:unary)"
     echo "                                            (unary, nuxmv, catra)"
-    echo "  -findModelBy=<strategy>:   Use <strategy> for finding models:                         (default:mixed)"
+    echo "  -findModelBy=<strategy>:   Use <strategy> for finding models:               (default:mixed)"
     echo "                                            (registers, transitions, mixed)"
-    echo "  -countUnwindBy=<strategy>: Use <strategy> for counting unwinding:                     (default:minFirst)"
+    echo "  -countUnwindBy=<strategy>: Use <strategy> for counting unwinding:           (default:minFirst)"
     echo "                                            (minFirst, meetFirst)"
+    echo "  -searchStringBy=<strategy>: Use <strategy> for searching accept strings   (default:moreUpdatesFirst)"
+    echo "                                            (moreUpdatesFirst, random)"
     echo "  -nuxmvBackend=<backend>: Use <backend> for cost-enriched automata solver:   (default:ic3)"
     echo "                                            (ic3, bmc)"
     echo " "
@@ -50,7 +52,7 @@ help() {
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | -findModelBy=* | -countUnwindBy=* | [+-]debug | [+-]log | [+-]compApprox)
+        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | -findModelBy=* | -countUnwindBy=* | -searchStringBy=* | [+-]debug | [+-]log | [+-]compApprox)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else

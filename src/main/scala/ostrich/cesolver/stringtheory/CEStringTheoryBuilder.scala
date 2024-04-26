@@ -40,6 +40,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
   private var findModelStrategy: OFlags.FindModelBy.Value = OFlags.FindModelBy.Mixed
   private var countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt
+  private var searchStringBy: OFlags.SearchStringBy.Value = OFlags.SearchStringBy.MoreUpdatesFirst
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -81,6 +82,11 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
     case CmdlParser.ValueOpt("findModelBy", "mixed") =>
       findModelStrategy = OFlags.FindModelBy.Mixed
     
+    case CmdlParser.ValueOpt("searchStringBy", "moreUpdatesFirst") =>
+      searchStringBy = OFlags.SearchStringBy.MoreUpdatesFirst
+    case CmdlParser.ValueOpt("searchStringBy", "random") =>
+      searchStringBy = OFlags.SearchStringBy.Random
+
     case CmdlParser.ValueOpt("countUnwindBy", "minFirst") =>
       countUnwindStrategy = OFlags.NestedCountUnwindBy.MinFisrt
     case CmdlParser.ValueOpt("countUnwindBy", "meetFirst") =>
@@ -130,6 +136,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         NuxmvBackend = nuxmvBackend,
         findModelStrategy = findModelStrategy,
         countUnwindStrategy = countUnwindStrategy,
+        searchStringStrategy = searchStringBy,
         compApprox = compApprox
       )
     )

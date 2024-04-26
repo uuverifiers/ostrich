@@ -37,7 +37,7 @@ class BaselineFinalConstraints(
     var registersModel = Map[ITerm, IdealInt]()
     for (term <- auts.flatMap(_.registers))
       registersModel += (term -> FinalConstraints.evalTerm(term, partialModel))
-    ParikhUtil.findAcceptedWord(auts, registersModel, flags.findModelStrategy)
+    ParikhUtil.findAcceptedWord(auts, registersModel, flags)
   }
 
 }

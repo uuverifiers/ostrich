@@ -16,6 +16,10 @@ import ap.parser.{IFormula, IBinJunctor, IExpression}
 import ap.api.SimpleAPI
 import ap.parser.SymbolCollector
 import ostrich.OFlags
+import ap.parser.IFunction
+import scala.collection.mutable.Stack
+import scala.collection.immutable.VectorBuilder
+import ap.parser.IFunApp
 
 object ParikhUtil {
 
@@ -35,7 +39,8 @@ object ParikhUtil {
 
   def findAcceptedWordByRegistersComplete(
       aut: CostEnrichedAutomatonBase,
-      registersModel: Map[ITerm, IdealInt]
+      registersModel: Map[ITerm, IdealInt],
+      flags: OFlags
   ): Option[Seq[Int]] = {
     log("Finding the accepted word by registers")
     val registersValue = aut.registers.map(registersModel(_).intValue)
@@ -57,8 +62,12 @@ object ParikhUtil {
       if (aut.isAccept(state) && regsVal == registersValue) {
         return Some(word.map(_.toInt))
       }
-      val sortedByVecSum =
+      val sortedByVecSum = if (
+        flags.searchStringStrategy == OFlags.SearchStringBy.MoreUpdatesFirst
+      )
         aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum)
+      else
+        aut.outgoingTransitionsWithVec(state)
       for ((t, l, v) <- sortedByVecSum) {
         val newRegsVal = sumVec(regsVal, v)
         val newWord = word :+ l._1
@@ -77,7 +86,8 @@ object ParikhUtil {
 
   private def findAcceptedWordByTransitionTimes(
       aut: CostEnrichedAutomatonBase,
-      transModel: Map[Transition, IdealInt]
+      transModel: Map[Transition, IdealInt],
+      flags: OFlags
   ): Option[Seq[Int]] = {
     log("Finding the accepted word by transition times")
     val transTimes = transModel
@@ -93,8 +103,12 @@ object ParikhUtil {
       if (aut.isAccept(state) && lastTransTimes.forall(_._2 == 0)) {
         return Some(word.map(_.toInt))
       }
-      val sortedByVecSum =
+      val sortedByVecSum = if (
+        flags.searchStringStrategy == OFlags.SearchStringBy.MoreUpdatesFirst
+      )
         aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum)
+      else
+        aut.outgoingTransitionsWithVec(state)
       for (
         (t, l, v) <- sortedByVecSum;
         if lastTransTimes.getOrElse((state, l, t, v), 0) > 0
@@ -116,7 +130,8 @@ object ParikhUtil {
   // Compute the transitions times based on registers values and find the string by DFS for each transition
   def findAcceptedWordByTransTimesComplete(
       aut: CostEnrichedAutomatonBase,
-      registersModel: Map[ITerm, IdealInt]
+      registersModel: Map[ITerm, IdealInt],
+      flags: OFlags
   ): Option[Seq[Int]] = {
     val termGen = TermGenerator()
     val trans2Term =
@@ -143,7 +158,7 @@ object ParikhUtil {
           val transModel = aut.transitionsWithVec
             .map(t => (t, model.eval(trans2Term(t)).get))
             .toMap
-          return findAcceptedWordByTransitionTimes(aut, transModel)
+          return findAcceptedWordByTransitionTimes(aut, transModel, flags)
         case _ =>
           throw new Exception(
             "Cannot find the transtions model when finding the accepted word by transition times"
@@ -156,22 +171,23 @@ object ParikhUtil {
   def findAcceptedWord(
       auts: Seq[CostEnrichedAutomatonBase],
       registersModel: Map[ITerm, IdealInt],
-      findModelStrategy: OFlags.FindModelBy.Value
+      flags: OFlags
   ): Option[Seq[Int]] = {
+    log(s"Finding Accepted word, the heuritics are: findModelBy ${flags.findModelStrategy} and searchStringBy ${flags.searchStringStrategy}")
     val aut = auts.reduce(_ product _)
     val useTransBasedLowerBound = 15
     val registersLogrithmSum =
       registersModel.map(_._2.intValue).filter(_ > 0).map(math.log(_)).sum
-    findModelStrategy match {
+    flags.findModelStrategy match {
       case OFlags.FindModelBy.Registers =>
-        findAcceptedWordByRegistersComplete(aut, registersModel)
+        findAcceptedWordByRegistersComplete(aut, registersModel, flags)
       case OFlags.FindModelBy.Transtions =>
-        findAcceptedWordByTransTimesComplete(aut, registersModel)
+        findAcceptedWordByTransTimesComplete(aut, registersModel, flags)
       case OFlags.FindModelBy.Mixed =>
         if (registersLogrithmSum > useTransBasedLowerBound)
-          findAcceptedWordByTransTimesComplete(aut, registersModel)
+          findAcceptedWordByTransTimesComplete(aut, registersModel, flags)
         else
-          findAcceptedWordByRegistersComplete(aut, registersModel)
+          findAcceptedWordByRegistersComplete(aut, registersModel, flags)
       case _ => throw new Exception("Unsupported find model based method")
     }
   }

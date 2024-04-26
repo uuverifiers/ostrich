@@ -28,6 +28,7 @@ import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
+import ap.parser.IFunApp
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
@@ -426,7 +427,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
           "Compute the approximate size of automaton for the regex, and give whether the complement of the regex need approximation",
           0
         )
-        return false
+        val coutingSize = autDatabase.regex2Aut.sizeOfCountingSubRegexes(regex)
+        return coutingSize < 50
       }
 
       val result = {

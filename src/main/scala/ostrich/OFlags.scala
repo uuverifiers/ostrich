@@ -54,6 +54,10 @@ object OFlags {
     val MinFisrt, MeetFirst = Value
   }
 
+  object SearchStringBy extends Enumeration{
+    val MoreUpdatesFirst, Random = Value
+  }
+
   /** Compile-time flag that can be used to switch on debugging output
     * throughout the theory.
     */
@@ -77,6 +81,7 @@ case class OFlags(
     lazyCheckConsistency: Boolean = false,
     NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
     findModelStrategy: OFlags.FindModelBy.Value = OFlags.FindModelBy.Mixed,
+    searchStringStrategy: OFlags.SearchStringBy.Value = OFlags.SearchStringBy.MoreUpdatesFirst,
     countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt,
     compApprox: Boolean = false,
 )
