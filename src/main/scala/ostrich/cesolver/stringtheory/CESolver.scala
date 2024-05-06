@@ -357,6 +357,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
       }
       def checkSat(approxT: ApproxType.Value) = approxT match {
         case ApproxType.Under => {
+          ParikhUtil.log("Begin under approximation")
           lProver.push
           val inputNegUnderCEFAs = negativeRegexes.map { case (t, regex) =>
             (
@@ -376,10 +377,12 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
             Internal2InputAbsy(goal.facts.arithConj)
           ).findModel
           lProver.pop
+          ParikhUtil.log("End under approximation")
           underApproxRes
         }
         case ApproxType.Over => {
           lProver.push
+          ParikhUtil.log("Begin over approximation")
           val inputNegOverCEFAs = negativeRegexes.map { case (t, regex) =>
             (
               t,
@@ -398,6 +401,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
             Internal2InputAbsy(goal.facts.arithConj)
           ).findModel
           lProver.pop
+          ParikhUtil.log("End over approximation")
           overApproxRes
         }
         case ApproxType.None => {
@@ -428,7 +432,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
           0
         )
         val coutingSize = autDatabase.regex2Aut.sizeOfCountingSubRegexes(regex)
-        return coutingSize < 50
+        return coutingSize < ParikhUtil.MIN_COUNTING_SIZE_APPROX
       }
 
       val result = {

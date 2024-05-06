@@ -46,16 +46,16 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
   // 1. use a hashmap to map each counting iterm to a boolean value, where the counting term with true boolean value need to be unwinded
   // 2. to get the hashmap, we need to map each counting iterm in the nested counting to its max counting, and only the largest counting does not need to be unwinded
 
-  private val notUnwindSet = new MHashSet[ITerm]
-  private var id = 0
-  private val countTerm2id = new MHashMap[ITerm, Int]
+  private val symbolicUnwindSet = new MHashSet[ITerm]
+  // private var id = 0
+  // private val countTerm2id = new MHashMap[ITerm, Int]
 
-  private def findNoUnwindCountFrom(t: ITerm) = {
+  private def findSymbolicUnwindCount(t: ITerm) = {
     ParikhUtil.log(
       "Traverse the counting iterms in the regex t and check if it is nested. Use heuritic algorithm to find the unwinded counting terms and update counting2unwind map"
     )
-
-    initCounting2id(t)
+    symbolicUnwindSet.clear()
+    // initCounting2id(t)
 
     val todo = new Stack[ITerm]
     todo push t
@@ -66,12 +66,13 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
         case IFunApp(`re_loop` | `re_loop_?`, _) => {
           flags.countUnwindStrategy match {
             case OFlags.NestedCountUnwindBy.MeetFirst =>
-              notUnwindSet += a
+              symbolicUnwindSet += a
             case OFlags.NestedCountUnwindBy.MinFisrt => {
-              val countingTree = buildCountingTree(a)
-              val tree2max = buildTree2Max(countingTree, a)
-              val notUnwind = buildNotUnwindList(countingTree, tree2max, a)
-              notUnwindSet ++= notUnwind
+              // val countingTree = buildCountingTree(a)
+              // val tree2max = buildTree2Max(countingTree, a)
+              // val notUnwind = buildNotUnwindList(countingTree, tree2max, a)
+              // symbolicUnwindSet ++= notUnwind
+              sizeWithRegsCount(a, false)
             }
           }
         }
@@ -85,18 +86,18 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
     }
   }
 
-  private def initCounting2id(t: ITerm) = {
+  private def allUnwind(t: ITerm): Unit = {
     val todo = new Stack[ITerm]
     todo push t
 
     while (!todo.isEmpty) {
       val a = todo.pop()
       a match {
-        case IFunApp(`re_loop` | `re_loop_?`, args) => {
-          countTerm2id += a -> id
-          id += 1
-          todo push args(2)
+        case IFunApp(`re_loop` | `re_loop_?`, _) => {
+          symbolicUnwindSet -= a
         }
+
+        case IFunApp(`re_*` | `re_*?` | `re_+` | `re_+?` | `re_comp`, _) => {}
 
         case IFunApp(_, args) =>
           for (arg <- args) todo push arg
@@ -104,6 +105,79 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
       }
     }
   }
+
+  private def sizeWithRegsCount(t: ITerm, unwind: Boolean): (Int, Int) = {
+
+    t match {
+      case IFunApp(
+            `re_loop` | `re_loop_?`,
+            Seq(_, IExpression.Const(IdealInt(upper)), subt)
+          ) => {
+        if (unwind) {
+          val (subtSize, subtRegs) = sizeWithRegsCount(subt, unwind)
+          (subtSize * upper, subtRegs * upper)
+        } else {
+          // the term t is unwinded
+          val (subtSize1, subtRegs1) = sizeWithRegsCount(subt, false)
+          val (tSize1, tRegs1) = (subtSize1 * upper, subtRegs1 * upper)
+          // the term t is not unwinded
+          val (subtSize2, subtRegs2) = sizeWithRegsCount(subt, true)
+          val (tSize2, tRegs2) = (subtSize2, subtRegs2 + 1)
+          if (
+            math.log(tSize1) + math.log(tRegs1+1) < math
+              .log(tSize2) + math.log(tRegs2+1)
+          ) {
+            (tSize1, tRegs1)
+          } else {
+            symbolicUnwindSet += t
+            allUnwind(subt)
+            (tSize2, tRegs2)
+          }
+        }
+      }
+
+      case IFunApp(`re_++`, _) => {
+        val leaves = collectLeaves(t, re_++)
+        val a = leaves.map(sizeWithRegsCount(_, unwind)).toMap
+        (a.keys.sum, a.values.sum)
+      }
+
+      case IFunApp(`re_union`, _) => {
+        val leaves = collectLeaves(t, re_union)
+        val a = leaves.map(sizeWithRegsCount(_, unwind)).toMap
+        (a.keys.sum, a.values.sum + leaves.size)
+      }
+
+      case IFunApp(`re_inter`, _) => {
+        val leaves = collectLeaves(t, re_inter)
+        val a = leaves.map(sizeWithRegsCount(_, unwind)).toMap
+        (a.keys.toSeq.sorted.last, a.values.sum)
+      }
+
+      case _ =>
+        (sizeOfAut(t), 0)
+    }
+  }
+
+  // private def initCounting2id(t: ITerm) = {
+  //   val todo = new Stack[ITerm]
+  //   todo push t
+
+  //   while (!todo.isEmpty) {
+  //     val a = todo.pop()
+  //     a match {
+  //       case IFunApp(`re_loop` | `re_loop_?`, args) => {
+  //         countTerm2id += a -> id
+  //         id += 1
+  //         todo push args(2)
+  //       }
+
+  //       case IFunApp(_, args) =>
+  //         for (arg <- args) todo push arg
+  //       case _ =>
+  //     }
+  //   }
+  // }
 
   private def buildCountingTree(
       countingParent: ITerm
@@ -136,9 +210,9 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
       tree: Map[ITerm, Seq[ITerm]],
       root: ITerm
   ): Map[ITerm, Int] = {
-    ParikhUtil.log(s"buildTree2Max tree is ${tree.map { case (key, values) =>
-        countTerm2id(key) -> values.map(countTerm2id(_))
-      }}, root is ${countTerm2id { root }}")
+    // ParikhUtil.log(s"buildTree2Max tree is ${tree.map { case (key, values) =>
+    //     countTerm2id(key) -> values.map(countTerm2id(_))
+    //   }}, root is ${countTerm2id { root }}")
     val tree2max = MHashMap[ITerm, Int]()
     val rootUpperBound = root match {
       case IFunApp(
@@ -167,11 +241,11 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
       tree2max: Map[ITerm, Int],
       root: ITerm
   ): Seq[ITerm] = {
-    ParikhUtil.log(
-      s"tree2max is ${tree2max.map { case (t, i) => countTerm2id(t) -> i }}, tree is ${tree.map {
-          case (key, values) => countTerm2id(key) -> values.map(countTerm2id(_))
-        }}, root is ${countTerm2id { root }}"
-    )
+    // ParikhUtil.log(
+    //   s"tree2max is ${tree2max.map { case (t, i) => countTerm2id(t) -> i }}, tree is ${tree.map {
+    //       case (key, values) => countTerm2id(key) -> values.map(countTerm2id(_))
+    //     }}, root is ${countTerm2id { root }}"
+    // )
     root match {
       case IFunApp(
             `re_loop` | `re_loop_?`,
@@ -289,10 +363,10 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
               subt
             )
           ) =>
-        val needUnwind = mustUnwind | !notUnwindSet.contains(t)
+        val needUnwind = mustUnwind | !symbolicUnwindSet.contains(t)
         maybeMin(
           repeat(
-            toCEAutomaton(subt, !needUnwind, minimize),
+            toCEAutomaton(subt, mustUnwind, minimize),
             n1,
             n2,
             needUnwind
@@ -483,7 +557,7 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
 
   override def buildAut(t: ITerm, minimize: Boolean): Automaton = {
     ParikhUtil.log("Regex2CEAut.buildAut: build automaton for regex " + t)
-    findNoUnwindCountFrom(t)
+    findSymbolicUnwindCount(t)
     toCEAutomaton(t, false, minimize)
   }
 
@@ -496,16 +570,16 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
 
   def buildUnderComplementAut(t: ITerm, minimize: Boolean): Automaton = {
     ParikhUtil.log(
-      "Regex2CEAut.buildOverComplementAut: build under approxismation complement automaton for regex " + t
+      "Regex2CEAut.buildUnderComplementAut: build under approximation complement automaton for regex " + t
     )
     complement(toOverCEAutomaton(t, false, minimize))
   }
 
   def buildOverComplementAut(t: ITerm, minimize: Boolean): Automaton = {
     ParikhUtil.log(
-      "Regex2CEAut.buildOverComplementAut: build over approxismation complement automaton for regex " + t
+      "Regex2CEAut.buildOverComplementAut: build over approximation complement automaton for regex " + t
     )
-    findNoUnwindCountFrom(t)
+    findSymbolicUnwindCount(t)
     overComplement(toCEAutomaton(t, false, minimize))
   }
 

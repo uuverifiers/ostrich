@@ -352,7 +352,6 @@ class ParikhExploration(
               (for ((IConstant(c), value) <- intModel)
                yield (c, IIntLit(value))).toMap
 
-            ParikhUtil.log("Model of leaf term: " + model)
             for (i <- integerTerms) {
               i match {
                 case _ if !model.contains(i) => // lia, update the lia result valut in model

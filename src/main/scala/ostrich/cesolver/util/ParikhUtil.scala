@@ -29,6 +29,12 @@ object ParikhUtil {
 
   var debugOpt, logOpt = false
 
+  // Constants
+  val MAX_MINIMIZE_SIZE        = 500  // if the automaton size is greater than this value, then do not minimize
+  val MAX_DETERMIN_EXPAND      = 1.5  // if the automaton size is expanded more than this value, then do not minimize 
+  val MIN_COUNTING_SIZE_APPROX = 50   // if the size of countings is greater than this value, then use approximate algorithm for complement of countings
+  val MIN_LOG_REG_SUM_PARIKH   = 15   // when finding string by mixed strategy, if the sum of registers logrithm is greater than this value, then use transition times
+
   def measure[A](
       op: String
   )(comp: => A)(implicit manualFlag: Boolean = true): A =
@@ -43,6 +49,7 @@ object ParikhUtil {
       flags: OFlags
   ): Option[Seq[Int]] = {
     log("Finding the accepted word by registers")
+    log(s"Registers model: $registersModel")
     val registersValue = aut.registers.map(registersModel(_).intValue)
     val todoList = new ArrayStack[(State, Seq[Int], Seq[Char])]
     val visited = new MHashSet[(State, Seq[Int])]
@@ -62,12 +69,13 @@ object ParikhUtil {
       if (aut.isAccept(state) && regsVal == registersValue) {
         return Some(word.map(_.toInt))
       }
-      val sortedByVecSum = if (
-        flags.searchStringStrategy == OFlags.SearchStringBy.MoreUpdatesFirst
-      )
-        aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum)
-      else
-        aut.outgoingTransitionsWithVec(state)
+      val sortedByVecSum =
+        if (
+          flags.searchStringStrategy == OFlags.SearchStringBy.MoreUpdatesFirst
+        )
+          aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum).reverse
+        else
+          aut.outgoingTransitionsWithVec(state)
       for ((t, l, v) <- sortedByVecSum) {
         val newRegsVal = sumVec(regsVal, v)
         val newWord = word :+ l._1
@@ -84,12 +92,37 @@ object ParikhUtil {
     None
   }
 
+  private def canArriveOtherTransFrom(
+      aut: CostEnrichedAutomatonBase,
+      trans: Transition,
+      transTimes: Map[Transition, Int]
+  ): Boolean = {
+    val visited = new Stack[Transition]
+    val todoList = new Stack[Transition]
+    todoList.push(trans)
+    visited.push(trans)
+    while (!todoList.isEmpty) {
+      val currentTrans = todoList.pop()
+      val (_, _, to, _) = currentTrans
+      for ((nextTo, l, v) <- aut.outgoingTransitionsWithVec(to)) {
+        if (
+          transTimes.contains((to, l, nextTo, v)) && !visited.contains(
+            (to, l, nextTo, v)
+          )
+        ) {
+          todoList.push((to, l, nextTo, v))
+          visited.push((to, l, nextTo, v))
+        }
+      }
+    }
+    transTimes.keySet.forall(visited.contains(_))
+  }
+
   private def findAcceptedWordByTransitionTimes(
       aut: CostEnrichedAutomatonBase,
       transModel: Map[Transition, IdealInt],
       flags: OFlags
   ): Option[Seq[Int]] = {
-    log("Finding the accepted word by transition times")
     val transTimes = transModel
       .map { case (tran, value) => (tran, value.intValue) }
       .filterNot(_._2 == 0)
@@ -103,27 +136,42 @@ object ParikhUtil {
       if (aut.isAccept(state) && lastTransTimes.forall(_._2 == 0)) {
         return Some(word.map(_.toInt))
       }
-      val sortedByVecSum = if (
-        flags.searchStringStrategy == OFlags.SearchStringBy.MoreUpdatesFirst
-      )
-        aut.outgoingTransitionsWithVec(state).toSeq.sortBy(_._3.sum)
-      else
-        aut.outgoingTransitionsWithVec(state)
-      for (
-        (t, l, v) <- sortedByVecSum;
-        if lastTransTimes.getOrElse((state, l, t, v), 0) > 0
-      ) {
+      val sortedByVecSum =
+        if (
+          flags.searchStringStrategy == OFlags.SearchStringBy.MoreUpdatesFirst
+        )
+          aut
+            .outgoingTransitionsWithVec(state)
+            .filter { case (t, l, v) =>
+              lastTransTimes.contains((state, l, t, v))
+            }
+            .toSeq
+            .sortBy { case (t, l, v) =>
+              v.sum
+            }
+            .reverse
+        else
+          aut.outgoingTransitionsWithVec(state)
+      for ((t, l, v) <- sortedByVecSum) {
         val currentTrans = (state, l, t, v)
+        val currTransTimes = lastTransTimes(currentTrans) - 1
         val newTransTimes =
-          lastTransTimes.updated(currentTrans, lastTransTimes(currentTrans) - 1)
+          if (currTransTimes > 0)
+            lastTransTimes.updated(currentTrans, currTransTimes)
+          else lastTransTimes - currentTrans
         val newWord = word :+ l._1
         val newState = t
-        if (!visited.contains((newState, newTransTimes))) {
+        if (
+          !visited.contains(
+            (newState, newTransTimes)
+          ) && canArriveOtherTransFrom(aut, currentTrans, newTransTimes)
+        ) {
           todoList.push((newState, newTransTimes, newWord))
           visited.add((newState, newTransTimes))
         }
       }
     }
+    // }
     None
   }
 
@@ -133,6 +181,7 @@ object ParikhUtil {
       registersModel: Map[ITerm, IdealInt],
       flags: OFlags
   ): Option[Seq[Int]] = {
+    log("Finding the accepted word by transition times")
     val termGen = TermGenerator()
     val trans2Term =
       aut.transitionsWithVec.map(t => (t, termGen.transitionTerm)).toMap
@@ -158,6 +207,9 @@ object ParikhUtil {
           val transModel = aut.transitionsWithVec
             .map(t => (t, model.eval(trans2Term(t)).get))
             .toMap
+          log(
+            s"Transitions model: ${transModel.map(t => trans2Term(t._1) + " = " + t._2)}"
+          )
           return findAcceptedWordByTransitionTimes(aut, transModel, flags)
         case _ =>
           throw new Exception(
@@ -173,9 +225,10 @@ object ParikhUtil {
       registersModel: Map[ITerm, IdealInt],
       flags: OFlags
   ): Option[Seq[Int]] = {
-    log(s"Finding Accepted word, the heuritics are: findModelBy ${flags.findModelStrategy} and searchStringBy ${flags.searchStringStrategy}")
+    log(
+      s"Finding Accepted word, the heuritics are: findModelBy ${flags.findModelStrategy} and searchStringBy ${flags.searchStringStrategy}"
+    )
     val aut = auts.reduce(_ product _)
-    val useTransBasedLowerBound = 15
     val registersLogrithmSum =
       registersModel.map(_._2.intValue).filter(_ > 0).map(math.log(_)).sum
     flags.findModelStrategy match {
@@ -184,7 +237,7 @@ object ParikhUtil {
       case OFlags.FindModelBy.Transtions =>
         findAcceptedWordByTransTimesComplete(aut, registersModel, flags)
       case OFlags.FindModelBy.Mixed =>
-        if (registersLogrithmSum > useTransBasedLowerBound)
+        if (registersLogrithmSum > ParikhUtil.MIN_LOG_REG_SUM_PARIKH)
           findAcceptedWordByTransTimesComplete(aut, registersModel, flags)
         else
           findAcceptedWordByRegistersComplete(aut, registersModel, flags)

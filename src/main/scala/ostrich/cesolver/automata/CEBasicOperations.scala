@@ -337,7 +337,8 @@ object CEBasicOperations {
 
   private def registersMustBeEmpty(aut: CostEnrichedAutomatonBase): Unit = {
     if (aut.registers.nonEmpty) {
-      aut.toDot("registersMustBeEmpty_assertion_failed")
+      if (ParikhUtil.debugOpt)
+        aut.toDot("registersMustBeEmpty_assertion_failed")
       throw new Exception("Registers must be empty")
     }
   }
@@ -396,14 +397,18 @@ object CEBasicOperations {
       (aut, i) <- auts.zipWithIndex; if (i >= min - 1); s <- aut.acceptingStates
     )
       ceAut.setAccept(old2new(s), true)
+
+    if (min == 0) ceAut.setAccept(ceAut.initialState, true)
+
     for (
       i <- (0 until auts.size - 1).reverse;
       lastAccept <- auts(i).acceptingStates
     )
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    ceAut.regsRelation =
-      connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
+    val epsilonF = if (ceAut.isAccept(ceAut.initialState)) and(for (r <- ceAut.registers) yield r === 0) else IBoolLit(false)
+    ceAut.regsRelation = 
+      or(Seq(connectSimplify(auts.map(_.regsRelation), IBinJunctor.And), epsilonF))
     ceAut
   }
 
@@ -430,7 +435,7 @@ object CEBasicOperations {
     val old2new = aut.states.map(s => (s, ceAut.newState())).toMap
     ceAut.initialState = old2new(aut.initialState)
     if (min == 0)
-      ceAut.setAccept(old2new(aut.initialState), true)
+      ceAut.setAccept(ceAut.initialState, true)
     // construct update of the new register
     for ((t, l, v) <- aut.outgoingTransitionsWithVec(aut.initialState))
       ceAut.addTransition(
@@ -450,11 +455,14 @@ object CEBasicOperations {
     val newRegisters = aut.registers ++ Seq(newRegister)
     // if empty string is accepted by the aut, then the repeat of the aut should also
     // accept empty string
+    val lowerbound = if (ceAut.isAccept(ceAut.initialState)) 0 else min
+    val upperbound = max
     val newRegsRelation =
-      if (aut.isAccept(aut.initialState))
-        newRegister <= max
+      if (max - min <= 50)
+        // because our algorithm is hard to find accepted word by large registers and simplex algorithm used to solve parikh image perfer to find convex point which lead to large registers, we try our best to avoid upper bounds of registers directly
+        or(for (i <- lowerbound to upperbound) yield newRegister === i)
       else
-        and(Seq(newRegister >= min, newRegister <= max))
+        and(Seq(newRegister >= lowerbound, newRegister <= upperbound))
     ceAut.registers = newRegisters
     ceAut.regsRelation = newRegsRelation
     ceAut
@@ -655,7 +663,10 @@ object CEBasicOperations {
     )
     val afterEpsilonClosure = epsilonClosureByVec(aut)
     val afterDetermine = determinateByVec(afterEpsilonClosure)
-    if (afterDetermine.size / 5 > aut.size)
+    ParikhUtil.debugPrintln("aut size is " + aut.size() + ", afterDetermineByVec size is " + afterDetermine.size())
+    if (afterDetermine.size() > ParikhUtil.MAX_MINIMIZE_SIZE)  // the overhead of minimization is too large (heuristic)
+      return if (aut.size() < afterDetermine.size()) aut else afterDetermine
+    if (afterDetermine.size() / ParikhUtil.MAX_DETERMIN_EXPAND > aut.size()) // the minimization is not effective (heuristic)
       return aut
     val s2representive = partitionStatesByVec(afterDetermine)
     val ceAut = new CostEnrichedAutomaton
@@ -666,6 +677,7 @@ object CEBasicOperations {
       ceAut.setAccept(s2representive(s), true)
     ceAut.regsRelation = afterDetermine.regsRelation
     ceAut.registers = afterDetermine.registers
+    ParikhUtil.debugPrintln("After minimizeHopcroftByVec, size is " + ceAut.size())
     removeDuplicatedReg(ceAut)
   }
   // ---------------------------------------------------------------------------------------------------------------------
@@ -801,11 +813,16 @@ object CEBasicOperations {
     s2reprensentive
   }
 
-  def minimizeHopcroft(aut: CostEnrichedAutomatonBase) = {
+  def minimizeHopcroft(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     ParikhUtil.log(
       "CEBasicOperations.minimizeHopcroft: minimize automata"
     )
     val afterDetermine = determinate(aut)
+    ParikhUtil.debugPrintln("aut size is " + aut.size() + ", afterDetermine size is " + afterDetermine.size())
+    if (afterDetermine.size() > ParikhUtil.MAX_MINIMIZE_SIZE)  // the overhead of minimization is too large (heuristic)
+      return if (aut.size() < afterDetermine.size()) aut else afterDetermine
+    if (afterDetermine.size() / ParikhUtil.MAX_DETERMIN_EXPAND > aut.size()) // the minimization is not effective (heuristic)
+      return aut
     val s2representive = partitionStates(afterDetermine)
     val ceAut = new CostEnrichedAutomaton
     ceAut.initialState = s2representive(afterDetermine.initialState)
@@ -815,6 +832,7 @@ object CEBasicOperations {
       ceAut.setAccept(s2representive(s), true)
     ceAut.regsRelation = afterDetermine.regsRelation
     ceAut.registers = afterDetermine.registers
+    ParikhUtil.log("After minimizeHopcroft, size is " + ceAut.size())
     removeDuplicatedReg(ceAut)
   }
 

@@ -17,7 +17,9 @@ class UnaryFinalConstraints(
     flags: OFlags
 ) extends BaselineFinalConstraints(strDataBaseId, auts, flags) {
 
-  private def removeDupTransitions(aut: CostEnrichedAutomatonBase) : CostEnrichedAutomatonBase = {
+  private def removeDupTransitions(
+      aut: CostEnrichedAutomatonBase
+  ): CostEnrichedAutomatonBase = {
     val ceAut = new CostEnrichedAutomatonBase
     val old2new = aut.states.map(_ -> ceAut.newState()).toMap
     ceAut.initialState = old2new(aut.initialState)
@@ -25,11 +27,13 @@ class UnaryFinalConstraints(
       if (aut.isAccept(state))
         ceAut.setAccept(old2new(state), true)
       val outTrans = aut.outgoingTransitionsWithVec(state)
-      val afterRemoveDup = outTrans.groupBy{
-        case (outState, _, vec) => (outState, vec)
-      }.map{
-        case (_, trans) => trans.head
-      }
+      val afterRemoveDup = outTrans
+        .groupBy { case (outState, _, vec) =>
+          (outState, vec)
+        }
+        .map { case (_, trans) =>
+          trans.head
+        }
       for ((outState, label, vec) <- afterRemoveDup) {
         ceAut.addTransition(old2new(state), label, old2new(outState), vec)
       }
@@ -43,13 +47,13 @@ class UnaryFinalConstraints(
 
   private lazy val findModelAut = {
     val afterRemoveDup = removeDupTransitions(productAut)
-    if (flags.minimizeAutomata)
-      CEBasicOperations.minimizeHopcroft(
-        afterRemoveDup
-      )
-    else afterRemoveDup
+    // if (flags.minimizeAutomata)
+    CEBasicOperations.minimizeHopcroft(
+      afterRemoveDup
+    )
+    // else CEBasicOperations.removeDuplicatedReg(afterRemoveDup)
   }
-    
+
   private lazy val checkSatAut = if (productAut.registers.isEmpty) {
     findModelAut
   } else {
@@ -58,8 +62,10 @@ class UnaryFinalConstraints(
     )
   }
 
-  ParikhUtil.log("The checkSatAut: " + checkSatAut)
-  ParikhUtil.log("The findModelAut: " + findModelAut)
+  if (ParikhUtil.debugOpt) {
+    checkSatAut.toDot("checkSatAut")
+    findModelAut.toDot("findModelAut")
+  }
 
   override lazy val getCompleteLIA: IFormula = {
     connectSimplify(
