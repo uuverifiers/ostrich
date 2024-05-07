@@ -9,12 +9,13 @@ import models.not_solved.atl as not_solved_atl_bench
 import models.redos_attack_detection as redos_bench
 import models.output_tmp as output_bench
 import models.all_counting_bench as setta_counting_bench
+import models.stringfuzz as stringfuzz_bench
 import startwebserver
 import tools.ostrichBackend
 import tools.cvc5
 
 tracks = (
-    setta_counting_bench.getTrackData()
+    stringfuzz_bench.getTrackData()
 ) + []
 
 solvers = {}
@@ -27,7 +28,7 @@ for s in [
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("setta_counting_bench+ostrich_unary_all_backend")
+store = storage.SQLiteDB("stringfuzz+ostrich_unary_all_backend")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 # verifiers = [""]

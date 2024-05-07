@@ -48,6 +48,7 @@ object CEBasicOperations {
   def unionWithoutRegs(
       auts: Seq[CostEnrichedAutomatonBase]
   ): CostEnrichedAutomatonBase = {
+    auts.foreach(registersMustBeEmpty)
     val bauts = auts.map(toBricsAutomaton)
     BricsAutomatonWrapper(BasicOperations.union(bauts.asJava))
   }
@@ -132,10 +133,63 @@ object CEBasicOperations {
   def complementWithoutRegs(
       aut: CostEnrichedAutomatonBase
   ): CostEnrichedAutomatonBase = {
-    val baut = toBricsAutomaton(aut)
-    BricsAutomatonWrapper {
-      BasicOperations.complement(baut)
+    ParikhUtil.todo(
+      "CEBasicOperations.complementWithoutRegs: Rewrite this function by using CostEnrichedAutomatonBase and add ap.util.Timeout.check, to avoid that the timeout is not checked and the function is not terminated",
+      0
+    )
+    registersMustBeEmpty(aut)
+    val afterDetermine = determinate(aut)
+    val compAut = new CostEnrichedAutomatonBase
+    val alwaysAccpetS = compAut.newState()
+    val old2new =
+      afterDetermine.states.map(s => (s, compAut.newState())).toMap
+    compAut.initialState = old2new(afterDetermine.initialState)
+    for ((s, l, t, vec) <- afterDetermine.transitionsWithVec) {
+      compAut.addTransition(old2new(s), l, old2new(t), vec)
     }
+    // neg accepted states
+    for (s <- afterDetermine.states; if !afterDetermine.isAccept(s)) {
+      compAut.setAccept(old2new(s), true)
+    }
+    compAut.setAccept(alwaysAccpetS, true)
+    // totalize
+    for (state <- afterDetermine.states) {
+      ap.util.Timeout.check
+      val outLabelsSorted =
+        afterDetermine.outgoingTransitionsWithVec(state).map(_._2).toSeq.sorted
+      var maxi : Int = (Char.MinValue).toInt
+      for ((min, max) <- outLabelsSorted) {
+        if (maxi < min)
+          compAut.addTransition(
+            old2new(state),
+            (maxi.toChar, (min.toInt - 1).toChar),
+            alwaysAccpetS,
+            Seq()
+          )
+        if (max.toInt + 1 > maxi.toInt)
+          maxi = max.toInt + 1
+      }
+      if (maxi <= Char.MaxValue){
+        compAut.addTransition(
+          old2new(state),
+          (maxi.toChar, Char.MaxValue),
+          alwaysAccpetS,
+          Seq()
+        )
+      }
+    }
+    compAut.addTransition(
+      alwaysAccpetS,
+      BricsTLabelOps.sigmaLabel,
+      alwaysAccpetS,
+      Seq()
+    )
+    removeDeadState(compAut)
+
+    // val baut = toBricsAutomaton(aut)
+    // BricsAutomatonWrapper {
+    //   BasicOperations.complement(baut)
+    // }
   }
 
   def complement(
@@ -144,7 +198,6 @@ object CEBasicOperations {
     ParikhUtil.log(
       "CEBasicOperations.complement: compute the complement of automata"
     )
-    registersMustBeEmpty(aut)
     complementWithoutRegs(aut)
   }
 
@@ -155,58 +208,69 @@ object CEBasicOperations {
       "CEBasicOperations.overComplement: compute the over complement of automata"
     )
     val afterDetermine = determinate(aut)
-    // totalize
     val overCompAut = new CostEnrichedAutomatonBase
     val alwaysAccpetS = overCompAut.newState()
-    val mergedOldAcceptStates = overCompAut.newState()
+    // val mergedOldAcceptStates = overCompAut.newState()
     val old2new =
       afterDetermine.states.map(s => (s, overCompAut.newState())).toMap
     overCompAut.initialState = old2new(afterDetermine.initialState)
     for ((s, l, t, vec) <- afterDetermine.transitionsWithVec) {
-      overCompAut.addTransition(old2new(s), l, old2new(t), vec :+ 0)
-      if (afterDetermine.isAccept(t)) 
-        overCompAut.addTransition(old2new(s), l, mergedOldAcceptStates, vec :+ 1)
+      val newVec = if (afterDetermine.isAccept(t)) vec :+ 1 else vec :+ 0
+      overCompAut.addTransition(old2new(s), l, old2new(t), newVec)
+      // if (afterDetermine.isAccept(t))
+      //   overCompAut.addTransition(
+      //     old2new(s),
+      //     l,
+      //     mergedOldAcceptStates,
+      //     vec :+ 1
+      //   )
     }
-    for (s <- afterDetermine.states; if !afterDetermine.isAccept(s)) {
+    // neg accepted states
+    for (s <- afterDetermine.states) {
       overCompAut.setAccept(old2new(s), true)
     }
     overCompAut.setAccept(alwaysAccpetS, true)
-    overCompAut.setAccept(mergedOldAcceptStates, true)
+    // overCompAut.setAccept(mergedOldAcceptStates, true)
     if (afterDetermine.isAccept(afterDetermine.initialState))
       overCompAut.setAccept(overCompAut.initialState, true)
     val totalizeNewTVec = Seq.fill(afterDetermine.registers.size)(0) :+ 0
+
+    // totalize
     overCompAut.addTransition(
       alwaysAccpetS,
       BricsTLabelOps.sigmaLabel,
       alwaysAccpetS,
       totalizeNewTVec
     )
-    for (state <- overCompAut.states) {
+    for (state <- afterDetermine.states) {
+      ap.util.Timeout.check
       val outLabelsSorted =
-        overCompAut.outgoingTransitionsWithVec(state).map(_._2).toSeq.sorted
-      var maxi = Char.MinValue
+        afterDetermine.outgoingTransitionsWithVec(state).map(_._2).toSeq.sorted
+      var maxi : Int = (Char.MinValue).toInt
       for ((min, max) <- outLabelsSorted) {
         if (maxi < min)
           overCompAut.addTransition(
-            state,
-            (maxi, (min.toInt - 1).toChar),
+            old2new(state),
+            (maxi.toChar, (min.toInt - 1).toChar),
             alwaysAccpetS,
             totalizeNewTVec
           )
         if (max.toInt + 1 > maxi.toInt)
-          maxi = (max.toInt + 1).toChar
-        if (maxi <= Char.MaxValue)
-          overCompAut.addTransition(
-            state,
-            (maxi, Char.MaxValue),
-            alwaysAccpetS,
-            totalizeNewTVec
-          )
+          maxi = max.toInt + 1
       }
+      if (maxi <= Char.MaxValue)
+        overCompAut.addTransition(
+          old2new(state),
+          (maxi.toChar, Char.MaxValue),
+          alwaysAccpetS,
+          totalizeNewTVec
+        )
     }
     val totalizeNewReg = termGen.registerTerm
     overCompAut.registers = afterDetermine.registers :+ totalizeNewReg
-    overCompAut.regsRelation = ((totalizeNewReg === 1) ===> !afterDetermine.regsRelation)
+    // neg the accepted condition
+    overCompAut.regsRelation =
+      ((totalizeNewReg === 1) ===> !afterDetermine.regsRelation)
     overCompAut
   }
 
@@ -308,7 +372,7 @@ object CEBasicOperations {
 
     var prefixlen = 0
     for (aut <- auts) {
-      for ((s, l, t, v) <- aut.transitionsWithVec)
+      for ((s, l, t, v) <- aut.transitionsWithVec){
         ceAut.addTransition(
           old2new(s),
           l,
@@ -317,6 +381,7 @@ object CEBasicOperations {
             finalVecLen - prefixlen - v.size
           )(0)
         )
+      }
       prefixlen += aut.registers.size
     }
 
@@ -406,9 +471,13 @@ object CEBasicOperations {
     )
       ceAut.addEpsilon(old2new(lastAccept), old2new(auts(i + 1).initialState))
     ceAut.registers = auts.flatMap(_.registers)
-    val epsilonF = if (ceAut.isAccept(ceAut.initialState)) and(for (r <- ceAut.registers) yield r === 0) else IBoolLit(false)
-    ceAut.regsRelation = 
-      or(Seq(connectSimplify(auts.map(_.regsRelation), IBinJunctor.And), epsilonF))
+    val epsilonF =
+      if (ceAut.isAccept(ceAut.initialState))
+        and(for (r <- ceAut.registers) yield r === 0)
+      else IBoolLit(false)
+    ceAut.regsRelation = or(
+      Seq(connectSimplify(auts.map(_.regsRelation), IBinJunctor.And), epsilonF)
+    )
     ceAut
   }
 
@@ -663,10 +732,17 @@ object CEBasicOperations {
     )
     val afterEpsilonClosure = epsilonClosureByVec(aut)
     val afterDetermine = determinateByVec(afterEpsilonClosure)
-    ParikhUtil.debugPrintln("aut size is " + aut.size() + ", afterDetermineByVec size is " + afterDetermine.size())
-    if (afterDetermine.size() > ParikhUtil.MAX_MINIMIZE_SIZE)  // the overhead of minimization is too large (heuristic)
+    ParikhUtil.log(
+      "aut size is " + aut
+        .size() + ", afterDetermineByVec size is " + afterDetermine.size()
+    )
+    if (
+      afterDetermine.size() > ParikhUtil.MAX_MINIMIZE_SIZE
+    ) // the overhead of minimization is too large (heuristic)
       return if (aut.size() < afterDetermine.size()) aut else afterDetermine
-    if (afterDetermine.size() / ParikhUtil.MAX_DETERMIN_EXPAND > aut.size()) // the minimization is not effective (heuristic)
+    if (
+      afterDetermine.size() / ParikhUtil.MAX_DETERMIN_EXPAND > aut.size()
+    ) // the minimization is not effective (heuristic)
       return aut
     val s2representive = partitionStatesByVec(afterDetermine)
     val ceAut = new CostEnrichedAutomaton
@@ -677,7 +753,9 @@ object CEBasicOperations {
       ceAut.setAccept(s2representive(s), true)
     ceAut.regsRelation = afterDetermine.regsRelation
     ceAut.registers = afterDetermine.registers
-    ParikhUtil.debugPrintln("After minimizeHopcroftByVec, size is " + ceAut.size())
+    ParikhUtil.log(
+      "After minimizeHopcroftByVec, size is " + ceAut.size()
+    )
     removeDuplicatedReg(ceAut)
   }
   // ---------------------------------------------------------------------------------------------------------------------
@@ -813,15 +891,24 @@ object CEBasicOperations {
     s2reprensentive
   }
 
-  def minimizeHopcroft(aut: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
+  def minimizeHopcroft(
+      aut: CostEnrichedAutomatonBase
+  ): CostEnrichedAutomatonBase = {
     ParikhUtil.log(
       "CEBasicOperations.minimizeHopcroft: minimize automata"
     )
     val afterDetermine = determinate(aut)
-    ParikhUtil.debugPrintln("aut size is " + aut.size() + ", afterDetermine size is " + afterDetermine.size())
-    if (afterDetermine.size() > ParikhUtil.MAX_MINIMIZE_SIZE)  // the overhead of minimization is too large (heuristic)
+    ParikhUtil.log(
+      "aut size is " + aut.size() + ", afterDetermine size is " + afterDetermine
+        .size()
+    )
+    if (
+      afterDetermine.size() > ParikhUtil.MAX_MINIMIZE_SIZE
+    ) // the overhead of minimization is too large (heuristic)
       return if (aut.size() < afterDetermine.size()) aut else afterDetermine
-    if (afterDetermine.size() / ParikhUtil.MAX_DETERMIN_EXPAND > aut.size()) // the minimization is not effective (heuristic)
+    if (
+      afterDetermine.size() / ParikhUtil.MAX_DETERMIN_EXPAND > aut.size()
+    ) // the minimization is not effective (heuristic)
       return aut
     val s2representive = partitionStates(afterDetermine)
     val ceAut = new CostEnrichedAutomaton

@@ -39,7 +39,7 @@ class App:
 
 
   def run (self):
-    print ("Starting server...")
+    print (f"Starting server at {self._address[0]}:{self._address[1]}...")
     handler = CustomHandler (self._router)
     httpd = HTTPServer(self._address, handler)
     print('running server...')
