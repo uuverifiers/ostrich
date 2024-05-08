@@ -11,8 +11,8 @@ import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import Transducer._
 import ostrich.cesolver.automata.CETransducer
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.automata.BricsTLabelEnumerator
 import ostrich.cesolver.util.ParikhUtil.{partition, State, getImage}
+import ostrich.cesolver.automata.CETLabelEnumerator
 
 object ReplaceCEPreOp {
   // pre-images of x = replace(y, e, u)
@@ -41,8 +41,8 @@ object ReplaceCEPreOp {
     // copy the rest of the word after first match
     case object CopyRest extends Mode
 
-    val labelEnumerator = new BricsTLabelEnumerator(
-      aut.transitionsWithVec.map(_._2).toIterator
+    val labelEnumerator = new CETLabelEnumerator(
+      aut.transitionsWithVec.map(_._2)
     )
     val labels = labelEnumerator.enumDisjointLabelsComplete
     val ceTran = new CETransducer

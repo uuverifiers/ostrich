@@ -47,11 +47,11 @@ class UnaryFinalConstraints(
 
   private lazy val findModelAut = {
     val afterRemoveDup = removeDupTransitions(productAut)
-    // if (flags.minimizeAutomata)
+    if (flags.minimizeAutomata)
     CEBasicOperations.minimizeHopcroft(
       afterRemoveDup
     )
-    // else CEBasicOperations.removeDuplicatedReg(afterRemoveDup)
+    else CEBasicOperations.removeDuplicatedReg(afterRemoveDup)
   }
 
   private lazy val checkSatAut = if (productAut.registers.isEmpty) {

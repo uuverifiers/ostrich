@@ -8,7 +8,7 @@ import ostrich.cesolver.util.ParikhUtil.{partition, getImage}
 import ostrich.automata.Automaton
 import ostrich.automata.Transducer._
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.automata.BricsTLabelEnumerator
+import ostrich.cesolver.automata.CETLabelEnumerator
 
 object ReplaceAllCEPreOp {
   // pre-images of x = replaceall(y, e, u)
@@ -33,8 +33,8 @@ object ReplaceAllCEPreOp {
     // last transition finished a match and reached frontier
     case class EndMatch(val frontier : Set[aut.State]) extends Mode
 
-     val labelEnumerator = new BricsTLabelEnumerator(
-      aut.transitionsWithVec.map(_._2).toIterator
+     val labelEnumerator = new CETLabelEnumerator(
+      aut.transitionsWithVec.map(_._2)
     )
     val labels = labelEnumerator.enumDisjointLabelsComplete
     val ceTran = new CETransducer
