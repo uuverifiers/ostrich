@@ -54,6 +54,9 @@ class CETLabelEnumerator(labels: Iterable[(Char, Char)])
     new CETLabelEnumerator(disjointLabels + ((a, a)))
 
   private def calculateDisjointLabels(): MTreeSet[(Char, Char)] = {
+    
+    if (labels.isEmpty) return new MTreeSet[(Char, Char)]()
+
     var disjoint = new MTreeSet[(Char, Char)]()
 
     val labelPoints = new MTreeSet[Char]

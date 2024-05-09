@@ -92,6 +92,7 @@ object CEBasicOperations {
     for (aut <- auts) {
       val old2new = aut.states.map(s => (s -> ceAut.newState())).toMap
       for ((s, l, t, v) <- aut.transitionsWithVec) {
+        ap.util.Timeout.check
         val preFill = Seq.fill(prefixlen)(0)
         val postFill = Seq.fill(oldRegsLen - prefixlen - v.size)(0)
         val newRegsUpdate = ArrayBuffer.fill(newRegisters.size)(0)
@@ -183,17 +184,17 @@ object CEBasicOperations {
     
     removeDeadState(compAut)
 
-    // removeDeadState(compAut).toDot("my_complement")
-    // aut.toDot("origin_aut")
-    // afterDetermine.toDot("determined_aut")
-    // val baut = toBricsAutomaton(aut)
-    // val res = BricsAutomatonWrapper(
-    //   BasicOperations.complement(baut)
-    // )
-    // baut.determinize()
-    // BricsAutomatonWrapper(baut).toDot("brics_aut_determined")
-    // res.toDot("brics_complement")
-    // res
+    removeDeadState(compAut).toDot("my_complement")
+    aut.toDot("origin_aut")
+    afterDetermine.toDot("determined_aut")
+    val baut = toBricsAutomaton(aut)
+    val res = BricsAutomatonWrapper(
+      BasicOperations.complement(baut)
+    )
+    baut.determinize()
+    BricsAutomatonWrapper(baut).toDot("brics_aut_determined")
+    res.toDot("brics_complement")
+    res
   }
 
   def complement(
@@ -377,6 +378,7 @@ object CEBasicOperations {
     var prefixlen = 0
     for (aut <- auts) {
       for ((s, l, t, v) <- aut.transitionsWithVec) {
+        ap.util.Timeout.check
         ceAut.addTransition(
           old2new(s),
           l,
@@ -437,7 +439,7 @@ object CEBasicOperations {
       "CEBasicOperations.repeatUnwind: directly unwind automata, min = " + min + ", max = " + max
     )
     if (min > max) return BricsAutomatonWrapper.makeEmpty()
-    if (max == 0) return BricsAutomatonWrapper.makeAnyString()
+    if (max == 0) return BricsAutomatonWrapper.makeEmptyString()
     val auts = Seq.fill(max)(aut.clone())
     val ceAut = new CostEnrichedAutomaton
     val old2new =
@@ -448,7 +450,8 @@ object CEBasicOperations {
 
     var prefixlen = 0
     for (aut <- auts) {
-      for ((s, l, t, v) <- aut.transitionsWithVec)
+      for ((s, l, t, v) <- aut.transitionsWithVec){
+        ap.util.Timeout.check
         ceAut.addTransition(
           old2new(s),
           l,
@@ -457,6 +460,7 @@ object CEBasicOperations {
             finalVecLen - prefixlen - v.size
           )(0)
         )
+      }
       prefixlen += aut.registers.size
     }
 
@@ -570,6 +574,7 @@ object CEBasicOperations {
       val workstack = MStack[State](s)
       val seen = MHashSet[State](s)
       while (workstack.nonEmpty) {
+        ap.util.Timeout.check
         val cur = workstack.pop()
         for ((t, _, v) <- aut.outgoingTransitionsWithVec(cur)) {
           if (v.forall(_ == 0) && !seen(t)) {
@@ -1016,6 +1021,7 @@ object CEBasicOperations {
       workstack.push(s); seen.add(s); ceAut.setAccept(old2new(s), true)
     }
     while (workstack.nonEmpty) {
+      ap.util.Timeout.check
       val cur = workstack.pop()
       for ((s, l, v) <- aut.incomingTransitionsWithVec(cur)) {
         ceAut.addTransition(old2new(s), l, old2new(cur), v)
