@@ -71,10 +71,10 @@ def run(params, eq, timeout, ploc, wd):
 def addRunner(addto):
     from functools import partial
     params = {
-        "unary-no-all-heuristic": ["+cea", "-countUnwindBy=meetFirst", "-compApprox", "-findModelBy=registers"],
+        "unary-no-all-heuristic": ["+cea", "-countUnwindBy=meetFirst", "-compApprox", "-findModelBy=registers", "-searchStringBy=random"],
         "unary-no-comp-approx": ["+cea", "-compApprox"],
         "unary-no-count-unwind-heuristic": ["+cea", "-countUnwindBy=meetFirst"],
-        "unary-no-find-model-heuristic": ["+cea", "-findModelBy=registers"],
+        "unary-no-find-model-heuristic": ["+cea", "-findModelBy=registers", "-searchStringBy=random"],
         "unary-all": ["+cea"],
         # "nuxmv-bmc": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=bmc", "+eager"],
         # "nuxmv-ic3": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=ic3", "+eager"],

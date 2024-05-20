@@ -13,22 +13,29 @@ import models.stringfuzz as stringfuzz_bench
 import startwebserver
 import tools.ostrichBackend
 import tools.cvc5
+import tools.regExSolver
+import tools.z3seq
+import tools.z3str3
+import tools.ostrich
 
 tracks = (
+    # setta_counting_bench.getTrackData() + 
     stringfuzz_bench.getTrackData()
 ) + []
 
 solvers = {}
 for s in [
-    tools.cvc5,
-    tools.ostrichBackend,
+    tools.regExSolver,
+    tools.z3seq,
+    tools.z3str3,
+    tools.ostrich
 ]:
     s.addRunner(solvers)
 
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("stringfuzz+ostrich_unary_all_backend")
+store = storage.SQLiteDB("string_fuzz+z3_all")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 verifiers = ["Cvc5"]
 # verifiers = [""]

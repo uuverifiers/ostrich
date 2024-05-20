@@ -84,4 +84,5 @@ case class OFlags(
     searchStringStrategy: OFlags.SearchStringBy.Value = OFlags.SearchStringBy.MoreUpdatesFirst,
     countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt,
     compApprox: Boolean = false,
+    simplyAutByVec: Boolean = true,
 )

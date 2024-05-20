@@ -538,7 +538,7 @@ class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)
     }
 
     case IFunApp(`re_diff`, Seq(subt1, subt2)) =>
-      math.max(sizeOfAut(subt1), math.pow(2, sizeOfAut(subt2)).toInt + 1)
+      math.min(sizeOfAut(subt1), math.pow(2, sizeOfAut(subt2)).toInt + 1)
 
     case IFunApp(`re_comp`, Seq(subt)) =>
       math.pow(2, sizeOfAut(subt)).toInt + 1

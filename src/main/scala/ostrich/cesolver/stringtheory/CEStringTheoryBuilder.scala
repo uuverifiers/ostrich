@@ -35,12 +35,15 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
   def setAlphabetSize(w: Int): Unit = ()
 
   private var eager, minimizeAuts, useCostEnriched, debug = false
-  private var compApprox = true
+  private var compApprox, simplyAutByVec = true
   private var backend: OFlags.CEABackend.Value = Unary
   private var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
-  private var findModelStrategy: OFlags.FindModelBy.Value = OFlags.FindModelBy.Mixed
-  private var countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt
-  private var searchStringBy: OFlags.SearchStringBy.Value = OFlags.SearchStringBy.MoreUpdatesFirst
+  private var findModelStrategy: OFlags.FindModelBy.Value =
+    OFlags.FindModelBy.Mixed
+  private var countUnwindStrategy: OFlags.NestedCountUnwindBy.Value =
+    OFlags.NestedCountUnwindBy.MinFisrt
+  private var searchStringBy: OFlags.SearchStringBy.Value =
+    OFlags.SearchStringBy.MoreUpdatesFirst
 
   // TODO: add more command line arguments
   override def parseParameter(str: String): Unit = str match {
@@ -48,7 +51,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       eager = value
     case CmdlParser.Opt("minimizeAutomata", value) =>
       minimizeAuts = value
-  
+
     // Options for cost-enriched-automata based solver
     case CmdlParser.Opt("costenriched", value) =>
       useCostEnriched = value
@@ -60,6 +63,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       ParikhUtil.logOpt = value
     case CmdlParser.Opt("compApprox", value) =>
       compApprox = value
+    case CmdlParser.Opt("simplyAutByVec", value) =>
+      simplyAutByVec = value
 
     case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
@@ -81,7 +86,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
       findModelStrategy = OFlags.FindModelBy.Transtions
     case CmdlParser.ValueOpt("findModelBy", "mixed") =>
       findModelStrategy = OFlags.FindModelBy.Mixed
-    
+
     case CmdlParser.ValueOpt("searchStringBy", "moreUpdatesFirst") =>
       searchStringBy = OFlags.SearchStringBy.MoreUpdatesFirst
     case CmdlParser.ValueOpt("searchStringBy", "random") =>
@@ -123,7 +128,7 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         )
         (name, aut)
       }
-    
+
     new CEStringTheory(
       symTransducers.toSeq,
       OFlags(
@@ -137,7 +142,8 @@ class CEStringTheoryBuilder extends StringTheoryBuilder {
         findModelStrategy = findModelStrategy,
         countUnwindStrategy = countUnwindStrategy,
         searchStringStrategy = searchStringBy,
-        compApprox = compApprox
+        compApprox = compApprox,
+        simplyAutByVec = simplyAutByVec
       )
     )
   }

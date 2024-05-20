@@ -45,22 +45,24 @@ class UnaryFinalConstraints(
 
   private val productAut = auts.reduce(_ product _)
 
-  private lazy val findModelAut = {
-    val afterRemoveDup = removeDupTransitions(productAut)
-    if (flags.minimizeAutomata)
-    CEBasicOperations.minimizeHopcroft(
-      afterRemoveDup
-    )
-    else CEBasicOperations.removeDuplicatedReg(afterRemoveDup)
-  }
+  private lazy val findModelAut =
+    if (!flags.simplyAutByVec) productAut
+    else {
+      val afterRemoveDup = removeDupTransitions(productAut)
+      if (flags.minimizeAutomata)
+        CEBasicOperations.minimizeHopcroft(
+          afterRemoveDup
+        )
+      else CEBasicOperations.removeDuplicatedReg(afterRemoveDup)
+    }
 
-  private lazy val checkSatAut = if (productAut.registers.isEmpty) {
-    findModelAut
-  } else {
-    CEBasicOperations.minimizeHopcroftByVec(
-      productAut
-    )
-  }
+  private lazy val checkSatAut =
+    if (!flags.simplyAutByVec) productAut
+    else {
+        CEBasicOperations.minimizeHopcroftByVec(
+          productAut
+        )
+    }
 
   if (ParikhUtil.debugOpt) {
     checkSatAut.toDot("checkSatAut")
