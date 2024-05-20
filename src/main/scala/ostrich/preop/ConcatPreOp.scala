@@ -37,6 +37,7 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton, InitFinalAutomaton,
 
 import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
 
+import scala.collection.JavaConverters.asScala
 
 /**
  * Pre-image computation for the concatenation operator.

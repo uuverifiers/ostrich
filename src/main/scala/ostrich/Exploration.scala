@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@ import ap.SimpleAPI
 import SimpleAPI.ProverStatus
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
+import ap.parser.SMTLineariser
 import ap.terfor.{Term, ConstantTerm, OneTerm, TerForConvenience, SortedWithOrder}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.substitutions.VariableSubst
@@ -208,7 +209,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
       def term2String(t : Term) = 
         (strDatabase term2Str t) match {
-          case Some(str) => "\"" + str + "\""
+          case Some(str) => "\"" + (SMTLineariser escapeString str) + "\""
           case None => t.toString
         }
 
@@ -477,7 +478,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             throw new Exception(
               "Could not satisfy length constraints for " + res +
                 " with solution " +
-                resValue.right.get.map(i => i.toChar)(breakOut) +
+                resValue.right.get.map(i => i.toChar).mkString("") +
                 "; length is " + resValue.right.get.size +
                 " but should be " + resLen)
   */
@@ -520,6 +521,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         measure("pre-op") { op(argConstraints, resAut) }
       while (measure("pre-op hasNext") {newConstraintsIt.hasNext}) {
         ap.util.Timeout.check
+
+        if (debug)
+          Console.err.println("dfExploreOp, trying next pre-image")
 
         val argCS = measure("pre-op next") {newConstraintsIt.next}
 
@@ -696,7 +700,7 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
               currentConstraint = Some(newAut)
               addLengthConstraint(TermConstraint(t, newAut),
                                   (for (a <- constraints)
-                                  yield TermConstraint(t, a)).toSeq)
+                                   yield TermConstraint(t, a)).toSeq)
               None
             }
           }
@@ -805,7 +809,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       val oldSize = constraintStack.pop
       while (constraints.size > oldSize) {
         constraintSet -= constraints.last
-        Seqs.reduceToSize(constraints, (constraints.size - 1))
+        Seqs.reduceToSize(constraints, constraints.size - 1)
       }
     }
 
@@ -862,13 +866,13 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
       AutomataUtils.product(constraints.toSeq, _flags.minimizeAutomata)
 
     def ensureCompleteLengthConstraints : Unit =
-      constraints match {
+      constraints.toSeq match {
         case Seq() | Seq(_) =>
           // nothing, all length constraints already pushed
         case auts =>
           addLengthConstraint(TermConstraint(t, intersection),
-                              (for (a <- constraints)
-                              yield TermConstraint(t, a)).toSeq)
+                              (for (a <- auts)
+                               yield TermConstraint(t, a)))
       }
 
     def isAcceptedWord(w : Seq[Int]) : Boolean =

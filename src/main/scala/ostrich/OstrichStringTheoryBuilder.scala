@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -39,19 +39,28 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 
+object OstrichStringTheoryBuilder {
+
+  val version = "1.3.5"
+
+  PortfolioSetup
+
+}
+
 /**
  * The entry class of the Ostrich string solver.
  */
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
+  import OstrichStringTheoryBuilder._
+
   val name = "OSTRICH"
-  val version = "1.2.1"
 
   Console.withOut(Console.err) {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Philipp Rümmer, 2018-2022")
+    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2024")
     println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
@@ -59,8 +68,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  private var eager, forward, minimizeAuts, useParikh = false
-  private var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  protected var eager, forward, minimizeAuts, useParikh = false
+  protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
+  protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -77,6 +87,12 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       forward = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+    case CmdlParser.ValueOpt("regexTranslator", "approx") =>
+      regexTrans = OFlags.RegexTranslator.Approx
+    case CmdlParser.ValueOpt("regexTranslator", "complete") =>
+      regexTrans = OFlags.RegexTranslator.Complete
+    case CmdlParser.ValueOpt("regexTranslator", "hybrid") =>
+      regexTrans = OFlags.RegexTranslator.Hybrid
     case str =>
       super.parseParameter(str)
   }
@@ -97,24 +113,25 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   private var createdTheory = false
 
+  lazy val symTransducers =
+    for ((name, transducer) <- transducers) yield {
+      Console.err.println("Translating transducer " + name + " ...")
+      val aut = TransducerTranslator.toBricsTransducer(
+                  transducer, OstrichStringTheory.alphabetSize,
+                  getTransducerTheory.get)
+      (name, aut)
+    }
+
   lazy val theory = {
     createdTheory = true
-
-    val symTransducers =
-      for ((name, transducer) <- transducers) yield {
-        Console.err.println("Translating transducer " + name + " ...")
-        val aut = TransducerTranslator.toBricsTransducer(
-                    transducer, OstrichStringTheory.alphabetSize,
-                    getTransducerTheory.get)
-        (name, aut)
-      }
 
     new OstrichStringTheory (symTransducers.toSeq,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
                                     forwardApprox           = forward,
-                                    minimizeAutomata        = minimizeAuts))
+                                    minimizeAutomata        = minimizeAuts,
+                                    regexTranslator         = regexTrans))
   }
 
 }

@@ -35,7 +35,6 @@ package ostrich.preop
 import ostrich.automata.{Transducer, AtomicStateAutomaton, Automaton,
                          ProductAutomaton, PostImageAutomaton}
 
-
 object TransducerPreOp {
   def apply(t : Transducer) = new TransducerPreOp(t)
 }

@@ -646,7 +646,7 @@ extends StreamingTransducer {
     res.toSet
   }
 
-  override def toDot() : String = {
+  override def toDot : String = {
     val sb = new StringBuilder()
     sb.append("digraph PSST" + numvars + " {\n")
 

@@ -35,7 +35,6 @@ package ostrich.preop
 import ostrich.automata.{StreamingTransducer, Automaton, ProductAutomaton,
                          AtomicStateAutomaton}
 
-
 object StreamingTransducerPreOp {
   def apply(t : StreamingTransducer) = new StreamingTransducerPreOp(t)
 }

@@ -2,7 +2,7 @@
 (declare-const y String)
 (declare-const z String)
 
-(assert (= x (str.replaceallre y (str.to.re "0101") z)))
+(assert (= x (str.replace_re_longest_all y (str.to.re "0101") z)))
 
 (assert 
 (str.in.re x 

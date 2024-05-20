@@ -45,6 +45,22 @@ object FinalConstraints {
     new NuxmvFinalConstraints(t, auts, flags)
   }
 
+/*
+  def catraACs(
+      t: ITerm,
+      auts: Seq[CostEnrichedAutomatonBase]
+  ): CatraFinalConstraints = {
+    new CatraFinalConstraints(t, auts)
+  }
+
+  def nuxmvACs(
+    t: ITerm,
+    auts: Seq[CostEnrichedAutomatonBase]
+  ): NuxmvFinalConstraints = {
+    new NuxmvFinalConstraints(t, auts)
+  }
+*/
+
   def evalTerm(t: ITerm, model: PartialModel): IdealInt = {
     val value = evalTerm(t)(model)
     if (!value.isDefined) {

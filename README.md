@@ -9,6 +9,12 @@ After installing [the Scala Build tool (SBT)](https://www.scala-sbt.org/), you c
 
 See `./ostrich -help` for more options.
 
+The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](https://eldarica.org/ostrich-popl24/)
+
+## Web Interface
+
+For experiments, OSTRICH can also be used through its [web interface.](https://eldarica.org/ostrich/)
+
 ## Input Format
 
 OSTRICH accepts constraints written using the [SMT-LIB theory of strings](http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml). At this point, most of the operators in the theory are supported, but inputs need to be straightline; see [this paper](https://dblp.uni-trier.de/rec/journals/pacmpl/ChenHLRW19.html?view=bibtex) for a definition.

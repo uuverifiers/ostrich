@@ -37,7 +37,14 @@ import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, A
 import ostrich.automata.AutomataUtils.buildEpsilons
 
 import scala.collection.JavaConverters.asScala
-import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, LinkedHashSet => MLinkedHashSet, MultiMap => MMultiMap, Set => MSet, Stack => MStack, TreeSet => MTreeSet}
+
+import scala.collection.mutable.{HashMap => MHashMap,
+                                 HashSet => MHashSet,
+                                 LinkedHashSet => MLinkedHashSet,
+                                 Stack => MStack,
+                                 TreeSet => MTreeSet,
+                                 MultiMap => MMultiMap,
+                                 Set => MSet}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -152,6 +159,105 @@ object BricsAutomaton {
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
+
+  /**
+   * A new automaton that accepts all strings x <= str (lexicographical ordering)
+   */
+
+  def smallerEqAutomaton(str : String) : BricsAutomaton = {
+    /*
+    Initial state is accepting.
+    Have one accepting sink state where every letter can be read because we are already smaller.
+    Have additional state per char 'c' in the string to check for equality.
+      Each of those additional states have one transition to the sink state reading ['c'+1, 65535]
+      Each of those additional states have one transition to the next state reading ['c', 'c']
+    The last state has no outgoing transitions.
+     */
+    val builder = new BricsAutomatonBuilder
+    val initital_state = builder.getNewState
+
+    builder.setInitialState(initital_state)
+    builder.setAccept(initital_state, isAccepting = true)
+    if (str.isEmpty){
+      return builder.getAutomaton
+    }
+
+    val sink_state = builder.getNewState
+    builder.setAccept(sink_state, isAccepting = true)
+
+
+    val first_letter = str.head
+
+    builder.addTransition(initital_state, builder.LabelOps.interval(Char.MinValue, (first_letter-1).toChar), sink_state)
+    builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
+
+    val states =
+      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
+
+    // add transition to rest of the automaton
+    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states(0))
+    val remaining_str = str.tail
+
+    for ((c,n) <- remaining_str.iterator.zipWithIndex) {
+      // we read x = c -> keep parsing
+      builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
+      // we read x <= c -> go to sink state
+      builder.addTransition(states(n),builder.LabelOps.interval(Char.MinValue, (c-1).toChar), sink_state)
+      builder.setAccept(states(n), isAccepting = true)
+    }
+
+    builder.getAutomaton
+  }
+  /**
+   * A new automaton that accepts all strings str <= x (lexicographical ordering)
+   */
+  def greaterEqAutomaton(str : String) : BricsAutomaton = {
+    /*
+    Initial state is NOT accepting.
+    Have one accepting sink state where every letter can be read because we are already smaller.
+    Have additional state per char 'c' in the string to check for equality.
+      Each of those additional states have one transition to the sink state reading ['c'+1, 65535]
+      Each of those additional states have one transition to the next state reading ['c', 'c']
+    The last state has no outgoing transitions.
+     */
+    val builder = new BricsAutomatonBuilder
+    val initital_state = builder.getNewState
+
+    builder.setInitialState(initital_state)
+
+    if (str.isEmpty){
+      builder.setAccept(initital_state, isAccepting = true)
+      builder.addTransition(initital_state, builder.LabelOps.sigmaLabel, initital_state)
+      return builder.getAutomaton
+    }
+
+    val sink_state = builder.getNewState
+    builder.setAccept(sink_state, isAccepting = true)
+
+    val first_letter = str.head
+
+    builder.addTransition(initital_state, builder.LabelOps.interval((first_letter+1).toChar, Char.MaxValue), sink_state)
+    builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
+
+    val states =
+      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
+
+    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states.head)
+    val remaining_str = str.tail
+
+    for ((c,n) <- remaining_str.iterator.zipWithIndex) {
+      // we read c = x -> keep parsing
+      builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
+      // we read c < x -> go to sink state
+      builder.addTransition(states(n),builder.LabelOps.interval((c+1).toChar, Char.MaxValue), sink_state)
+      builder.setAccept(states(n), isAccepting = true)
+    }
+    // we are equal up to this point -> can read any letter afterwards and be bigger
+    builder.setAccept(states.last, isAccepting = true)
+    builder.addTransition(states.last, builder.LabelOps.sigmaLabel, states.last)
+
+    builder.getAutomaton
+  }
 
   /**
    * Check whether we should avoid ever minimising the given automaton.
@@ -493,8 +599,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
       def sortingFn(s1 : State, s2 : State) : Boolean = {
         // sort by lowest outgoing transition
-        for ((t1, t2) <- asScala(s1.getSortedTransitions(false))
-                         zip
+        for ((t1, t2) <- asScala(s1.getSortedTransitions(false)) zip
                          asScala(s2.getSortedTransitions(false))) {
           import scala.math.Ordering.Implicits._
           val lbl1 = (t1.getMin, t1.getMax)

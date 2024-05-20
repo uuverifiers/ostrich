@@ -46,8 +46,6 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
                            Transition => BTransition}
 
-import scala.collection.JavaConverters.asScala
-
 import java.lang.StringBuilder
 
 object BricsTransducer {
@@ -481,7 +479,9 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
 
     sMap += (newInitState -> ((initialState, initAutState)))
     sMapRev += (initialState, initAutState) -> newInitState
-
+    if (isAccept(initialState) && aut.isAccept(initAutState)){
+      builder.setAccept(newInitState, isAccepting =  true)
+    }
     // collect silent transitions during main loop and eliminate them
     // after (TODO: think of more efficient solution)
     val silentTransitions = new MHashMap[aut.State, MSet[aut.State]]
@@ -759,7 +759,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     }
   }
 
-  override def toDot() : String = {
+  override def toDot : String = {
     val sb = new StringBuilder()
     sb.append("digraph transducer {\n")
 
@@ -845,8 +845,8 @@ class BricsTransducerBuilder
     minimize()
     // TODO: restrict to live reachable states
     new BricsTransducer(initialState,
-                        lblTrans.toMap.view.mapValues(_.toSet).toMap,
-                        eTrans.toMap.view.mapValues(_.toSet).toMap,
+                        lblTrans.toMap.mapValues(_.toSet).toMap,
+                        eTrans.toMap.mapValues(_.toSet).toMap,
                         acceptingStates.toSet)
   }
 
