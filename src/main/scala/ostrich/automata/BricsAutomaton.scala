@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Oliver Markgraf. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -159,6 +159,147 @@ object BricsAutomaton {
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
+
+  def eqLengthAutomata(length : Int) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to length) yield builder.getNewState).toIndexedSeq
+
+
+    builder.setInitialState(states(0))
+    for (i <- 0 until length){
+      builder.addTransition(states(i), BricsTLabelOps.sigmaLabel,states(i+1))
+    }
+    builder.setAccept(states(length), isAccepting = true)
+    builder.getAutomaton
+  }
+
+  def boundedLengthAutomata(lowerBound : Int,
+                            upperBound : Option[Int]) : BricsAutomaton = {
+    val upperBoundValue = upperBound.getOrElse(-1)
+    val numberOfStates = math.max(lowerBound,upperBoundValue)
+
+    val builder = new BricsAutomatonBuilder
+    // lb k -> have k+1 states and last state with sigma and accept
+    // ub k -> return k+1 states, every state up to k accept, no loop on last
+    val states =
+      (for (_ <- 0 to numberOfStates) yield builder.getNewState).toIndexedSeq
+
+    builder.setInitialState(states(0))
+    for (i <- 0 until numberOfStates){
+      builder.addTransition(states(i), BricsTLabelOps.sigmaLabel,states(i+1))
+      if (i >= lowerBound && i <= upperBoundValue){
+        builder.setAccept(states(i), isAccepting = true)
+      }
+    }
+    builder.setAccept(states(numberOfStates), isAccepting = true)
+    // no upper bound -> last state has loop
+    if (upperBoundValue == -1){
+      builder.addTransition(states(numberOfStates),
+                            BricsTLabelOps.sigmaLabel,states(numberOfStates))
+    }
+    builder.getAutomaton
+  }
+
+  /**
+   * A new automaton that accepts all strings x <= str (lexicographical ordering)
+   */
+
+  def smallerEqAutomaton(str : String) : BricsAutomaton = {
+    /*
+    Initial state is accepting.
+    Have one accepting sink state where every letter can be read because we are already smaller.
+    Have additional state per char 'c' in the string to check for equality.
+      Each of those additional states have one transition to the sink state reading ['c'+1, 65535]
+      Each of those additional states have one transition to the next state reading ['c', 'c']
+    The last state has no outgoing transitions.
+     */
+    val builder = new BricsAutomatonBuilder
+    val initital_state = builder.getNewState
+
+    builder.setInitialState(initital_state)
+    builder.setAccept(initital_state, isAccepting = true)
+    if (str.isEmpty){
+      return builder.getAutomaton
+    }
+
+    val sink_state = builder.getNewState
+    builder.setAccept(sink_state, isAccepting = true)
+
+
+    val first_letter = str.head
+
+    builder.addTransition(initital_state, builder.LabelOps.interval(Char.MinValue, (first_letter-1).toChar), sink_state)
+    builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
+
+    val states =
+      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
+
+    // add transition to rest of the automaton
+    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states(0))
+    val remaining_str = str.tail
+
+    for ((c,n) <- remaining_str.iterator.zipWithIndex) {
+      // we read x = c -> keep parsing
+      builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
+      // we read x <= c -> go to sink state
+      builder.addTransition(states(n),builder.LabelOps.interval(Char.MinValue, (c-1).toChar), sink_state)
+      builder.setAccept(states(n), isAccepting = true)
+    }
+
+    builder.getAutomaton
+  }
+  /**
+   * A new automaton that accepts all strings str <= x (lexicographical ordering)
+   */
+  def greaterEqAutomaton(str : String) : BricsAutomaton = {
+    /*
+    Initial state is NOT accepting.
+    Have one accepting sink state where every letter can be read because we are already smaller.
+    Have additional state per char 'c' in the string to check for equality.
+      Each of those additional states have one transition to the sink state reading ['c'+1, 65535]
+      Each of those additional states have one transition to the next state reading ['c', 'c']
+    The last state has no outgoing transitions.
+     */
+    val builder = new BricsAutomatonBuilder
+    val initital_state = builder.getNewState
+
+    builder.setInitialState(initital_state)
+
+    if (str.isEmpty){
+      builder.setAccept(initital_state, isAccepting = true)
+      builder.addTransition(initital_state, builder.LabelOps.sigmaLabel, initital_state)
+      return builder.getAutomaton
+    }
+
+    val sink_state = builder.getNewState
+    builder.setAccept(sink_state, isAccepting = true)
+
+    val first_letter = str.head
+
+    builder.addTransition(initital_state, builder.LabelOps.interval((first_letter+1).toChar, Char.MaxValue), sink_state)
+    builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
+
+    val states =
+      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
+
+    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states.head)
+    val remaining_str = str.tail
+
+    for ((c,n) <- remaining_str.iterator.zipWithIndex) {
+      // we read c = x -> keep parsing
+      builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
+      // we read c < x -> go to sink state
+      builder.addTransition(states(n),builder.LabelOps.interval((c+1).toChar, Char.MaxValue), sink_state)
+      builder.setAccept(states(n), isAccepting = true)
+    }
+    // we are equal up to this point -> can read any letter afterwards and be bigger
+    builder.setAccept(states.last, isAccepting = true)
+    builder.addTransition(states.last, builder.LabelOps.sigmaLabel, states.last)
+
+    builder.getAutomaton
+  }
 
   /**
    * Check whether we should avoid ever minimising the given automaton.

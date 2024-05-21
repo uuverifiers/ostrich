@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2022 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2023 Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -69,13 +69,33 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   val printer = new PrettyPrinterNonStatic
 
-  def string2Term(inputString : String) : ITerm = {
+  def string2Term(inputString : String) : ITerm =
+    string2TermWithReduction(inputString)._1
+
+  def string2TermExact(inputString : String) : ITerm = {
     val pat = parseRegex(inputString)
-    val res = TranslationVisitor(pat)
+    val res = applyTranslationVisitorExact(pat)
     if (flags contains "i")
       theory.re_case_insensitive(res)
     else
       res
+  }
+
+  /**
+   * Translate the given regex to a standard SMT-LIB regex term. This
+   * will try to replace look-arounds and anchors with intersection. The
+   * returned Boolean flag tells whether this reduction was precise, or
+   * had to ignore some parts of the regex.
+   */
+  def string2TermWithReduction(inputString : String) : (ITerm, Boolean) = {
+    val pat = parseRegex(inputString)
+    val (res, incomplete) = applyTranslationVisitorRed(pat)
+    val res2 =
+      if (flags contains "i")
+        theory.re_case_insensitive(res)
+      else
+        res
+    (res2, incomplete)
   }
 
   def parseRegex(inputString : String) : Pattern = {
@@ -105,19 +125,82 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   val LookAhead       = new IFunction("LookAhead",  1, false, false)
   val LookBehind      = new IFunction("LookBehind", 1, false, false)
+  val NegLookAhead    = new IFunction("NegLookAhead", 1, false, false)
+  val NegLookBehind   = new IFunction("NegLookBehind", 1, false, false)
   val WordBoundary    = new IFunction("WordBoundary", 0, false, false)
   val NonWordBoundary = new IFunction("NonWordBoundary", 0, false, false)
+
+  private def applyTranslationVisitorExact(pat : Pattern) = {
+    val visitor = new TranslationVisitor(false)
+    visitor.visit (pat, true)
+  }
+
+  /**
+   * Translate the given pattern, dropping assertions that cannot be
+   * handled using standard automata operations. The second result
+   * component tells whether this kind of approximation took place.
+   */
+  private def applyTranslationVisitorRed(pat : Pattern) : (ITerm, Boolean) = {
+    val visitor = new TranslationVisitor(true)
+    val rawRes = visitor.visit (pat, true)
+    val res = dropAssertions (rawRes)
+    (res, res != rawRes)
+  }
+
+  private def dropAssertions(t : ITerm,
+                             negative : Boolean = false) : ITerm = t match {
+
+    case IFunApp(`re_begin_anchor`, _) => {
+      Console.err.println("Warning: ignoring anchor ^")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(`re_end_anchor`, _) => {
+      Console.err.println("Warning: ignoring anchor $")
+      if (negative) NONE else EPS
+    }
+
+    case IFunApp(LookAhead, _) => {
+      Console.err.println("Warning: ignoring look-ahead")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(LookBehind, _) => {
+      Console.err.println("Warning: ignoring look-behind")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(NegLookAhead, _) => {
+      Console.err.println("Warning: ignoring look-ahead")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(NegLookBehind, _) => {
+      Console.err.println("Warning: ignoring look-behind")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(WordBoundary, _) => {
+      Console.err.println("Warning: ignoring anchor \\b")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(NonWordBoundary, _) => {
+      Console.err.println("Warning: ignoring anchor \\B")
+      if (negative) NONE else EPS
+    }
+    case IFunApp(`re_comp`, Seq(arg)) =>
+      re_comp(dropAssertions(arg, !negative))
+    case IFunApp(f, args) =>
+      f((for (arg <- args) yield dropAssertions(arg, negative)) : _*)
+    case t =>
+      t
+  }
+
 
   /**
    * Visitor to translate a regex AST to a term.
    */
-  object TranslationVisitor extends FoldVisitor[ITerm, VisitorArg] {
+  private class TranslationVisitor(approxAssertions : Boolean)
+                extends FoldVisitor[ITerm, VisitorArg] {
     import IExpression._
     import theory._
 
     private var captGroupNum = 1
-
-    def apply(pat : Pattern) = dropAssertions(this.visit(pat, true))
 
     def leaf(arg : VisitorArg) : ITerm = EPS
     def combine(x : ITerm, y : ITerm, arg : VisitorArg) : ITerm = reCat(x, y)
@@ -129,14 +212,14 @@ class ECMARegexParser(theory : OstrichStringTheory,
                        outermost : VisitorArg) = {
       val terms = expandGroups(p.listtermc_) map (_.accept(this, false))
 
-      if (outermost) {
+      if (outermost && approxAssertions) {
         // handle leading look-aheads and trailing look-behinds
 
         var midTerms = terms filterNot (_ == EPS)
 
         val lookAheads = midTerms takeWhile {
-          case IFunApp(`re_begin_anchor` | `re_end_anchor` | 
-                         LookAhead | WordBoundary | NonWordBoundary, _)
+          case IFunApp(`re_begin_anchor` | `re_end_anchor` |
+                         LookAhead | NegLookAhead | WordBoundary | NonWordBoundary, _)
               => true
           case _
               => false
@@ -146,7 +229,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
         val newEnd = midTerms lastIndexWhere {
           case IFunApp(`re_begin_anchor` | `re_end_anchor` |
-                         LookBehind | WordBoundary | NonWordBoundary, _)
+                         LookBehind | NegLookBehind | WordBoundary | NonWordBoundary, _)
               => false
           case _
               => true
@@ -163,6 +246,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
                            EPS
                          case IFunApp(LookAhead, Seq(t)) =>
                            t
+                         case IFunApp(NegLookAhead, Seq(t)) =>
+                           t
                          case IFunApp(WordBoundary, _) =>
                            re_++(word, ALL)
                          case IFunApp(NonWordBoundary, _) =>
@@ -174,6 +259,8 @@ class ECMARegexParser(theory : OstrichStringTheory,
                          case IFunApp(`re_end_anchor`, _) =>
                            ALL
                          case IFunApp(LookBehind, Seq(t)) =>
+                           t
+                         case IFunApp(NegLookBehind, Seq(t)) =>
                            t
                          case IFunApp(WordBoundary, _) =>
                            re_++(ALL, word)
@@ -224,42 +311,6 @@ class ECMARegexParser(theory : OstrichStringTheory,
       alt.listtermc_.toList
     }
 
-    private def dropAssertions(t : ITerm,
-                               negative : Boolean = false) : ITerm = t match {
-/*
-      case IFunApp(`re_begin_anchor`, _) => {
-        Console.err.println("Warning: ignoring anchor ^")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(`re_end_anchor`, _) => {
-        Console.err.println("Warning: ignoring anchor $")
-        if (negative) NONE else EPS
-      }
- */
-      case IFunApp(LookAhead, _) => {
-        Console.err.println("Warning: ignoring look-ahead")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(LookBehind, _) => {
-        Console.err.println("Warning: ignoring look-behind")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(WordBoundary, _) => {
-        Console.err.println("Warning: ignoring anchor \\b")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(NonWordBoundary, _) => {
-        Console.err.println("Warning: ignoring anchor \\B")
-        if (negative) NONE else EPS
-      }
-      case IFunApp(`re_comp`, Seq(arg)) =>
-        re_comp(dropAssertions(arg, !negative))
-      case IFunApp(f, args) =>
-        f((for (arg <- args) yield dropAssertions(arg, negative)) : _*)
-      case t =>
-        t
-    }
-
     private def translateLookAhead(t : ITerm) : ITerm = {
       val ts = catToList(t) filterNot (_ == EPS)
       ts.lastOption match {
@@ -280,6 +331,7 @@ class ECMARegexParser(theory : OstrichStringTheory,
       }
     }
 
+
     private def catToList(t : ITerm) : Seq[ITerm] = t match {
       case IFunApp(`re_++`, Seq(a, b)) => catToList(a) ++ catToList(b)
       case t                         => List(t)
@@ -296,27 +348,48 @@ class ECMARegexParser(theory : OstrichStringTheory,
       // non-capture group
       reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)
 
-    override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) =
-      LookAhead(
-        translateLookAhead(
-          reUnionStar(p.listalternativec_ map (_.accept(this, arg)) : _*)))
+    override def visit(p : ecma2020regex.Absyn.PosLookahead, arg : VisitorArg) = {
+      if (approxAssertions)
+        LookAhead(
+          translateLookAhead(
+            reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*)))
+      else
+        LookAhead(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
+    }
 
-    override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) =
-      LookAhead(
-        re_comp(translateLookAhead(reUnionStar(
-          p.listalternativec_ map (_.accept(this, arg)) : _*))))
+    override def visit(p : ecma2020regex.Absyn.NegLookahead, arg : VisitorArg) = {
+      if (approxAssertions)
+        NegLookAhead(
+          re_comp(translateLookAhead(reUnionStar(
+            p.listalternativec_ map (_.accept(this, arg)): _*))))
+      else
+        NegLookAhead(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
+    }
 
     override def visit(p : ecma2020regex.Absyn.PosLookbehind,
-                       arg : VisitorArg) =
-      LookBehind(
-        translateLookBehind(reUnionStar(
-                              p.listalternativec_ map (_.accept(this, arg)) : _*)))
+                       arg : VisitorArg) = {
+      if (approxAssertions)
+        LookBehind(
+          translateLookBehind(reUnionStar(
+            p.listalternativec_ map (_.accept(this, arg)): _*)))
+      else
+        LookBehind(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
+    }
 
-    override def visit(p : ecma2020regex.Absyn.NegLookbehind,
-                       arg : VisitorArg) =
-      LookBehind(
-        re_comp(translateLookBehind(reUnionStar(
-                  p.listalternativec_ map (_.accept(this, arg)) : _*))))
+    override def visit(p : ecma2020regex.Absyn.NegLookbehind, arg : VisitorArg) = {
+      if (approxAssertions)
+        NegLookBehind (
+          re_comp (
+            translateLookBehind (
+              reUnionStar (
+                p.listalternativec_ map (_.accept (this, arg) ): _*) ) ) )
+      else
+        NegLookBehind(
+          reUnionStar(p.listalternativec_ map (_.accept(this, arg)): _*))
+    }
 
     override def visit(p : ecma2020regex.Absyn.DotAtom, arg : VisitorArg) =
       if (flags contains "s")
@@ -544,9 +617,9 @@ class ECMARegexParser(theory : OstrichStringTheory,
     override def visit(p : ecma2020regex.Absyn.BClassEscape,
                        arg : VisitorArg) =
       charSet(0x0008)
-    override def visit(p : ecma2020regex.Absyn.DashClassEscape,
+/*    override def visit(p : ecma2020regex.Absyn.DashClassEscape,
                        arg : VisitorArg) =
-      charSet(0x002D)
+      charSet(0x002D) */
 
     override def visit(p : ecma2020regex.Absyn.LetterCharEscape,
                        arg : VisitorArg) = {
@@ -647,8 +720,10 @@ class ECMARegexParser(theory : OstrichStringTheory,
 
   private def reInterStar(xs : ITerm*) = (ALL /: xs) (reInter _)
 
-  private lazy val decimal =
-    re_charrange(48, 57)
+  lazy val decimal = re_charrange(48, 57)
+  lazy val uppCaseChars = re_charrange(65, 90)
+  lazy val lowCaseChars = re_charrange(97, 122)
+  lazy val underscore = re_charrange(95, 95)
 
   private lazy val whitespace =
     charSet(9,          // TAB,   \t
