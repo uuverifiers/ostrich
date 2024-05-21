@@ -141,6 +141,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("re.from_ecma2020", List(SSo), RSo, true, false)
   val re_from_ecma2020_flags =
     MonoSortedIFunction("re.from_ecma2020_flags", List(SSo, SSo), RSo, true, false)
+  val re_from_automaton =
+    MonoSortedIFunction("re.from_automaton", List(SSo), RSo, true, false)
   val re_case_insensitive =
     MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
   val str_at_right =
@@ -200,7 +202,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val extraRegexFunctions =
     List(re_begin_anchor, re_end_anchor,
-         re_from_ecma2020, re_from_ecma2020_flags,
+         re_from_ecma2020, re_from_ecma2020_flags, re_from_automaton,
          re_case_insensitive,
          str_at_right, str_trim,
          str_replacere_longest, str_replaceallre_longest,
@@ -306,7 +308,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    re_comp, re_loop, re_loop_?, re_from_str, re_capture,
                    re_reference,
                    re_begin_anchor, re_end_anchor,
-                   re_from_ecma2020, re_from_ecma2020_flags,
+                   re_from_ecma2020, re_from_ecma2020_flags, re_from_automaton,
                    re_case_insensitive))
      yield functionPredicateMap(f)) ++
     (for (f <- List(str_len); if theoryFlags.useLength != OFlags.LengthOptions.Off)

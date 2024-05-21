@@ -82,14 +82,15 @@ lazy val root = (project in file(".")).
     mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
-//    resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
+    resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
 //
-//    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2024-01-12",
+    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2024-01-12",
   //  libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
+    libraryDependencies   += "com.lihaoyi" %% "fastparse" % "3.0.2",
   )
 
 
