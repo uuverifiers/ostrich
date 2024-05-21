@@ -480,9 +480,6 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     val newInitState = builder.initialState
 
     sMap += (newInitState -> ((initialState, initAutState)))
-    if (isAccept(initialState) && aut.isAccept(initAutState)){
-      builder.setAccept(newInitState, isAccepting =  true)
-    }
     sMapRev += (initialState, initAutState) -> newInitState
     if (isAccept(initialState) && aut.isAccept(initAutState)){
       builder.setAccept(newInitState, isAccepting =  true)
@@ -526,10 +523,12 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
         wordRun(psNext, word.tail, targState)
       }
     }
+
     while (!worklist.isEmpty) {
       // pre aut state, transducer state, automaton state
       val ps = worklist.pop()
       val (ts, as) = sMap(ps)
+
       for (ts <- lblTrans.get(ts);
            t <- ts;
            (asNext, aLbl) <- aut.outgoingTransitions(as);
@@ -596,7 +595,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
               throw new IllegalArgumentException("Post image of a transducer with internal transitions needs and internalAut")
             } else {
               silentTransitions.addBinding(ps, internalInit.get)
-             for (f <- internalFins.get)
+              for (f <- internalFins.get)
                 silentTransitions.addBinding(f, psNext)
             }
           }
@@ -614,7 +613,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     }
 
     AutomataUtils.buildEpsilons(builder, silentTransitions)
-   builder.getAutomaton
+
+    builder.getAutomaton
   }
 
   override def toString = {
