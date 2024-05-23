@@ -16,7 +16,7 @@ JAVA=java
 export JAVA_OPTS="-Xss512m -Xmx2048m"
 
 princessParams=()
-ostrichSolver=ostrich.OstrichStringTheory
+ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
 ostrichParams=""
 
 help() {
@@ -63,15 +63,6 @@ for p; do
         -h)
             help
             exit 0
-            ;;
-        -cea)
-            ostrichSolver=ostrich.OstrichStringTheory
-            ;;
-        +cea)
-            ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
-            ;;
-        +seq)
-            ostrichSolver=ap.theories.strings.SeqStringTheory
             ;;
         *)
             princessParams+=("$p")
