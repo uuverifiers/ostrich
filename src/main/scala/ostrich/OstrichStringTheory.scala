@@ -216,6 +216,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          (str_extract, 1),
          (re_loop_?, 2))
 
+  // List of additional functions that can be provided by sub-classes
+  protected def extraExtraFunctions : Seq[IFunction] = List()
+
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
      yield (f, (op, argSelector, resSelector))).toMap
@@ -234,7 +237,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
       yield (name, Right(p))) ++
-     (for (f <- extraRegexFunctions.iterator)
+     (for (f <- extraRegexFunctions.iterator ++ extraExtraFunctions.iterator)
       yield (f.name, Left(f)))).toMap
 
   val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] =
@@ -256,7 +259,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     predefFunctions ++
     List(str_empty, str_cons, str_head, str_tail, str_char_count) ++
     (extraStringFunctions map (_._2)) ++
-    extraRegexFunctions ++ (extraIndexedFunctions map (_._1))
+    extraRegexFunctions ++
+    (extraIndexedFunctions map (_._1)) ++
+    extraExtraFunctions
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
