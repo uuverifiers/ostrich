@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2023 Denghang Hu, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2023 Denghang Hu, Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
