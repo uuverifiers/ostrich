@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2023 Denghang Hu, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2023 Denghang Hu, Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -65,7 +65,7 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
     println
   }
 
-  protected var useCostEnriched, debug = false
+  protected var debug = false
   protected var compApprox, simplyAutByVec = true
   protected var backend: OFlags.CEABackend.Value = Unary
   protected var nuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3
@@ -83,8 +83,6 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
       minimizeAuts = value
 
     // Options for cost-enriched-automata based solver
-    case CmdlParser.Opt("costenriched", value) =>
-      useCostEnriched = value
     case CmdlParser.Opt("debug", value) =>
       debug = value
       ParikhUtil.debugOpt = value
@@ -145,7 +143,6 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
         useLength = OFlags.LengthOptions.On,
         minimizeAutomata = minimizeAuts,
         backend = backend,
-        useCostEnriched = useCostEnriched,
         debug = debug,
         NuxmvBackend = nuxmvBackend,
         findModelStrategy = findModelStrategy,

@@ -298,18 +298,14 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         case Seq((IdealInt.ONE, c: ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
           val str = strDatabase id2Str 0
-          val negAut =
-            if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
-            else !(BricsAutomaton fromString str)
+          val negAut = !(BricsAutomatonWrapper fromString str)
           regexes += ((l(c), negAut))
         }
         case Seq((IdealInt.ONE, c: ConstantTerm), (IdealInt(coeff), OneTerm))
             if (stringConstants contains c) &&
               (strDatabase containsId -coeff) => {
           val str = strDatabase id2Str -coeff
-          val negAut =
-            if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
-            else !(BricsAutomaton fromString str)
+          val negAut = !(BricsAutomatonWrapper fromString str)
           regexes += ((l(c), negAut))
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>
@@ -335,9 +331,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         for ((t, _) <- regexes)
           regexCoveredTerms += t
 
-        val anyString =
-          if (flags.useCostEnriched) BricsAutomatonWrapper.makeAnyString()
-          else BricsAutomaton.makeAnyString()
+        val anyString = BricsAutomatonWrapper.makeAnyString()
         for ((c, d) <- negEqs) {
           if (regexCoveredTerms add c)
             regexes += ((l(c), anyString))

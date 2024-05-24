@@ -109,7 +109,6 @@ class ParikhStore(
   private def checkConsistencyByProduct(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
-    if (flags.lazyCheckConsistency) return None
     productAut = productAut product aut
     val consideredAuts = new ArrayBuffer[CostEnrichedAutomatonBase]
     if (productAut.isEmpty) {
@@ -131,7 +130,6 @@ class ParikhStore(
   private def checkConsistencyByNuxmv(
       aut: CostEnrichedAutomatonBase
   ): Option[Seq[CostEnrichedAutomatonBase]] = {
-    if (flags.lazyCheckConsistency) return None
     val productComplexity =
       aut.transitionsWithVec.size * productAut.transitionsWithVec.size
     if (productComplexity < 100_000 || flags.eagerAutomataOperations)
