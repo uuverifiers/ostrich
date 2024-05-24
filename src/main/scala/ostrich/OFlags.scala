@@ -84,14 +84,21 @@ case class OFlags(
   regexTranslator         : OFlags.RegexTranslator.Value =
                               OFlags.RegexTranslator.Hybrid,
 
-  backend: OFlags.CEABackend.Value = OFlags.CEABackend.Unary,
-  useCostEnriched: Boolean = false,
-  debug: Boolean = false,
-  lazyCheckConsistency: Boolean = false,
-  NuxmvBackend: OFlags.NuxmvBackend.Value = OFlags.NuxmvBackend.Ic3,
-  findModelStrategy: OFlags.FindModelBy.Value = OFlags.FindModelBy.Mixed,
-  searchStringStrategy: OFlags.SearchStringBy.Value = OFlags.SearchStringBy.MoreUpdatesFirst,
-  countUnwindStrategy: OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt,
-  compApprox: Boolean = false,
-  simplyAutByVec: Boolean = true,
+  // ceasolver args
+  // cea solver backend
+  backend                 : OFlags.CEABackend.Value          = OFlags.CEABackend.Unary,                
+  // the develop arg controlling whether to print the debug information
+  debug                   : Boolean                          = false,                                  
+  // which backend to use for nuxmv (ic3, bmc)
+  NuxmvBackend            : OFlags.NuxmvBackend.Value        = OFlags.NuxmvBackend.Ic3,                
+  // find model based on which integer information (trantions times, registers values, or mixed information)
+  findModelStrategy       : OFlags.FindModelBy.Value         = OFlags.FindModelBy.Mixed,               
+  // the order of transitions to be searched during depth-first search for finding a model (more registers' updates first, random)
+  searchStringStrategy    : OFlags.SearchStringBy.Value      = OFlags.SearchStringBy.MoreUpdatesFirst,
+  // how to unwind nested counting operations (min first, meet first)
+  countUnwindStrategy     : OFlags.NestedCountUnwindBy.Value = OFlags.NestedCountUnwindBy.MinFisrt,  
+  // whether to use approximate complementation for counting  
+  compApprox              : Boolean                          = false,         
+  // whether to simplify automata by vector                         
+  simplyAutByVec          : Boolean                          = true,                                   
 )
