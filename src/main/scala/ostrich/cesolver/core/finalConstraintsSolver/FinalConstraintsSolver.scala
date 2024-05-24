@@ -47,6 +47,10 @@ class Result {
   def updateModel(t: ITerm, v: Seq[Int]): Unit = model.update(t, v)
 
   def getModel = model.getModel
+
+  override def toString : String =
+    "" + status + ", " + model
+
 }
 
 
