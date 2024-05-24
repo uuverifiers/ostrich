@@ -68,7 +68,7 @@ object OFlags {
    */
   protected[ostrich] val debug = false
 
-  val timeout = 900000
+  val timeout = 60000
 
 }
 

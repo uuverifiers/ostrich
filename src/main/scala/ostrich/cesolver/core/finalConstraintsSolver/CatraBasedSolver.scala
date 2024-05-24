@@ -55,16 +55,6 @@ import java.nio.charset.StandardCharsets
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.{ITerm, IConstant, IIntLit}
-import ap.terfor.ConstantTerm
-import ap.terfor.linearcombination.LinearCombination
-import ostrich.OFlags
-import uuverifiers.catra.ChooseNuxmv
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.util.Random
-import java.io.File
-import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.cesolver.util.ParikhUtil
-import ap.parser.{ITerm, IConstant, IIntLit, SimplifyingConstantSubstVisitor}
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.util.CatraWriter
@@ -124,15 +114,16 @@ class CatraBasedSolver(
   def toCatraInputInteger: String = {
     val sb = new StringBuilder
     val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
-
     val liaIntTerms = SymbolCollector.constants(lia)
     val autIntTerms =
-      (for (constraint <- constraints;
-            aut <- constraint.auts;
-            IConstant(c) <- aut.registers)
-       yield c).toSet
-
+      (for (
+        constraint <- constraints;
+        aut <- constraint.auts;
+        IConstant(c) <- aut.registers
+      )
+        yield c).toSet
     val allIntTerms = liaIntTerms ++ autIntTerms
+
     if (allIntTerms.isEmpty) return ""
 
     sb.append("counter int ")
@@ -276,22 +267,21 @@ class CatraBasedSolver(
       result.setStatus(ProverStatus.Sat)
       return result
     }
-/*
-    for (c <- constraints) {
-      val productAut = c.auts.reduceLeft(_ product _)
-      productAut.toDot("catra_" + c.strId)
-    }
- */
     var result = new Result
-    val interFile = File.createTempFile("ostrich-catra", ".par", null)
-    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
-    // val interFile = new File("catra")
+    val catraInputF =
+      if (ParikhUtil.debugOpt) Paths.get("catra_input.par")
+      else Files.createTempFile("catra_input", ".par")
     try {
-      val writer = new CatraWriter(interFile.toString())
-      writer.write(toCatraInput)
-      writer.close()
+      val catraInput = toCatraInput.getBytes(StandardCharsets.UTF_8)
+      Files.write(
+        catraInputF,
+        catraInput,
+        StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE,
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
       val arguments = CommandLineOptions(
-        inputFiles = Seq(interFile.toString()),
+        inputFiles = Seq(catraInputF.toString()),
         timeout_ms = Some(OFlags.timeout),
         dumpSMTDir = None,
         dumpGraphvizDir = None,
@@ -311,8 +301,6 @@ class CatraBasedSolver(
         printProof = false
       )
 
-      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
-      
       val catraRes = ParikhUtil.measure(
         s"${this.getClass().getSimpleName()}::findIntegerModel"
       )(runInstances(arguments))
@@ -320,14 +308,12 @@ class CatraBasedSolver(
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-        case Failure(e) => throw e
+        case Failure(_) => // do nothing as unknown resultå
       }
-
-      result
-
     } finally {
-      // delete temp file
-      interFile.delete()
+      if (!ParikhUtil.debugOpt)
+        Files.deleteIfExists(catraInputF)
     }
+    result
   }
 }

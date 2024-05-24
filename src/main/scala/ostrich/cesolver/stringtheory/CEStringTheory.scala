@@ -19,10 +19,9 @@ import ostrich.OstrichEqualityPropagator
 import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.cesolver.preprocess.CEInternalPreprocessor
 import ostrich.cesolver.preprocess.CEReducerFactory
-
-object CEStringTheory {
-  val alphabetSize = 0x10000
-}
+import ap.parser.IFunction
+import ap.types.MonoSortedIFunction
+import ap.types.Sort.Integer
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -36,6 +35,27 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
 
   lazy val ceAutDatabase = new CEAutDatabase(this, flags)
 
+   // substring special cases 
+  lazy val str_substr_0_lenMinus1 = 
+    new MonoSortedIFunction("str_substr_0_lenMinus1", List(StringSort), StringSort, true, false)
+  lazy val str_substr_lenMinus1_1 = 
+    new MonoSortedIFunction("str_substr_lenMinus1_1", List(StringSort), StringSort, true, false)
+  lazy val str_substr_n_lenMinusM = 
+    new MonoSortedIFunction("str_substr_n_lenMinusM", List(StringSort, Integer, Integer), StringSort, true, false)
+  lazy val str_substr_0_indexofc0 = 
+    new MonoSortedIFunction("str_substr_0_indexofc0", List(StringSort, StringSort), StringSort, true, false)
+  lazy val str_substr_0_indexofc0Plus1 = 
+    new MonoSortedIFunction("str_substr_0_indexofc0Plus1", List(StringSort, StringSort), StringSort, true, false)
+  lazy val str_substr_indexofc0Plus1_tail = 
+    new MonoSortedIFunction("str_substr_indexofc0Plus1_tail", List(StringSort, StringSort), StringSort, true, false)
+
+  lazy val specialSubstrFucs = List(
+    str_substr_0_lenMinus1, str_substr_n_lenMinusM, str_substr_lenMinus1_1, 
+    str_substr_0_indexofc0, str_substr_0_indexofc0Plus1, str_substr_indexofc0Plus1_tail
+  )
+
+  override protected def  extraExtraFunctions: Seq[IFunction] = specialSubstrFucs
+
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
     Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof) ++
@@ -45,7 +65,6 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
                    str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
-                   str_substr_0_lenMinus1,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,

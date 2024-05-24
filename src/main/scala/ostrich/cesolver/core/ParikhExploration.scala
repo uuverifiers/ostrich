@@ -241,7 +241,7 @@ class ParikhExploration(
   val leafTerms =
     allTerms filter { case t => !(resultTerms contains t) }
 
-  private def trivialConflict: ConflictSet = {
+  private def trivalConflict: ConflictSet = {
     for (
       t <- leafTerms.toSeq;
       aut <- constraintStores(t).getCompleteContents
@@ -335,7 +335,7 @@ class ParikhExploration(
             throwResultCutException
           else
             throw new Exception(
-              "Model extraction failed: " + res + " old value::" + _oldValue + " != res value::" + resValue
+              s"For $res = $op($args), model extraction failed: old value::" + _oldValue + " != res value::" + resValue
             )
       }
 
@@ -365,11 +365,9 @@ class ParikhExploration(
 
         backendSolver.setIntegerTerm(integerTerms.toSet)
         for (t <- leafTerms; if (strTerms contains t)) {
-          backendSolver.addConstraint(t, constraintStores(t).getCompleteContents)
+          backendSolver.addConstraint(t, constraintStores(t).getContents)
         }
         val res = backendSolver.measureTimeSolve
-
-        ParikhUtil.debugPrintln("Result from CEA backend: " + res)
 
         res.getStatus match {
           case ProverStatus.Sat => {
@@ -410,11 +408,11 @@ class ParikhExploration(
               }.toMap
             )
           }
-          case ProverStatus.Unsat => return trivialConflict
+          case ProverStatus.Unsat => return trivalConflict
           case _ => 
             ParikhUtil.log("One search branch is unknow: " + res.getStatus)
             maybeUnknown = true
-            return trivialConflict
+            return trivalConflict
         }
 
       }

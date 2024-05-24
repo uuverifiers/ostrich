@@ -66,8 +66,4 @@ class OstrichModel extends Model {
   def update(term: ITerm, value: IdealInt): Unit = super.update(term, IntValue(value))
 
   def update(term: ITerm, value: Seq[Int]): Unit = super.update(term, StringValue(value))
-
-  override def toString : String =
-    "{" + model.mkString(", ") + "}"
-
 }

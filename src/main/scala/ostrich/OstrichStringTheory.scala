@@ -216,24 +216,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          (str_extract, 1),
          (re_loop_?, 2))
 
-  // substring special cases 
-  val str_substr_0_lenMinus1 = 
-    new MonoSortedIFunction("str_substr_0_lenMinus1", List(StringSort), StringSort, true, false)
-  val str_substr_lenMinus1_1 = 
-    new MonoSortedIFunction("str_substr_lenMinus1_1", List(StringSort), StringSort, true, false)
-  val str_substr_n_lenMinusM = 
-    new MonoSortedIFunction("str_substr_n_lenMinusM", List(StringSort, Integer, Integer), StringSort, true, false)
-  val str_substr_0_indexofc0 = 
-    new MonoSortedIFunction("str_substr_0_indexofc0", List(StringSort, StringSort), StringSort, true, false)
-  val str_substr_0_indexofc0Plus1 = 
-    new MonoSortedIFunction("str_substr_0_indexofc0Plus1", List(StringSort, StringSort), StringSort, true, false)
-  val str_substr_indexofc0Plus1_tail = 
-    new MonoSortedIFunction("str_substr_indexofc0Plus1_tail", List(StringSort, StringSort), StringSort, true, false)
-
-  val specialSubstrFucs = List(
-    str_substr_0_lenMinus1, str_substr_n_lenMinusM, str_substr_lenMinus1_1, 
-    str_substr_0_indexofc0, str_substr_0_indexofc0Plus1, str_substr_indexofc0Plus1_tail
-  )
+  // List of additional functions that can be provided by sub-classes
+  protected def extraExtraFunctions : Seq[IFunction] = List()
 
   val extraFunctionPreOps =
     (for ((_, f, op, argSelector, resSelector) <- extraStringFunctions.iterator)
@@ -253,7 +237,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       yield (name, Left(f))) ++
      (for ((name, p, _) <- transducersWithPreds.iterator)
       yield (name, Right(p))) ++
-     (for (f <- extraRegexFunctions.iterator ++ specialSubstrFucs.iterator)
+     (for (f <- extraRegexFunctions.iterator ++ extraExtraFunctions.iterator)
       yield (f.name, Left(f)))).toMap
 
   val extraIndexedOps : Map[(String, Int), Either[IFunction, Predicate]] =
@@ -275,7 +259,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     predefFunctions ++
     List(str_empty, str_cons, str_head, str_tail, str_char_count) ++
     (extraStringFunctions map (_._2)) ++
-    extraRegexFunctions ++ (extraIndexedFunctions map (_._1)) ++ specialSubstrFucs
+    extraRegexFunctions ++
+    (extraIndexedFunctions map (_._1)) ++
+    extraExtraFunctions
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
