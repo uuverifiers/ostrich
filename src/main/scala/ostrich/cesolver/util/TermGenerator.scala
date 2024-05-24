@@ -47,24 +47,10 @@ object TermGenerator {
 
   def apply(id: Int): TermGenerator = new TermGenerator(id)
 
-<<<<<<< HEAD
   def apply(): TermGenerator = apply(nextId)
 }
 
 class TermGenerator(private val id: Int)  {
-=======
-  private var id_counter = 0
-
-  private def nextId : Int = synchronized {
-    id_counter = id_counter + 1
-    id_counter - 1
-  }
-
-  def apply(): TermGenerator = new TermGenerator(nextId)
-}
-
-class TermGenerator private (val id: Int) {
->>>>>>> upstream/cea-catra
   var count = 0
   def registerTerm: ITerm = {
     count = count + 1

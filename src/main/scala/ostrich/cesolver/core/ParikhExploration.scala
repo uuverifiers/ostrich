@@ -410,11 +410,11 @@ class ParikhExploration(
               }.toMap
             )
           }
-          case ProverStatus.Unsat => return trivalConflict
+          case ProverStatus.Unsat => return trivialConflict
           case _ => 
             ParikhUtil.log("One search branch is unknow: " + res.getStatus)
             maybeUnknown = true
-            return trivalConflict
+            return trivialConflict
         }
 
       }
