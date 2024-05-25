@@ -42,7 +42,6 @@ import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.IBinJunctor
 
-
 object FinalConstraints {
   def unaryHeuristicACs(
       t: ITerm,
@@ -68,6 +67,7 @@ object FinalConstraints {
     new CatraFinalConstraints(t, auts, flags)
   }
 
+/*
   def nuxmvACs(
     t: ITerm,
     auts: Seq[CostEnrichedAutomatonBase],

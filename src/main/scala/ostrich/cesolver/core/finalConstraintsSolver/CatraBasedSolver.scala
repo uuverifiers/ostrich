@@ -1,37 +1,41 @@
-/** This file is part of Ostrich, an SMT solver for strings. Copyright (c) 2023
-  * Denghang Hu. All rights reserved.
-  *
-  * Redistribution and use in source and binary forms, with or without
-  * modification, are permitted provided that the following conditions are met:
-  *
-  * * Redistributions of source code must retain the above copyright notice,
-  * this list of conditions and the following disclaimer.
-  *
-  * * Redistributions in binary form must reproduce the above copyright notice,
-  * this list of conditions and the following disclaimer in the documentation
-  * and/or other materials provided with the distribution.
-  *
-  * * Neither the name of the authors nor the names of their contributors may be
-  * used to endorse or promote products derived from this software without
-  * specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  * POSSIBILITY OF SUCH DAMAGE.
-  */
-
+/**
+ * This file is part of Ostrich, an SMT solver for strings.
+ * Copyright (c) 2023 Denghang Hu. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the authors nor the names of their
+ *   contributors may be used to endorse or promote products derived from
+ *   this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.{SymbolCollector, PrincessLineariser}
+
+import ap.terfor.TerForConvenience._
+import ap.terfor.Term
 import ap.basetypes.IdealInt
 import uuverifiers.catra.CommandLineOptions
 import scala.io.Source
@@ -219,20 +223,37 @@ class CatraBasedSolver(
     val result = new Result
     res match {
       case Sat(assignments) => {
-        // update integer model
-        new StringBuilder
-        // lia may contains some string term which should be ignored
-        and(inputFormula +: constraints.map(_.getRegsRelation))
-        val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
-        val name2Term = allIntTerms.map(t => (t.toString(), t)).toMap
+        val strIntersted = constraints.flatMap(_.interestTerms)
+
+        val freshTerms =
+          (for ((IConstant(a), b) <- freshIntTerm2orgin;
+                t <- List(a) ++ (SymbolCollector constants b))
+           yield IConstant(t)).toSeq
+
+        val name2Term =
+          (strIntersted ++ integerTerms ++ freshTerms).map {
+            case t => (t.toString(), t)
+          }.toMap
+
+        val termModelPre =
+          (for ((_, t : IConstant) <- name2Term)
+           yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap ++
+          (for (
+             (k, v) <- assignments;
+             t <- name2Term.get(k.name)
+           ) yield (t, IdealInt(v)))
+
+        val preAssignment =
+          (for ((IConstant(c), t) <- termModelPre)
+           yield (c -> IIntLit(t))).toMap
 
         val termModel =
-          (for ((_, t: IConstant) <- name2Term)
-            yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap ++
-            (for (
-              (k, v) <- assignments;
-              t <- name2Term.get(k.name)
-            ) yield (t, IdealInt(v)))
+          termModelPre ++ (
+            for ((a, b) <- freshIntTerm2orgin;
+                 IIntLit(value) <-
+                   List(SimplifyingConstantSubstVisitor(b, preAssignment)))
+            yield (a -> value)
+          )
 
         for ((a, b) <- termModel)
           result.updateModel(a, b)
@@ -307,7 +328,7 @@ class CatraBasedSolver(
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-        case Failure(_) => // do nothing as unknown resultå
+        case Failure(_) => // do nothing as unknown result
       }
     } finally {
       if (!ParikhUtil.debugOpt)

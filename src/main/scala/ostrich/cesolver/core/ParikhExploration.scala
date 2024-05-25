@@ -412,7 +412,7 @@ class ParikhExploration(
           }
           case ProverStatus.Unsat => return trivialConflict
           case _ => 
-            ParikhUtil.log("One search branch is unknow: " + res.getStatus)
+            ParikhUtil.log("One search branch is unknown: " + res.getStatus)
             maybeUnknown = true
             return trivialConflict
         }
