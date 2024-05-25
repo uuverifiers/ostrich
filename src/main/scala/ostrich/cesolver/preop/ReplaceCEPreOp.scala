@@ -34,25 +34,17 @@ package ostrich.cesolver.preop
 
 import scala.collection.mutable.{
   HashMap => MHashMap,
-  HashSet => MHashSet,
   Stack => MStack
 }
 
 import ostrich.automata.Automaton
 import ostrich.automata.Transducer
-import ostrich.automata.BricsTransducer
-import ostrich.automata.BricsTransducerBuilder
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import Transducer._
-import scala.collection.mutable.Stack
-import scala.collection.mutable.ArrayBuffer
-import ostrich.cesolver.util.ParikhUtil.TLabel
 import ostrich.cesolver.automata.CETransducer
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.automata.BricsTLabelOps
-import ostrich.automata.BricsTLabelEnumerator
 import ostrich.cesolver.util.ParikhUtil.{partition, State, getImage}
-import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
+import ostrich.cesolver.automata.CETLabelEnumerator
 
 object ReplaceCEPreOp {
   // pre-images of x = replace(y, e, u)
@@ -70,7 +62,7 @@ object ReplaceCEPreOp {
   private def buildTransducer(
       aut: CostEnrichedAutomatonBase
   ): CETransducer = {
-    ParikhUtil.todo("ReplaceCEPreOp: not handle empty match in pattern")
+    ParikhUtil.todo("ReplaceCEPreOp: not handle empty match in pattern", 3)
     abstract class Mode
     // not matching
     case object NotMatching extends Mode
@@ -81,8 +73,8 @@ object ReplaceCEPreOp {
     // copy the rest of the word after first match
     case object CopyRest extends Mode
 
-    val labelEnumerator = new BricsTLabelEnumerator(
-      aut.transitionsWithVec.map(_._2).toIterator
+    val labelEnumerator = new CETLabelEnumerator(
+      aut.transitionsWithVec.map(_._2)
     )
     val labels = labelEnumerator.enumDisjointLabelsComplete
     val ceTran = new CETransducer
@@ -251,7 +243,7 @@ class ReplaceCEPreOp(tran: CETransducer, replacement: Seq[Char])
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     // x = replace(y, pattern, replacement)
-    val rc = automaton2CostEnriched(resultConstraint)
+    val rc = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val internals = partition(rc, replacement)
     val newYCon = tran.preImage(rc, internals)
     (Iterator(Seq(newYCon)), argumentConstraints)

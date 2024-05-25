@@ -29,11 +29,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.{SymbolCollector, PrincessLineariser}
+
 import ap.terfor.TerForConvenience._
 import ap.terfor.Term
 import ap.basetypes.IdealInt
@@ -53,29 +53,27 @@ import uuverifiers.catra.Sat
 import uuverifiers.catra.OutOfMemory
 import uuverifiers.catra.Timeout
 import uuverifiers.catra.Unsat
-import ap.terfor.ConstantTerm
-import ap.terfor.linearcombination.LinearCombination
 import ostrich.OFlags
-import uuverifiers.catra.ChooseNuxmv
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.util.Random
-import java.io.File
+import java.nio.file.{Files, StandardOpenOption, Paths}
+import java.nio.charset.StandardCharsets
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.util.ParikhUtil
-import ap.parser.{ITerm, IConstant, IIntLit, SimplifyingConstantSubstVisitor}
+import ap.parser.{ITerm, IConstant, IIntLit}
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.util.TimeoutException
 import ostrich.cesolver.util.CatraWriter
 import ap.parser.IExpression._
 import ap.parser.IFormula
+import ostrich.cesolver.core.finalConstraints.CatraFinalConstraints
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
 
 class CatraBasedSolver(
-    private val inputFormula: IFormula,
-    freshIntTerm2orgin: Map[ITerm, ITerm]
+    flags: OFlags,
+    private val inputFormula: IFormula
 ) extends FinalConstraintsSolver[CatraFinalConstraints] {
 
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    addConstraint(FinalConstraints.catraACs(t, auts))
+    addConstraint(FinalConstraints.catraACs(t, auts, flags))
   }
 
   def runInstances(arguments: CommandLineOptions): Try[CatraResult] = {
@@ -141,7 +139,7 @@ class CatraBasedSolver(
     val sb = new StringBuilder
     for (constraint <- constraints) {
       sb.append("synchronised {\n")
-      val autNamePrefix = constraint.strId.toString
+      val autNamePrefix = constraint.strDataBaseId.toString
       for ((aut, i) <- constraint.auts.zipWithIndex) {
         sb.append(toCatraInputAutomaton(aut, autNamePrefix + i))
       }
@@ -195,10 +193,28 @@ class CatraBasedSolver(
 
   def toCatraInputLIA: String = {
     val sb = new StringBuilder
-    val lia = and(inputFormula +: constraints.map(_.getRegsRelation))
+    // to match the semantic of catra, we need to generate a constraint R = 0 if
+    // the automaton only accepts empty string and has register R
+    val zeroConstraint =
+      and(
+        for (
+          c <- constraints; aut <- c.auts; reg <- aut.registers;
+          if ParikhUtil.isEmptyString(aut)
+        )
+          yield reg === IIntLit(0)
+      )
+
+    val lia = and(
+      inputFormula +: constraints.map(_.getRegsRelation) :+ zeroConstraint
+    )
     if (lia.isTrue) return ""
     sb.append("constraint ")
-    sb.append(PrincessLineariser.asString(lia).replaceAll("&", "&&"))
+    sb.append(
+      PrincessLineariser
+        .asString(lia)
+        .replaceAll("&", "&&")
+        .replaceAll("[|]", "||")
+    )
     sb.append(";\n")
     sb.toString()
   }
@@ -244,12 +260,11 @@ class CatraBasedSolver(
 
         // update string model
         for (singleString <- constraints) {
-          singleString.setInterestTermModel(termModel)
           val value = ParikhUtil.measure(
             s"${this.getClass().getSimpleName()}::findStringModel"
-          )(singleString.getModel)
+          )(singleString.getModel(termModel))
           value match {
-            case Some(v) => result.updateModel(singleString.strId, v)
+            case Some(v) => result.updateModel(singleString.strDataBaseId, v)
             case None    => throw UnknownException("Cannot find string model")
           }
         }
@@ -272,22 +287,21 @@ class CatraBasedSolver(
       result.setStatus(ProverStatus.Sat)
       return result
     }
-/*
-    for (c <- constraints) {
-      val productAut = c.auts.reduceLeft(_ product _)
-      productAut.toDot("catra_" + c.strId)
-    }
- */
     var result = new Result
-    val interFile = File.createTempFile("ostrich-catra", ".par", null)
-    ParikhUtil.debugPrintln("Writing Catra input to " + interFile)
-    // val interFile = new File("catra")
+    val catraInputF =
+      if (ParikhUtil.debugOpt) Paths.get("catra_input.par")
+      else Files.createTempFile("catra_input", ".par")
     try {
-      val writer = new CatraWriter(interFile.toString())
-      writer.write(toCatraInput)
-      writer.close()
+      val catraInput = toCatraInput.getBytes(StandardCharsets.UTF_8)
+      Files.write(
+        catraInputF,
+        catraInput,
+        StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE,
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
       val arguments = CommandLineOptions(
-        inputFiles = Seq(interFile.toString()),
+        inputFiles = Seq(catraInputF.toString()),
         timeout_ms = Some(OFlags.timeout),
         dumpSMTDir = None,
         dumpGraphvizDir = None,
@@ -307,8 +321,6 @@ class CatraBasedSolver(
         printProof = false
       )
 
-      ParikhUtil.debugPrintln("Catra arguments: " + arguments)
-      
       val catraRes = ParikhUtil.measure(
         s"${this.getClass().getSimpleName()}::findIntegerModel"
       )(runInstances(arguments))
@@ -316,14 +328,12 @@ class CatraBasedSolver(
       catraRes match {
         case Success(_catraRes) =>
           result = decodeCatraResult(_catraRes)
-        case Failure(e) => throw e
+        case Failure(_) => // do nothing as unknown result
       }
-
-      result
-
     } finally {
-      // delete temp file
-      interFile.delete()
+      if (!ParikhUtil.debugOpt)
+        Files.deleteIfExists(catraInputF)
     }
+    result
   }
 }

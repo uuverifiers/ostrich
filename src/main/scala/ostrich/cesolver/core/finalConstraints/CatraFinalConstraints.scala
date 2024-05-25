@@ -29,35 +29,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package ostrich.cesolver.core.finalConstraints
 
-package ostrich.cesolver.core
-
-import ap.terfor.Formula
-import scala.collection.mutable.{HashMap => MHashMap}
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
-import ap.parser.IExpression._
-import ap.parser.IFormula
+import ostrich.OFlags
+import ap.basetypes.IdealInt
 import ostrich.cesolver.util.ParikhUtil
 
 
 class CatraFinalConstraints(
-    override val strId: ITerm,
-    override val auts: Seq[CostEnrichedAutomatonBase]
-) extends FinalConstraints {
-
-  val interestTerms: Seq[ITerm] = auts.flatMap(_.registers)
-
-  import ap.terfor.TerForConvenience._
-  
-  def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
-
-  def getModel: Option[Seq[Int]] = {
-    val registersModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(auts, registersModel)
-  }
-
-  override def toString : String =
-    "" + strId + ", " + auts.mkString(", ")
-
+    strDataBaseId: ITerm,
+    auts: Seq[CostEnrichedAutomatonBase],
+    flags: OFlags
+) extends BaselineFinalConstraints(strDataBaseId, auts, flags) {
+    def getModel(termModel: Map[ITerm, IdealInt]): Option[Seq[Int]] = {
+        ParikhUtil.findAcceptedWord(auts, termModel, flags)
+    }
 }

@@ -33,13 +33,10 @@
 package ostrich.cesolver.util
 
 import ap.parser.ITerm
-import ap.terfor.ConstantTerm
-import ap.terfor.TermOrder
 import ap.parser.IExpression._
 
 
 object TermGenerator {
-  def apply(id: Int): TermGenerator = new TermGenerator(id)
 
   private var id_counter = 0
 
@@ -48,10 +45,12 @@ object TermGenerator {
     id_counter - 1
   }
 
-  def apply(): TermGenerator = new TermGenerator(nextId)
+  def apply(id: Int): TermGenerator = new TermGenerator(id)
+
+  def apply(): TermGenerator = apply(nextId)
 }
 
-class TermGenerator private (val id: Int) {
+class TermGenerator(private val id: Int)  {
   var count = 0
   def registerTerm: ITerm = {
     count = count + 1

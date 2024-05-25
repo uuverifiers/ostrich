@@ -29,35 +29,31 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package ostrich.cesolver.util
 
-package ostrich.cesolver.convenience
+import ap.parser.CollectingVisitor
+import ap.parser.{IExpression, IFormula}
+import ap.parser.ITerm
+import ap.parser.IConstant
 
-import ostrich.cesolver.automata.BricsAutomatonWrapper
-import ostrich.automata.Automaton
-import ostrich.automata.BricsAutomaton
-import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.cesolver.util.ParikhUtil
-object CostEnrichedConvenience {
-  def automaton2CostEnriched(
-      auts: Seq[Automaton]
-  ): Seq[CostEnrichedAutomatonBase] = {
-    ParikhUtil.log("CostEnrichedConvenience.automaton2CostEnriched: convert automata to cost-enriched automata")
-    auts.map(automaton2CostEnriched(_))
+class ConstSubstVisitor extends CollectingVisitor[Map[ITerm, ITerm], IExpression] {
+  def apply(t: IExpression, substMap: Map[ITerm, ITerm]): IExpression = {
+    visit(t, substMap)
+  }
+  def apply(t : ITerm, substMap : Map[ITerm, ITerm]) : ITerm =
+    apply(t.asInstanceOf[IExpression], substMap).asInstanceOf[ITerm]
+  def apply(t : IFormula, substMap : Map[ITerm, ITerm]) : IFormula =
+    apply(t.asInstanceOf[IExpression], substMap).asInstanceOf[IFormula]
+
+  override def preVisit(t: IExpression, substMap: Map[ITerm, ITerm]): PreVisitResult = t match {
+    case t: IConstant if substMap.contains(t) => {
+      ShortCutResult(substMap(t))
+    }
+    case _ => KeepArg
   }
 
-  def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonBase = {
-    ParikhUtil.log("CostEnrichedConvenience.automaton2CostEnriched: convert automaton to cost-enriched automaton")
-    if (
-      aut.isInstanceOf[CostEnrichedAutomatonBase]
-    ) {
-      aut.asInstanceOf[CostEnrichedAutomatonBase]
-    } else if (aut.isInstanceOf[BricsAutomaton]) {
-      BricsAutomatonWrapper(aut.asInstanceOf[BricsAutomaton].underlying)
-    } else {
-      val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
-      // e.printStackTrace()
-      throw e
-    }
+  def postVisit(t: IExpression, arg: Map[ITerm,ITerm], subres: Seq[IExpression]): IExpression = {
+    t update subres
   }
 
 }

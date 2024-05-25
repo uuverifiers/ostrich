@@ -34,6 +34,7 @@ package ostrich.cesolver
 
 import ap.ParallelFileProver
 import ap.parameters.Param
+import ostrich.cesolver.util.ParikhUtil
 
 /**
  * Wrapper around <code>ap.CmdlMain</code>, adding the option
@@ -50,6 +51,41 @@ object CEMain {
    */
   val options = List("-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory", "-logo")
 
-  def main(args: Array[String]) : Unit =
+  ParallelFileProver.addPortfolio(
+    "strings", arguments => {
+                 import arguments._
+                 val strategies =
+                   List(ParallelFileProver.Configuration(
+                          baseSettings,
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC(baseSettings),
+                          1000000000,
+                          2000),
+                        ParallelFileProver.Configuration(
+                          Param.STRING_THEORY_DESC.set(
+                                  baseSettings,
+                                  Param.STRING_THEORY_DESC.defau),
+                          "-stringSolver=" +
+                            Param.STRING_THEORY_DESC.defau,
+                          1000000000,
+                          2000))
+                 ParallelFileProver(createReader,
+                                    timeout,
+                                    true,
+                                    userDefStoppingCond(),
+                                    strategies,
+                                    1,
+                                    2,
+                                    runUntilProof,
+                                    prelResultPrinter,
+                                    threadNum)
+               })
+
+  def main(args: Array[String]) : Unit = try {
     ap.CmdlMain.main((options ++ args).toArray)
+  } catch {
+    case e: Throwable =>
+      ParikhUtil.throwWithStackTrace(e)
+  }
+
 }

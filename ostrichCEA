@@ -1,0 +1,75 @@
+#!/bin/bash
+
+if [ $(uname) = "Linux" ]; then
+    pathCmd="readlink -f"
+elif [ $(uname) = "Darwin" ]; then
+    pathCmd="stat -f %N"
+else
+    pathCmd="realpath"
+fi
+
+BASEDIR=`dirname $($pathCmd $0)`
+TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
+LIBDIR=$BASEDIR/lib
+SCALA=scala
+JAVA=java
+export JAVA_OPTS="-Xss512m -Xmx2048m"
+
+princessParams=()
+ostrichSolver=ostrich.cesolver.stringtheory.CEStringTheory
+ostrichParams=""
+
+help() {
+    echo "Usage: $0 <options>* <file>*"
+    echo " "
+    echo " Usual options:"
+    echo "  [+-]incremental:         Enable incremental solving                         (default:-)"
+    echo "  [+-]model:               Print model                                        (default:-)"
+    echo "  -timeout=<val>:          Set timeout to <val> milliseconds                  (default:infy)"
+    echo "  [+-]eager:               Eagerly intersect automata                         (default:-)"
+    echo "  [+-]minimizeAutomata:    Minimize automata                                  (default:-)"
+    echo " "
+    echo " String solver options:"
+    echo "  [+-]cea:                 Use the cost-enriched automata solver              (default:-)"
+    echo "  [+-]seq:                 Use the sequential string solver                   (default:-)"
+    echo "  [+-]compApprox:          Use the approximate solver for complement          (default:+)"
+    echo "  [+-]simplyAutByVec:      Use the vector-based automata simplification       (default:+)"
+    echo "  -ceaBackend=<backend>:   Use <backend> for cost-enriched automata solver:   (default:unary)"
+    echo "                                            (unary, nuxmv, catra)"
+    echo "  -findModelBy=<strategy>:   Use <strategy> for finding models:               (default:mixed)"
+    echo "                                            (registers, transitions, mixed)"
+    echo "  -countUnwindBy=<strategy>: Use <strategy> for counting unwinding:           (default:minFirst)"
+    echo "                                            (minFirst, meetFirst)"
+    echo "  -searchStringBy=<strategy>: Use <strategy> for searching accept strings     (default:moreUpdatesFirst)"
+    echo "                                            (moreUpdatesFirst, random)"
+    echo "  -nuxmvBackend=<backend>: Use <backend> for cost-enriched automata solver:   (default:ic3)"
+    echo "                                            (ic3, bmc)"
+    echo " "
+    echo " Debugging options:"
+    echo "  [+-]debug:               Enable debugging (only used for developer)         (default:-)"
+    echo "  [+-]log:                 Enable logging                                     (default:-)"
+    echo "  -h:                      Print this help message"
+}
+
+for p; do
+    case "$p" in
+        [+-]eager | [+-]minimizeAutomata | -ceaBackend=* | -nuxmvBackend=* | -findModelBy=* | -countUnwindBy=* | -searchStringBy=* | [+-]debug | [+-]log | [+-]compApprox | [+-]simplyAutByVec)
+            if [ x"$ostrichParams" = x"" ]; then
+                ostrichParams=$p
+            else
+                ostrichParams=$ostrichParams,$p
+            fi
+            ;;
+        -h)
+            help
+            exit 0
+            ;;
+        *)
+            princessParams+=("$p")
+            ;;
+    esac
+done
+
+exec $JAVA $JAVA_OPTS -cp $TARGET \
+     ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
+     "${princessParams[@]}"

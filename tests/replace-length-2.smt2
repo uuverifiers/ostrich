@@ -1,3 +1,4 @@
+; sat
 (set-logic QF_S)
 
 (declare-fun x_4 () String)

@@ -39,6 +39,7 @@ import dk.brics.automaton.{
 }
 
 import scala.collection.JavaConverters.asScala
+import ostrich.cesolver.util.ParikhUtil
 
 object BricsAutomatonWrapper {
 
@@ -51,13 +52,15 @@ object BricsAutomatonWrapper {
   def apply(underlying: BAutomaton): BricsAutomatonWrapper = 
     new BricsAutomatonWrapper(underlying)
 
-  /** Build CostEnriched automaton from a regular expression in brics format
-    */
-  def apply(pattern: String): BricsAutomatonWrapper =
+  def apply(pattern: String): BricsAutomatonWrapper = {
+    ParikhUtil.log("BricsAutomatonWrapper.apply: build automaton from regex pattern " + pattern)
     BricsAutomatonWrapper(new RegExp(pattern).toAutomaton(false))
+  }
 
-  def fromString(str: String): BricsAutomatonWrapper =
+  def fromString(str: String): BricsAutomatonWrapper = {
+    ParikhUtil.log("BricsAutomatonWrapper.fromString: build automaton from string " + str)
     BricsAutomatonWrapper(BasicAutomata makeString str)
+  }
 
   def makeAnyString(): BricsAutomatonWrapper =
     BricsAutomatonWrapper(BAutomaton.makeAnyString)
@@ -67,13 +70,6 @@ object BricsAutomatonWrapper {
 
   def makeEmptyString(): BricsAutomatonWrapper = 
     BricsAutomatonWrapper(BAutomaton.makeEmptyString())
-
-  /** Check whether we should avoid ever minimising the given automaton.
-    */
-  def neverMinimize(aut: BAutomaton): Boolean =
-    aut.getSingleton != null || aut.getNumberOfStates > MINIMIZE_LIMIT
-
-  private val MINIMIZE_LIMIT = 100000
 }
 
 /** Wrapper for the dk.brics.automaton. Extend dk.brics.automaton with

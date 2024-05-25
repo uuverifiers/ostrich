@@ -1,0 +1,8 @@
+set on_failure_script_quits 1;
+read_model;
+flatten_hierarchy;
+encode_variables;
+go_msat;
+check_invar_ic3 -i;
+show_traces -p 4;
+quit;

@@ -34,10 +34,13 @@ package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
 import ostrich.cesolver.automata.CostEnrichedAutomaton
-import ostrich.cesolver._
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
 import ostrich.cesolver.util.TermGenerator
+import ap.parser.IExpression
+import ap.basetypes.IdealInt
+import ostrich.cesolver.automata.BricsAutomatonWrapper
+import ostrich.cesolver.util.ParikhUtil
 
 object LengthCEPreOp {
 
@@ -45,29 +48,39 @@ object LengthCEPreOp {
 
   def apply(length: ITerm): LengthCEPreOp = new LengthCEPreOp(length)
 
-  def lengthPreimage(length: ITerm) : CostEnrichedAutomatonBase = {
+  def lengthPreimage(
+      length: ITerm,
+      newReg: Boolean = true
+  ): CostEnrichedAutomatonBase = {
     val preimage = new CostEnrichedAutomaton
     val initalState = preimage.initialState
 
-    // 0 -> (sigma, 1) -> 0
-    preimage.addTransition(
-      initalState,
-      preimage.LabelOps.sigmaLabel,
-      initalState,
-      Seq(1)
-    )
-    preimage.setAccept(initalState, true)
-    // registers: (r0)
-    preimage.registers = Seq(termGen.registerTerm)
-    // intFormula : r0 === `length`
-    preimage.regsRelation = length === preimage.registers(0)
-    preimage
+    length match {
+      case IExpression.Const(IdealInt(value)) =>
+        PreOpUtil.automatonWithLen(value)
+      case _: ITerm =>
+        // 0 -> (sigma, 1) -> 0
+        preimage.addTransition(
+          initalState,
+          preimage.LabelOps.sigmaLabel,
+          initalState,
+          Seq(1)
+        )
+        preimage.setAccept(initalState, true)
+        // registers: (r0)
+        val reg = if (newReg) termGen.registerTerm else length
+        preimage.registers = Seq(reg)
+        // intFormula : r0 === `length`
+        if (newReg) preimage.regsRelation = reg === length
+        preimage
+    }
+
   }
 }
 
-/**
-  * Pre-op for length constraints. 
-  * @param length The length 
+/** Pre-op for length constraints.
+  * @param length
+  *   The length
   */
 class LengthCEPreOp(length: ITerm) extends CEPreOp {
 
