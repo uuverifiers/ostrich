@@ -298,7 +298,8 @@ class CatraBasedSolver(
         enableRestarts = true,
         restartTimeoutFactor = 500L,
         randomSeed = 1234567,
-        printProof = false
+        printProof = false,
+        old = false
       )
 
       val catraRes = ParikhUtil.measure(
