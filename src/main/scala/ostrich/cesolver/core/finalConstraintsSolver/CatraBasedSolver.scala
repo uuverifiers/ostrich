@@ -33,9 +33,6 @@ package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.{SymbolCollector, PrincessLineariser}
-
-import ap.terfor.TerForConvenience._
-import ap.terfor.Term
 import ap.basetypes.IdealInt
 import uuverifiers.catra.CommandLineOptions
 import scala.io.Source
@@ -223,37 +220,20 @@ class CatraBasedSolver(
     val result = new Result
     res match {
       case Sat(assignments) => {
-        val strIntersted = constraints.flatMap(_.interestTerms)
-
-        val freshTerms =
-          (for ((IConstant(a), b) <- freshIntTerm2orgin;
-                t <- List(a) ++ (SymbolCollector constants b))
-           yield IConstant(t)).toSeq
-
-        val name2Term =
-          (strIntersted ++ integerTerms ++ freshTerms).map {
-            case t => (t.toString(), t)
-          }.toMap
-
-        val termModelPre =
-          (for ((_, t : IConstant) <- name2Term)
-           yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap ++
-          (for (
-             (k, v) <- assignments;
-             t <- name2Term.get(k.name)
-           ) yield (t, IdealInt(v)))
-
-        val preAssignment =
-          (for ((IConstant(c), t) <- termModelPre)
-           yield (c -> IIntLit(t))).toMap
+        // update integer model
+        new StringBuilder
+        // lia may contains some string term which should be ignored
+        and(inputFormula +: constraints.map(_.getRegsRelation))
+        val allIntTerms = integerTerms ++ constraints.flatMap(_.regsTerms)
+        val name2Term = allIntTerms.map(t => (t.toString(), t)).toMap
 
         val termModel =
-          termModelPre ++ (
-            for ((a, b) <- freshIntTerm2orgin;
-                 IIntLit(value) <-
-                   List(SimplifyingConstantSubstVisitor(b, preAssignment)))
-            yield (a -> value)
-          )
+          (for ((_, t: IConstant) <- name2Term)
+            yield (t.asInstanceOf[ITerm] -> IdealInt.ZERO)).toMap ++
+            (for (
+              (k, v) <- assignments;
+              t <- name2Term.get(k.name)
+            ) yield (t, IdealInt(v)))
 
         for ((a, b) <- termModel)
           result.updateModel(a, b)

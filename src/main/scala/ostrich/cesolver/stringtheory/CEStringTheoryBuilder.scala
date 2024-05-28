@@ -93,6 +93,7 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
       compApprox = value
     case CmdlParser.Opt("simplyAutByVec", value) =>
       simplyAutByVec = value
+
     case CmdlParser.ValueOpt("ceaBackend", "baseline") =>
       backend = Baseline
     case CmdlParser.ValueOpt("ceaBackend", "unary") =>
