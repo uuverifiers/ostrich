@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2023 Denghang Hu, Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2023-2024 Denghang Hu, Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -48,20 +48,10 @@ import ap.CmdlMain
   */
 class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
 
-  override val name = "OSTRICH"
-  val version = "1.2.1"
+  import OstrichStringTheoryBuilder.version
 
   Console.withOut(Console.err) {
-    println
-    println(
-      "Loading " + name + " " + version +
-        ", a solver for string constraints"
-    )
-    println("(c) Denghang Hu, Matthew Hague, Philipp Rümmer, 2018-2023")
-    println(
-      "With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf."
-    )
-    println("For more information, see https://github.com/uuverifiers/ostrich")
+    println("Loading cost-enriched automata backend")
     println
   }
 
