@@ -44,19 +44,19 @@ case class AutomatonFragment(name: String, initStates: String, transitions: Seq[
 
 
 class AutomatonParser {
-  def identifier[_: P]: P[String] = P(CharsWhileIn("a-zA-Z_0-9").!)
+  def identifier[$: P]: P[String] = P(CharsWhileIn("a-zA-Z_0-9").!)
 
-  def number[_: P]: P[Int] = P(CharsWhileIn("0-9").!).map(_.toInt)
+  def number[$: P]: P[Int] = P(CharsWhileIn("0-9").!).map(_.toInt)
 
-  def range[_: P]: P[(Int, Int)] = P("[" ~/ number ~ "," ~ number ~ "]").map { case (start, end) => (start, end) }
+  def range[$: P]: P[(Int, Int)] = P("[" ~/ number ~ "," ~ number ~ "]").map { case (start, end) => (start, end) }
 
-  def transition[_: P]: P[Transition] = P(identifier ~ "->" ~ identifier ~ range ~ ";").map {
+  def transition[$: P]: P[Transition] = P(identifier ~ "->" ~ identifier ~ range ~ ";").map {
     case (from, to, range) => Transition(from, to, range)
   }
-  def init[_: P]: P[String] = P("init" ~/ identifier ~ ";")
-  def accepting[_: P]: P[Seq[String]] = P("accepting" ~/ identifier.rep(1, sep = ",") ~ ";").map(_.toSeq)
+  def init[$: P]: P[String] = P("init" ~/ identifier ~ ";")
+  def accepting[$: P]: P[Seq[String]] = P("accepting" ~/ identifier.rep(1, sep = ",") ~ ";").map(_.toSeq)
 
-  def automaton[_: P]: P[AutomatonFragment] = P("automaton" ~/ identifier ~ "{" ~ init ~ transition.rep ~ accepting ~ "}").map {
+  def automaton[$: P]: P[AutomatonFragment] = P("automaton" ~/ identifier ~ "{" ~ init ~ transition.rep ~ accepting ~ "}").map {
     case (name, initStates, transitions, acceptingStates) => AutomatonFragment(name, initStates, transitions, acceptingStates)
   }
 
