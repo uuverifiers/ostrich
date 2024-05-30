@@ -17,6 +17,7 @@ import tools.regExSolver
 import tools.z3seq
 import tools.z3str3
 import tools.ostrich
+import tools.ostrichHeuristics
 
 tracks = (
     setta_counting_bench.getTrackData() + 
@@ -25,20 +26,17 @@ tracks = (
 
 solvers = {}
 for s in [
-    tools.regExSolver,
-    tools.z3seq,
-    tools.z3str3,
-    tools.ostrich
+    tools.ostrichHeuristics
 ]:
     s.addRunner(solvers)
 
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("string_fuzz+z3_all")
+store = storage.SQLiteDB("string_fuzz+setta_counting-noAll")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-verifiers = ["Cvc5"]
-# verifiers = [""]
+# verifiers = ["Cvc5"]
+verifiers = [""]
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )

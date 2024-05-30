@@ -8,9 +8,9 @@ import timer
 
 
 def run(params, eq, timeout, ploc, wd):
-    path = ploc.findProgram("Ostrich")
+    path = ploc.findProgram("OstrichCEA")
     if not path:
-        raise "Ostrich Not in Path"
+        raise "OstrichCEA Not in Path"
 
     (fd, smtfile) = tempfile.mkstemp(suffix=".smt2")
 
@@ -34,7 +34,6 @@ def run(params, eq, timeout, ploc, wd):
                     "+incremental",
                     "-inputFormat=smtlib",
                     "-timeout=" + str(timeout) + "000",
-                     "+cea",
                 ] + params + [smtfile],
                 timeout=timeout,
             )
@@ -71,13 +70,15 @@ def run(params, eq, timeout, ploc, wd):
 def addRunner(addto):
     from functools import partial
     params = {
-              "all":                     [],
-              "no-under":                ["-under-approx"],
-              "no-simplify-aut":         ["-simplify-aut"],
-              "all-off":                 ["-under-approx", "-simplify-aut"],
+            #   "all":                     [],
+            #   "no-nested":               ["-countUnwindBy=meetFirst"],
+            #   "no-find-model":           ["-findModelBy=registers", "-searchStringBy=random"],
+            #   "no-comp":                 ["-compApprox"],
+            #   "no-simplify-aut":         ["-simplyAutByVec"],
+              "all-off":                 ["-countUnwindBy=meetFirst", "-findModelBy=registers", "-searchStringBy=random", "-compApprox", "-simplyAutByVec"],
             }
     for i in params.keys():
-        addto['ostrich-'+i] = partial(run, params[i])
+        addto['OstrichCEA-'+i] = partial(run, params[i])
 
 
 if __name__ == "__main__":

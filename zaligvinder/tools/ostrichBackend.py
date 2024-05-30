@@ -8,9 +8,9 @@ import timer
 
 
 def run(params, eq, timeout, ploc, wd):
-    path = ploc.findProgram("Ostrich")
+    path = ploc.findProgram("OstrichCEA")
     if not path:
-        raise "Ostrich Not in Path"
+        raise "OstrichCEA Not in Path"
 
     (fd, smtfile) = tempfile.mkstemp(suffix=".smt2")
 
@@ -71,18 +71,18 @@ def run(params, eq, timeout, ploc, wd):
 def addRunner(addto):
     from functools import partial
     params = {
-        "unary-no-all-heuristic": ["+cea", "-countUnwindBy=meetFirst", "-compApprox", "-findModelBy=registers", "-searchStringBy=random"],
-        "unary-no-comp-approx": ["+cea", "-compApprox"],
-        "unary-no-count-unwind-heuristic": ["+cea", "-countUnwindBy=meetFirst"],
-        "unary-no-find-model-heuristic": ["+cea", "-findModelBy=registers", "-searchStringBy=random"],
-        "unary-all": ["+cea"],
-        # "nuxmv-bmc": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=bmc", "+eager"],
-        # "nuxmv-ic3": ["+cea", "-ceaBackend=nuxmv", "-nuxmvBackend=ic3", "+eager"],
-        # "catra": ["+cea", "-ceaBackend=catra"],
+        "unary-no-all-heuristic": ["-countUnwindBy=meetFirst", "-compApprox", "-findModelBy=registers", "-searchStringBy=random"],
+        "unary-no-comp-approx": ["-compApprox"],
+        "unary-no-count-unwind-heuristic": ["-countUnwindBy=meetFirst"],
+        "unary-no-find-model-heuristic": ["-findModelBy=registers", "-searchStringBy=random"],
+        "unary-all": []
+        # "nuxmv-bmc": ["-ceaBackend=nuxmv", "-nuxmvBackend=bmc", "+eager"],
+        # "nuxmv-ic3": ["-ceaBackend=nuxmv", "-nuxmvBackend=ic3", "+eager"],
+        # "catra": ["-ceaBackend=catra"],
         # "seq": ["+seq"]
     }
     for i in params.keys():
-        addto['ostrich-'+i] = partial(run, params[i])
+        addto['OstrichCEA-'+i] = partial(run, params[i])
 
 
 if __name__ == "__main__":

@@ -8,9 +8,9 @@ import timer
 
 
 def run(eq, timeout, ploc, wd):
-    path = ploc.findProgram("Ostrich")
+    path = ploc.findProgram("OstrichCEA")
     if not path:
-        raise "Ostrich Not in Path"
+        raise "OstrichCEA Not in Path"
 
     (fd, smtfile) = tempfile.mkstemp(suffix=".smt2")
 
@@ -34,7 +34,6 @@ def run(eq, timeout, ploc, wd):
                     "+incremental",
                     "-inputFormat=smtlib",
                     "-timeout=" + str(timeout) + "000",
-                    "+cea",
                     smtfile,
                 ],
                 timeout=timeout,

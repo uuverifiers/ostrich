@@ -17,6 +17,9 @@
 		},
 		"Ostrich" : {
 				"path" : "/home/hudh/github/ostrich/zaligvinder/../ostrich"
+		},
+		"OstrichCEA" : {
+				"path" : "/home/hudh/github/ostrich/zaligvinder/../ostrichCEA"
 		}
   }
 }

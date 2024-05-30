@@ -21,6 +21,9 @@ cat << EOF > "$tPath/toolconfig.json"
 		},
 		"Ostrich" : {
 				"path" : "$tPath/../ostrich"
+		},
+		"OstrichCEA" : {
+				"path" : "$tPath/../ostrichCEA"
 		}
   }
 }
