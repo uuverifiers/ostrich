@@ -19,7 +19,7 @@ import tools.z3str3
 import tools.ostrich
 
 tracks = (
-    # setta_counting_bench.getTrackData() + 
+    setta_counting_bench.getTrackData() + 
     stringfuzz_bench.getTrackData()
 ) + []
 
