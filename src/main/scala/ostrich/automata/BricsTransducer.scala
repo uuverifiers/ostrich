@@ -46,8 +46,6 @@ import dk.brics.automaton.{Automaton => BAutomaton,
                            State => BState,
                            Transition => BTransition}
 
-import scala.collection.JavaConversions.{iterableAsScalaIterable,asJavaCollection}
-
 import java.lang.StringBuilder
 
 object BricsTransducer {
@@ -761,7 +759,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     }
   }
 
-  override def toDot() : String = {
+  override def toDot : String = {
     val sb = new StringBuilder()
     sb.append("digraph transducer {\n")
 
@@ -847,8 +845,8 @@ class BricsTransducerBuilder
     minimize()
     // TODO: restrict to live reachable states
     new BricsTransducer(initialState,
-                        lblTrans.toMap.mapValues(_.toSet),
-                        eTrans.toMap.mapValues(_.toSet),
+                        lblTrans.toMap.mapValues(_.toSet).toMap,
+                        eTrans.toMap.mapValues(_.toSet).toMap,
                         acceptingStates.toSet)
   }
 

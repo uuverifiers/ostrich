@@ -67,44 +67,52 @@ object PortfolioSetup {
   private val ceaStringTheory =
     "ostrich.cesolver.stringtheory.CEStringTheory"
 
-  // Run the BW, ADT, and CEA solvers
+  // Run the BW, ADT, CEA and RCP solvers
   ParallelFileProver.addPortfolio(
     "strings", arguments => {
-                 import arguments._
-                 val strategies =
-                   List(ParallelFileProver.Configuration(
-                          baseSettings,
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC(baseSettings),
-                          1000000000,
-                          2000),
-                        ParallelFileProver.Configuration(
-                          Param.STRING_THEORY_DESC.set(
-                                  baseSettings,
-                                  Param.STRING_THEORY_DESC.defau),
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC.defau,
-                          1000000000,
-                          2000),
-                        ParallelFileProver.Configuration(
-                          Param.STRING_THEORY_DESC.set(
-                                  baseSettings,
-                                  ceaStringTheory),
-                          "-stringSolver=" +
-                            ceaStringTheory,
-                          1000000000,
-                          2000))
-                 ParallelFileProver(createReader,
-                                    timeout,
-                                    true,
-                                    userDefStoppingCond(),
-                                    strategies,
-                                    1,
-                                    3,
-                                    runUntilProof,
-                                    prelResultPrinter,
-                                    threadNum)
-               })
+      import arguments._
+      val strategies =
+        List(
+          ParallelFileProver.Configuration(
+          baseSettings,
+          "-stringSolver=" +
+            Param.STRING_THEORY_DESC(baseSettings),
+          1000000000,
+          2000),
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(
+              baseSettings,
+              Param.STRING_THEORY_DESC.defau),
+            "-stringSolver=" +
+              Param.STRING_THEORY_DESC.defau,
+            1000000000,
+            2000),
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(
+              baseSettings,
+              ceaStringTheory),
+            "-stringSolver=" +
+              ceaStringTheory,
+            1000000000,
+            2000),
+            ParallelFileProver.Configuration(
+          Param.STRING_THEORY_DESC.set(baseSettings, Param.STRING_THEORY_DESC(baseSettings) + ":+forwardBackward"),
+          "-stringSolver=" +
+            Param.STRING_THEORY_DESC(baseSettings) + ":+forwardBackward",
+          1000000000,
+          2000))
+      ParallelFileProver(createReader,
+        timeout,
+        true,
+        userDefStoppingCond(),
+        strategies,
+        1,
+        4,
+        runUntilProof,
+        prelResultPrinter,
+        threadNum)
+    })
+
 
   // Run the BW and ADT solvers
   ParallelFileProver.addPortfolio(

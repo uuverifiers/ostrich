@@ -48,7 +48,6 @@ import ap.basetypes.IdealInt
 
 import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
 
-import scala.collection.breakOut
 import scala.collection.mutable.{
   ArrayBuffer,
   HashMap => MHashMap,
@@ -390,8 +389,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         }
 
         val approxExp = new ParikhExploration(
-          inputFuns,
-          inputRegexes,
+          inputFuns.toSeq,
+          inputRegexes.toSeq,
           strDatabase,
           flags,
           lProver

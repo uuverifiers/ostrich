@@ -46,12 +46,14 @@ object OFlags {
     val Baseline, Unary = Value
   }
 
-  /** Compile-time flag that can be used to switch on debugging output
-    * throughout the theory.
-    */
+  /**
+   * Compile-time flag that can be used to switch on debugging output
+   * throughout the theory.
+   */
   protected[ostrich] val debug = false
 
   val timeout = 60000
+
 }
 
 case class OFlags(
@@ -63,6 +65,9 @@ case class OFlags(
   useParikhConstraints    : Boolean = true,
   forwardApprox           : Boolean = false,
   minimizeAutomata        : Boolean = false,
+  forwardOnly             : Boolean = false,
+  forwardBackward         : Boolean = false,
+  backwardOnly            : Boolean = false,
   regexTranslator         : OFlags.RegexTranslator.Value =
                               OFlags.RegexTranslator.Hybrid,
 
