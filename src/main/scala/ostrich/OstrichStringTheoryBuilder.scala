@@ -41,7 +41,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object OstrichStringTheoryBuilder {
 
-  val version = "1.3.5"
+  val version = "1.4pre"
 
   PortfolioSetup
 
@@ -131,7 +131,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   lazy val theory = {
     createdTheory = true
 
-    new OstrichStringTheory (symTransducers,
+    new OstrichStringTheory (symTransducers.toSeq,
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,

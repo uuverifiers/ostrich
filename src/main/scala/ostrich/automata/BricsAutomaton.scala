@@ -36,8 +36,15 @@ import ostrich.OFlags
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Transition, Automaton => BAutomaton, State => BState}
 import ostrich.automata.AutomataUtils.buildEpsilons
 
-import scala.collection.JavaConversions.{asScalaIterator, iterableAsScalaIterable}
-import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, LinkedHashSet => MLinkedHashSet, MultiMap => MMultiMap, Set => MSet, Stack => MStack, TreeSet => MTreeSet}
+import scala.collection.JavaConverters.asScala
+
+import scala.collection.mutable.{HashMap => MHashMap,
+                                 HashSet => MHashSet,
+                                 LinkedHashSet => MLinkedHashSet,
+                                 Stack => MStack,
+                                 TreeSet => MTreeSet,
+                                 MultiMap => MMultiMap,
+                                 Set => MSet}
 
 object BricsAutomaton {
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
@@ -625,7 +632,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
     val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
-    for (t <- from.getTransitions)
+    for (t <- asScala(from.getTransitions))
       dests.addBinding((t.getMin, t.getMax), t.getDest)
 
     val outgoing = new MLinkedHashSet[(State, TLabel)]
@@ -634,9 +641,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
       def sortingFn(s1 : State, s2 : State) : Boolean = {
         // sort by lowest outgoing transition
-        for ((t1, t2) <- s1.getSortedTransitions(false)
-                         zip
-                         s2.getSortedTransitions(false)) {
+        for ((t1, t2) <- asScala(s1.getSortedTransitions(false)) zip
+                         asScala(s2.getSortedTransitions(false))) {
           import scala.math.Ordering.Implicits._
           val lbl1 = (t1.getMin, t1.getMax)
           val lbl2 = (t2.getMin, t2.getMax)
@@ -740,7 +746,7 @@ class BricsAutomatonBuilder
 
   def outgoingTransitions(q : BricsAutomaton#State)
         : Iterator[(BricsAutomaton#State, BricsAutomaton#TLabel)] =
-    for (t <- q.getTransitions.iterator)
+    for (t <- asScala(q.getTransitions.iterator))
       yield (t.getDest, (t.getMin, t.getMax))
 
   def setAccept(q : BricsAutomaton#State, isAccepting : Boolean) : Unit =

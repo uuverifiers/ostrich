@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "1.3.5",
+  version               := "1.4pre",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
@@ -49,9 +49,9 @@ lazy val commonSettings = Seq(
                              )
                           ),
 //
-  scalaVersion          := "2.11.12",
-  crossScalaVersions    := Seq("2.11.12", "2.12.17"),
+  scalaVersion          := "2.13.14",
   scalacOptions         += "-deprecation",
+  scalacOptions         += "-Wunused",
   fork in run           := true,
   cancelable in Global  := true,
 //

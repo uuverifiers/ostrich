@@ -46,12 +46,14 @@ object OFlags {
     val Baseline, Unary = Value
   }
 
-  /** Compile-time flag that can be used to switch on debugging output
-    * throughout the theory.
-    */
+  /**
+   * Compile-time flag that can be used to switch on debugging output
+   * throughout the theory.
+   */
   protected[ostrich] val debug = false
 
   val timeout = 60000
+
 }
 
 case class OFlags(

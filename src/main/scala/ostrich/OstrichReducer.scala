@@ -394,7 +394,7 @@ class OstrichReducer protected[ostrich]
           assert(funTranslator.translatablePredicates contains p, ("Unhandled case in reducer: " + p))
           } catch {
             case t : ap.util.Timeout => throw t
-            // case t : Throwable =>  { t.printStackTrace; throw t }
+            case t : Throwable =>  { t.printStackTrace; throw t }
           }
           funTranslator(a) match {
             case Some((op, args, res)) if (args forall isConcrete) => {
