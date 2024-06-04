@@ -338,16 +338,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
     }
-    if (flags.forwardApprox || flags.forwardOnly || flags.forwardBackward){
+    if (flags.forwardPropagation){
       var result = addForwardConstraints
       if (result.isDefined){
-        return None
-      }
-      if (flags.forwardOnly){
-        while (result.isEmpty){
-          ap.util.Timeout.check
-          result = addForwardConstraints
-        }
         return None
       }
     }
@@ -645,7 +638,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                           fwdApps : List[(PreOp, Seq[Term], Term)])
                         : ConflictSet = resConstraints match {
     case List() => {
-      if (!straightLine && flags.forwardBackward){
+      if (!straightLine && flags.forwardPropagation && flags.backwardPropagation){
         var fwdAppsRes : List[(PreOp, Seq[Term], Term)] = fwdApps
         val funAppList = {
           (for ((apps, res) <- sortedFunApps;

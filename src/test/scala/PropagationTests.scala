@@ -45,18 +45,14 @@ object PropagationTests extends Properties("PropagationTests") {
     }
 
     property("noodles-unsat.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat.smt2", "unknown", "", "-timeout=3000")
-    property("noodles-unsat.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat.smt2", "unknown", "+forward", "-timeout=3000")
-    property("noodles-unsat.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat.smt2", "unsat", "+forwardBackward")
+      checkFileOpts("tests/propagation-benchmarks/noodles-unsat.smt2", "unsat", "+forwardPropagation,+backwardPropagation")
     property("noodles-unsat2.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat2.smt2", "unsat", "+forwardBackward")
+      checkFileOpts("tests/propagation-benchmarks/noodles-unsat2.smt2", "unsat", "+forwardPropagation,+backwardPropagation")
     property("noodles-unsat3.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat3.smt2", "unsat", "+forwardBackward")
+      checkFileOpts("tests/propagation-benchmarks/noodles-unsat3.smt2", "unsat", "+forwardPropagation,+backwardPropagation")
     property("noodles-unsat4.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat4.smt2", "unsat", "+forwardBackward")
+      checkFileOpts("tests/propagation-benchmarks/noodles-unsat4.smt2", "unsat", "+forwardPropagation,+backwardPropagation")
     property("noodles-unsat5.smt2") =
-      checkFileOpts("tests/propagation-benchmarks/noodles-unsat5.smt2", "unsat", "+forwardBackward")
+      checkFileOpts("tests/propagation-benchmarks/noodles-unsat5.smt2", "unsat", "+forwardPropagation,+backwardPropagation")
 
 }

@@ -96,9 +96,9 @@ object PortfolioSetup {
             1000000000,
             2000),
             ParallelFileProver.Configuration(
-          Param.STRING_THEORY_DESC.set(baseSettings, Param.STRING_THEORY_DESC(baseSettings) + ":+forwardBackward"),
+          Param.STRING_THEORY_DESC.set(baseSettings, Param.STRING_THEORY_DESC(baseSettings) + ":+forwardPropagation,+backwardPropagation"),
           "-stringSolver=" +
-            Param.STRING_THEORY_DESC(baseSettings) + ":+forwardBackward",
+            Param.STRING_THEORY_DESC(baseSettings) + ":+forwardPropagation,+backwardPropagation",
           1000000000,
           2000))
       ParallelFileProver(createReader,

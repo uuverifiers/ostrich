@@ -90,7 +90,6 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
         eagerAutomataOperations = eager,
         useLength               = useLen,
         useParikhConstraints    = useParikh,
-        forwardApprox           = forward,
         minimizeAutomata        = minimizeAuts,
         regexTranslator         = regexTrans,
         ceaBackend              = backend,

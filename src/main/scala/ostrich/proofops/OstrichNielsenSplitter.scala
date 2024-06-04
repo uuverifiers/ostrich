@@ -456,7 +456,7 @@ class OstrichNielsenSplitter(goal : Goal,
    * Apply the Nielsen transformation to some selected equation.
    */
   def splitEquation : Seq[Plugin.Action] = {
-    if (flags.forwardOnly || flags.forwardBackward || flags.backwardOnly){
+    if (flags.forwardPropagation || flags.backwardPropagation){
       return List()
     }
     val multiGroups =

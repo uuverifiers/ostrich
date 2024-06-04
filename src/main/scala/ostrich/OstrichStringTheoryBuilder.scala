@@ -68,7 +68,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  protected var eager, forward, forwardOnly, forwardBackward, backwardOnly, minimizeAuts, useParikh = false
+  protected var eager, forwardPropagation, backwardPropagation, minimizeAuts, useParikh = false
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
@@ -83,14 +83,10 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.On
     case CmdlParser.ValueOpt("length", "auto") =>
       useLen = OFlags.LengthOptions.Auto
-    case CmdlParser.Opt("forward", value) =>
-      forward = value
-    case CmdlParser.Opt("forwardOnly", value) =>
-      forwardOnly = value
-    case CmdlParser.Opt("forwardBackward", value) =>
-      forwardBackward = value
-    case CmdlParser.Opt("backwardOnly", value) =>
-      backwardOnly = value
+    case CmdlParser.Opt("forwardPropagation", value) =>
+      forwardPropagation = value
+    case CmdlParser.Opt("backwardPropagation", value) =>
+      backwardPropagation = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
@@ -135,10 +131,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
-                                    forwardApprox           = forward,
-                                    forwardOnly             = forwardOnly,
-                                    forwardBackward         = forwardBackward,
-                                    backwardOnly            = backwardOnly,
+                                    forwardPropagation      = forwardPropagation,
+                                    backwardPropagation     = backwardPropagation,
                                     minimizeAutomata        = minimizeAuts,
                                     regexTranslator         = regexTrans))
   }
