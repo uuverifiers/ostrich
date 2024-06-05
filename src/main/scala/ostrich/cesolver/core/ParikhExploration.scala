@@ -184,7 +184,7 @@ class ParikhExploration(
 
     if (remFunApps.nonEmpty) {
       ignoredApps ++= remFunApps
-      println("WARNING: cyclic definitions found, ignoring them")
+      Console.err.println("WARNING: cyclic definitions found, ignoring them")
     }
 
     (integerTerms, strTerms, sortedApps, ignoredApps)
@@ -369,7 +369,9 @@ class ParikhExploration(
         }
         val res = backendSolver.measureTimeSolve
 
-        ParikhUtil.debugPrintln("Result from CEA backend: " + res)
+        Console.withOut(Console.err) {
+          ParikhUtil.debugPrintln("Result from CEA backend: " + res)
+        }
 
         res.getStatus match {
           case ProverStatus.Sat => {
