@@ -94,7 +94,7 @@ until [ $success -eq 0 ]; do
 
         for var; do
 	    case "$var" in
-                [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -regexTranslator=* | -ceaBackend=* | [+-]debug)
+                [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -regexTranslator=* | -ceaBackend=* | [+-]debug | [+-]backwardOnly | [+-]forwardOnly | [+-]forwardBackward)
                     if [ x"$ostrichParams" = x"" ]; then
                         ostrichParams=$var
                     else
