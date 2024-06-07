@@ -64,6 +64,8 @@ object OstrichMain {
 
 object PortfolioSetup {
 
+  private val ostrichStringTheory =
+    "ostrich.OstrichStringTheory"
   private val ceaStringTheory =
     "ostrich.cesolver.stringtheory.CEStringTheory"
 
@@ -74,11 +76,23 @@ object PortfolioSetup {
       val strategies =
         List(
           ParallelFileProver.Configuration(
-          baseSettings,
-          "-stringSolver=" +
-            Param.STRING_THEORY_DESC(baseSettings),
-          1000000000,
-          2000),
+            Param.STRING_THEORY_DESC.set(baseSettings, ostrichStringTheory),
+            f"-stringSolver=$ostrichStringTheory",
+            1000000000,
+            2000),
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(
+              baseSettings,
+              ceaStringTheory),
+            "+cea",
+            1000000000,
+            2000),
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,-nielsenSplitter"),
+            f"-stringSolver=$ostrichStringTheory:+forwardPropagation,+backwardPropagation,-nielsenSplitter",
+            1000000000,
+            2000),
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
@@ -86,21 +100,7 @@ object PortfolioSetup {
             "-stringSolver=" +
               Param.STRING_THEORY_DESC.defau,
             1000000000,
-            2000),
-          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(
-              baseSettings,
-              ceaStringTheory),
-            "-stringSolver=" +
-              ceaStringTheory,
-            1000000000,
-            2000),
-            ParallelFileProver.Configuration(
-          Param.STRING_THEORY_DESC.set(baseSettings, Param.STRING_THEORY_DESC(baseSettings) + ":+forwardPropagation,+backwardPropagation"),
-          "-stringSolver=" +
-            Param.STRING_THEORY_DESC(baseSettings) + ":+forwardPropagation,+backwardPropagation",
-          1000000000,
-          2000))
+            2000))
       ParallelFileProver(createReader,
         timeout,
         true,
