@@ -184,7 +184,7 @@ class ParikhExploration(
 
     if (remFunApps.nonEmpty) {
       ignoredApps ++= remFunApps
-      println("WARNING: cyclic definitions found, ignoring them")
+      Console.err.println("WARNING: cyclic definitions found, ignoring " + ignoredApps)
     }
 
     (integerTerms, strTerms, sortedApps, ignoredApps)
