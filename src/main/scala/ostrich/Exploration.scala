@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -114,7 +114,7 @@ object Exploration {
                strictLengths : Boolean,
                flags : OFlags) : Exploration =
     new EagerExploration(funApps, initialConstraints, strDatabase,
-                         lengthProver, lengthVars, strictLengths, flags)
+      lengthProver, lengthVars, strictLengths, flags)
 
   def lazyExp(funApps : Seq[(PreOp, Seq[Term], Term)],
               initialConstraints : Seq[(Term, Automaton)],
@@ -124,10 +124,10 @@ object Exploration {
               strictLengths : Boolean,
               flags : OFlags) : Exploration =
     new LazyExploration(funApps, initialConstraints, strDatabase,
-                        lengthProver, lengthVars, strictLengths, flags)
+      lengthProver, lengthVars, strictLengths, flags)
 
   private case class FoundModel(model : Map[Term, Either[IdealInt, Seq[Int]]])
-          extends Exception
+    extends Exception
 
 }
 
@@ -159,9 +159,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   private var straightLine = true
   // topological sorting of the function applications
   private val (allTerms, sortedFunApps, ignoredApps)
-              : (Set[Term],
-                 Seq[(Seq[(PreOp, Seq[Term])], Term)],
-                 Seq[(PreOp, Seq[Term], Term)]) = {
+  : (Set[Term],
+    Seq[(Seq[(PreOp, Seq[Term])], Term)],
+    Seq[(PreOp, Seq[Term], Term)]) = {
     val argTermNum = new MHashMap[Term, Int]
     for ((_, _, res) <- funApps)
       argTermNum.put(res, 0)
@@ -179,8 +179,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     while (!remFunApps.isEmpty) {
       val (selectedApps, otherApps) =
         remFunApps partition { case (_, _, res) =>
-                                 argTermNum(res) == 0 ||
-                                 strDatabase.isConcrete(res) }
+          argTermNum(res) == 0 ||
+            strDatabase.isConcrete(res) }
 
       if (selectedApps.isEmpty) {
 
@@ -215,7 +215,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     Console.withOut(Console.err) {
       println("   Considered function applications:")
 
-      def term2String(t : Term) = 
+      def term2String(t : Term) =
         (strDatabase term2Str t) match {
           case Some(str) => "\"" + (SMTLineariser escapeString str) + "\""
           case None => t.toString
@@ -225,17 +225,17 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         println("   " + term2String(res) + " =")
         for ((op, args) <- apps)
           println("     " + op +
-                    "(" + (args map (term2String _) mkString ", ") + ")")
+            "(" + (args map (term2String _) mkString ", ") + ")")
       }
 
-/*
-      println
-      println("Regular expression constraints:")
-      for ((t, aut) <- initialConstraints) {
-        println("===== " + term2String(t) + " in:")
-        println("     " + aut)
-      }
-*/
+      /*
+            println
+            println("Regular expression constraints:")
+            for ((t, aut) <- initialConstraints) {
+              println("===== " + term2String(t) + " in:")
+              println("     " + aut)
+            }
+      */
     }
 
   val nonTreeLikeApps =
@@ -262,11 +262,11 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   // check whether we have to add further regex constraints to ensure
   // completeness; otherwise not all pre-images of function applications might
   // be considered
-  
+
   val allInitialConstraints = {
     val term2Index =
       (for (((_, t), n) <- sortedFunApps.iterator.zipWithIndex)
-       yield (t -> n)).toMap
+        yield (t -> n)).toMap
 
     val coveredTerms = new MBitSet
     for ((t, _) <- initialConstraints)
@@ -309,7 +309,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
   for (p <- lengthProver)
     for ((apps, res) <- sortedFunApps; (op, args) <- apps)
       p addAssertion op.lengthApproximation(args map lengthVars,
-                                            lengthVars(res), p.order)
+        lengthVars(res), p.order)
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -333,25 +333,27 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     for (p <- lengthProver) {
       for ((t, aut) <- allInitialConstraints)
         p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                               aut.getLengthAbstraction)
+          aut.getLengthAbstraction)
 
       if (measure("check length consistency") { p.??? } == ProverStatus.Unsat)
         return None
     }
     if (flags.forwardPropagation){
-      var result = addForwardConstraints
+      val result = addForwardConstraints
       if (result.isDefined){
         return None
       }
     }
-
+    if (!flags.backwardPropagation){
+      dfExplore(List(), List())
+    }
 
 
 
     val funAppList =
       (for ((apps, res) <- sortedFunApps;
             (op, args) <- apps)
-       yield (op, args, res)).toList
+      yield (op, args, res)).toList
 
     try {
       dfExplore(funAppList, List())
@@ -382,48 +384,8 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     None
   }
 
-  private def propagateForwards(apps :  Seq[(PreOp, Seq[Term], Term)], usedApps : MHashSet[(PreOp, Seq[Term],Term)], rootApps : MHashSet[(PreOp, Seq[Term],Term)]) : Option[ConflictSet] = apps match {
-      case List() => {
-        None
-      }
-      case (op, args, res) :: otherApps => {
-        if (!usedApps.contains((op,args,res))){
-          usedApps.add((op,args,res))
-          //propagate and add new candidates
-          val arguments = for (a <- args) yield constraintStores(a).getCompleteContents
-          val resultConstraint = op.forwardApprox(arguments)
-          if (constraintStores(res).isSuperSet(resultConstraint)){
-          }
-          else {
-            val resFwd = constraintStores(res).assertConstraint(resultConstraint)
-            if (resFwd.isDefined){
-              return resFwd
-            }
-
-          }
-          var isRoot = true
-          for ((apps2, res2) <- sortedFunApps; (op2, args2) <- apps2){
-            if (args2.contains(res)){
-              isRoot = false
-              val resFwd = propagateForwards((op2,args2,res2)::otherApps,usedApps,rootApps)
-              if (resFwd.isDefined){
-                return resFwd
-              }
-            }
-          }
-          if (isRoot){
-            rootApps.add((op,args,res))
-          }
-          propagateForwards(otherApps,usedApps,rootApps)
-        }
-        else {
-          propagateForwards(otherApps,usedApps,rootApps)
-        }
-    }
-  }
-
   private def evalTerm(t : Term)(model : PartialModel)
-                      : Option[IdealInt] = t match {
+  : Option[IdealInt] = t match {
     case c : ConstantTerm =>
       model eval c
     case OneTerm =>
@@ -431,86 +393,18 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     case lc : LinearCombination => {
       val terms = for ((coeff, t) <- lc) yield (coeff, evalTerm(t)(model))
       if (terms forall { case (_, None) => false
-                         case _ => true })
+      case _ => true })
         Some((for ((coeff, Some(v)) <- terms) yield (coeff * v)).sum)
       else
         None
     }
   }
 
-  private def selectBwdCandidates(rootApps: MHashSet[(PreOp, Seq[Term],Term)], usedApps: MHashSet[(PreOp, Seq[Term],Term)]): Seq[(PreOp, Seq[Term],Term)] = {
-    def findFunApps(term: Term) : Seq[(PreOp, Seq[Term],Term)]  = {
-      var res : Seq[(PreOp, Seq[Term],Term)] = List()
-      val funAppList =
-        (for ((apps, result) <- sortedFunApps;
-              (op, args) <- apps)
-        yield (op, args, result)).toList
-      for ((op, args , result) <- funAppList){
-        if (term == result){
-          res = res ++ Seq((op, args, result))
-          for (a <- args) {
-            res = res ++ findFunApps(a)
-          }
-        }
-      }
-      res
-    }
-    var res : Seq[(PreOp, Seq[Term],Term)] = List()
-    for (root <- rootApps){
-      res = res ++ findFunApps(root._3)
-
-    }
-
-    res
-  }
 
   private def dfExplore(apps : List[(PreOp, Seq[Term], Term)], fwdApps : List[(PreOp, Seq[Term], Term)])
-                      : ConflictSet = apps match {
+  : ConflictSet = apps match {
 
     case List() => {
-      if (fwdApps.nonEmpty){
-        val usedApps : MHashSet[(PreOp, Seq[Term],Term)] = MHashSet()
-        val rootApps : MHashSet[(PreOp, Seq[Term],Term)] = MHashSet()
-        val prop_res = propagateForwards(fwdApps, usedApps, rootApps)
-        if (prop_res.isDefined){
-          return prop_res.get
-        }
-        var selection = selectBwdCandidates(rootApps,usedApps)
-        val test = selection.diff(usedApps.toSeq)
-        selection = selection.diff(usedApps.toSeq).diff(rootApps.toSeq)
-        selection match {
-          case List() => {
-            val funAppList = {
-              (for ((apps, res) <- sortedFunApps;
-                    (op, args) <- apps)
-              yield (op, args, res)).toList
-            }
-
-            def throwResultCutExceptionCycle : Unit = {
-
-              import TerForConvenience._
-              val res = rootApps.head._3
-              val word = AutomataUtils.product(constraintStores(res).getCompleteContents).getAcceptedWord.get
-              implicit val o = res.asInstanceOf[SortedWithOrder[Term]].order
-
-              val resEq =
-                res === strDatabase.list2Id(word)
-              if (debug)
-                Console.err.println("   ... adding cut over result for " + res)
-
-              throw new OstrichSolver.BlockingActions(List(
-                Plugin.CutSplit(resEq, List(), List())))
-
-            }
-
-
-            throwResultCutExceptionCycle
-          }
-          case _ => {
-            return dfExplore(selection.toList, List())
-          }
-        }
-      }
       if (debug)
         Console.err.println("Trying to contruct model")
 
@@ -538,9 +432,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       for (t <- leafTerms) {
         val store = constraintStores(t)
         model.put(t,
-                  Right((for (tlen <- getVarLength(t))
-                         yield store.getAcceptedWordLen(tlen.intValueSafe))
-                        .getOrElse(store.getAcceptedWord)))
+          Right((for (tlen <- getVarLength(t))
+            yield store.getAcceptedWordLen(tlen.intValueSafe))
+            .getOrElse(store.getAcceptedWord)))
       }
 
       // values for integer variables
@@ -553,15 +447,15 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       val allFunApps : Iterator[(PreOp, Seq[Term], Term)] =
         (for ((ops, res) <- sortedFunApps.reverseIterator;
               (op, args) <- ops.iterator)
-         yield (op, args, res)) ++
-        ignoredApps.iterator  // TODO: reverseIterator?
+        yield (op, args, res)) ++
+          ignoredApps.iterator  // TODO: reverseIterator?
 
       for ((op, args, res) <- allFunApps;
            argValues = args map model) {
         if (argValues exists (_.isLeft))
           throw new Exception(
             "Model extraction failed: " + op +
-            " is only defined for string arguments")
+              " is only defined for string arguments")
 
         val argStrings : Seq[Seq[Int]] = argValues map (_.right.get)
 
@@ -571,7 +465,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             case None =>
               throw new Exception(
                 "Model extraction failed: " + op + " is not defined for " +
-                argStrings.mkString(", "))
+                  argStrings.mkString(", "))
           }
 
         if (debug)
@@ -596,27 +490,28 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
           if (resValue != oldValue) {
             if (!nonTreeLikeApps)
               throw new Exception("Model extraction failed: " +
-                                    oldValue + " != " + resValue)
+                oldValue + " != " + resValue)
             throwResultCutException
           }
 
-        if (!(constraintStores(res) isAcceptedWord resString))
+        if (!(constraintStores(res) isAcceptedWord resString)) {
           throw new Exception(
             "Could not satisfy regex constraints for " + res +
-            ", maybe the problems involves non-functional transducers?")
+              ", maybe the problems involves non-functional transducers?")
+        }
 
         for (resLen <- getVarLength(res))
           if (resValue.right.get.size != resLen.intValueSafe) {
- /*
-            throw new Exception(
-              "Could not satisfy length constraints for " + res +
-                " with solution " +
-                resValue.right.get.map(i => i.toChar)(breakOut) +
-                "; length is " + resValue.right.get.size +
-                " but should be " + resLen)
-  */
+            /*
+                       throw new Exception(
+                         "Could not satisfy length constraints for " + res +
+                           " with solution " +
+                           resValue.right.get.map(i => i.toChar)(breakOut) +
+                           "; length is " + resValue.right.get.size +
+                           " but should be " + resLen)
+             */
             throwResultCutException
-         }
+          }
 
         model.put(res, resValue)
       }
@@ -624,10 +519,25 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
     }
     case (op, args, res) :: otherApps => {
       if (debug)
-       Console.err.println("dfExplore, depth " + apps.size)
+        Console.err.println("dfExplore, depth " + apps.size)
       dfExploreOp(op, args, res, constraintStores(res).getContents,
-                  otherApps, fwdApps)
+        otherApps, fwdApps)
     }
+  }
+  private def addForwardConstraints(nextApps : List[(PreOp, Seq[Term], Term)], argInput : Seq[Term]) : Option[ConflictSet] = {
+    for ((apps, res) <- sortedFunApps.reverseIterator;
+         (op, args) <- apps) if (argInput.intersect(args).isEmpty)
+    {
+      val arguments = for (a <- args) yield constraintStores(a).getCompleteContents
+      val resultConstraint = op.forwardApprox(arguments)
+      if (constraintStores(res).isSuperSet(resultConstraint)){
+      }
+      else {
+        val r = constraintStores(res).assertConstraint(resultConstraint)
+        if (r.isDefined) return r
+      }
+    }
+    None
   }
 
   private def dfExploreOp(op : PreOp,
@@ -636,28 +546,9 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                           resConstraints : List[Automaton],
                           nextApps : List[(PreOp, Seq[Term], Term)],
                           fwdApps : List[(PreOp, Seq[Term], Term)])
-                        : ConflictSet = resConstraints match {
+  : ConflictSet = resConstraints match {
     case List() => {
-      if (!straightLine && flags.forwardPropagation && flags.backwardPropagation){
-        var fwdAppsRes : List[(PreOp, Seq[Term], Term)] = fwdApps
-        val funAppList = {
-          (for ((apps, res) <- sortedFunApps;
-                (op, args) <- apps)
-          yield (op, args, res)).toList}
-
-        for (a <- args) {
-          for ((op2, args2, res2) <- funAppList){
-            if (args2.contains(a) && ((op2 != op) || (args != args2) || (res != res2))){
-              fwdAppsRes = fwdAppsRes ++ List((op2, args2, res2))
-            }
-          }
-        }
-        dfExplore(nextApps, fwdAppsRes)
-
-      }
-      else{
-        dfExplore(nextApps, fwdApps)
-      }
+      dfExplore(nextApps, fwdApps)
     }
 
     case resAut :: otherAuts => {
@@ -670,16 +561,23 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
         for (a <- args) yield constraintStores(a).getCompleteContents
 
       val collectedConflicts = new LinkedHashSet[TermConstraint]
-
+      if (flags.forwardPropagation){
+        addForwardConstraints(nextApps, args)
+      }
       val (newConstraintsIt, argDependencies) =
         measure("pre-op") { op(argConstraints, resAut) }
       while (measure("pre-op hasNext") {newConstraintsIt.hasNext}) {
         ap.util.Timeout.check
 
         val argCS = measure("pre-op next") {newConstraintsIt.next}
-
-        for (a <- args)
-          constraintStores(a).push
+        if (flags.forwardPropagation){
+          for (a <- allTerms)
+            constraintStores(a).push
+        }
+        else {
+          for (a <- args)
+            constraintStores(a).push
+        }
 
         pushLengthConstraints
 
@@ -714,14 +612,20 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
             if (Seqs.disjointSeq(newConstraints, conflict)) {
               // we can jump back, because the found conflict does not depend
               // on the considered function application
-//println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
+              //println("backjump " + (conflict map { case TermConstraint(t, aut) => (t, aut.hashCode) }))
               return conflict
             }
             collectedConflicts ++= (conflict.iterator filterNot newConstraints)
           }
         } finally {
-          for (a <- args)
-            constraintStores(a).pop
+          if (flags.forwardPropagation){
+            for (a <- allTerms)
+              constraintStores(a).pop
+          }
+          else {
+            for (a <- args)
+              constraintStores(a).pop
+          }
           popLengthConstraints
         }
       }
@@ -729,14 +633,14 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       if (needCompleteContentsForConflicts)
         collectedConflicts ++=
           (for (aut <- constraintStores(res).getCompleteContents)
-           yield TermConstraint(res, aut))
+            yield TermConstraint(res, aut))
       else
         collectedConflicts += TermConstraint(res, resAut)
 
       collectedConflicts ++=
         (for ((t, auts) <- args.iterator zip argDependencies.iterator;
               aut <- auts.iterator)
-         yield TermConstraint(t, aut))
+        yield TermConstraint(t, aut))
 
       collectedConflicts.toSeq
     }
@@ -754,7 +658,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
       p setPartitionNumber lengthPartitions.size
       val TermConstraint(t, aut) = constraint
       p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-                                                  aut.getLengthAbstraction)
+        aut.getLengthAbstraction)
     }
 
   private def checkLengthConsistency : Option[Seq[TermConstraint]] =
@@ -814,8 +718,8 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _lengthVars : Map[Term, Term],
                        _strictLengths : Boolean,
                        _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _strDatabase,
-                          _lengthProver, _lengthVars, _strictLengths, _flags) {
+  extends Exploration(_funApps, _initialConstraints, _strDatabase,
+    _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
 
@@ -848,13 +752,13 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
             val newAut = measure("intersection") { oldAut & aut }
             if (newAut.isEmpty) {
               Some(for (a <- aut :: constraints.toList)
-                   yield TermConstraint(t, a))
+                yield TermConstraint(t, a))
             } else {
               constraints += aut
               currentConstraint = Some(newAut)
               addLengthConstraint(TermConstraint(t, newAut),
-                                  for (a <- constraints)
-                                  yield TermConstraint(t, a))
+                for (a <- constraints)
+                  yield TermConstraint(t, a))
               None
             }
           }
@@ -909,8 +813,8 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _lengthVars : Map[Term, Term],
                       _strictLengths : Boolean,
                       _flags : OFlags)
-      extends Exploration(_funApps, _initialConstraints, _strDatabase,
-                          _lengthProver, _lengthVars, _strictLengths, _flags) {
+  extends Exploration(_funApps, _initialConstraints, _strDatabase,
+    _lengthProver, _lengthVars, _strictLengths, _flags) {
 
   import Exploration._
 
@@ -923,7 +827,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
 
   private def addIncAutomata(auts : Seq[Automaton]) : Unit = {
     inconsistentAutomata += auts
-//    println("Watching " + inconsistentAutomata.size + " sets of inconsistent automata")
+    //    println("Watching " + inconsistentAutomata.size + " sets of inconsistent automata")
     val ind = inconsistentAutomata.size - 1
     for (s <- stores) {
       val r = s.watchAutomata(auts, ind)
@@ -946,11 +850,11 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     // <code>false</code> in case the set of new automata is a subset of the
     // asserted constraints
     def watchAutomata(auts : Seq[Automaton], ind : Int) : Boolean =
-      // TODO: we should randomise at this point!
+    // TODO: we should randomise at this point!
       (auts find { a => !(constraintSet contains a) }) match {
         case Some(aut) => {
           watchedAutomata.put(aut,
-                              ind :: watchedAutomata.getOrElse(aut, List()))
+            ind :: watchedAutomata.getOrElse(aut, List()))
           true
         }
         case None =>
@@ -1002,7 +906,7 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
             // constraints have become inconsistent!
             watchedAutomata.put(aut, potentialConflicts)
             return Some(for (a <- inconsistentAutomata(autInd).toList)
-                        yield TermConstraint(t, a))
+              yield TermConstraint(t, a))
           }
 
           potentialConflicts = potentialConflicts.tail
@@ -1034,11 +938,11 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
     def ensureCompleteLengthConstraints : Unit =
       constraints match {
         case Seq() | Seq(_) =>
-          // nothing, all length constraints already pushed
+        // nothing, all length constraints already pushed
         case auts =>
           addLengthConstraint(TermConstraint(t, intersection),
-                              for (a <- constraints)
-                              yield TermConstraint(t, a))
+            for (a <- constraints)
+              yield TermConstraint(t, a))
       }
 
     def isAcceptedWord(w : Seq[Int]) : Boolean =
