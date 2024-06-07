@@ -309,7 +309,11 @@ class CostEnrichedAutomatonBase extends Automaton {
     if (registers.nonEmpty) throw new UnsupportedOperationException
     BricsAutomatonWrapper(BasicOperations.complement(toBricsAutomaton(this)))
   }
-  def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
+  def apply(word: Seq[Int]): Boolean = {
+    ParikhUtil.log("Naively run word on CEFA without registers. Indeed, the CEFA with registers can be easily supported in the future.")
+    if (registers.nonEmpty) throw new UnsupportedOperationException
+    BasicOperations.run(toBricsAutomaton(this), word.map(_.toChar).mkString)
+  }
 
   def product(that: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     CEBasicOperations.intersection(this, that)
