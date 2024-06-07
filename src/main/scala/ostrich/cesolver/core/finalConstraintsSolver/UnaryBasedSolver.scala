@@ -82,6 +82,9 @@ class UnaryBasedSolver(
 
     lProver.addConstantsRaw(newConsts)
     lProver !! finalArith
+
+    ParikhUtil.debugPrintln(finalArith)
+
     lProver.checkSat(false)
     val status = measure(
       s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"

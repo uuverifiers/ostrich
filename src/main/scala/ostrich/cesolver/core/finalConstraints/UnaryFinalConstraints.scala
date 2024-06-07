@@ -96,8 +96,8 @@ class UnaryFinalConstraints(
     }
 
   if (ParikhUtil.debugOpt) {
-    checkSatAut.toDot("checkSatAut")
-    findModelAut.toDot("findModelAut")
+    checkSatAut.toDot(strDataBaseId + "_checkSatAut")
+    findModelAut.toDot(strDataBaseId + "_findModelAut")
   }
 
   override lazy val getCompleteLIA: IFormula = {

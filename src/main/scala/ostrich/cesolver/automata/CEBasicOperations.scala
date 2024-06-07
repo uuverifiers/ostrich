@@ -216,17 +216,17 @@ object CEBasicOperations {
     
     removeDeadState(compAut)
 
-    removeDeadState(compAut).toDot("my_complement")
-    aut.toDot("origin_aut")
-    afterDetermine.toDot("determined_aut")
-    val baut = toBricsAutomaton(aut)
-    val res = BricsAutomatonWrapper(
-      BasicOperations.complement(baut)
-    )
-    baut.determinize()
-    BricsAutomatonWrapper(baut).toDot("brics_aut_determined")
-    res.toDot("brics_complement")
-    res
+    // removeDeadState(compAut).toDot("my_complement")
+    // aut.toDot("origin_aut")
+    // afterDetermine.toDot("determined_aut")
+    // val baut = toBricsAutomaton(aut)
+    // val res = BricsAutomatonWrapper(
+    //   BasicOperations.complement(baut)
+    // )
+    // baut.determinize()
+    // BricsAutomatonWrapper(baut).toDot("brics_aut_determined")
+    // res.toDot("brics_complement")
+    // res
   }
 
   def complement(
@@ -423,8 +423,6 @@ object CEBasicOperations {
       prefixlen += aut.registers.size
     }
 
-    for (aut <- auts; s <- aut.acceptingStates)
-      ceAut.setAccept(old2new(s), false)
     for (s <- auts.last.acceptingStates)
       ceAut.setAccept(old2new(s), true)
     for (
@@ -822,12 +820,6 @@ object CEBasicOperations {
           (t, l, v) <- aut.outgoingTransitionsWithVec(s)
         ) yield l
       val outLabelsEnumerator = new CETLabelEnumerator(outLabels)
-      ParikhUtil.debugPrintln(
-        "curPowerSet: " + curPowerSet.mkString(", ")
-      )
-      ParikhUtil.debugPrintln(
-        "outLabels: " + outLabelsEnumerator.enumDisjointLabels.map{case (a,b) => (a.toInt, b.toInt)}.mkString(", ")
-      )
       for (
         s <- curPowerSet; (t, l, v) <- aut.outgoingTransitionsWithVec(s);
         splitlbl <- outLabelsEnumerator.enumLabelOverlap(l)

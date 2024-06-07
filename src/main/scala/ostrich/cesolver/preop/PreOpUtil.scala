@@ -48,6 +48,7 @@ object PreOpUtil {
     for (i <- 0 until len) {
       ceAut.addTransition(states(i), sigma, states(i + 1), Seq())
     }
+    ceAut.initialState = states(0)
     ceAut.setAccept(states(len), true)
     ceAut
   }
