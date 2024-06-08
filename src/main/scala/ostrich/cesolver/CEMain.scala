@@ -82,6 +82,7 @@ object CEMain {
                })
 
   def main(args: Array[String]) : Unit = try {
+    ap.CmdlMain.stackTraces = ParikhUtil.debugOpt
     ap.CmdlMain.main((options ++ args).toArray)
   } catch {
     case e: Throwable =>

@@ -10,6 +10,7 @@ import models.redos_attack_detection as redos_bench
 import models.output_tmp as output_bench
 import models.all_counting_bench as setta_counting_bench
 import models.stringfuzz as stringfuzz_bench
+import models.non_incremental as non_incremental_bench
 import startwebserver
 import tools.ostrichBackend
 import tools.cvc5
@@ -20,20 +21,20 @@ import tools.ostrich
 import tools.ostrichHeuristics
 
 tracks = (
-    setta_counting_bench.getTrackData() + 
-    stringfuzz_bench.getTrackData()
+    non_incremental_bench.getTrackData()
 ) + []
 
 solvers = {}
 for s in [
-    tools.ostrichHeuristics
+    tools.ostrichCEA,
+    tools.cvc5
 ]:
     s.addRunner(solvers)
 
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("string_fuzz+setta_counting-noAll")
+store = storage.SQLiteDB("smtcomp_2024_cea+cvc5")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
 # verifiers = ["Cvc5"]
 verifiers = [""]
