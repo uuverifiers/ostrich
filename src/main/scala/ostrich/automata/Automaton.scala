@@ -369,6 +369,8 @@ trait AtomicStateAutomaton extends Automaton {
         changed = false
 
         for (i <- 0 until transPreStates.size) {
+          ap.util.Timeout.check
+
           val set = transPreStates(i)
 
           val oldSize = set.size
