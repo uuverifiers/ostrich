@@ -34,10 +34,10 @@ for s in [
 timeout = 60
 ploc = utils.JSONProgramConfig()
 
-store = storage.SQLiteDB("smtcomp_2024_cea+cvc5")
+store = storage.SQLiteDB("smtcomp_2024_cea_brics_comp+cvc5")
 summaries = [summarygenerators.terminalResult, store.postTrackUpdate]
-# verifiers = ["Cvc5"]
-verifiers = [""]
+verifiers = ["Cvc5"]
+# verifiers = [""]
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )

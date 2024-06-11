@@ -37,6 +37,7 @@ import ostrich.OstrichStringTheory
 import ap.parser._
 
 import scala.collection.mutable.{HashMap => MHashMap}
+import ostrich.cesolver.util.ParikhUtil.debugPrintln
 
 object AutDatabase {
 
@@ -188,6 +189,12 @@ class AutDatabase(theory : OstrichStringTheory,
   def isSubsetOf(aut1 : NamedAutomaton, aut2 : NamedAutomaton) : Boolean =
     if (aut1.id < aut2.id) {
       synchronized {
+        debugPrintln("aut1 is " + aut1)
+        debugPrintln("id2Aut is " + id2Aut)
+        debugPrintln("id2Regex is " + id2Regex)
+        debugPrintln("id2CompAut is " + id2CompAut)
+        debugPrintln(id2Automaton(aut1).get)
+        debugPrintln(id2Automaton(aut2.complement).get)
         // aut1 <= aut2
         //  <==>
         // (aut1 & aut2.complement) = empty

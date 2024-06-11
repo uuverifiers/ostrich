@@ -115,6 +115,20 @@ class CEReducer(
   }
   import factory.{_str_len, _int_to_str, _str_to_int}
 
+  override def addAssumptions(arithConj : ArithConj,
+                     mode : ReducerPlugin.ReductionMode.Value) = this
+
+  override def addAssumptions(predConj : PredConj,
+                     mode : ReducerPlugin.ReductionMode.Value) = {
+    val newLangs = extractLanguageConstraints(predConj, theory)
+    if (newLangs.isEmpty)
+      this
+    else
+      new CEReducer(theory, funTranslator,
+                         newLangs :: languageConstraints,
+                         factory)
+                     }
+
   override def reduce(
       predConj: PredConj,
       reducer: ReduceWithConjunction,

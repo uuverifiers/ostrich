@@ -48,12 +48,11 @@ class CEAutDatabase(theory: OstrichStringTheory, flags: OFlags)
       (id2CompAut get id) match {
         case r @ Some(_) => r
         case None =>
-          (id2Regex get id) match {
-            case Some(regex) => {
-              val aut =
-                regex2Aut.buildComplementAut(regex, flags.minimizeAutomata)
-              id2CompAut.put(id, aut)
-              Some(aut)
+          id2Automaton(id) match {
+            case Some(aut) => {
+              val compAut = !aut
+              id2CompAut.put(id, compAut)
+              Some(compAut)
             }
             case None =>
               None
