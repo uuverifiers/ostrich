@@ -167,54 +167,56 @@ object CEBasicOperations {
       0
     )
     registersMustBeEmpty(aut)
-    // val afterDetermine = determinate(aut)
-    // val compAut = new CostEnrichedAutomatonBase
-    // val alwaysAccpetS = compAut.newState()
-    // val old2new =
-    //   afterDetermine.states.map(s => (s, compAut.newState())).toMap
-    // compAut.initialState = old2new(afterDetermine.initialState)
-    // for ((s, l, t, vec) <- afterDetermine.transitionsWithVec) {
-    //   compAut.addTransition(old2new(s), l, old2new(t), vec)
-    // }
-    // // neg accepted states
-    // for (s <- afterDetermine.states; if !afterDetermine.isAccept(s)) {
-    //   compAut.setAccept(old2new(s), true)
-    // }
-    // compAut.setAccept(alwaysAccpetS, true)
-    // // totalize
-    // for (state <- afterDetermine.states) {
-    //   ap.util.Timeout.check
-    //   val outLabelsSorted =
-    //     afterDetermine.outgoingTransitionsWithVec(state).map(_._2).toSeq.sorted
-    //   var maxi: Int = (Char.MinValue).toInt
-    //   for ((min, max) <- outLabelsSorted) {
-    //     if (maxi < min)
-    //       compAut.addTransition(
-    //         old2new(state),
-    //         (maxi.toChar, (min.toInt - 1).toChar),
-    //         alwaysAccpetS,
-    //         Seq()
-    //       )
-    //     if (max.toInt + 1 > maxi.toInt)
-    //       maxi = max.toInt + 1
-    //   }
-    //   if (maxi <= Char.MaxValue) {
-    //     compAut.addTransition(
-    //       old2new(state),
-    //       (maxi.toChar, Char.MaxValue),
-    //       alwaysAccpetS,
-    //       Seq()
-    //     )
-    //   }
-    // }
-    // compAut.addTransition(
-    //   alwaysAccpetS,
-    //   BricsTLabelOps.sigmaLabel,
-    //   alwaysAccpetS,
-    //   Seq()
-    // )
+    val afterDetermine = determinate(aut)
+    val compAut = new CostEnrichedAutomatonBase
+    val alwaysAccpetS = compAut.newState()
+    val old2new =
+      afterDetermine.states.map(s => (s, compAut.newState())).toMap
+    compAut.initialState = old2new(afterDetermine.initialState)
+    for ((s, l, t, vec) <- afterDetermine.transitionsWithVec) {
+      compAut.addTransition(old2new(s), l, old2new(t), vec)
+    }
+    // neg accepted states
+    for (s <- afterDetermine.states; if !afterDetermine.isAccept(s)) {
+      compAut.setAccept(old2new(s), true)
+    }
+    compAut.setAccept(alwaysAccpetS, true)
+    // totalize
+    for (state <- afterDetermine.states) {
+      ap.util.Timeout.check
+      val outLabelsSorted =
+        afterDetermine.outgoingTransitionsWithVec(state).map(_._2).toSeq.sorted
+      var maxi: Int = (Char.MinValue).toInt
+      for ((min, max) <- outLabelsSorted) {
+        if (maxi < min)
+          compAut.addTransition(
+            old2new(state),
+            (maxi.toChar, (min.toInt - 1).toChar),
+            alwaysAccpetS,
+            Seq()
+          )
+        if (max.toInt + 1 > maxi.toInt)
+          maxi = max.toInt + 1
+      }
+      if (maxi <= Char.MaxValue) {
+        compAut.addTransition(
+          old2new(state),
+          (maxi.toChar, Char.MaxValue),
+          alwaysAccpetS,
+          Seq()
+        )
+      }
+    }
+    compAut.addTransition(
+      alwaysAccpetS,
+      BricsTLabelOps.sigmaLabel,
+      alwaysAccpetS,
+      Seq()
+    )
     
-    // removeDeadState(compAut)
+    removeDeadState(compAut)
+
+    //// after the full test of above code, we can remove the following code ////
 
     // removeDeadState(compAut).toDot("my_complement")
     // aut.toDot("origin_aut")
