@@ -56,6 +56,7 @@ import ostrich.cesolver.util.ParikhUtil
 import ap.terfor.inequalities.InEqConj
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ConstSubstVisitor
+import ostrich.cesolver.automata.CEBasicOperations.complement
 
 /** This is the implementation of cost-enriched finite automaton(CEFA). Each
   * transition of CEFA contains a vector of integers, which is used to record
@@ -307,9 +308,13 @@ class CostEnrichedAutomatonBase extends Automaton {
 
   def unary_! = {
     if (registers.nonEmpty) throw new UnsupportedOperationException
-    BricsAutomatonWrapper(BasicOperations.complement(toBricsAutomaton(this)))
+    CEBasicOperations.complement(this)
   }
-  def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
+  def apply(word: Seq[Int]): Boolean = {
+    ParikhUtil.log("Naively run word on CEFA without registers. Indeed, the CEFA with registers can be easily supported in the future.")
+    if (registers.nonEmpty) throw new UnsupportedOperationException
+    BasicOperations.run(toBricsAutomaton(this), word.map(_.toChar).mkString)
+  }
 
   def product(that: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     CEBasicOperations.intersection(this, that)

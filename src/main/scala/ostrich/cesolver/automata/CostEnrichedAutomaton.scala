@@ -136,14 +136,6 @@ class CETLabelEnumerator(labels: Iterable[(Char, Char)])
           disjoint += ((possibleMin, possibleMax))
       }
     }
-    // // add last char
-    // disjoint += ((labelPoints.last, labelPoints.last))
-
-    debugPrintln(
-      "Disjoint labels: " + disjoint
-        .map { case (a, b) => (a.toInt, b.toInt) }
-        .mkString(", ")
-    )
 
     // assert no original labels will be filtered out
     assert(

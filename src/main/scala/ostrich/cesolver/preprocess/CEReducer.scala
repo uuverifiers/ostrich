@@ -60,6 +60,7 @@ import ostrich.cesolver.stringtheory.{
 }
 import ostrich.OstrichReducer
 import ostrich.OstrichReducerFactory
+import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
 class CEReducerFactory(theory: CEStringTheory)
     extends OstrichReducerFactory(theory) {
@@ -113,6 +114,20 @@ class CEReducer(
     int2Char
   }
   import factory.{_str_len, _int_to_str, _str_to_int}
+
+  override def addAssumptions(arithConj : ArithConj,
+                     mode : ReducerPlugin.ReductionMode.Value) = this
+
+  override def addAssumptions(predConj : PredConj,
+                     mode : ReducerPlugin.ReductionMode.Value) = {
+    val newLangs = extractLanguageConstraints(predConj, theory)
+    if (newLangs.isEmpty)
+      this
+    else
+      new CEReducer(theory, funTranslator,
+                         newLangs :: languageConstraints,
+                         factory)
+                     }
 
   override def reduce(
       predConj: PredConj,
@@ -319,7 +334,7 @@ class CEReducer(
 
             val str = term2Str(a(1)).get
             val autId =
-              ceAutDatabase.automaton2Id(BricsAutomaton.suffixAutomaton(str))
+              ceAutDatabase.automaton2Id(automaton2CostEnriched(BricsAutomaton.suffixAutomaton(str)))
             str_in_re_id(List(a(0), l(autId)))
           } else {
             a
@@ -343,7 +358,7 @@ class CEReducer(
 
             val str = term2Str(a(0)).get
             val autId =
-              ceAutDatabase.automaton2Id(BricsAutomaton.containsAutomaton(str))
+              ceAutDatabase.automaton2Id(automaton2CostEnriched(BricsAutomaton.containsAutomaton(str)))
             str_in_re_id(List(a(1), l(autId)))
           } else {
             a
@@ -364,7 +379,7 @@ class CEReducer(
           } else if (isConcrete(a(1))) {
             val str = term2Str(a(1)).get
             val autId =
-              ceAutDatabase.automaton2Id(BricsAutomaton.prefixAutomaton(str))
+              ceAutDatabase.automaton2Id(automaton2CostEnriched(BricsAutomaton.prefixAutomaton(str)))
             str_in_re_id(List(a(0), l(autId)))
           } else {
             a

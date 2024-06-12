@@ -308,6 +308,8 @@ class ParikhExploration(
                 argsValues.mkString(", ")
             )
         }
+
+      ParikhUtil.log(resValue + " = " + op + "(" + argsValues.mkString(", ") + ")")
       def throwResultCutException: Unit = {
         import ap.terfor.TerForConvenience._
         implicit val o = lProver.order

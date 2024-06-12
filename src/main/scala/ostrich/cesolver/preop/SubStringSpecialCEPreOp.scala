@@ -36,6 +36,7 @@ import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.automata.CEBasicOperations
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.automata.BricsTLabelOps
+import ostrich.cesolver.util.ParikhUtil.debugPrintln
 
 object SubStrPreImageUtil {
   // An Automaton that accepts all strings not containing c
@@ -58,16 +59,26 @@ class SubStr_0_lenMinus1 extends CEPreOp {
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
-    val preImage = CEBasicOperations.concatenate(
+    val nonEpsResPre = CEBasicOperations.concatenate(
       Seq(
         res,
         PreOpUtil.automatonWithLen(1)
       )
     )
-    if (res.isAccept(res.initialState))
-      preImage.setAccept(preImage.initialState, true)
+    val epsResPre = BricsAutomatonWrapper.makeEmptyString()
+    epsResPre.regsRelation = res.regsRelation
+    epsResPre.registers = res.registers
 
-    (Iterator(Seq(preImage)), Seq())
+    val preImages = 
+    if (res.isAccept(res.initialState))
+      Seq(epsResPre, nonEpsResPre)
+    else
+      Seq(nonEpsResPre)
+
+    debugPrintln("preImage.regsRelation: " + nonEpsResPre.regsRelation)
+    nonEpsResPre.toDot("preImage_of" + res.hashCode())
+
+    (Iterator(Seq(nonEpsResPre)), Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
