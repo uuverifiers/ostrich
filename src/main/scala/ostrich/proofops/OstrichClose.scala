@@ -54,8 +54,8 @@ class OstrichClose(goal : Goal,
 
   val facts: Conjunction = goal.facts
   val predConj: PredConj = facts.predConj
-  private val posRegularExpressions = predConj.positiveLitsWithPred(str_in_re_id)
-  private val negRegularExpressions = predConj.negativeLitsWithPred(str_in_re_id)
+  private val posRegularExpressions = predConj.positiveLitsWithPred(str_in_re_id) ++ predConj.positiveLitsWithPred(str_in_re)
+  private val negRegularExpressions = predConj.negativeLitsWithPred(str_in_re_id) ++ predConj.negativeLitsWithPred(str_in_re)
 
   def isConsistent : Seq[Plugin.Action] = {
 
