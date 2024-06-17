@@ -33,17 +33,16 @@
 package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
-import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
-import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
-
+import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
+import ostrich.proofops.{OstrichClose, OstrichNielsenSplitter, OstrichPredtoEqConverter}
 import ap.Signature
 import ap.basetypes.IdealInt
-import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp}
+import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
 import IExpression.Predicate
 import ap.theories.strings._
-import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
-import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
-import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
+import ap.theories.{Incompleteness, ModuloArithmetic, Theory, TheoryRegistry}
+import ap.types.{MonoSortedIFunction, MonoSortedPredicate, ProxySort, Sort}
+import ap.terfor.{ConstantTerm, TerForConvenience, Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.Atom
 import ap.proof.theoryPlugins.Plugin
@@ -355,13 +354,14 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
       lazy val predToEq =
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, theoryFlags)
-
+      lazy val ostrichClose = new OstrichClose(goal, OstrichStringTheory.this, theoryFlags)
       goalState(goal) match {
 
         case Plugin.GoalState.Eager =>
           List()
 
         case Plugin.GoalState.Intermediate => try {
+          ostrichClose.isConsistent                    elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
