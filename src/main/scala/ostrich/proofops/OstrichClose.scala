@@ -134,13 +134,8 @@ class OstrichClose(goal : Goal,
     }
 
     for ((term, autSequence) <- regexes) {
-      for (i <- autSequence.indices){
-        for (j <- i+1 until autSequence.length){
-          if (autDatabase.emptyIntersection(autSequence(i),autSequence(j))){
-            // TODO return only the constraints that lead to the close
-            return Seq(Plugin.CloseByAxiom(goal.facts.iterator.toList, theory))
-          }
-        }
+      if (autDatabase.emptyIntersection(autSequence)){
+        return Seq(Plugin.CloseByAxiom(goal.facts.iterator.toList, theory))
       }
     }
     Seq()

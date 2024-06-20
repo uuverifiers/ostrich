@@ -33,10 +33,94 @@
 package ostrich.automata
 
 import ostrich.OstrichStringTheory
-
 import ap.parser._
 
-import scala.collection.mutable.{HashMap => MHashMap}
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, HashSet => MHashSet}
+
+class SuffixTrieNode {
+  var children: Map[Int, SuffixTrieNode] = Map()
+  var isEndOfSet: Boolean = false
+
+  def insert(set: Seq[Int]): Unit = {
+    var currentNode = this
+    for (elem <- set) {
+      if (!currentNode.children.contains(elem)) {
+        currentNode.children += (elem -> new SuffixTrieNode)
+      }
+      currentNode = currentNode.children(elem)
+    }
+    currentNode.isEndOfSet = true
+  }
+
+
+  def contains(set: Seq[Int]): Boolean = {
+    var currentNode = this
+    for (elem <- set) {
+      if (currentNode.isEndOfSet) {
+        return true
+      }
+      if (!currentNode.children.contains(elem)) {
+        return false
+      }
+      currentNode = currentNode.children(elem)
+    }
+    currentNode.isEndOfSet
+  }
+
+}
+
+class SuffixTrie {
+  private val root = new SuffixTrieNode
+
+  def insert(set: Seq[Int]): Unit = {
+    root.insert(set)
+  }
+
+  def contains(set: Seq[Int]): Boolean = {
+    root.contains(set)
+  }
+
+}
+
+class TrieNode {
+  var children: Map[Int, TrieNode] = Map()
+
+  def insert(set: Seq[Int]): Unit = {
+    var currentNode = this
+    for (elem <- set) {
+      if (!currentNode.children.contains(elem)) {
+        currentNode.children += (elem -> new TrieNode)
+      }
+      currentNode = currentNode.children(elem)
+    }
+  }
+
+
+  def contains(set: Seq[Int]): Boolean = {
+    var currentNode = this
+    for (elem <- set) {
+      if (!currentNode.children.contains(elem)) {
+        return false
+      }
+      currentNode = currentNode.children(elem)
+    }
+    true
+  }
+
+}
+
+class SetTrie {
+  private val root = new TrieNode
+
+  def insert(set: Seq[Int]): Unit = {
+    root.insert(set)
+  }
+
+  def contains(set: Seq[Int]): Boolean = {
+    root.contains(set)
+  }
+
+}
 
 object AutDatabase {
 
@@ -75,6 +159,9 @@ class AutDatabase(theory : OstrichStringTheory,
 
   private val subsetRel  =
     new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]
+
+  private val prefixSortedIntersectionTree = new SetTrie
+  private val knownConflicts = new SuffixTrie
 
   /**
    * Query the id of a regular expression.
@@ -232,7 +319,39 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   def emptyIntersection(aut1 : NamedAutomaton,
                         aut2 : NamedAutomaton) : Boolean =
-    isSubsetOf(aut1, aut2.complement)
+  {
+    val tmp = isSubsetOf(aut1, aut2.complement)
+    if (tmp) {
+      knownConflicts.insert(Seq(aut1.id, aut2.id).sorted)
+    }
+    tmp
+  }
+
+  def emptyIntersection(auts : ArrayBuffer[NamedAutomaton]) : Boolean =
+  {
+    val autIds = new ArrayBuffer[Int]
+    val autValues = new ArrayBuffer[Automaton]
+    for (aut <- auts){
+      autIds += aut.id
+      autValues += id2Automaton(aut).get
+    }
+    autIds.sorted
+    if (knownConflicts.contains(autIds)){
+      return true
+    }
+    if (prefixSortedIntersectionTree.contains(autIds)){
+      return false
+    }
+
+    if (AutomataUtils.areConsistentAutomata(autValues)){
+      prefixSortedIntersectionTree.insert(autIds)
+      false
+    }
+    else {
+      knownConflicts.insert(autIds)
+      true
+    }
+  }
 
   /**
    * Query the automaton that belongs to a regular expression.
