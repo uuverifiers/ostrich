@@ -37,9 +37,11 @@ import ostrich.preop.{ConcatPreOp, PreOp}
 import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
-import ap.terfor.Term
+import ap.proof.theoryPlugins.Plugin.AddFormula
+import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.{Atom, PredConj}
+import ap.terfor.{RichPredicate, Term}
 
 import scala.collection.breakOut
 import scala.collection.mutable.{
@@ -59,10 +61,21 @@ object OstrichForwardsProp {
     def pop : Unit
 
     /**
-     * Add new automata to the store, return a sequence of term constraints
-     * in case the asserted constraints have become inconsistent
+     * Add an automaton to the store, return a sequence of term constraints in
+     * case the asserted constraints have become inconsistent.
+     *
+     * These constraints are not returned by getNewContents
      */
     def assertConstraint(aut : Automaton) : Option[ConflictSet]
+
+    /**
+     * Add a "new" automaton to the store, return a sequence of term
+     * constraints in case the asserted constraints have become inconsistent
+     *
+     * These constraints are returned by getNewContents and are intended to
+     * represent constraints derived by forwards propagation
+     */
+    def assertNewConstraint(aut : Automaton) : Option[ConflictSet]
 
     /**
      * Check whether input automaton is superset of current constraints
@@ -81,6 +94,12 @@ object OstrichForwardsProp {
      * Return all constraints that were asserted (without any modifications)
      */
     def getCompleteContents : List[Automaton]
+
+    /**
+     * Return all new constraints that were asserted (without any
+     * modifications)
+     */
+    def getNewContents : List[Automaton]
 
     /**
      * Make sure that the exact length abstraction for the intersection of the
@@ -306,12 +325,24 @@ class OstrichForwardsProp(goal : Goal,
     // TODO: return seq of AddAxiom for discovered constraints
     // so use constraint stores?
     val res = addForwardConstraints
+    println("RES" + res)
     if (res.isDefined) {
       // return close with axiom?
       List()
     } else {
+      val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
       // return seq of new constraints
-      List()
+      constraintStores.flatMap { case (term, store) =>
+        store.getNewContents.map { aut =>
+          val lterm = LinearCombination(term, goal.order)
+          //val lautid = autDatabase.
+          AddFormula(Conjunction.conj(
+            // don't know how to assert string in automaton language
+            str_in_re_id_app(Seq(lterm)),
+            goal.order
+          ))
+        }.toList
+      }.toList
     }
   }
 
@@ -329,7 +360,7 @@ class OstrichForwardsProp(goal : Goal,
         //println("Forward is saturated") TODO do something with that info?
       }
       else {
-        val r = constraintStores(res).assertConstraint(resultConstraint)
+        val r = constraintStores(res).assertNewConstraint(resultConstraint)
         // Forward has found conlict
         if (r.isDefined) return r
       }
@@ -339,6 +370,7 @@ class OstrichForwardsProp(goal : Goal,
 
   private def newStore(t : Term) : ConstraintStore = new ConstraintStore {
     private val constraints = new ArrayBuffer[Automaton]
+    private val newConstraints = new ArrayBuffer[Automaton]
     private var currentConstraint : Option[Automaton] = None
     private val constraintStack = new ArrayStack[(Int, Option[Automaton])]
 
@@ -353,6 +385,11 @@ class OstrichForwardsProp(goal : Goal,
 
     override def isSuperSet(aut: Automaton): Boolean = {
       false
+    }
+
+    def assertNewConstraint(aut : Automaton) : Option[ConflictSet] = {
+      newConstraints += aut
+      assertConstraint(aut)
     }
 
     def assertConstraint(aut : Automaton) : Option[ConflictSet] =
@@ -388,6 +425,8 @@ class OstrichForwardsProp(goal : Goal,
       currentConstraint.toList
     def getCompleteContents : List[Automaton] =
       constraints.toList
+    def getNewContents: List[Automaton] =
+      newConstraints.toList
 
     def ensureCompleteLengthConstraints : Unit = ()
 
