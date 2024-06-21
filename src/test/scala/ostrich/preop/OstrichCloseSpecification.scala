@@ -34,12 +34,11 @@
 package ap.proof;
 
 import ap.SimpleAPI
-import ap.api.SimpleAPI
-import ap.api.SimpleAPI.ProverStatus
-import ap.util.{APTestCase, Debug, Logic, PlainRange}
-import ap.proof.goal.{CompoundFormulas, FactsNormalisationTask, Goal, TaskManager}
+import ap.parser._
+import ap.proof.goal.{Goal, AddFactsTask}
 import ap.proof.tree._
 import ap.proof.certificates.BranchInferenceCollection
+import ap.basetypes.IdealInt
 import ap.terfor._
 import ap.terfor.conjunctions.{Conjunction, NegatedConjunctions, Quantifier}
 import ap.terfor.substitutions.{ConstantSubst, IdentitySubst}
@@ -52,6 +51,8 @@ import ap.parameters.{GoalSettings, Param}
 import ap.terfor.preds.PredConj
 import ap.theories.strings.StringTheory
 import ap.types.Sort
+import ap.util.{APTestCase, Debug, Logic, PlainRange}
+
 import org.scalacheck.Properties
 import ostrich.automata.{AutomataUtils, Automaton, BricsAutomaton}
 import ostrich.proofops.OstrichClose
@@ -60,18 +61,21 @@ import ostrich.{OFlags, OstrichStringTheory, OstrichStringTheoryBuilder}
 import scala.collection.mutable.ArrayBuffer
 
 object OstrichCloseSpecification extends Properties("ostrichCloseSpecification"){
+  Debug.enableAllAssertions(true)
 
-  private val theory =     new OstrichStringTheory (Seq(),
-    OFlags())
-  import ap.basetypes.IdealInt
-  import ap.theories.strings.StringTheory
+  val p = SimpleAPI.spawnWithAssertions
+  import p._
+
+  private val theory = new OstrichStringTheory (Seq(), OFlags())
   import ostrich.automata.AutDatabase
   import theory._
-  import TerForConvenience._
-  import StringTheory.ConcreteString
+  import IExpression._
 
-  private val consts = for (i <- Array.range(0, 10)) yield new ConstantTerm("c" + i)
-  implicit val to: TermOrder = (TermOrder.EMPTY /: consts)((o, c) => o.extend(c))
+  addTheory(theory)
+
+  val consts = createConstants("c", 0 until 10, StringSort)
+
+  implicit val to: TermOrder = p.order
 
   val aut1: Automaton  = BricsAutomaton.fromString("a")
   val aut2: Automaton  = BricsAutomaton.fromString("b")
@@ -87,28 +91,45 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
   val idAut5: Int = autDatabase.automaton2Id(aut5)
   val idAut6: Int = autDatabase.automaton2Id(aut6)
 
-  val formula2 : Formula = str_in_re_id(List(l(consts(0)), l(idAut1)))
-  val formula3 : Formula = str_in_re_id(List(l(consts(1)), l(idAut2)))
-  println(formula2)
+  val formula2 = str_in_re_id(consts(0), idAut1)
+  val formula3 = str_in_re_id(consts(1), idAut2)
 
+  val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
+  val settings =
+    Param.CONSTRAINT_SIMPLIFIER.set(GoalSettings.DEFAULT, simplifier)
+  val ptf =
+    new SimpleProofTreeFactory(true, simplifier)
 
+  def createGoalFor(c : Conjunction) : Goal = {
+    var goal = Goal(List(c.negate), Set(), Vocabulary(to), settings)
 
-  private val settings =
-    Param.CONSTRAINT_SIMPLIFIER.set(GoalSettings.DEFAULT,
-      ConstraintSimplifier.FAIR_SIMPLIFIER)
-  private val prover = new ExhaustiveProver(settings)
+    // run the rule applications to turn formulas into facts
+    var cont = true
+    while (cont && goal.stepPossible) {
+      cont = goal.tasks.max match {
+          case _ : AddFactsTask => true
+          case _ => false
+        }
+      if (cont)
+        goal = (goal step ptf).asInstanceOf[Goal]
+    }
+ 
+    goal
+  }
 
-  val facts: Conjunction = Conjunction.TRUE
-  // Why does this fail?
-  // val facts1: Conjunction = conj(Seq(formula2, formula3))
+  val goal = createGoalFor(asConjunction(formula2 & formula3))
 
+  println(goal)
 
-
-  val goal: Goal = Goal(facts, CompoundFormulas.EMPTY(Map()),
-    TaskManager.EMPTY,  0, Set.empty, Vocabulary(to), new IdentitySubst(to),
-    BranchInferenceCollection.EMPTY, settings
-  )
   val closeTest = new OstrichClose(goal, theory, theory.theoryFlags)
+  println(closeTest)
   val valueClose = closeTest.isConsistent
   println(valueClose)
+
+  // should be fine to stop the prover again at this point
+  p.shutDown
+
+  property("test 1") = {
+    true
+  }
 }
