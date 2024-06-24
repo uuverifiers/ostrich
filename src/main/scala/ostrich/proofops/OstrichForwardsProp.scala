@@ -37,7 +37,7 @@ import ostrich.preop.{ConcatPreOp, PreOp}
 import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
-import ap.proof.theoryPlugins.Plugin.AddFormula
+import ap.proof.theoryPlugins.Plugin.AddAxiom
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.{Atom, PredConj}
@@ -48,83 +48,27 @@ import scala.collection.mutable.{
   ArrayBuffer,
   ArrayStack,
   BitSet => MBitSet,
-  HashMap => MHashMap
+  HashMap => MHashMap,
+  MultiMap => MMultiMap,
+  Set => MSet
 }
+import ap.basetypes.IdealInt
+import ap.terfor.Formula
 
 object OstrichForwardsProp {
   case class TermConstraint(t : Term, aut : Automaton)
   type ConflictSet = Seq[TermConstraint]
-
-  abstract class ConstraintStore {
-    def push : Unit
-
-    def pop : Unit
-
-    /**
-     * Add an automaton to the store, return a sequence of term constraints in
-     * case the asserted constraints have become inconsistent.
-     *
-     * These constraints are not returned by getNewContents
-     */
-    def assertConstraint(aut : Automaton) : Option[ConflictSet]
-
-    /**
-     * Add a "new" automaton to the store, return a sequence of term
-     * constraints in case the asserted constraints have become inconsistent
-     *
-     * These constraints are returned by getNewContents and are intended to
-     * represent constraints derived by forwards propagation
-     */
-    def assertNewConstraint(aut : Automaton) : Option[ConflictSet]
-
-    /**
-     * Check whether input automaton is superset of current constraints
-     * Not implemented for eager
-     * @param aut
-     * @return true if constraints.getComplete \subseteq aut
-     */
-    def isSuperSet(aut : Automaton) : Boolean
-
-    /**
-     * Return some representation of the asserted constraints
-     */
-    def getContents : List[Automaton]
-
-    /**
-     * Return all constraints that were asserted (without any modifications)
-     */
-    def getCompleteContents : List[Automaton]
-
-    /**
-     * Return all new constraints that were asserted (without any
-     * modifications)
-     */
-    def getNewContents : List[Automaton]
-
-    /**
-     * Make sure that the exact length abstraction for the intersection of the
-     * stored automata has been pushed to the length prover
-     */
-    def ensureCompleteLengthConstraints : Unit
-
-    /**
-     * Check whether some word is accepted by all the stored constraints
-     */
-    def isAcceptedWord(w : Seq[Int]) : Boolean
-
-    /**
-     * Produce an arbitrary word accepted by all the stored constraints
-     */
-    def getAcceptedWord : Seq[Int]
-
-    /**
-     * Produce a word of length <code>len</code> accepted by all the stored
-     * constraints
-     */
-    def getAcceptedWordLen(len : Int) : Seq[Int]
-  }
 }
 
+/**
+ * Forwards propagate constraints and return axioms
+ *
+ * For each x = f(y1,...,yn) collect constraints on y1,...,yn, propagate
+ * them forwards through f, and create a new axiom:
+ *
+ *  assume: <yi constraints> & x = f(y1,...,yn)
+ *  derive: x in Pre(f, <yi constraints>)
+ */
 class OstrichForwardsProp(goal : Goal,
                           theory : OstrichStringTheory,
                           flags : OFlags) {
@@ -145,7 +89,6 @@ class OstrichForwardsProp(goal : Goal,
   private val autDatabase = theory.autDatabase
   private val stringFunctionTranslator =
       new OstrichStringFunctionTranslator(theory, goal.facts)
-  private val constraintStores = new MHashMap[Term, ConstraintStore]
 
   val rexOps : Set[IFunction] = Set(
     re_none, re_all, re_allchar, re_charrange, re_++, re_union,
@@ -155,9 +98,18 @@ class OstrichForwardsProp(goal : Goal,
     re_from_ecma2020, re_from_ecma2020_flags, re_case_insensitive
   )
 
+  // Collect a bunch of data. Always keep original formula for axiom
+  // construction when returning propagation results.
+  //
+  // funApps -- each function application:
+  //  (operation, arguments, result term, original formula containing app)
+  // regexes -- each x in L constraint
+  //  (x term, aut it's contained in, original formula that makes assertion)
+  // lengthVars -- x = len(y) assertions
+  //  (x, y)
   private val (funApps, initialConstraints, lengthVars) = {
-    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
-    val regexes = new ArrayBuffer[(Term, Automaton)]
+    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term, Formula)]
+    val regexes = new ArrayBuffer[(Term, Automaton, Formula)]
     val lengthVars = new MHashMap[Term, Term]
 
     def decodeRegexId(a : Atom, complemented : Boolean) : Unit
@@ -171,7 +123,7 @@ class OstrichForwardsProp(goal : Goal,
 
           autOption match {
             case Some(aut) =>
-              regexes += ((a.head, aut))
+              regexes += ((a.head, aut, a))
             case None =>
               throw new Exception ("Could not decode regex id " + a(1))
           }
@@ -184,28 +136,28 @@ class OstrichForwardsProp(goal : Goal,
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
         val aut = autDatabase.regex2Automaton(regex)
-        regexes += ((a.head, aut))
+        regexes += ((a.head, aut, a))
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`) => {
         lengthVars.put(a(0), a(1))
         if (a(1).isZero)
-          regexes += ((a(0), BricsAutomaton fromString ""))
+          regexes += ((a(0), BricsAutomaton fromString "", a))
       }
       case FunPred(`str_char_count`) => {
         // ignore
       }
       case `str_prefixof` => {
         val rightVar = theory.StringSort.newConstant("rhs")
-        funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
+        funApps += ((ConcatPreOp, List(a(0), rightVar), a(1), a))
       }
       case FunPred(f) if rexOps contains f =>
         // nothing
       case p if (theory.predicates contains p) =>
         stringFunctionTranslator(a) match {
           case Some((op, args, res)) =>
-            funApps += ((op(), args, res))
+            funApps += ((op(), args, res, a))
           case _ =>
             throw new Exception ("Cannot handle literal " + a)
         }
@@ -217,27 +169,32 @@ class OstrichForwardsProp(goal : Goal,
 
   // TODO: these will likely need calculating externally and sharing
   // between backwards and forwards
+  // allTerms -- all of the terms in the formula
+  // sortedFunApps -- the funApps above but grouped by result. I.e. (op,
+  // args, result, formula) becomes ([(op, args, formula)], result). The
+  // sorted.
+  // ignoredApps -- what was missed.
   private val (allTerms, sortedFunApps, ignoredApps)
   : (Set[Term],
-    Seq[(Seq[(PreOp, Seq[Term])], Term)],
-    Seq[(PreOp, Seq[Term], Term)]) = {
+    Seq[(Seq[(PreOp, Seq[Term], Formula)], Term)],
+    Seq[(PreOp, Seq[Term], Term, Formula)]) = {
     val argTermNum = new MHashMap[Term, Int]
-    for ((_, _, res) <- funApps)
+    for ((_, _, res, _) <- funApps)
       argTermNum.put(res, 0)
-    for ((t, _) <- initialConstraints)
+    for ((t, _, _) <- initialConstraints)
       argTermNum.put(t, 0)
     for ((t, _) <- lengthVars)
       argTermNum.put(t, 0)
-    for ((_, args, _) <- funApps; a <- args)
+    for ((_, args, _, _) <- funApps; a <- args)
       argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
 
-    var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term)]
+    var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term, Formula)]
     var remFunApps  = funApps
-    val sortedApps  = new ArrayBuffer[(Seq[(PreOp, Seq[Term])], Term)]
+    val sortedApps  = new ArrayBuffer[(Seq[(PreOp, Seq[Term], Formula)], Term)]
 
     while (!remFunApps.isEmpty) {
       val (selectedApps, otherApps) =
-        remFunApps partition { case (_, _, res) =>
+        remFunApps partition { case (_, _, res, _) =>
           argTermNum(res) == 0 ||
             strDatabase.isConcrete(res) }
 
@@ -254,7 +211,7 @@ class OstrichForwardsProp(goal : Goal,
 
         remFunApps = otherApps
 
-        for ((_, args, _) <- selectedApps; a <- args)
+        for ((_, args, _, _) <- selectedApps; a <- args)
           argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
 
         val appsPerRes = selectedApps groupBy (_._3)
@@ -262,7 +219,7 @@ class OstrichForwardsProp(goal : Goal,
 
         for (t <- nonArgTerms)
           sortedApps +=
-            ((for ((op, args, _) <- appsPerRes(t)) yield (op, args), t))
+            ((for ((op, args, _, f) <- appsPerRes(t)) yield (op, args, f), t))
 
       }
     }
@@ -270,200 +227,88 @@ class OstrichForwardsProp(goal : Goal,
     (argTermNum.keySet.toSet, sortedApps.toSeq, ignoredApps.toSeq)
   }
 
+  /**
+   * Propagate input constraints to outputs
+   *
+   * Returns AddAxioms of input constraints plus funApp implying a new
+   * constraint on the output variable.
+   */
   def apply : Seq[Plugin.Action] = {
-    for (t <- allTerms)
-      constraintStores.put(t, newStore(t))
+    // get input constraints
+    val termConstraints = getTermConstraints
 
-    // check whether we have to add further regex constraints to ensure
-    // completeness; otherwise not all pre-images of function applications might
-    // be considered
-    val allInitialConstraints = {
-      val term2Index =
-        (for (((_, t), n) <- sortedFunApps.iterator.zipWithIndex)
-          yield (t -> n)).toMap
+    val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
 
-      val coveredTerms = new MBitSet
-      for ((t, _) <- initialConstraints)
-        for (ind <- term2Index get t)
-          coveredTerms += ind
+    val actions = for {
+      (apps, res) <- sortedFunApps.reverseIterator;
+      (op, args, formula) <- apps;
+      argAuts = for (a <- args) yield termConstraints(a).map(_._1).toSeq;
+      argAtoms = for (a <- args) yield termConstraints(a).map(_._2).toSeq;
+      resultConstraint = op.forwardApprox(argAuts);
+      autId = autDatabase.automaton2Id(resultConstraint);
+      lres = LinearCombination(res, goal.order);
+      lautId = LinearCombination(IdealInt(autId));
+      assumptions = argAtoms.flatten ++ List(formula)
+    } yield AddAxiom(
+        assumptions,
+        Conjunction.conj(str_in_re_id_app(Seq(lres, lautId)), goal.order),
+        theory
+    )
 
-      val additionalConstraints = new ArrayBuffer[(Term, Automaton)]
-
-      // check whether any of the terms have concrete definitions
-      for (t <- allTerms)
-        for (w <- strDatabase.term2List(t)) {
-          val str : String = w.map(i => i.toChar)(breakOut)
-          additionalConstraints += ((t, BricsAutomaton fromString str))
-          for (ind <- term2Index get t)
-            coveredTerms += ind
-        }
-
-      for (n <- 0 until sortedFunApps.size;
-           if {
-             if (!(coveredTerms contains n)) {
-               coveredTerms += n
-               additionalConstraints +=
-                 ((sortedFunApps(n)._2, BricsAutomaton.makeAnyString()))
-             }
-             true
-           };
-           (_, args) <- sortedFunApps(n)._1;
-           arg <- args)
-        for (ind <- term2Index get arg)
-          coveredTerms += ind
-
-      initialConstraints ++ additionalConstraints
-    }
-
-    for ((t, aut) <- allInitialConstraints) {
-      constraintStores(t).assertConstraint(aut) match {
-        case Some(_) => List() // return conflict set?
-        case None    => // nothing
-      }
-    }
-
-    // TODO: return seq of AddAxiom for discovered constraints
-    // so use constraint stores?
-    val res = addForwardConstraints
-    println("RES" + res)
-    if (res.isDefined) {
-      // return close with axiom?
-      List()
-    } else {
-      val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
-      // return seq of new constraints
-      constraintStores.flatMap { case (term, store) =>
-        store.getNewContents.map { aut =>
-          val lterm = LinearCombination(term, goal.order)
-          //val lautid = autDatabase.
-          AddFormula(Conjunction.conj(
-            // don't know how to assert string in automaton language
-            str_in_re_id_app(Seq(lterm)),
-            goal.order
-          ))
-        }.toList
-      }.toList
-    }
+    actions.toSeq
   }
 
   /**
-   * Propagates approximate constraints forwards from the root, adds new
-   * constraints to constraintStores
+   * Map all regular constraints on variables
+   *
+   * Maps to the automaton the term should belong to, and the formula that
+   * makes the assertion that the term is in the automaton.
    */
-  private def addForwardConstraints : Option[ConflictSet] = {
-    for ((apps, res) <- sortedFunApps.reverseIterator;
-         (op, args) <- apps) {
-      val arguments = for (a <- args)
-        yield constraintStores(a).getCompleteContents
-      val resultConstraint = op.forwardApprox(arguments)
-      if (constraintStores(res).isSuperSet(resultConstraint)){
-        //println("Forward is saturated") TODO do something with that info?
+  private def getTermConstraints : MMultiMap[Term, (Automaton, Formula)] = {
+    val termConstraints = new MHashMap[Term, MSet[(Automaton, Formula)]]
+      with MMultiMap[Term, (Automaton, Formula)]
+
+    for ((t, aut, atom) <- initialConstraints) {
+      termConstraints.addBinding(t, (aut, atom))
+    }
+
+    // Make sure "implicit" constraints are taken care of also (e.g. x
+    // in Sigma*)
+    val term2Index =
+      (for (((_, t), n) <- sortedFunApps.iterator.zipWithIndex)
+        yield (t -> n)).toMap
+
+    val coveredTerms = new MBitSet
+    for ((t, _, _) <- initialConstraints)
+      for (ind <- term2Index get t)
+        coveredTerms += ind
+
+    // check whether any of the terms have concrete definitions
+    for (t <- allTerms)
+      for (w <- strDatabase.term2List(t)) {
+        val str : String = w.map(i => i.toChar)(breakOut)
+        termConstraints.addBinding(
+          t, (BricsAutomaton fromString str, Conjunction.TRUE)
+        )
+        for (ind <- term2Index get t)
+          coveredTerms += ind
       }
-      else {
-        val r = constraintStores(res).assertNewConstraint(resultConstraint)
-        // Forward has found conlict
-        if (r.isDefined) return r
+
+    // add in Sigma* for all other input terms
+    for (
+      n <- 0 until sortedFunApps.size;
+      (_, args, _) <- sortedFunApps(n)._1;
+      arg <- args;
+      ind <- term2Index get arg
+    ) {
+      if (!(coveredTerms contains ind)) {
+        termConstraints.addBinding(
+          arg, (BricsAutomaton.makeAnyString(), Conjunction.TRUE)
+        )
+        coveredTerms += ind
       }
     }
-    None
+
+    termConstraints
   }
-
-  private def newStore(t : Term) : ConstraintStore = new ConstraintStore {
-    private val constraints = new ArrayBuffer[Automaton]
-    private val newConstraints = new ArrayBuffer[Automaton]
-    private var currentConstraint : Option[Automaton] = None
-    private val constraintStack = new ArrayStack[(Int, Option[Automaton])]
-
-    def push : Unit =
-      constraintStack push (constraints.size, currentConstraint)
-
-    def pop : Unit = {
-      val (oldSize, lastCC) = constraintStack.pop
-      constraints reduceToSize oldSize
-      currentConstraint = lastCC
-    }
-
-    override def isSuperSet(aut: Automaton): Boolean = {
-      false
-    }
-
-    def assertNewConstraint(aut : Automaton) : Option[ConflictSet] = {
-      newConstraints += aut
-      assertConstraint(aut)
-    }
-
-    def assertConstraint(aut : Automaton) : Option[ConflictSet] =
-      if (aut.isEmpty) {
-        Some(List(TermConstraint(t, aut)))
-      } else {
-        currentConstraint match {
-          case Some(oldAut) => {
-            val newAut = measure("intersection") { oldAut & aut }
-            if (newAut.isEmpty) {
-              Some(for (a <- aut :: constraints.toList)
-                yield TermConstraint(t, a))
-            } else {
-              constraints += aut
-              currentConstraint = Some(newAut)
-              addLengthConstraint(TermConstraint(t, newAut),
-                for (a <- constraints)
-                  yield TermConstraint(t, a))
-              None
-            }
-          }
-          case None => {
-            constraints += aut
-            currentConstraint = Some(aut)
-            val c = TermConstraint(t, aut)
-            addLengthConstraint(c, List(c))
-            None
-          }
-        }
-      }
-
-    def getContents : List[Automaton] =
-      currentConstraint.toList
-    def getCompleteContents : List[Automaton] =
-      constraints.toList
-    def getNewContents: List[Automaton] =
-      newConstraints.toList
-
-    def ensureCompleteLengthConstraints : Unit = ()
-
-    def isAcceptedWord(w : Seq[Int]) : Boolean =
-      currentConstraint match {
-        case Some(aut) => aut(w)
-        case None      => true
-      }
-
-    def getAcceptedWord : Seq[Int] =
-      currentConstraint match {
-        case Some(aut) => aut.getAcceptedWord.get
-        case None      => List()
-      }
-
-    def getAcceptedWordLen(len : Int) : Seq[Int] =
-      currentConstraint match {
-        case Some(aut) => AutomataUtils.findAcceptedWord(List(aut), len).get
-        case None      => List()
-      }
-  }
-
-  private def addLengthConstraint(constraint : TermConstraint,
-                                    sources : Seq[TermConstraint]) : Unit = {
-    // TODO: do we still want to track length constraints here?
-    //for (p <- lengthProver) {
-    //  lengthPartitions += sources
-    //  p setPartitionNumber lengthPartitions.size
-    //  val TermConstraint(t, aut) = constraint
-    //  p addAssertion VariableSubst(0, List(lengthVars(t)), p.order)(
-    //    aut.getLengthAbstraction)
-    //}
-  }
-
-  private def measure[A](op : String)(comp : => A) : A =
-    if (flags.measureTimes)
-      ap.util.Timer.measure(op)(comp)
-    else
-      comp
 }
