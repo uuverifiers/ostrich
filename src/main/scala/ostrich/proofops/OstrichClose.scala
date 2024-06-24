@@ -135,7 +135,19 @@ class OstrichClose(goal : Goal,
 
     for ((term, autSequence) <- regexes) {
       if (autDatabase.emptyIntersection(autSequence)){
-        return Seq(Plugin.CloseByAxiom(goal.facts.iterator.toList, theory))
+        val conflict: ArrayBuffer[Atom] = new ArrayBuffer()
+        for (form <- predConj.positiveLitsWithPred(str_in_re_id)){
+          if (form.contains(term)){
+            conflict.append(form)
+          }
+        }
+        for (form <- predConj.negativeLitsWithPred(str_in_re_id)){
+          if (form.contains(term)){
+            conflict.append(form)
+          }
+        }
+
+        return Seq(Plugin.CloseByAxiom(conflict, theory))
       }
     }
     Seq()

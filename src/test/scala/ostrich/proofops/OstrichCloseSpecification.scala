@@ -31,34 +31,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ap.proof;
+package ostrich.proofops
 
 import ap.SimpleAPI
-import ap.parser._
-import ap.proof.goal.{Goal, AddFactsTask}
-import ap.proof.tree._
-import ap.proof.certificates.BranchInferenceCollection
-import ap.basetypes.IdealInt
-import ap.terfor._
-import ap.terfor.conjunctions.{Conjunction, NegatedConjunctions, Quantifier}
-import ap.terfor.substitutions.{ConstantSubst, IdentitySubst}
-import ap.terfor.equations.{EquationConj, NegEquationConj}
-import ap.terfor.inequalities.InEqConj
-import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.arithconj.ArithConj
-import ap.basetypes.IdealInt
 import ap.parameters.{GoalSettings, Param}
-import ap.terfor.preds.PredConj
-import ap.theories.strings.StringTheory
-import ap.types.Sort
-import ap.util.{APTestCase, Debug, Logic, PlainRange}
-
+import ap.parser._
+import ap.proof.goal.{AddFactsTask, Goal}
+import ap.proof.tree._
+import ap.proof.{ConstraintSimplifier, Vocabulary}
+import ap.terfor._
+import ap.terfor.conjunctions.Conjunction
+import ap.util.Debug
 import org.scalacheck.Properties
-import ostrich.automata.{AutomataUtils, Automaton, BricsAutomaton}
-import ostrich.proofops.OstrichClose
-import ostrich.{OFlags, OstrichStringTheory, OstrichStringTheoryBuilder}
-
-import scala.collection.mutable.ArrayBuffer
+import ostrich.automata.{Automaton, BricsAutomaton}
+import ostrich.{OFlags, OstrichStringTheory}
 
 object OstrichCloseSpecification extends Properties("ostrichCloseSpecification"){
   Debug.enableAllAssertions(true)
@@ -67,9 +53,8 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
   import p._
 
   private val theory = new OstrichStringTheory (Seq(), OFlags())
-  import ostrich.automata.AutDatabase
-  import theory._
   import IExpression._
+  import theory._
 
   addTheory(theory)
 
@@ -91,8 +76,11 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
   val idAut5: Int = autDatabase.automaton2Id(aut5)
   val idAut6: Int = autDatabase.automaton2Id(aut6)
 
-  val formula2 = str_in_re_id(consts(0), idAut1)
-  val formula3 = str_in_re_id(consts(1), idAut2)
+  val formula1 = str_in_re_id(consts(1), idAut3)
+  val formula2 = str_in_re_id(consts(0), idAut4)
+  val formula3 = str_in_re_id(consts(0), idAut5)
+  val formula4 = str_in_re_id(consts(0), idAut6)
+
 
   val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
   val settings =
@@ -117,19 +105,16 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
     goal
   }
 
-  val goal = createGoalFor(asConjunction(formula2 & formula3))
-
-  println(goal)
+  val goal = createGoalFor(asConjunction(formula1 & formula2 & formula3 & formula4))
+  //println(goal)
 
   val closeTest = new OstrichClose(goal, theory, theory.theoryFlags)
-  println(closeTest)
   val valueClose = closeTest.isConsistent
-  println(valueClose)
-
   // should be fine to stop the prover again at this point
   p.shutDown
 
-  property("test 1") = {
-    true
+  property("Test Close 1") = {
+    // Check the specific regular expression that should be returned
+    (valueClose != List())
   }
 }
