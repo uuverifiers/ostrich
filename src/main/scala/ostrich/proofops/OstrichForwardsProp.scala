@@ -31,29 +31,28 @@
 package ostrich.proofops
 
 import ostrich._
-import ostrich.automata.{Automaton, BricsAutomaton, AutomataUtils}
+import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{ConcatPreOp, PreOp}
 
+import ap.basetypes.IdealInt
 import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AddAxiom
+import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.preds.{Atom, PredConj}
+import ap.terfor.preds.Atom
 import ap.terfor.{RichPredicate, Term}
 
 import scala.collection.breakOut
 import scala.collection.mutable.{
   ArrayBuffer,
-  ArrayStack,
   BitSet => MBitSet,
   HashMap => MHashMap,
   MultiMap => MMultiMap,
   Set => MSet
 }
-import ap.basetypes.IdealInt
-import ap.terfor.Formula
 
 object OstrichForwardsProp {
   case class TermConstraint(t : Term, aut : Automaton)
