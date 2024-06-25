@@ -88,8 +88,8 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
   val ptf =
     new SimpleProofTreeFactory(true, simplifier)
 
-  def createGoalFor(c : Conjunction) : Goal = {
-    var goal = Goal(List(c.negate), Set(), Vocabulary(to), settings)
+  def createGoalFor(f : IFormula) : Goal = {
+    var goal = Goal(List(asConjunction(!f)), Set(), Vocabulary(to), settings)
 
     // run the rule applications to turn formulas into facts
     var cont = true
@@ -105,7 +105,7 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
     goal
   }
 
-  val goal = createGoalFor(asConjunction(formula1 & formula2 & formula3 & formula4))
+  val goal = createGoalFor(formula1 & formula2 & formula3 & formula4)
   //println(goal)
 
   val closeTest = new OstrichClose(goal, theory, theory.theoryFlags)
