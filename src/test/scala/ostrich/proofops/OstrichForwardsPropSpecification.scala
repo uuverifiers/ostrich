@@ -59,8 +59,6 @@ object OstrichForwardsPropSpecification
   val x = createConstant("x", StringSort)
   val y = createConstant("y", StringSort)
 
-  implicit val to: TermOrder = p.order
-
   val autA: Automaton  = BricsAutomaton.fromString("a")
   val autB: Automaton  = BricsAutomaton.fromString("b")
   val autAorB: Automaton  = autA | autB
@@ -78,7 +76,7 @@ object OstrichForwardsPropSpecification
   val ptf = new SimpleProofTreeFactory(true, simplifier)
 
   def createGoalFor(c : Conjunction) : Goal = {
-    var goal = Goal(List(c), Set(), Vocabulary(to), settings)
+    var goal = Goal(List(c), Set(), Vocabulary(p.order), settings)
 
     // run the rule applications to turn formulas into facts
     var cont = true
