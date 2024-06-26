@@ -118,7 +118,6 @@ object OstrichForwardsPropSpecification
       case _ => throw new RuntimeException("Was expecting an AddAxiom action")
     }
     val newXConstraint = conclusion.predConj.positiveLits.head
-    val iY = InputAbsy2Internal(y, p.order)
     val newAut
       = autDatabase.id2Automaton(newXConstraint(1).constant.intValue) match {
           case Some(aut) => aut
@@ -138,6 +137,7 @@ object OstrichForwardsPropSpecification
     val iYreplaceX = InputAbsy2Internal(pstr_replaceall(
       x, strDatabase.str2Id("a"), strDatabase.str2Id("d"), y
     ), p.order)
+    val iY = InputAbsy2Internal(y, p.order)
 
     // finally, the property
     (
