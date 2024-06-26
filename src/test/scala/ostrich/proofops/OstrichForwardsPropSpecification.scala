@@ -34,10 +34,12 @@ import ap.SimpleAPI
 import ap.parameters.{GoalSettings, Param}
 import ap.parser._
 import ap.proof.goal.{AddFactsTask, Goal}
+import ap.proof.theoryPlugins.Plugin.AddAxiom
 import ap.proof.tree._
 import ap.proof.{ConstraintSimplifier, Vocabulary}
 import ap.terfor._
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.preds.Atom
 import ap.util.Debug
 import org.scalacheck.Properties
 import ostrich.automata.{Automaton, BricsAutomaton}
@@ -75,8 +77,13 @@ object OstrichForwardsPropSpecification
     = Param.CONSTRAINT_SIMPLIFIER.set(GoalSettings.DEFAULT, simplifier)
   val ptf = new SimpleProofTreeFactory(true, simplifier)
 
-  def createGoalFor(c : Conjunction) : Goal = {
-    var goal = Goal(List(c), Set(), Vocabulary(p.order), settings)
+  def createGoalFor(f : IFormula) : Goal = {
+    var goal = Goal(
+      List(asConjunction(!f)),
+      Set(),
+      Vocabulary(p.order),
+      settings
+    )
 
     // run the rule applications to turn formulas into facts
     var cont = true
@@ -92,20 +99,62 @@ object OstrichForwardsPropSpecification
     goal
   }
 
-  val goal = createGoalFor(asConjunction(
-    formulaXinAorB & formulaYreplaceX
-  ))
-  println(goal)
+  val goalSimpleReplace = createGoalFor(formulaXinAorB & formulaYreplaceX)
 
-  val fwdsProp = new OstrichForwardsProp(goal, theory, theory.theoryFlags)
-  val fwdsRes = fwdsProp.apply
+  val fwdsPropSimpleReplace
+    = new OstrichForwardsProp(goalSimpleReplace, theory, theory.theoryFlags)
+  val fwdsResSimpleReplace = fwdsPropSimpleReplace.apply
 
   // should be fine to stop the prover again at this point
   p.shutDown
 
+  def seq(s : String) = s.map(_.toInt)
+
   property("Test Simple Replace") = {
-    // Check the specific regular expression that should be returned
-    print(fwdsRes)
-    true
+    // get data from propagation result
+    val axioms = fwdsResSimpleReplace.toList
+    val (assumptions, conclusion) = axioms(0) match {
+      case AddAxiom(assumptions, conclusion, _) => (assumptions, conclusion)
+      case _ => throw new RuntimeException("Was expecting an AddAxiom action")
+    }
+    val newXConstraint = conclusion.predConj.positiveLits.head
+    val iY = InputAbsy2Internal(y, p.order)
+    val newAut
+      = autDatabase.id2Automaton(newXConstraint(1).constant.intValue) match {
+          case Some(aut) => aut
+          case _ => throw new RuntimeException("Could not find aut in db")
+        }
+
+    // construct terms to check against result
+    val iXinAorB = InputAbsy2Internal(formulaXinAorB, order)
+    // @Philipp: what is the proper way to check
+    // str_replaceall(x, 1, 2, y) is an assumption?
+    // InputAbsy2Internal crashes with a MatchError for str_replaceall
+    val pstr_replaceall
+      = functionPredicateMapping.toMap.get(str_replaceall) match {
+          case Some(p) => p
+          case _ => str_replaceall.toPredicate
+        }
+    val iYreplaceX = InputAbsy2Internal(pstr_replaceall(
+      x, strDatabase.str2Id("a"), strDatabase.str2Id("d"), y
+    ), p.order)
+
+    // finally, the property
+    (
+      axioms.size == 1
+        // correct assumptions
+        && assumptions.size == 2
+        && assumptions.contains(iXinAorB)
+        && assumptions.contains(iYreplaceX)
+        // one correct conclusion
+        && conclusion.size == 1
+        && newXConstraint.pred == str_in_re_id
+        && newXConstraint(0) == iY
+        && !newAut(seq("a"))
+        && newAut(seq("b"))
+        && newAut(seq("d"))
+        && !newAut(seq("aa"))
+        && !newAut(seq("c"))
+    )
   }
 }

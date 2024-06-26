@@ -242,7 +242,11 @@ class OstrichForwardsProp(goal : Goal,
       (apps, res) <- sortedFunApps.reverseIterator;
       (op, args, formula) <- apps;
       argAuts = for (a <- args) yield termConstraints(a).map(_._1).toSeq;
-      argAtoms = for (a <- args) yield termConstraints(a).map(_._2).toSeq;
+      argAtoms = for (a <- args)
+        yield termConstraints(a)
+          .map(_._2)
+          .filter(_ != Conjunction.TRUE)
+          .toSeq;
       resultConstraint = op.forwardApprox(argAuts);
       autId = autDatabase.automaton2Id(resultConstraint);
       lres = LinearCombination(res, goal.order);
