@@ -62,6 +62,7 @@ object OstrichForwardsPropSpecification
 
   val x = createConstant("x", StringSort)
   val y = createConstant("y", StringSort)
+  val z = createConstant("z", StringSort)
 
   val autA: Automaton  = BricsAutomaton.fromString("a")
   val autB: Automaton  = BricsAutomaton.fromString("b")
@@ -79,6 +80,7 @@ object OstrichForwardsPropSpecification
   val formulaXinABCstar = str_in_re_id(x, idAutABCstar)
   val formulaXinABThenCstar = str_in_re_id(x, idAutABThenCstar)
   val formulaYreplaceX = y === str_replaceall(x, "a", "d")
+  val formulaZreplaceX = z === str_replaceall(x, "b", "c")
 
   val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
   val settings
@@ -117,7 +119,15 @@ object OstrichForwardsPropSpecification
   )
   val fwdsPropReplaceTwoCons
     = new OstrichForwardsProp(goalReplaceTwoXCons, theory, theory.theoryFlags)
-  val fwdsResReplaceTwoCons= fwdsPropReplaceTwoCons.apply
+  val fwdsResReplaceTwoCons = fwdsPropReplaceTwoCons.apply
+
+  val goalTwoFuns = createGoalFor(
+    formulaXinABThenCstar & formulaXinABCstar
+      & formulaYreplaceX & formulaZreplaceX
+  )
+  val fwdsPropTwoFuns
+    = new OstrichForwardsProp(goalTwoFuns, theory, theory.theoryFlags)
+  val fwdsResTwoFuns = fwdsPropTwoFuns.apply
 
   // should be fine to stop the prover again at this point
   p.shutDown
@@ -135,13 +145,15 @@ object OstrichForwardsPropSpecification
   val iXinABCstar = makeInternal(formulaXinABCstar)
   val iXinABThenCstar = makeInternal(formulaXinABThenCstar)
   val iYreplaceX = makeReplaceAll(x, "a", "d", y)
+  val iZreplaceX = makeReplaceAll(x, "b", "c", z)
   val iY = makeInternal(y)
+  val iZ = makeInternal(z)
 
   property("Test Simple Replace") = {
     val axioms = fwdsResSimpleReplace.toList
     val (assumptions, conclusion) = getAssumptionsConclusion(axioms(0))
-    val newXConstraint = conclusion.predConj.positiveLits.head
-    val newAut = getAutomatonFromIntFormula(newXConstraint(1))
+    val newYConstraint = conclusion.predConj.positiveLits.head
+    val newYAut = getAutomatonFromIntFormula(newYConstraint(1))
 
     (
       axioms.size == 1
@@ -151,21 +163,21 @@ object OstrichForwardsPropSpecification
         && assumptions.contains(iYreplaceX)
         // one correct conclusion
         && conclusion.size == 1
-        && newXConstraint.pred == str_in_re_id
-        && newXConstraint(0) == iY
-        && !newAut(seq("a"))
-        && newAut(seq("b"))
-        && newAut(seq("d"))
-        && !newAut(seq("aa"))
-        && !newAut(seq("c"))
+        && newYConstraint.pred == str_in_re_id
+        && newYConstraint(0) == iY
+        && !newYAut(seq("a"))
+        && newYAut(seq("b"))
+        && newYAut(seq("d"))
+        && !newYAut(seq("aa"))
+        && !newYAut(seq("c"))
     )
   }
 
   property("Test Two X Constraints") = {
     val axioms = fwdsResReplaceTwoCons.toList
     val (assumptions, conclusion) = getAssumptionsConclusion(axioms(0))
-    val newXConstraint = conclusion.predConj.positiveLits.head
-    val newAut = getAutomatonFromIntFormula(newXConstraint(1))
+    val newYConstraint = conclusion.predConj.positiveLits.head
+    val newYAut = getAutomatonFromIntFormula(newYConstraint(1))
 
     (
       axioms.size == 1
@@ -176,13 +188,57 @@ object OstrichForwardsPropSpecification
         && assumptions.contains(iYreplaceX)
         // one correct conclusion
         && conclusion.size == 1
-        && newXConstraint.pred == str_in_re_id
-        && newXConstraint(0) == iY
-        && newAut(seq("db"))
-        && newAut(seq("dbcccc"))
-        && !newAut(seq("ab"))
-        && !newAut(seq("abccc"))
-        && !newAut(seq("dd"))
+        && newYConstraint.pred == str_in_re_id
+        && newYConstraint(0) == iY
+        && newYAut(seq("db"))
+        && newYAut(seq("dbcccc"))
+        && !newYAut(seq("ab"))
+        && !newYAut(seq("abccc"))
+        && !newYAut(seq("dd"))
+    )
+  }
+
+  property("Test Two Fun Apps") = {
+    val axioms = fwdsResTwoFuns.toList
+    val (assumptionsY, conclusionY) = getAssumptionsConclusion(axioms(0))
+    val (assumptionsZ, conclusionZ) = getAssumptionsConclusion(axioms(1))
+    val newYConstraint = conclusionY.predConj.positiveLits.head
+    val newYAut = getAutomatonFromIntFormula(newYConstraint(1))
+    val newZConstraint = conclusionZ.predConj.positiveLits.head
+    val newZAut = getAutomatonFromIntFormula(newZConstraint(1))
+
+    print(newZAut)
+
+    (
+      axioms.size == 2
+        // correct assumptions for y var
+        && assumptionsY.size == 3
+        && assumptionsY.contains(iXinABCstar)
+        && assumptionsY.contains(iXinABThenCstar)
+        && assumptionsY.contains(iYreplaceX)
+        // one correct conclusion for y var
+        && conclusionY.size == 1
+        && newYConstraint.pred == str_in_re_id
+        && newYConstraint(0) == iY
+        && newYAut(seq("db"))
+        && newYAut(seq("dbcccc"))
+        && !newYAut(seq("ab"))
+        && !newYAut(seq("abccc"))
+        && !newYAut(seq("dd"))
+        // correct assumptions for z var
+        && assumptionsZ.size == 3
+        && assumptionsZ.contains(iXinABCstar)
+        && assumptionsZ.contains(iXinABThenCstar)
+        && assumptionsZ.contains(iZreplaceX)
+        // one correct conclusion for z var
+        && conclusionZ.size == 1
+        && newZConstraint.pred == str_in_re_id
+        && newZConstraint(0) == iZ
+        && newZAut(seq("ac"))
+        && newZAut(seq("accccc"))
+        && !newZAut(seq("ab"))
+        && !newZAut(seq("abccc"))
+        && !newZAut(seq("cc"))
     )
   }
 
