@@ -38,6 +38,8 @@ import ap.proof.tree._
 import ap.proof.{ConstraintSimplifier, Vocabulary}
 import ap.terfor._
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.linearcombination.LinearCombination
+import ap.terfor.preds.Atom
 import ap.util.Debug
 import org.scalacheck.Properties
 import ostrich.automata.{Automaton, BricsAutomaton}
@@ -55,7 +57,6 @@ trait TestProverUtils {
 
   prover.addTheory(theory)
 
-  val stringConsts = prover.createConstants("c", 0 until 10, StringSort)
 //  implicit val to: TermOrder = prover.order
 
   val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
@@ -81,6 +82,54 @@ trait TestProverUtils {
  
     goal
   }
+
+  def getAutomatonFromIntFormula(i : LinearCombination)
+    = autDatabase.id2Automaton(i.constant.intValue) match {
+        case Some(aut) => aut
+        case _ => throw new RuntimeException("Could not find aut in db")
+      }
+
+  def isCorrectRegex(a : Atom, term : ITerm,
+                     positiveSamples : Seq[String],
+                     negativeSamples : Seq[String]) : Boolean = {
+    def seq(s : String) = s.map(_.toInt)
+
+    val IConstant(const) = term
+    a.pred == str_in_re_id &&
+    (a(0) match {
+      case LinearCombination.SingleTerm(`const`) => true
+      case _ => false
+    }) && {
+      val aut = getAutomatonFromIntFormula(a(1))
+      positiveSamples.forall(str => aut(seq(str))) &&
+      negativeSamples.forall(str => !aut(seq(str)))
+    }
+  }
+
+  object SingleAtom {
+    def unapply(c : Conjunction) : Option[Atom] =
+      if (c.size == 1 && c.predConj.positiveLits.size == 1)
+        Some(c.predConj.positiveLits.head)
+      else
+        None
+  }
+
+  def makeInternal(f : IExpression) = InputAbsy2Internal(f, prover.order)
+
+  def makeReplaceAll(
+    inVar : ITerm,
+    replaceString : String,
+    newString : String,
+    outVar : ITerm
+  ) : Formula  = InputAbsy2Internal(
+    FunPred(str_replaceall)(
+      inVar,
+      strDatabase.str2Id(replaceString),
+      strDatabase.str2Id(newString),
+      outVar
+    ),
+    prover.order
+  )
 
   def shutdown : Unit =
     prover.shutDown

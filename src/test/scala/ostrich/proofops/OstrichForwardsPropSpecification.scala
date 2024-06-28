@@ -41,24 +41,18 @@ import ap.proof.{ConstraintSimplifier, Vocabulary}
 import ap.terfor._
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.preds.Atom
 import ap.util.Debug
 import org.scalacheck.Properties
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.{OFlags, OstrichStringTheory}
 
 object OstrichForwardsPropSpecification
-  extends Properties("OstrichForwardsPropSpecification"){
-  Debug.enableAllAssertions(true)
+  extends Properties("OstrichForwardsPropSpecification")
+          with TestProverUtils {
 
-  val p = SimpleAPI.spawnWithAssertions
-  import p._
-
-  private val theory = new OstrichStringTheory (Seq(), OFlags())
+  import prover._
   import IExpression._
   import theory._
-
-  addTheory(theory)
 
   val x = createConstant("x", StringSort)
   val y = createConstant("y", StringSort)
@@ -82,33 +76,6 @@ object OstrichForwardsPropSpecification
   val formulaYreplaceX = y === str_replaceall(x, "a", "d")
   val formulaZreplaceX = z === str_replaceall(x, "b", "c")
 
-  val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
-  val settings
-    = Param.CONSTRAINT_SIMPLIFIER.set(GoalSettings.DEFAULT, simplifier)
-  val ptf = new SimpleProofTreeFactory(true, simplifier)
-
-  def createGoalFor(f : IFormula) : Goal = {
-    var goal = Goal(
-      List(asConjunction(!f)),
-      Set(),
-      Vocabulary(p.order),
-      settings
-    )
-
-    // run the rule applications to turn formulas into facts
-    var cont = true
-    while (cont && goal.stepPossible) {
-      cont = goal.tasks.max match {
-          case _ : AddFactsTask => true
-          case _ => false
-        }
-      if (cont)
-        goal = (goal step ptf).asInstanceOf[Goal]
-    }
-
-    goal
-  }
-
   val goalSimpleReplace = createGoalFor(formulaXinAorB & formulaYreplaceX)
   val fwdsPropSimpleReplace
     = new OstrichForwardsProp(goalSimpleReplace, theory, theory.theoryFlags)
@@ -130,145 +97,49 @@ object OstrichForwardsPropSpecification
   val fwdsResTwoFuns = fwdsPropTwoFuns.apply
 
   // should be fine to stop the prover again at this point
-  p.shutDown
-
-  // @Philipp: what is the proper way to check
-  // str_replaceall(x, 1, 2, y) is an assumption?
-  // InputAbsy2Internal crashes with a MatchError for str_replaceall
-  val pstr_replaceall
-    = functionPredicateMapping.toMap.get(str_replaceall) match {
-        case Some(p) => p
-        case _ => str_replaceall.toPredicate
-      }
+  shutdown
 
   val iXinAorB = makeInternal(formulaXinAorB)
   val iXinABCstar = makeInternal(formulaXinABCstar)
   val iXinABThenCstar = makeInternal(formulaXinABThenCstar)
   val iYreplaceX = makeReplaceAll(x, "a", "d", y)
   val iZreplaceX = makeReplaceAll(x, "b", "c", z)
-  val iY = makeInternal(y)
-  val iZ = makeInternal(z)
 
   property("Test Simple Replace") = {
-    val axioms = fwdsResSimpleReplace.toList
-    val (assumptions, conclusion) = getAssumptionsConclusion(axioms(0))
-    val newYConstraint = conclusion.predConj.positiveLits.head
-    val newYAut = getAutomatonFromIntFormula(newYConstraint(1))
-
-    (
-      axioms.size == 1
-        // correct assumptions
-        && assumptions.size == 2
-        && assumptions.contains(iXinAorB)
-        && assumptions.contains(iYreplaceX)
-        // one correct conclusion
-        && conclusion.size == 1
-        && newYConstraint.pred == str_in_re_id
-        && newYConstraint(0) == iY
-        && !newYAut(seq("a"))
-        && newYAut(seq("b"))
-        && newYAut(seq("d"))
-        && !newYAut(seq("aa"))
-        && !newYAut(seq("c"))
-    )
+    fwdsResSimpleReplace match {
+      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
+        if assumptions.toSet == Set(iXinAorB, iYreplaceX) &&
+           isCorrectRegex(newConstraint, y,
+                          List("b", "d"), List("a", "aa", "c")) => true
+      case _ =>
+        false
+    }
   }
 
   property("Test Two X Constraints") = {
-    val axioms = fwdsResReplaceTwoCons.toList
-    val (assumptions, conclusion) = getAssumptionsConclusion(axioms(0))
-    val newYConstraint = conclusion.predConj.positiveLits.head
-    val newYAut = getAutomatonFromIntFormula(newYConstraint(1))
-
-    (
-      axioms.size == 1
-        // correct assumptions
-        && assumptions.size == 3
-        && assumptions.contains(iXinABCstar)
-        && assumptions.contains(iXinABThenCstar)
-        && assumptions.contains(iYreplaceX)
-        // one correct conclusion
-        && conclusion.size == 1
-        && newYConstraint.pred == str_in_re_id
-        && newYConstraint(0) == iY
-        && newYAut(seq("db"))
-        && newYAut(seq("dbcccc"))
-        && !newYAut(seq("ab"))
-        && !newYAut(seq("abccc"))
-        && !newYAut(seq("dd"))
-    )
+    fwdsResReplaceTwoCons match {
+      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
+        if assumptions.toSet == Set(iXinABCstar, iXinABThenCstar, iYreplaceX) &&
+           isCorrectRegex(newConstraint, y,
+                          List("db", "dbcccc"), List("ab", "abccc", "dd")) => true
+      case _ =>
+        false
+    }
   }
 
   property("Test Two Fun Apps") = {
-    val axioms = fwdsResTwoFuns.toList
-    val (assumptionsY, conclusionY) = getAssumptionsConclusion(axioms(0))
-    val (assumptionsZ, conclusionZ) = getAssumptionsConclusion(axioms(1))
-    val newYConstraint = conclusionY.predConj.positiveLits.head
-    val newYAut = getAutomatonFromIntFormula(newYConstraint(1))
-    val newZConstraint = conclusionZ.predConj.positiveLits.head
-    val newZAut = getAutomatonFromIntFormula(newZConstraint(1))
-
-    print(newZAut)
-
-    (
-      axioms.size == 2
-        // correct assumptions for y var
-        && assumptionsY.size == 3
-        && assumptionsY.contains(iXinABCstar)
-        && assumptionsY.contains(iXinABThenCstar)
-        && assumptionsY.contains(iYreplaceX)
-        // one correct conclusion for y var
-        && conclusionY.size == 1
-        && newYConstraint.pred == str_in_re_id
-        && newYConstraint(0) == iY
-        && newYAut(seq("db"))
-        && newYAut(seq("dbcccc"))
-        && !newYAut(seq("ab"))
-        && !newYAut(seq("abccc"))
-        && !newYAut(seq("dd"))
-        // correct assumptions for z var
-        && assumptionsZ.size == 3
-        && assumptionsZ.contains(iXinABCstar)
-        && assumptionsZ.contains(iXinABThenCstar)
-        && assumptionsZ.contains(iZreplaceX)
-        // one correct conclusion for z var
-        && conclusionZ.size == 1
-        && newZConstraint.pred == str_in_re_id
-        && newZConstraint(0) == iZ
-        && newZAut(seq("ac"))
-        && newZAut(seq("accccc"))
-        && !newZAut(seq("ab"))
-        && !newZAut(seq("abccc"))
-        && !newZAut(seq("cc"))
-    )
+    fwdsResTwoFuns match {
+      case Seq(AddAxiom(assumptionsY, SingleAtom(newYConstraint), _),
+               AddAxiom(assumptionsZ, SingleAtom(newZConstraint), _))
+        if assumptionsY.toSet == Set(iXinABCstar, iXinABThenCstar, iYreplaceX) &&
+           assumptionsZ.toSet == Set(iXinABCstar, iXinABThenCstar, iZreplaceX) &&
+           isCorrectRegex(newYConstraint, y,
+                          List("db", "dbcccc"), List("ab", "abccc", "dd")) &&
+           isCorrectRegex(newZConstraint, z,
+                          List("ac", "accccc"), List("ab", "abccc", "cc")) => true
+      case _ =>
+        false
+    }
   }
 
-  def seq(s : String) = s.map(_.toInt)
-
-  def makeInternal(f : IExpression) = InputAbsy2Internal(f, p.order)
-
-  def makeReplaceAll(
-    inVar : ITerm,
-    replaceString : String,
-    newString : String,
-    outVar : ITerm
-  ) : Formula  = InputAbsy2Internal(
-    pstr_replaceall(
-      inVar,
-      strDatabase.str2Id(replaceString),
-      strDatabase.str2Id(newString),
-      outVar
-    ),
-    p.order
-  )
-
-  def getAssumptionsConclusion(action : Action) = action match {
-    case AddAxiom(assumptions, conclusion, _) => (assumptions, conclusion)
-    case _ => throw new RuntimeException("Was expecting an AddAxiom action")
-  }
-
-  def getAutomatonFromIntFormula(i : LinearCombination)
-      = autDatabase.id2Automaton(i.constant.intValue) match {
-          case Some(aut) => aut
-          case _ => throw new RuntimeException("Could not find aut in db")
-        }
 }

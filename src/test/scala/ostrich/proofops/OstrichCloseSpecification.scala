@@ -49,6 +49,8 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
   import IExpression._
   import theory._
 
+  val stringConsts = prover.createConstants("c", 0 until 10, StringSort)
+
   val aut1: Automaton  = BricsAutomaton.fromString("a")
   val aut2: Automaton  = BricsAutomaton.fromString("b")
   val aut3: Automaton  = BricsAutomaton.fromString("c")
