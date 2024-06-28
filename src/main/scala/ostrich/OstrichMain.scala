@@ -83,6 +83,13 @@ object PortfolioSetup {
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
+              ceaStringTheory),
+            "+cea",
+            1000000000,
+            2000),
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(
+              baseSettings,
               Param.STRING_THEORY_DESC.defau),
             "-stringSolver=" +
               Param.STRING_THEORY_DESC.defau,
