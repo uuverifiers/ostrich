@@ -43,42 +43,46 @@ import org.scalacheck.Properties
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.{OFlags, OstrichStringTheory}
 
-object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
-                                 with TestProverUtils {
-  import prover._
+trait TestProverUtils {
+
   import IExpression._
+
+  Debug.enableAllAssertions(true)
+
+  val prover = SimpleAPI.spawnWithAssertions
+  val theory = new OstrichStringTheory (Seq(), OFlags())
   import theory._
 
-  val aut1: Automaton  = BricsAutomaton.fromString("a")
-  val aut2: Automaton  = BricsAutomaton.fromString("b")
-  val aut3: Automaton  = BricsAutomaton.fromString("c")
-  val aut4: Automaton  = aut1 | aut2
-  val aut5: Automaton  = aut2 | aut3
-  val aut6: Automaton  = aut1 | aut3
+  prover.addTheory(theory)
 
-  val idAut1: Int = autDatabase.automaton2Id(aut1)
-  val idAut2: Int = autDatabase.automaton2Id(aut2)
-  val idAut3: Int = autDatabase.automaton2Id(aut3)
-  val idAut4: Int = autDatabase.automaton2Id(aut4)
-  val idAut5: Int = autDatabase.automaton2Id(aut5)
-  val idAut6: Int = autDatabase.automaton2Id(aut6)
+  val stringConsts = prover.createConstants("c", 0 until 10, StringSort)
+//  implicit val to: TermOrder = prover.order
 
-  val formula1 = str_in_re_id(stringConsts(1), idAut3)
-  val formula2 = str_in_re_id(stringConsts(0), idAut4)
-  val formula3 = str_in_re_id(stringConsts(0), idAut5)
-  val formula4 = str_in_re_id(stringConsts(0), idAut6)
+  val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
+  val settings =
+    Param.CONSTRAINT_SIMPLIFIER.set(GoalSettings.DEFAULT, simplifier)
+  val ptf =
+    new SimpleProofTreeFactory(true, simplifier)
 
-  // should be fine to stop the prover again at this point
-  shutdown
+  def createGoalFor(f : IFormula) : Goal = {
+    var goal = Goal(List(prover.asConjunction(!f)), Set(),
+                    Vocabulary(prover.order), settings)
 
-  property("Test Close 1") = {
-    val goal = createGoalFor(formula1 & formula2 & formula3 & formula4)
-    //println(goal)
-
-    val closeTest = new OstrichClose(goal, theory, theory.theoryFlags)
-    val valueClose = closeTest.isConsistent
-
-    // Check the specific regular expression that should be returned
-    (valueClose != List())
+    // run the rule applications to turn formulas into facts
+    var cont = true
+    while (cont && goal.stepPossible) {
+      cont = goal.tasks.max match {
+          case _ : AddFactsTask => true
+          case _ => false
+        }
+      if (cont)
+        goal = (goal step ptf).asInstanceOf[Goal]
+    }
+ 
+    goal
   }
+
+  def shutdown : Unit =
+    prover.shutDown
+
 }
