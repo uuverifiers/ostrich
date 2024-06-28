@@ -83,19 +83,6 @@ object PortfolioSetup {
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
-              ceaStringTheory),
-            "+cea",
-            1000000000,
-            2000),
-          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(baseSettings,
-              ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,-nielsenSplitter"),
-            f"-stringSolver=$ostrichStringTheory:+forwardPropagation,+backwardPropagation,-nielsenSplitter",
-            1000000000,
-            2000),
-          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(
-              baseSettings,
               Param.STRING_THEORY_DESC.defau),
             "-stringSolver=" +
               Param.STRING_THEORY_DESC.defau,
@@ -107,11 +94,13 @@ object PortfolioSetup {
         userDefStoppingCond(),
         strategies,
         1,
-        4,
+        3,
         runUntilProof,
         prelResultPrinter,
         threadNum)
     })
+
+
 
 
   // Run the BW and ADT solvers
