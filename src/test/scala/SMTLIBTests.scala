@@ -326,6 +326,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("no-regexes.smt2") =
     checkFile("tests/no-regexes.smt2", "unsat")
+  property("str_in_re_translation.smt2") =
+    checkFile("tests/str_in_re_translation.smt2", "sat")
 
   property("adt.smt2") =
     checkFile("tests/adt.smt2", "sat")

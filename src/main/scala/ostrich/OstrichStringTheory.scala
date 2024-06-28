@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,7 +34,9 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{OstrichClose, OstrichNielsenSplitter, OstrichPredtoEqConverter}
+import ostrich.proofops.{OstrichClose, OstrichNielsenSplitter, OstrichPredtoEqConverter,
+                         OstrichStrInReTranslator}
+
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -340,6 +342,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
+  private val strInReTranslator  = new OstrichStrInReTranslator(this)
 
   def plugin = Some(new Plugin {
 
@@ -358,7 +361,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       goalState(goal) match {
 
         case Plugin.GoalState.Eager =>
-          List()
+          strInReTranslator.handleGoal(goal)
 
         case Plugin.GoalState.Intermediate => try {
           ostrichClose.isConsistent                    elseDo
