@@ -29,16 +29,15 @@
  */
 
 package ostrich.proofops
-
+import scala.util.Random
 import ostrich._
 import ostrich.automata.{Automaton, BricsAutomaton}
 import ostrich.preop.{ConcatPreOp, PreOp}
-
 import ap.basetypes.IdealInt
 import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
-import ap.proof.theoryPlugins.Plugin.AddAxiom
+import ap.proof.theoryPlugins.Plugin.{AddAxiom, AxiomSplit}
 import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
@@ -46,13 +45,7 @@ import ap.terfor.preds.Atom
 import ap.terfor.{RichPredicate, Term}
 
 import scala.collection.breakOut
-import scala.collection.mutable.{
-  ArrayBuffer,
-  BitSet => MBitSet,
-  HashMap => MHashMap,
-  MultiMap => MMultiMap,
-  Set => MSet
-}
+import scala.collection.mutable.{ArrayBuffer, BitSet => MBitSet, HashMap => MHashMap, MultiMap => MMultiMap, Set => MSet}
 
 object OstrichForwardsProp {
   case class TermConstraint(t : Term, aut : Automaton)
@@ -261,6 +254,78 @@ class OstrichForwardsProp(goal : Goal,
     actions.toSeq
   }
 
+
+  def pickBackwardsCandidate: Option[((PreOp, Seq[Term], Formula), Term)] = {
+    var goodCandidate = false
+
+    while (!goodCandidate) {
+      if (sortedFunApps.isEmpty) {
+        return None
+      }
+
+      val candidateList = sortedFunApps(Random.nextInt(sortedFunApps.length))
+      val candidate = (candidateList._1(Random.nextInt(candidateList._1.length)), candidateList._2)
+      // TODO Assuming some logic to determine if the candidate is good
+      goodCandidate = true // Replace with actual condition
+
+      if (goodCandidate) {
+        return Some(candidate)
+      }
+    }
+
+    None
+  }
+
+  def backwardsProp : Seq[Plugin.Action] = {
+    // get input constraints
+    val termConstraints = getTermConstraints
+    //print(termConstraints)
+
+    val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
+    val candidateOption = pickBackwardsCandidate
+    if (candidateOption.isEmpty){
+      return Seq()
+    }
+    else {
+      val (apps, res) = candidateOption.get
+      //println("apps: ", apps, "res: ", res)
+      assert(termConstraints.contains(apps._2.head))
+      val argAuts = for (a <- apps._2) yield termConstraints(a).map(_._1).toSeq;
+      //println("---------------  term constraints: \n ", termConstraints, res, (apps, res) + "\n---------------")
+      val aut = termConstraints(res).map(_._1);
+      // TODO Pick aut
+      val (newConstraintsIt, argDependencies) = apps._1(argAuts, aut.head)
+      // Store formula for assumptions:
+      val assumptionRegex = str_in_re_id_app(Seq(LinearCombination(res, goal.order), LinearCombination(IdealInt(autDatabase.automaton2Id(aut.head)))))
+      //println("constraint it : ", newConstraintsIt.toSet.size)
+
+      val newConstraintsSeq = newConstraintsIt.toList
+      val results = for {
+        argCS <- newConstraintsSeq
+      } yield {
+        for {
+          (a, aut) <- apps._2 zip argCS
+          autId = autDatabase.automaton2Id(aut)
+          argTerm = LinearCombination(a, goal.order)
+          lautId = LinearCombination(IdealInt(autId))
+        } yield {
+          //println(s"aut: $aut $counter")
+          str_in_re_id_app(Seq(argTerm, lautId))}
+      }
+
+
+
+
+      //println("Results: ", results)
+      val conjunctions = results.map{r => (Conjunction.conj(r,goal.order), Seq())}
+      // assumption is the chosen funapp and the chosen regex
+      // cases is seq(conj(result),seq())
+      //println("Axiomsplit: ", Plugin.AxiomSplit(Seq(candidateOption.get._1._3,assumptionRegex), conjunctions, theory))
+      Plugin.AxiomSplit(Seq(candidateOption.get._1._3, assumptionRegex), conjunctions, theory)
+    }
+
+    Seq()
+  }
   /**
    * Map all regular constraints on variables
    *
@@ -287,7 +352,7 @@ class OstrichForwardsProp(goal : Goal,
         coveredTerms += ind
 
     // check whether any of the terms have concrete definitions
-    for (t <- allTerms)
+    for (t <- allTerms) {
       for (w <- strDatabase.term2List(t)) {
         val str : String = w.map(i => i.toChar)(breakOut)
         termConstraints.addBinding(
@@ -296,21 +361,11 @@ class OstrichForwardsProp(goal : Goal,
         for (ind <- term2Index get t)
           coveredTerms += ind
       }
-
-    // add in Sigma* for all other input terms
-    for (
-      n <- 0 until sortedFunApps.size;
-      (_, args, _) <- sortedFunApps(n)._1;
-      arg <- args;
-      ind <- term2Index get arg
-    ) {
-      if (!(coveredTerms contains ind)) {
-        termConstraints.addBinding(
-          arg, (BricsAutomaton.makeAnyString(), Conjunction.TRUE)
-        )
-        coveredTerms += ind
+      if (!termConstraints.contains(t)){
+        termConstraints.addBinding(t, (BricsAutomaton.makeAnyString(), Conjunction.TRUE))
       }
     }
+
 
     termConstraints
   }
