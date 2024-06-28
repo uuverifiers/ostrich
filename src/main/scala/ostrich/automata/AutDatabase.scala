@@ -321,35 +321,39 @@ class AutDatabase(theory : OstrichStringTheory,
                         aut2 : NamedAutomaton) : Boolean =
   {
     val tmp = isSubsetOf(aut1, aut2.complement)
-    if (tmp) {
-      knownConflicts.insert(Seq(aut1.id, aut2.id).sorted)
+    synchronized {
+      if (tmp) {
+        knownConflicts.insert(Seq(aut1.id, aut2.id).sorted)
+      }
+      tmp
     }
-    tmp
   }
 
   def emptyIntersection(auts : ArrayBuffer[NamedAutomaton]) : Boolean =
   {
-    val autIds = new ArrayBuffer[Int]
-    val autValues = new ArrayBuffer[Automaton]
-    for (aut <- auts){
-      autIds += aut.id
-      autValues += id2Automaton(aut).get
-    }
-    autIds.sorted
-    if (knownConflicts.contains(autIds)){
-      return true
-    }
-    if (prefixSortedIntersectionTree.contains(autIds)){
-      return false
-    }
+    synchronized {
+      val autIds = new ArrayBuffer[Int]
+      val autValues = new ArrayBuffer[Automaton]
+      for (aut <- auts){
+        autIds += aut.id
+        autValues += id2Automaton(aut).get
+      }
+      autIds.sorted
+      if (knownConflicts.contains(autIds)){
+        return true
+      }
+      if (prefixSortedIntersectionTree.contains(autIds)){
+        return false
+      }
 
-    if (AutomataUtils.areConsistentAutomata(autValues)){
-      prefixSortedIntersectionTree.insert(autIds)
-      false
-    }
-    else {
-      knownConflicts.insert(autIds)
-      true
+      if (AutomataUtils.areConsistentAutomata(autValues)){
+        prefixSortedIntersectionTree.insert(autIds)
+        false
+      }
+      else {
+        knownConflicts.insert(autIds)
+        true
+      }
     }
   }
 
