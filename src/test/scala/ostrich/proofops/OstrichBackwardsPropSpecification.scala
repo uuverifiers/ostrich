@@ -48,7 +48,6 @@ object OstrichBackwardsPropSpecification
 
   val p = SimpleAPI.spawnWithAssertions
   import p._
-
   private val theory = new OstrichStringTheory (Seq(), OFlags())
   import IExpression._
   import theory._
@@ -66,10 +65,10 @@ object OstrichBackwardsPropSpecification
   val idAutB: Int = autDatabase.automaton2Id(autB)
   val idAutAorB: Int = autDatabase.automaton2Id(autAorB)
   import ap.terfor.TerForConvenience._
-  val formulaXinAorB = str_in_re_id(x, idAutAorB)
+  val formulaXinAorB = str_in_re_id(y, idAutAorB)
   val formulaYinAorB = str_in_re_id(y, idAutA)
 
-  val concat = _str_++(x,x,y)
+  val concat = _str_++(y,y,x)
   val formulaYreplaceX = y === str_replaceall(x, "a", "d")
 
   val simplifier = ConstraintSimplifier.FAIR_SIMPLIFIER
@@ -99,12 +98,19 @@ object OstrichBackwardsPropSpecification
     goal
   }
 
-  val goalSimpleReplace = createGoalFor(concat & formulaYinAorB)
+  val goalSimpleReplace = createGoalFor(formulaXinAorB  & formulaYinAorB & concat)
+  val tmp = new backwardsSaturation(theory)
+  val points = tmp.extractApplicationPoints(goalSimpleReplace)
+  while (points.hasNext){
+    tmp.handleApplicationPoint(goalSimpleReplace, points.next())
 
+  }
+  //forwardSaturation.extractApplicationPoints(goalSimpleReplace)
+/*
   val fwdsPropSimpleReplace
     = new OstrichForwardsProp(goalSimpleReplace, theory, theory.theoryFlags)
-  val fwdsResSimpleReplace = fwdsPropSimpleReplace.backwardsProp
-
+  val fwdsResSimpleReplace = fwdsPropSimpleReplace.backwardsProp*/
+  //println(fwdsResSimpleReplace)
   // should be fine to stop the prover again at this point
   p.shutDown
 /*
