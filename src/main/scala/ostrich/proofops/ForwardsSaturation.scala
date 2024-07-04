@@ -134,6 +134,8 @@ class ForwardsSaturation(
       case None => 1
       case Some(a) => {
         a.pred match {
+          // TODO: these can be ignored, str_in_re_id will be seen
+          // instead
           case `str_in_re` => {
             // TODO: is this building the automaton?
             val regex = regexExtractor regexAsTerm a(1)
@@ -154,6 +156,7 @@ class ForwardsSaturation(
   override def handleApplicationPoint(
     goal : Goal, appPoint : ApplicationPoint
   ) : Seq[Plugin.Action] = {
+    // TODO: check appPoint is still relevant to goal
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
     val regexExtractor = theory.RegexExtractor(goal)
