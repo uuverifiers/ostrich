@@ -153,7 +153,10 @@ class ForwardsSaturation(
   override def handleApplicationPoint(
     goal : Goal, appPoint : ApplicationPoint
   ) : Seq[Plugin.Action] = {
-    // TODO: check appPoint is still relevant to goal
+    // return empty if appPoint no longer relevant
+    if (!extractApplicationPoints(goal).contains(appPoint))
+      return List()
+
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
     val regexExtractor = theory.RegexExtractor(goal)
