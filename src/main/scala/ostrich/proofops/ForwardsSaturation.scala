@@ -118,10 +118,10 @@ class ForwardsSaturation(
       (op, args, formula) <- apps;
       argConSeqs = args.map(
         termConstraintMap.get(_)
-          // TODO: the filter might empty the sequence
-          // needs to be changed to None in this case to avoid empty
-          // seqs
           .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
+          // Use [None] instead of [] for no constraint
+          // (helps Cartesian product)
+          .map(cons => if (cons.isEmpty) Seq(None) else cons)
           .getOrElse(Seq(None))
       );
       argCons <- cartesianProduct(argConSeqs.toList)
