@@ -79,7 +79,7 @@ trait TestProverUtils {
       if (cont)
         goal = (goal step ptf).asInstanceOf[Goal]
     }
- 
+
     goal
   }
 

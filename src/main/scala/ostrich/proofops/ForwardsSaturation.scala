@@ -172,23 +172,36 @@ class ForwardsSaturation(
             )
         }
 
-    val argAuts = argCons.map(_ match {
-      // None means arg in Sigma*
-      case None => BricsAutomaton.makeAnyString()
-      case Some(a) => {
-        a.pred match {
-          case `str_in_re_id` =>
-            decodeRegexId(a, false)
-          // will be a str_len == 0 as we only return those
-          case FunPred(`str_len`) =>
-            BricsAutomaton.fromString("")
-          // will not happen
-          case _ => {
-            throw new Exception ("Cannot handle literal " + a)
+    val argAuts = (args zip argCons).map({ case (arg, cons) =>
+      cons match {
+        // None means arg in Sigma*...
+        case None => {
+          // but might have a concrete def
+          val constraints = strDatabase.term2List(arg).map({ w =>
+            val str : String = w.map(i => i.toChar)(breakOut)
+            BricsAutomaton.fromString(str)
+          }).toSeq
+
+          if (constraints.isEmpty)
+            Seq(BricsAutomaton.makeAnyString())
+          else
+            constraints
+        }
+        case Some(a) => {
+          a.pred match {
+            case `str_in_re_id` =>
+              Seq(decodeRegexId(a, false))
+            // will be a str_len == 0 as we only return those
+            case FunPred(`str_len`) =>
+              Seq(BricsAutomaton.fromString(""))
+            // will not happen
+            case _ => {
+              throw new Exception ("Cannot handle literal " + a)
+            }
           }
         }
       }
-    }).map(Seq(_))
+    })
     val resultConstraint = op.forwardApprox(argAuts);
     val autId = autDatabase.automaton2Id(resultConstraint);
     val lres = LinearCombination(res, goal.order);
@@ -253,12 +266,20 @@ class ForwardsSaturation(
       }
       case FunPred(f) if rexOps contains f =>
         None
+      // next three cases prevent exception for supported string
+      // functions that aren't apps
+      case `str_in_re` =>
+        None
+      case `str_in_re_id` =>
+        None
+      case FunPred(`str_char_count`) =>
+        None
       case p if (theory.predicates contains p) =>
         stringFunctionTranslator(a) match {
           case Some((op, args, res)) =>
             Some((op(), args, res, a))
           case _ =>
-            throw new Exception ("Cannot handle literal " + a)
+            throw new Exception ("Cannot get fun app from literal " + a)
         }
       case _ =>
         None
@@ -288,16 +309,13 @@ class ForwardsSaturation(
             strDatabase.isConcrete(res) }
 
       if (selectedApps.isEmpty) {
-
         if (ignoredApps.isEmpty)
           Console.err.println(
             "Warning: cyclic definitions found, ignoring some function " +
               "applications")
         ignoredApps += remFunApps.head
         remFunApps = remFunApps.tail
-
       } else {
-
         remFunApps = otherApps
 
         for ((_, args, _, _) <- selectedApps; a <- args)
@@ -309,7 +327,6 @@ class ForwardsSaturation(
         for (t <- nonArgTerms)
           sortedApps +=
             ((for ((op, args, _, f) <- appsPerRes(t)) yield (op, args, f), t))
-
       }
     }
 
