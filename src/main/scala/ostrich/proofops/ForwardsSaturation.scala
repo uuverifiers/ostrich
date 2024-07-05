@@ -72,7 +72,9 @@ object ForwardsSaturation {
  *
  * For the saturation, the ApplicationPoint is (appTerm,
  * Seq[argConstraint]) where appTerm is a function application as above
- * and the argConstraints are str_in_re_id constraints on y1, ..., yn
+ * and the argConstraints are str_in_re_id constraints on y1, ..., yn.
+ *
+ * Expects str_in_re not to occur, only str_in_re_id.
  */
 class ForwardsSaturation(
   theory : OstrichStringTheory
@@ -137,14 +139,6 @@ class ForwardsSaturation(
       case None => 1
       case Some(a) => {
         a.pred match {
-          // TODO: these can be ignored, str_in_re_id will be seen
-          // instead
-          case `str_in_re` => {
-            // TODO: is this building the automaton?
-            val regex = regexExtractor regexAsTerm a(1)
-            val aut = autDatabase.regex2Automaton(regex)
-            getAutomatonSize(aut)
-          }
           case `str_in_re_id` =>
             getAutomatonSize(decodeRegexId(a, false))
           // will be a str_len == 0 as we only return those
@@ -180,10 +174,6 @@ class ForwardsSaturation(
       case None => BricsAutomaton.makeAnyString()
       case Some(a) => {
         a.pred match {
-          case `str_in_re` => {
-            val regex = regexExtractor regexAsTerm a(1)
-            autDatabase.regex2Automaton(regex)
-          }
           case `str_in_re_id` =>
             decodeRegexId(a, false)
           // will be a str_len == 0 as we only return those
@@ -326,7 +316,7 @@ class ForwardsSaturation(
   /**
    * Get initial constraints on string vars
    *
-   * The atom will be str_in_re, str_in_re_id, or a str_len constraint
+   * The atom will be str_in_re_id, or a str_len constraint
    */
   private def getInitialConstraints(goal: Goal) : MMultiMap[Term, Atom] = {
     val atoms = goal.facts.predConj
@@ -337,7 +327,6 @@ class ForwardsSaturation(
       with MMultiMap[Term, Atom]
 
     for (a <- atoms.positiveLits) a.pred match {
-      case `str_in_re` => termConstraints.addBinding(a(0), a)
       case `str_in_re_id` => termConstraints.addBinding(a(0), a)
       case FunPred(`str_len`) => termConstraints.addBinding(a(0), a)
       case _ => // nothing
