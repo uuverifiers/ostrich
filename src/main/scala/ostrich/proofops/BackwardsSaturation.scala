@@ -34,7 +34,7 @@ import ap.basetypes.IdealInt
 import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
-import ap.proof.theoryPlugins.Plugin.{AddAxiom, AxiomSplit}
+import ap.proof.theoryPlugins.Plugin.AxiomSplit
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
@@ -56,27 +56,27 @@ import scala.collection.mutable.{
   Set => MSet
 }
 
-object ForwardsSaturation {
+object BackwardsSaturation {
   case class TermConstraint(t : Term, aut : Automaton)
   type ConflictSet = Seq[TermConstraint]
 }
 
 /**
- * A SaturationProcedure for forwards propagation.
+ * A SaturationProcedure for backwards propagation.
  *
- * For each x = f(y1,...,yn) collect constraints on y1,...,yn, propagate
- * them forwards through f, and create a new axiom:
+ * For each x = f(y1,...,yn) collect constraints on x, propagate
+ * them backwards through f, and create a new AxiomSplit:
  *
- *  assume: <yi constraints> & x = f(y1,...,yn)
- *  derive: x in Post(f, <yi constraints>)
+ *  assume: <x constraint> & x = f(y1,...,yn)
+ *  derive: Disj of <yi constraints> in Pre(f, <x constraint>)
  *
  * For the saturation, the ApplicationPoint is (appTerm,
- * Seq[argConstraint]) where appTerm is a function application as above
- * and the argConstraints are str_in_re_id constraints on y1, ..., yn.
+ * argConstraint) where appTerm is a function application as above
+ * and the argConstraint is a str_in_re_id constraint on x.
  *
  * Expects str_in_re not to occur, only str_in_re_id.
  */
-class ForwardsSaturation(
+class BackwardsSaturation(
   theory : OstrichStringTheory
 ) extends SaturationProcedure("ForwardsPropagation") {
   import theory.{
@@ -91,11 +91,11 @@ class ForwardsSaturation(
   }
 
   /**
-   * (funApp, argConstraints)
+   * (funApp, argConstraint)
    * funApp -- x = f(y1, ..., yn)
-   * argConstraints -- str_in_re_id(yi, autid) or None for Sigma*
+   * argConstraint -- str_in_re_id(x, autid) or None for Sigma*
    */
-  type ApplicationPoint = (Atom, Seq[Option[Atom]])
+  type ApplicationPoint = (Atom, Option[Atom])
 
   val rexOps : Set[IFunction] = Set(
     re_none, re_all, re_allchar, re_charrange, re_++, re_union,
@@ -115,25 +115,19 @@ class ForwardsSaturation(
     val sortedFunApps = sortFunApps(funApps, termConstraintMap)
 
     val applicationPoints = for {
-      (apps, res) <- sortedFunApps.reverseIterator;
-      (op, args, formula) <- apps;
-      argConSeqs = args.map(
-        termConstraintMap.get(_)
-          .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
-          // Use [None] instead of [] for no constraint
-          // (helps Cartesian product)
-          .map(cons => if (cons.isEmpty) Seq(None) else cons)
-          .getOrElse(Seq(None))
-      );
-      argCons <- cartesianProduct(argConSeqs.toList)
-    } yield (formula, argCons)
+      (apps, res) <- sortedFunApps;
+      (_, _, formula) <- apps;
+      regex <- termConstraintMap.get(res)
+        .map(_.map(Some(_)))
+        .getOrElse(Seq(None))
+    } yield (formula, regex)
 
     applicationPoints.toIterator
   }
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
     val regexExtractor = theory.RegexExtractor(goal)
-    p._2.map(_ match {
+    p._2 match {
       // None means arg in Sigma*
       case None => 1
       case Some(a) => {
@@ -146,7 +140,7 @@ class ForwardsSaturation(
           case _ => 0
         }
       }
-    }).sum
+    }
   }
 
   override def handleApplicationPoint(
@@ -161,7 +155,7 @@ class ForwardsSaturation(
     val regexExtractor = theory.RegexExtractor(goal)
     val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
 
-    val (funApp, argCons) = appPoint
+    val (funApp, argCon) = appPoint
     val (op, args, res, formula)
       = getFunApp(stringFunctionTranslator, funApp) match {
           case Some(app) => app
@@ -171,47 +165,76 @@ class ForwardsSaturation(
             )
         }
 
-    val argAuts = (args zip argCons).map({ case (arg, cons) =>
-      cons match {
-        // None means arg in Sigma*...
-        case None => {
-          // but might have a concrete def
-          val constraints = strDatabase.term2List(arg).map({ w =>
-            val str : String = w.map(i => i.toChar)(breakOut)
-            BricsAutomaton.fromString(str)
-          }).toSeq
+    // TODO: is it better to compute argument constraints anew based on
+    // latest goal or reuse the one we build for finding application
+    // points? At any rate, we already compute it when checking the goal
+    // is still relevant, so refactor to avoid computing it twice.
+    // In backwards propagation, the constraints on the arguments are
+    // used to avoid constraints on yi being to general / too many
+    // disjunctions
+    val termConstraintMap = getInitialConstraints(goal)
 
-          if (constraints.isEmpty)
-            Seq(BricsAutomaton.makeAnyString())
-          else
-            constraints
-        }
-        case Some(a) => {
-          a.pred match {
-            case `str_in_re_id` =>
-              Seq(decodeRegexId(a, false))
-            // will be a str_len == 0 as we only return those
-            case FunPred(`str_len`) =>
-              Seq(BricsAutomaton.fromString(""))
-            // will not happen
-            case _ => {
-              throw new Exception ("Cannot handle literal " + a)
-            }
+    val argAuts = for (a <- args)
+      yield termConstraintMap(a)
+        .map(atom => applicationPointAtomToAut(a, Some(atom)))
+        .toSeq
+    val resAut = applicationPointAtomToAut(res, argCon)
+
+    val (newConstraints, _) = op(argAuts, resAut)
+    val argConstraints = for {
+      argCS <- newConstraints;
+      (a, aut) <- args zip argCS
+      autId = autDatabase.automaton2Id(aut)
+      argTerm = LinearCombination(a, goal.order)
+      lautId = LinearCombination(IdealInt(autId))
+    } yield str_in_re_id_app(Seq(argTerm, lautId))
+
+    val argCases = argConstraints.map(
+      r => (Conjunction.conj(r, goal.order), Seq())
+    ).toSeq
+
+    // TODO: is the assumption really just funApp -- don't we need the
+    // constraints on the result and the ones on the argument we used
+    // for optimisation?
+    Seq(AxiomSplit(Seq(funApp), argCases, theory))
+  }
+
+  /**
+   * Convert an atom in one of our application points to Automaton
+   *
+   * Throws exception if not of the expected format (i.e. the atom came
+   * from somewhere other than an application point.
+   *
+   * @param term the term the constraint applies to
+   * @constraint the constraint or None if there is no constraint (will
+   * try to find a concrete def of term instead)
+   */
+  private def applicationPointAtomToAut(
+    term : Term, constraint : Option[Atom]
+  ) : Automaton = {
+    constraint match {
+      // None means arg in Sigma*...
+      case None => {
+        // but might have a concrete def
+        strDatabase.term2List(term).map({ w =>
+          val str : String = w.map(i => i.toChar)(breakOut)
+          BricsAutomaton.fromString(str)
+        }).getOrElse(BricsAutomaton.makeAnyString())
+      }
+      case Some(a) => {
+        a.pred match {
+          case `str_in_re_id` =>
+            decodeRegexId(a, false)
+          // will be a str_len == 0 as we only return those
+          case FunPred(`str_len`) =>
+            BricsAutomaton.fromString("")
+          // will not happen
+          case _ => {
+            throw new Exception ("Cannot handle literal " + a)
           }
         }
       }
-    })
-    val resultConstraint = op.forwardApprox(argAuts);
-    val autId = autDatabase.automaton2Id(resultConstraint);
-    val lres = LinearCombination(res, goal.order);
-    val lautId = LinearCombination(IdealInt(autId));
-    val assumptions = List(formula) ++ argCons.flatten
-
-    Seq(AddAxiom(
-      assumptions,
-      Conjunction.conj(str_in_re_id_app(Seq(lres, lautId)), goal.order),
-      theory
-    ))
+    }
   }
 
   private def getAutomatonSize(aut : Automaton) : Int = {
