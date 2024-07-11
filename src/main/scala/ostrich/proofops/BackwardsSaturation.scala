@@ -40,26 +40,9 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
 import ap.terfor.{RichPredicate, Term}
 import ap.theories.SaturationProcedure
-import ap.util.Combinatorics.cartesianProduct
-import ostrich._
-import ostrich.automata.{Automaton, BricsAutomaton, AtomicStateAutomaton}
-import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.preop.{ConcatPreOp, PreOp}
-import scala.util.Random
-
-import scala.collection.breakOut
-import scala.collection.mutable.{
-  ArrayBuffer,
-  BitSet => MBitSet,
-  HashMap => MHashMap,
-  MultiMap => MMultiMap,
-  Set => MSet
-}
-
-object BackwardsSaturation {
-  case class TermConstraint(t : Term, aut : Automaton)
-  type ConflictSet = Seq[TermConstraint]
-}
+import ostrich.OstrichStringFunctionTranslator
+import ostrich.OstrichStringTheory
+import ostrich.automata.Automaton
 
 /**
  * A SaturationProcedure for backwards propagation.
@@ -79,16 +62,7 @@ object BackwardsSaturation {
 class BackwardsSaturation(
   theory : OstrichStringTheory
 ) extends SaturationProcedure("ForwardsPropagation") {
-  import theory.{
-    str_from_char, str_len, str_empty, str_cons, str_++, str_in_re,
-    str_char_count, str_in_re_id, str_to_re, re_from_str,
-    re_from_ecma2020, re_from_ecma2020_flags, re_case_insensitive,
-    str_replace, str_replacere, str_replaceall, str_replaceallre,
-    str_prefixof, re_none, re_all, re_allchar, re_charrange, re_++,
-    re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt,
-    re_opt_?, re_comp, re_loop, re_loop_?, re_eps, re_capture,
-    re_reference, re_begin_anchor, re_end_anchor, FunPred, strDatabase
-  }
+  import theory.{ str_len, str_in_re_id, FunPred }
 
   /**
    * (funApp, argConstraint)
@@ -97,22 +71,15 @@ class BackwardsSaturation(
    */
   type ApplicationPoint = (Atom, Option[Atom])
 
-  val rexOps : Set[IFunction] = Set(
-    re_none, re_all, re_allchar, re_charrange, re_++, re_union,
-    re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
-    re_comp, re_loop, re_loop_?, re_eps, str_to_re, re_from_str,
-    re_capture, re_reference, re_begin_anchor, re_end_anchor,
-    re_from_ecma2020, re_from_ecma2020_flags, re_case_insensitive
-  )
-
   val autDatabase = theory.autDatabase
+  val satUtils = new PropagationSaturationUtils(theory)
 
   override def extractApplicationPoints(
     goal : Goal
   ) : Iterator[ApplicationPoint] = {
-    val funApps = getFunApps(goal)
-    val termConstraintMap = getInitialConstraints(goal)
-    val sortedFunApps = sortFunApps(funApps, termConstraintMap)
+    val funApps = satUtils.getFunApps(goal)
+    val termConstraintMap = satUtils.getInitialConstraints(goal)
+    val sortedFunApps = satUtils.sortFunApps(funApps, termConstraintMap)
 
     val applicationPoints = for {
       (apps, res) <- sortedFunApps;
@@ -133,7 +100,7 @@ class BackwardsSaturation(
       case Some(a) => {
         a.pred match {
           case `str_in_re_id` =>
-            getAutomatonSize(decodeRegexId(a, false))
+            satUtils.getAutomatonSize(satUtils.decodeRegexId(a, false))
           // will be a str_len == 0 as we only return those
           case FunPred(`str_len`) => 1
           // will not happen
@@ -157,7 +124,7 @@ class BackwardsSaturation(
 
     val (funApp, argCon) = appPoint
     val (op, args, res, formula)
-      = getFunApp(stringFunctionTranslator, funApp) match {
+      = satUtils.getFunApp(stringFunctionTranslator, funApp) match {
           case Some(app) => app
           case None =>
             throw new Exception(
@@ -172,13 +139,13 @@ class BackwardsSaturation(
     // In backwards propagation, the constraints on the arguments are
     // used to avoid constraints on yi being to general / too many
     // disjunctions
-    val termConstraintMap = getInitialConstraints(goal)
+    val termConstraintMap = satUtils.getInitialConstraints(goal)
 
     val argAuts = for (a <- args)
       yield termConstraintMap(a)
-        .map(atom => applicationPointAtomToAut(a, Some(atom)))
+        .map(atom => satUtils.atomConstraintToAut(a, Some(atom)))
         .toSeq
-    val resAut = applicationPointAtomToAut(res, argCon)
+    val resAut = satUtils.atomConstraintToAut(res, argCon)
 
     val (newConstraints, _) = op(argAuts, resAut)
     val argConstraints = for {
@@ -197,202 +164,5 @@ class BackwardsSaturation(
     // constraints on the result and the ones on the argument we used
     // for optimisation?
     Seq(AxiomSplit(Seq(funApp), argCases, theory))
-  }
-
-  /**
-   * Convert an atom in one of our application points to Automaton
-   *
-   * Throws exception if not of the expected format (i.e. the atom came
-   * from somewhere other than an application point.
-   *
-   * @param term the term the constraint applies to
-   * @constraint the constraint or None if there is no constraint (will
-   * try to find a concrete def of term instead)
-   */
-  private def applicationPointAtomToAut(
-    term : Term, constraint : Option[Atom]
-  ) : Automaton = {
-    constraint match {
-      // None means arg in Sigma*...
-      case None => {
-        // but might have a concrete def
-        strDatabase.term2List(term).map({ w =>
-          val str : String = w.map(i => i.toChar)(breakOut)
-          BricsAutomaton.fromString(str)
-        }).getOrElse(BricsAutomaton.makeAnyString())
-      }
-      case Some(a) => {
-        a.pred match {
-          case `str_in_re_id` =>
-            decodeRegexId(a, false)
-          // will be a str_len == 0 as we only return those
-          case FunPred(`str_len`) =>
-            BricsAutomaton.fromString("")
-          // will not happen
-          case _ => {
-            throw new Exception ("Cannot handle literal " + a)
-          }
-        }
-      }
-    }
-  }
-
-  private def getAutomatonSize(aut : Automaton) : Int = {
-    aut match {
-      case automaton: AtomicStateAutomaton => automaton.states.size
-      case base: CostEnrichedAutomatonBase => base.states.size
-      case _ => 0
-    }
-  }
-
-  private def isNotNonZeroLenConstraint(a : Atom) : Boolean = {
-    a.pred match {
-      case FunPred(`str_len`) => a(1).isZero
-      case _ => true
-    }
-  }
-
-  private def getFunApps(
-    goal : Goal
-  ) : Seq[(PreOp, Seq[Term], Term, Atom)] = {
-    val atoms = goal.facts.predConj
-    val stringFunctionTranslator =
-        new OstrichStringFunctionTranslator(theory, goal.facts)
-
-    // Collect a bunch of data. Always keep original formula for axiom
-    // construction when returning propagation results.
-    //
-    // funApps -- each function application:
-    //  (operation, arguments, result term, original formula containing app)
-    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term, Atom)]
-
-    for (a <- atoms.positiveLits)
-      getFunApp(stringFunctionTranslator, a).foreach(funApps += _)
-
-    funApps
-  }
-
-  /**
-   * Split a fun app atom into (op, args, atom)
-   *
-   * Or None if not a fun app
-   */
-  private def getFunApp(
-    stringFunctionTranslator : OstrichStringFunctionTranslator,
-    a : Atom
-  ) : Option[(PreOp, Seq[Term], Term, Atom)] = {
-    a.pred match {
-      case `str_prefixof` => {
-        val rightVar = theory.StringSort.newConstant("rhs")
-        Some((ConcatPreOp, List(a(0), rightVar), a(1), a))
-      }
-      case FunPred(f) if rexOps contains f =>
-        None
-      // next three cases prevent exception for supported string
-      // functions that aren't apps
-      case `str_in_re` =>
-        None
-      case `str_in_re_id` =>
-        None
-      case FunPred(`str_char_count`) =>
-        None
-      case p if (theory.predicates contains p) =>
-        stringFunctionTranslator(a) match {
-          case Some((op, args, res)) =>
-            Some((op(), args, res, a))
-          case _ =>
-            throw new Exception ("Cannot get fun app from literal " + a)
-        }
-      case _ =>
-        None
-    }
-  }
-
-  private def sortFunApps(
-    funApps : Seq[(PreOp, Seq[Term], Term, Atom)],
-    termConstraints : MMultiMap[Term, Atom]
-  ) : Seq[(Seq[(PreOp, Seq[Term], Atom)], Term)] = {
-    val argTermNum = new MHashMap[Term, Int]
-    for ((_, _, res, _) <- funApps)
-      argTermNum.put(res, 0)
-    for ((t, _) <- termConstraints)
-      argTermNum.put(t, 0)
-    for ((_, args, _, _) <- funApps; a <- args)
-      argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
-
-    var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term, Atom)]
-    var remFunApps  = funApps
-    val sortedApps  = new ArrayBuffer[(Seq[(PreOp, Seq[Term], Atom)], Term)]
-
-    while (!remFunApps.isEmpty) {
-      val (selectedApps, otherApps) =
-        remFunApps partition { case (_, _, res, _) =>
-          argTermNum(res) == 0 ||
-            strDatabase.isConcrete(res) }
-
-      if (selectedApps.isEmpty) {
-        if (ignoredApps.isEmpty)
-          Console.err.println(
-            "Warning: cyclic definitions found, ignoring some function " +
-              "applications")
-        ignoredApps += remFunApps.head
-        remFunApps = remFunApps.tail
-      } else {
-        remFunApps = otherApps
-
-        for ((_, args, _, _) <- selectedApps; a <- args)
-          argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
-
-        val appsPerRes = selectedApps groupBy (_._3)
-        val nonArgTerms = (selectedApps map (_._3)).distinct
-
-        for (t <- nonArgTerms)
-          sortedApps +=
-            ((for ((op, args, _, f) <- appsPerRes(t)) yield (op, args, f), t))
-      }
-    }
-
-    sortedApps.toSeq
-  }
-
-  /**
-   * Get initial constraints on string vars
-   *
-   * The atom will be str_in_re_id, or a str_len constraint
-   */
-  private def getInitialConstraints(goal: Goal) : MMultiMap[Term, Atom] = {
-    val atoms = goal.facts.predConj
-    val stringFunctionTranslator =
-        new OstrichStringFunctionTranslator(theory, goal.facts)
-
-    val termConstraints = new MHashMap[Term, MSet[Atom]]
-      with MMultiMap[Term, Atom]
-
-    for (a <- atoms.positiveLits) a.pred match {
-      case `str_in_re_id` => termConstraints.addBinding(a(0), a)
-      case FunPred(`str_len`) => termConstraints.addBinding(a(0), a)
-      case _ => // nothing
-    }
-
-    termConstraints
-  }
-
-  def decodeRegexId(a : Atom, complemented : Boolean) : Automaton = {
-    a(1) match {
-      case LinearCombination.Constant(id) => {
-        val autOption
-          = if (complemented)
-            autDatabase.id2ComplementedAutomaton(id.intValueSafe)
-          else
-            autDatabase.id2Automaton(id.intValueSafe)
-
-        autOption match {
-          case Some(aut) => aut
-          case None => throw new Exception ("Could not decode regex id " + a(1))
-        }
-      }
-      case lc =>
-        throw new Exception ("Could not decode regex id " + lc)
-    }
   }
 }

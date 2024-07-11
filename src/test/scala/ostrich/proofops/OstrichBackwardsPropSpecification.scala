@@ -99,7 +99,7 @@ object OstrichBackwardsPropSpecification
   }
 
   val goalSimpleReplace = createGoalFor(formulaXinAorB  & formulaYinAorB & concat)
-  val tmp = new backwardsSaturation(theory)
+  val tmp = new BackwardsSaturation(theory)
   val points = tmp.extractApplicationPoints(goalSimpleReplace)
   while (points.hasNext){
     tmp.handleApplicationPoint(goalSimpleReplace, points.next())
