@@ -142,9 +142,9 @@ class BackwardsSaturation(
     val termConstraintMap = satUtils.getInitialConstraints(goal)
 
     val argAuts = for (a <- args)
-      yield termConstraintMap(a)
-        .map(atom => satUtils.atomConstraintToAut(a, Some(atom)))
-        .toSeq
+      yield termConstraintMap.get(a)
+        .map(_.map(atom => satUtils.atomConstraintToAut(a, Some(atom))).toSeq)
+        .getOrElse(Seq(satUtils.atomConstraintToAut(a, None)))
     val resAut = satUtils.atomConstraintToAut(res, argCon)
 
     val (newConstraints, _) = op(argAuts, resAut)

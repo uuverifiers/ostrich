@@ -33,7 +33,6 @@
 
 package ostrich.proofops
 
-import ap.SimpleAPI
 import ap.parameters.{GoalSettings, Param}
 import ap.parser._
 import ap.proof.goal.{AddFactsTask, Goal}
@@ -82,37 +81,27 @@ object ForwardsSaturationSpecification
 
   val fwdsSat = new ForwardsSaturation(theory)
 
-  def getDataFor(formula : IFormula) : (
-    Seq[fwdsSat.ApplicationPoint],
-    Seq[Int],
-    Seq[Seq[Plugin.Action]]
-  ) = {
-    val goal = createGoalFor(formula)
-
-    val appPoints = fwdsSat.extractApplicationPoints(goal).toList
-    val priorities = appPoints.map(fwdsSat.applicationPriority(goal, _))
-    val applied = appPoints.map(fwdsSat.handleApplicationPoint(goal, _))
-
-    (appPoints, priorities, applied)
-  }
-
   val (
     appPointsSimpleReplace,
     prioritiesSimpleReplace,
     appliedSimpleReplace
-  ) = getDataFor(formulaXinAorB & formulaYreplaceX)
+  ) = getSaturationDataFor(fwdsSat, formulaXinAorB & formulaYreplaceX)
 
   val (
     appPointsReplaceTwoXCons,
     prioritiesReplaceTwoXCons,
     appliedReplaceTwoXCons
-  ) = getDataFor(formulaXinABThenCstar & formulaXinABCstar & formulaYreplaceX)
+  ) = getSaturationDataFor(
+    fwdsSat,
+    formulaXinABThenCstar & formulaXinABCstar & formulaYreplaceX
+  )
 
   val (
     appPointsTwoFuns,
     prioritiesTwoFuns,
     appliedTwoFuns
-  ) = getDataFor(
+  ) = getSaturationDataFor(
+    fwdsSat,
     formulaXinABThenCstar & formulaXinABCstar
       & formulaYreplaceX & formulaZreplaceX
   )

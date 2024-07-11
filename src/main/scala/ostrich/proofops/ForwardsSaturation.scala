@@ -44,11 +44,6 @@ import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
 import ostrich.automata.Automaton
 
-object ForwardsSaturation {
-  case class TermConstraint(t : Term, aut : Automaton)
-  type ConflictSet = Seq[TermConstraint]
-}
-
 /**
  * A SaturationProcedure for forwards propagation.
  *

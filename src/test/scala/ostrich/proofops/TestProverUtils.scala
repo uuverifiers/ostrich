@@ -34,12 +34,14 @@ import ap.SimpleAPI
 import ap.parameters.{GoalSettings, Param}
 import ap.parser._
 import ap.proof.goal.{AddFactsTask, Goal}
+import ap.proof.theoryPlugins.Plugin
 import ap.proof.tree._
 import ap.proof.{ConstraintSimplifier, Vocabulary}
 import ap.terfor._
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
+import ap.theories.SaturationProcedure
 import ap.util.Debug
 import org.scalacheck.Properties
 import ostrich.automata.{Automaton, BricsAutomaton}
@@ -130,6 +132,30 @@ trait TestProverUtils {
     ),
     prover.order
   )
+
+  /**
+   * Get the application points, priorities, and actions for a goal
+   *
+   * Gets the application points for the goal from satProc, then returns
+   * them as a sequence, a sequence of the priorities of those points,
+   * and the sequences of actions for each points from
+   * handleApplicationPoint.
+   */
+  def getSaturationDataFor[S <: SaturationProcedure](
+    satProc : S, formula : IFormula
+  ) : (
+    Seq[S#ApplicationPoint],
+    Seq[Int],
+    Seq[Seq[Plugin.Action]]
+  ) = {
+    val goal = createGoalFor(formula)
+
+    val appPoints = satProc.extractApplicationPoints(goal).toList
+    val priorities = appPoints.map(satProc.applicationPriority(goal, _))
+    val applied = appPoints.map(satProc.handleApplicationPoint(goal, _))
+
+    (appPoints, priorities, applied)
+  }
 
   def shutdown : Unit =
     prover.shutDown
