@@ -91,6 +91,18 @@ trait TestProverUtils {
         case _ => throw new RuntimeException("Could not find aut in db")
       }
 
+  def isCorrectRegex(conj : Conjunction, term : ITerm,
+                     positiveSamples : Seq[String],
+                     negativeSamples : Seq[String]) : Boolean = {
+    if (conj.groundAtoms.size != 1) {
+      return false
+    } else {
+      return isCorrectRegex(conj.groundAtoms.toSeq(0), term,
+                            positiveSamples,
+                            negativeSamples)
+    }
+  }
+
   def isCorrectRegex(a : Atom, term : ITerm,
                      positiveSamples : Seq[String],
                      negativeSamples : Seq[String]) : Boolean = {
