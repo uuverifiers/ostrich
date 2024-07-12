@@ -163,6 +163,11 @@ class BackwardsSaturation(
     // TODO: is the assumption really just funApp -- don't we need the
     // constraints on the result and the ones on the argument we used
     // for optimisation?
-    Seq(AxiomSplit(Seq(funApp), argCases, theory))
+    val assumptions = (
+      Seq(funApp)
+      ++ argCon.map(Seq(_)).getOrElse(Seq())
+      ++ args.map(termConstraintMap.get(_).getOrElse(Seq())).toSeq.flatten
+    )
+    Seq(AxiomSplit(assumptions, argCases, theory))
   }
 }
