@@ -88,9 +88,9 @@ object BackwardsSaturationSpecification
   ) = getSaturationDataFor(bwdsSat, formulaYinAorB & formulaYreplaceX)
 
   val (
-    appPointsReplaceTwoXCons,
-    prioritiesReplaceTwoXCons,
-    appliedReplaceTwoXCons
+    appPointsReplaceTwoYCons,
+    prioritiesReplaceTwoYCons,
+    appliedReplaceTwoYCons
   ) = getSaturationDataFor(
     bwdsSat,
     formulaYinABThenCstar & formulaYinABCstar & formulaYreplaceX
@@ -127,14 +127,11 @@ object BackwardsSaturationSpecification
   property("Test Simple Replace Applied") = {
     appliedSimpleReplace.exists(_ match {
       case Seq(AxiomSplit(
-        assumptions, (c1, List()) #:: (c2, List()) #:: Stream.Empty, _
+        assumptions, cases, _
       ))
-        // TODO: complete test of constraints
-        // c2 is about one of the strings -- that should be removed
-        // somehow
         if assumptions.toSet == Set(iYinAorB, iYreplaceX)
           && isSplitCases(
-            Seq(c1, c2),
+            cases.map(_._1).toSeq,
             Seq(
               (x, List("b"), List("a", "d", "bb")),
               // d in Sigma*..
@@ -146,61 +143,49 @@ object BackwardsSaturationSpecification
     })
   }
 
-  /**
-   * Test cases of  AxiomSplit are as expected
-   *
-   * Each conjunction in cases should pass at least one test in tests.
-   * Careful, several conjunctions may end pass the same test.
-   *
-   * @param cases the conjunction for each case
-   * @param tests tuple of (term, positiveEgs, negativeEgs) for each
-   * str_in_re_id constraint that the conjunction should enforce. See
-   * isCorrectRegex.
-   */
-  def isSplitCases(
-    cases : Seq[Conjunction],
-    tests : Seq[(ITerm, Seq[String], Seq[String])]
-  ) : Boolean = {
-    cases.forall(conj =>
-      tests.exists({ case (term, pos, neg) =>
-        isCorrectRegex(conj, term, pos, neg)
-      })
+  property("Test Two Y Constraints App Points") = {
+    appPointsReplaceTwoYCons.toSet == Set(
+      (iYreplaceX, Some(iYinABThenCstar)),
+      (iYreplaceX, Some(iYinABCstar))
     )
   }
 
-//  property("Test Two X Constraints App Points") = {
-//    appPointsReplaceTwoXCons.toSet == Set(
-//      (iYreplaceX, List(Some(iXinABThenCstar), None)),
-//      (iYreplaceX, List(Some(iXinABCstar), None))
-//    )
-//  }
-//
-//  property("Test Two X Constraints Priorities") = {
-//    prioritiesReplaceTwoXCons.toSet == Set(2, 4)
-//  }
-//
-//  property("Test Two X Constraints Applied") = {
-//    appliedReplaceTwoXCons.exists(_ match {
-//      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
-//        if assumptions.toSet == Set(iXinABCstar, iYreplaceX) &&
-//           isCorrectRegex(
-//             newConstraint, y,
-//             List("db", "dbcccc"), List("ab", "abccc", "da")
-//           ) => true
-//      case _ =>
-//        false
-//    }) && appliedReplaceTwoXCons.exists(_ match {
-//      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
-//        if assumptions.toSet == Set(iXinABThenCstar, iYreplaceX) &&
-//           isCorrectRegex(
-//             newConstraint, y,
-//             List("db", "dbcccc"), List("ab", "abccc", "dd")
-//           ) => true
-//      case _ =>
-//        false
-//    })
-//  }
-//
+  property("Test Two Y Constraints Priorities") = {
+    // TODO: check
+    prioritiesReplaceTwoYCons.toSet == Set(1, 3)
+  }
+
+  property("Test Two Y Constraints Applied") = {
+    appliedReplaceTwoYCons.forall(_ match {
+      case Seq(AxiomSplit(assumptions, cases, _))
+        if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
+          && isSplitCases(
+            cases.map(_._1).toSeq,
+            Seq(
+              // should not accept anything
+              (x, List(), List("a", "ab", "abc", "c", "b")),
+              // d in Sigma*..
+              (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
+            )
+          ) => true
+      case Seq(AxiomSplit(
+        assumptions, cases, _
+      ))
+        if assumptions.toSet == Set(iYinABCstar, iYreplaceX)
+          && isSplitCases(
+            cases.map(_._1).toSeq,
+            Seq(
+              // should be (b|c)*
+              (x, List("c", "b", "cb", "bcbb"), List("a", "ab", "bac")),
+              // d in Sigma*..
+              (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
+            )
+          ) => true
+      case _ =>
+        false
+    })
+  }
+
 //  property("Test Two Fun Apps App Points") = {
 //    appPointsTwoFuns.toSet == Set(
 //      (iYreplaceX, List(Some(iXinABCstar), None)),
@@ -253,4 +238,26 @@ object BackwardsSaturationSpecification
 //        false
 //    })
 //  }
+
+  /**
+   * Test cases of  AxiomSplit are as expected
+   *
+   * Each conjunction in cases should pass at least one test in tests.
+   * Careful, several conjunctions may end pass the same test.
+   *
+   * @param cases the conjunction for each case
+   * @param tests tuple of (term, positiveEgs, negativeEgs) for each
+   * str_in_re_id constraint that the conjunction should enforce. See
+   * isCorrectRegex.
+   */
+  private def isSplitCases(
+    cases : Seq[Conjunction],
+    tests : Seq[(ITerm, Seq[String], Seq[String])]
+  ) : Boolean = {
+    cases.forall(conj =>
+      tests.exists({ case (term, pos, neg) =>
+        isCorrectRegex(conj, term, pos, neg)
+      })
+    )
+  }
 }
