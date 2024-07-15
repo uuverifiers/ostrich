@@ -150,6 +150,21 @@ trait TestProverUtils {
     prover.order
   )
 
+  def makeReplaceAll(
+    inVar : ITerm,
+    replaceString : String,
+    newVar: ITerm,
+    outVar : ITerm
+  ) : Formula  = InputAbsy2Internal(
+    FunPred(str_replaceall)(
+      inVar,
+      strDatabase.str2Id(replaceString),
+      newVar,
+      outVar
+    ),
+    prover.order
+  )
+
   /**
    * Get the application points, priorities, and actions for a goal
    *

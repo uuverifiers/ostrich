@@ -78,9 +78,11 @@ object BackwardsSaturationSpecification
   val formulaYinAorB = str_in_re_id(y, idAutAorB)
   val formulaYinABCstar = str_in_re_id(y, idAutABCstar)
   val formulaYinABThenCstar = str_in_re_id(y, idAutABThenCstar)
+  val formulaZinAorB = str_in_re_id(z, idAutAorB)
   val formulaZinABstar = str_in_re_id(z, idAutABstar)
   val formulaYreplaceX = y === str_replaceall(x, "a", "d")
   val formulaZreplaceX = z === str_replaceall(x, "b", "c")
+  val formulaZreplaceXY = z === str_replaceall(x, "a", y)
 
   val bwdsSat = new BackwardsSaturation(theory)
 
@@ -109,15 +111,26 @@ object BackwardsSaturationSpecification
       & formulaYreplaceX & formulaZreplaceX
   )
 
+  // z = replace(x, "a", y) and z in a|b should split cases
+  // x in a|b and y in a|b
+  // x in b and y in .*
+  val (
+    appPointsSplit,
+    prioritiesSplit,
+    appliedSplit
+  ) = getSaturationDataFor(bwdsSat, formulaZreplaceXY & formulaZinAorB)
+
   // should be fine to stop the prover again at this point
   shutdown
 
   val iYinAorB = makeInternal(formulaYinAorB)
   val iYinABCstar = makeInternal(formulaYinABCstar)
   val iYinABThenCstar = makeInternal(formulaYinABThenCstar)
+  val iZinAorB = makeInternal(formulaZinAorB)
   val iZinABstar = makeInternal(formulaZinABstar)
   val iYreplaceX = makeReplaceAll(x, "a", "d", y)
   val iZreplaceX = makeReplaceAll(x, "b", "c", z)
+  val iZreplaceXY = makeReplaceAll(x, "a", y, z)
 
   property("Test Simple Replace App Points") = {
     appPointsSimpleReplace == List((iYreplaceX, Some(iYinAorB)))
@@ -242,7 +255,50 @@ object BackwardsSaturationSpecification
               (strDatabase.str2Id("c"), List("a", "bc", "xyz"), List())
             ))
           ) => true
-      case x =>
+      case _ =>
+        false
+    })
+  }
+
+  property("Test Split App Points") = {
+    appPointsSplit.toSet == Set((iZreplaceXY, Some(iZinAorB)))
+  }
+
+  property("Test Split Priorities") = {
+    // TODO: verify
+    prioritiesSplit.toSet == Set(3)
+  }
+
+  property("Test Split Apps") = {
+    appliedSplit.size == 1 && appliedSplit.forall(_ match {
+      case Seq(AxiomSplit(assumptions, cases, _))
+        if assumptions.toSet == Set(iZinAorB, iZreplaceXY)
+          && isSplitCases(
+            cases.map(_._1).toSeq,
+            // x in a*ba* and y in empty
+            // x in b and y in .*
+            // x in a|b and y in a
+            // x in a|b and y in b
+            Seq(
+              Seq(
+                (x, List("aba", "baa", "abaa"), List("bb", "abc", "c")),
+                (y, List(""), List("a", "ab", "abc", "c", "ba", "b"))
+              ),
+              Seq(
+                (x, List("b"), List("", "a", "ab", "ba")),
+                (y, List("a", "", "b", "bc", "abc"), List())
+              ),
+              Seq(
+                (x, List("a", "b"), List("", "ab", "abc", "c", "ba")),
+                (y, List("a"), List("", "ab", "abc", "c", "ba", "b"))
+              ),
+              Seq(
+                (x, List("a", "b"), List("", "ab", "abc", "c", "ba")),
+                (y, List("b"), List("", "ab", "abc", "c", "ba", "a"))
+              )
+            )
+          ) => true
+      case _ =>
         false
     })
   }
