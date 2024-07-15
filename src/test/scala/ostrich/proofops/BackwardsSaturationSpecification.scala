@@ -136,11 +136,11 @@ object BackwardsSaturationSpecification
         if assumptions.toSet == Set(iYinAorB, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
-            Seq(
+            Seq(Seq(
               (x, List("b"), List("a", "d", "bb")),
               // d in Sigma*..
               (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
-            )
+            ))
           ) => true
       case _ =>
         false
@@ -165,12 +165,12 @@ object BackwardsSaturationSpecification
         if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
-            Seq(
+            Seq(Seq(
               // should not accept anything
               (x, List(), List("a", "ab", "abc", "c", "b")),
               // d in Sigma*..
               (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
-            )
+            ))
           ) => true
       case Seq(AxiomSplit(
         assumptions, cases, _
@@ -178,12 +178,12 @@ object BackwardsSaturationSpecification
         if assumptions.toSet == Set(iYinABCstar, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
-            Seq(
+            Seq(Seq(
               // should be (b|c)*
               (x, List("c", "b", "cb", "bcbb"), List("a", "ab", "bac")),
               // d in Sigma*..
               (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
-            )
+            ))
           ) => true
       case _ =>
         false
@@ -204,18 +204,17 @@ object BackwardsSaturationSpecification
   }
 
   property("Test Two Fun Apps") = {
-    println(appliedTwoFuns)
     appliedTwoFuns.size == 3 && appliedTwoFuns.forall(_ match {
       case Seq(AxiomSplit(assumptions, cases, _))
         if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
-            Seq(
+            Seq(Seq(
               // should not accept anything
               (x, List(), List("a", "ab", "abc", "c", "b")),
               // d in Sigma*..
               (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
-            )
+            ))
           ) => true
       case Seq(AxiomSplit(
         assumptions, cases, _
@@ -223,12 +222,12 @@ object BackwardsSaturationSpecification
         if assumptions.toSet == Set(iYinABCstar, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
-            Seq(
+            Seq(Seq(
               // should be (b|c)*
               (x, List("c", "b", "cb", "bcbb"), List("a", "ab", "bac")),
               // d in Sigma*..
               (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
-            )
+            ))
           ) => true
       case Seq(AxiomSplit(
         assumptions, cases, _
@@ -236,12 +235,12 @@ object BackwardsSaturationSpecification
         if assumptions.toSet == Set(iZinABstar, iZreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
-            Seq(
+            Seq(Seq(
               // should be a*
               (x, List("a", "", "aaaa"), List("b", "ab", "bac", "c")),
               // c in Sigma*..
               (strDatabase.str2Id("c"), List("a", "bc", "xyz"), List())
-            )
+            ))
           ) => true
       case x =>
         false
@@ -255,18 +254,32 @@ object BackwardsSaturationSpecification
    * Careful, several conjunctions may end pass the same test.
    *
    * @param cases the conjunction for each case
+   * @param Sequence of conjunction tests, where a conjunction test is a
+   * sequence of tuples as passed to isConjunctionOf
+   */
+  private def isSplitCases(
+    cases : Seq[Conjunction],
+    tests : Seq[Seq[(ITerm, Seq[String], Seq[String])]]
+  ) : Boolean
+    = cases.forall(conj => tests.exists(test => isConjunctionOf(conj, test)))
+
+
+  /**
+   * Tests the conjunction asserts each of the tests
+   *
+   * Tests are passed to isCorrectRegex
+   *
+   * @param cases the conjunction for each case
    * @param tests tuple of (term, positiveEgs, negativeEgs) for each
    * str_in_re_id constraint that the conjunction should enforce. See
    * isCorrectRegex.
    */
-  private def isSplitCases(
-    cases : Seq[Conjunction],
+  private def isConjunctionOf(
+    conj : Conjunction,
     tests : Seq[(ITerm, Seq[String], Seq[String])]
   ) : Boolean = {
-    cases.forall(conj =>
-      tests.exists({ case (term, pos, neg) =>
-        isCorrectRegex(conj, term, pos, neg)
-      })
-    )
+    tests.forall({ case (term, pos, neg) =>
+      conj.groundAtoms.exists(isCorrectRegex(_, term, pos, neg))
+    })
   }
 }

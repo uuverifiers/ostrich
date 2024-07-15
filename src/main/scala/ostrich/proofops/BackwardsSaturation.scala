@@ -148,17 +148,15 @@ class BackwardsSaturation(
     val resAut = satUtils.atomConstraintToAut(res, argCon)
 
     val (newConstraints, _) = op(argAuts, resAut)
-    val argConstraints = for {
-      argCS <- newConstraints;
-      (a, aut) <- args zip argCS
-      autId = autDatabase.automaton2Id(aut)
-      argTerm = LinearCombination(a, goal.order)
-      lautId = LinearCombination(IdealInt(autId))
-    } yield str_in_re_id_app(Seq(argTerm, lautId))
-
-    val argCases = argConstraints.map(
-      r => (Conjunction.conj(r, goal.order), Seq())
-    ).toSeq
+    val argCases = newConstraints.map(argCS => {
+      (args zip argCS).map({ case (a, aut) =>
+        val autId = autDatabase.automaton2Id(aut)
+        val argTerm = LinearCombination(a, goal.order)
+        val lautId = LinearCombination(IdealInt(autId))
+        str_in_re_id_app(Seq(argTerm, lautId))
+      })
+    }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
+    .toSeq
 
     // TODO: is the assumption really just funApp -- don't we need the
     // constraints on the result and the ones on the argument we used
