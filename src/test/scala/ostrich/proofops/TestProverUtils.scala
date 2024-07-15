@@ -108,9 +108,14 @@ trait TestProverUtils {
                      negativeSamples : Seq[String]) : Boolean = {
     def seq(s : String) = s.map(_.toInt)
 
-    val IConstant(const) = term
+    // support string constants (by id) or variables
+    val const = term match {
+      case IIntLit(const) => const
+      case IConstant(const) => const
+    }
     a.pred == str_in_re_id &&
     (a(0) match {
+      case LinearCombination.Constant(`const`) => true
       case LinearCombination.SingleTerm(`const`) => true
       case _ => false
     }) && {

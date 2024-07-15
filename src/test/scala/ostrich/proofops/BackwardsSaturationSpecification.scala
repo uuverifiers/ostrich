@@ -133,10 +133,39 @@ object BackwardsSaturationSpecification
         // c2 is about one of the strings -- that should be removed
         // somehow
         if assumptions.toSet == Set(iYinAorB, iYreplaceX)
-          && isCorrectRegex(c1, x, List(), List()) => true
+          && isSplitCases(
+            Seq(c1, c2),
+            Seq(
+              (x, List("b"), List("a", "d", "bb")),
+              // d in Sigma*..
+              (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
+            )
+          ) => true
       case _ =>
         false
     })
+  }
+
+  /**
+   * Test cases of  AxiomSplit are as expected
+   *
+   * Each conjunction in cases should pass at least one test in tests.
+   * Careful, several conjunctions may end pass the same test.
+   *
+   * @param cases the conjunction for each case
+   * @param tests tuple of (term, positiveEgs, negativeEgs) for each
+   * str_in_re_id constraint that the conjunction should enforce. See
+   * isCorrectRegex.
+   */
+  def isSplitCases(
+    cases : Seq[Conjunction],
+    tests : Seq[(ITerm, Seq[String], Seq[String])]
+  ) : Boolean = {
+    cases.forall(conj =>
+      tests.exists({ case (term, pos, neg) =>
+        isCorrectRegex(conj, term, pos, neg)
+      })
+    )
   }
 
 //  property("Test Two X Constraints App Points") = {
