@@ -65,17 +65,20 @@ object BackwardsSaturationSpecification
   val autB: Automaton  = BricsAutomaton.fromString("b")
   val autAorB: Automaton  = autA | autB
   val autABCstar: Automaton  = BricsAutomaton("(a|b|c)*")
+  val autABstar: Automaton  = BricsAutomaton("(a|b)*")
   val autABThenCstar: Automaton  = BricsAutomaton("abc*")
 
   val idAutA: Int = autDatabase.automaton2Id(autA)
   val idAutB: Int = autDatabase.automaton2Id(autB)
   val idAutAorB: Int = autDatabase.automaton2Id(autAorB)
   val idAutABCstar: Int = autDatabase.automaton2Id(autABCstar)
+  val idAutABstar: Int = autDatabase.automaton2Id(autABstar)
   val idAutABThenCstar: Int = autDatabase.automaton2Id(autABThenCstar)
 
   val formulaYinAorB = str_in_re_id(y, idAutAorB)
   val formulaYinABCstar = str_in_re_id(y, idAutABCstar)
   val formulaYinABThenCstar = str_in_re_id(y, idAutABThenCstar)
+  val formulaZinABstar = str_in_re_id(z, idAutABstar)
   val formulaYreplaceX = y === str_replaceall(x, "a", "d")
   val formulaZreplaceX = z === str_replaceall(x, "b", "c")
 
@@ -102,7 +105,7 @@ object BackwardsSaturationSpecification
     appliedTwoFuns
   ) = getSaturationDataFor(
     bwdsSat,
-    formulaYinABThenCstar & formulaYinABCstar
+    formulaYinABThenCstar & formulaYinABCstar & formulaZinABstar
       & formulaYreplaceX & formulaZreplaceX
   )
 
@@ -112,6 +115,7 @@ object BackwardsSaturationSpecification
   val iYinAorB = makeInternal(formulaYinAorB)
   val iYinABCstar = makeInternal(formulaYinABCstar)
   val iYinABThenCstar = makeInternal(formulaYinABThenCstar)
+  val iZinABstar = makeInternal(formulaZinABstar)
   val iYreplaceX = makeReplaceAll(x, "a", "d", y)
   val iZreplaceX = makeReplaceAll(x, "b", "c", z)
 
@@ -156,7 +160,7 @@ object BackwardsSaturationSpecification
   }
 
   property("Test Two Y Constraints Applied") = {
-    appliedReplaceTwoYCons.forall(_ match {
+    appliedReplaceTwoYCons.size == 2 && appliedReplaceTwoYCons.forall(_ match {
       case Seq(AxiomSplit(assumptions, cases, _))
         if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
           && isSplitCases(
@@ -186,58 +190,63 @@ object BackwardsSaturationSpecification
     })
   }
 
-//  property("Test Two Fun Apps App Points") = {
-//    appPointsTwoFuns.toSet == Set(
-//      (iYreplaceX, List(Some(iXinABCstar), None)),
-//      (iYreplaceX, List(Some(iXinABThenCstar), None)),
-//      (iZreplaceX, List(Some(iXinABCstar), None)),
-//      (iZreplaceX, List(Some(iXinABThenCstar), None))
-//    )
-//  }
-//
-//  property("Test Two Fun Apps Priorities") = {
-//    prioritiesTwoFuns.toSet == Set(2, 4)
-//  }
-//
-//  property("Test Two Fun Apps") = {
-//    appliedTwoFuns.exists(_ match {
-//      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
-//        if assumptions.toSet == Set(iXinABCstar, iYreplaceX) &&
-//           isCorrectRegex(
-//             newConstraint, y,
-//             List("db", "dbcccc"), List("ab", "abccc", "da")
-//           ) => true
-//      case _ =>
-//        false
-//    }) && appliedTwoFuns.exists(_ match {
-//      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
-//        if assumptions.toSet == Set(iXinABThenCstar, iYreplaceX) &&
-//           isCorrectRegex(
-//             newConstraint, y,
-//             List("db", "dbcccc"), List("ab", "abccc", "dd")
-//           ) => true
-//      case _ =>
-//        false
-//    }) && appliedTwoFuns.exists(_ match {
-//      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
-//        if assumptions.toSet == Set(iXinABCstar, iZreplaceX) &&
-//           isCorrectRegex(
-//             newConstraint, z,
-//             List("ac", "accccc"), List("ab", "abccc", "bc")
-//           ) => true
-//      case _ =>
-//        false
-//    }) && appliedTwoFuns.exists(_ match {
-//      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
-//        if assumptions.toSet == Set(iXinABThenCstar, iZreplaceX) &&
-//           isCorrectRegex(
-//             newConstraint, z,
-//             List("ac", "accccc", "acc"), List("ab", "abccc", "cb")
-//           ) => true
-//      case _ =>
-//        false
-//    })
-//  }
+  property("Test Two Fun Apps App Points") = {
+    appPointsTwoFuns.toSet == Set(
+      (iYreplaceX, Some(iYinABCstar)),
+      (iYreplaceX, Some(iYinABThenCstar)),
+      (iZreplaceX, Some(iZinABstar))
+    )
+  }
+
+  property("Test Two Fun Apps Priorities") = {
+    // TODO: verify
+    prioritiesTwoFuns.toSet == Set(1, 3)
+  }
+
+  property("Test Two Fun Apps") = {
+    println(appliedTwoFuns)
+    appliedTwoFuns.size == 3 && appliedTwoFuns.forall(_ match {
+      case Seq(AxiomSplit(assumptions, cases, _))
+        if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
+          && isSplitCases(
+            cases.map(_._1).toSeq,
+            Seq(
+              // should not accept anything
+              (x, List(), List("a", "ab", "abc", "c", "b")),
+              // d in Sigma*..
+              (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
+            )
+          ) => true
+      case Seq(AxiomSplit(
+        assumptions, cases, _
+      ))
+        if assumptions.toSet == Set(iYinABCstar, iYreplaceX)
+          && isSplitCases(
+            cases.map(_._1).toSeq,
+            Seq(
+              // should be (b|c)*
+              (x, List("c", "b", "cb", "bcbb"), List("a", "ab", "bac")),
+              // d in Sigma*..
+              (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
+            )
+          ) => true
+      case Seq(AxiomSplit(
+        assumptions, cases, _
+      ))
+        if assumptions.toSet == Set(iZinABstar, iZreplaceX)
+          && isSplitCases(
+            cases.map(_._1).toSeq,
+            Seq(
+              // should be a*
+              (x, List("a", "", "aaaa"), List("b", "ab", "bac", "c")),
+              // c in Sigma*..
+              (strDatabase.str2Id("c"), List("a", "bc", "xyz"), List())
+            )
+          ) => true
+      case x =>
+        false
+    })
+  }
 
   /**
    * Test cases of  AxiomSplit are as expected
