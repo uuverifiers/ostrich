@@ -78,6 +78,7 @@ object ForwardsSaturationSpecification
   val formulaXinABThenCstar = str_in_re_id(x, idAutABThenCstar)
   val formulaYreplaceX = y === str_replaceall(x, "a", "d")
   val formulaZreplaceX = z === str_replaceall(x, "b", "c")
+  val formulaXchar = str_len(x) === 1
 
   val fwdsSat = new ForwardsSaturation(theory)
 
@@ -105,6 +106,12 @@ object ForwardsSaturationSpecification
     formulaXinABThenCstar & formulaXinABCstar
       & formulaYreplaceX & formulaZreplaceX
   )
+
+  val (
+    appPointsStrLen,
+    prioritiesStrLen,
+    appliedStrLen
+  ) = getSaturationDataFor(fwdsSat, formulaYreplaceX & formulaXchar)
 
   // should be fine to stop the prover again at this point
   shutdown
@@ -215,6 +222,30 @@ object ForwardsSaturationSpecification
              newConstraint, z,
              List("ac", "accccc", "acc"), List("ab", "abccc", "cb")
            ) => true
+      case _ =>
+        false
+    })
+  }
+
+  property("Test Str Len App Points") = {
+    // the str_len(x) === 1 doesn't get translated to anything
+    // propagatable at the moment
+    appPointsStrLen == List((iYreplaceX, List(None, None)))
+  }
+
+  property("Test Simple Replace Priorities") = {
+    // TODO: check
+    prioritiesStrLen == List(2)
+  }
+
+  property("Test Simple Replace Applied") = {
+    // only asserts no "a" in y since it's been replaced and str_len(x)
+    // === 1 was thrown away
+    appliedStrLen.exists(_ match {
+      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
+        if assumptions.toSet == Set(iYreplaceX) &&
+           isCorrectRegex(newConstraint, y,
+                          List("c", "d", "ed"), List("a", "ca", "dea")) => true
       case _ =>
         false
     })
