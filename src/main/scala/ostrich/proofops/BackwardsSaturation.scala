@@ -44,6 +44,8 @@ import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
 import ostrich.automata.Automaton
 
+import scala.collection.mutable.{MultiMap => MMultiMap}
+
 /**
  * A SaturationProcedure for backwards propagation.
  *
@@ -74,19 +76,9 @@ class BackwardsSaturation(
 
   override def extractApplicationPoints(
     goal : Goal
-  ) : Iterator[ApplicationPoint] = {
-    val funApps = getFunApps(goal)
-    val termConstraintMap = getInitialConstraints(goal)
-
-    val applicationPoints = for {
-      (_, _, res, formula) <- funApps;
-      regex <- termConstraintMap.get(res)
-        .map(_.map(Some(_)))
-        .getOrElse(Seq(None))
-    } yield (formula, regex)
-
-    applicationPoints.toIterator
-  }
+  ) : Iterator[ApplicationPoint] = extractApplicationPoints(
+    goal, getInitialConstraints(goal)
+  )
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
     val regexExtractor = theory.RegexExtractor(goal)
@@ -109,8 +101,9 @@ class BackwardsSaturation(
   override def handleApplicationPoint(
     goal : Goal, appPoint : ApplicationPoint
   ) : Seq[Plugin.Action] = {
+    val termConstraintMap = getInitialConstraints(goal)
     // return empty if appPoint no longer relevant
-    if (!extractApplicationPoints(goal).contains(appPoint))
+    if (!extractApplicationPoints(goal, termConstraintMap).contains(appPoint))
       return List()
 
     val stringFunctionTranslator =
@@ -127,15 +120,6 @@ class BackwardsSaturation(
               "Expected a funApp in the ApplicationPoint " + appPoint
             )
         }
-
-    // TODO: is it better to compute argument constraints anew based on
-    // latest goal or reuse the one we build for finding application
-    // points? At any rate, we already compute it when checking the goal
-    // is still relevant, so refactor to avoid computing it twice.
-    // In backwards propagation, the constraints on the arguments are
-    // used to avoid constraints on yi being to general / too many
-    // disjunctions
-    val termConstraintMap = getInitialConstraints(goal)
 
     val argAuts = for (a <- args)
       yield termConstraintMap.get(a)
@@ -154,14 +138,32 @@ class BackwardsSaturation(
     }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
     .toSeq
 
-    // TODO: is the assumption really just funApp -- don't we need the
-    // constraints on the result and the ones on the argument we used
-    // for optimisation?
     val assumptions = (
       Seq(funApp)
       ++ argCon.map(Seq(_)).getOrElse(Seq())
       ++ args.map(termConstraintMap.get(_).getOrElse(Seq())).toSeq.flatten
     )
     Seq(AxiomSplit(assumptions, argCases, theory))
+  }
+
+  /**
+   * Extract application points without computing term constraints
+   *
+   * Useful when the constraints are already known, e.g. in
+   * handleApplicationPoint
+   */
+  private def extractApplicationPoints(
+    goal : Goal, termConstraintMap : MMultiMap[Term, Atom]
+  ) : Iterator[ApplicationPoint] = {
+    val funApps = getFunApps(goal)
+
+    val applicationPoints = for {
+      (_, _, res, formula) <- funApps;
+      regex <- termConstraintMap.get(res)
+        .map(_.map(Some(_)))
+        .getOrElse(Seq(None))
+    } yield (formula, regex)
+
+    applicationPoints.toIterator
   }
 }
