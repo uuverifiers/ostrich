@@ -34,9 +34,7 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{OstrichClose, OstrichNielsenSplitter, OstrichPredtoEqConverter,
-                         OstrichStrInReTranslator}
-
+import ostrich.proofops.{BackwardsSaturation, ForwardsSaturation, OstrichClose, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -280,9 +278,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
   val IntEnumerator = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
+  private val forwardSaturation = new ForwardsSaturation(this)
+  private val backwardsSaturation = new BackwardsSaturation(this)
 
   override val dependencies : Iterable[Theory] =
-    List(ModuloArithmetic, IntEnumerator)
+    List(ModuloArithmetic, IntEnumerator, forwardSaturation,backwardsSaturation )
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)
