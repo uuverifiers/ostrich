@@ -81,7 +81,6 @@ class BackwardsSaturation(
   )
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
-    val regexExtractor = theory.RegexExtractor(goal)
     p._2 match {
       // None means arg in Sigma*
       case None => 1
@@ -108,7 +107,6 @@ class BackwardsSaturation(
 
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
-    val regexExtractor = theory.RegexExtractor(goal)
     val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
 
     val (funApp, argCon) = appPoint
