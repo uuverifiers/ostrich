@@ -51,9 +51,9 @@ import scala.collection.mutable.{
 /**
  * Utility methods for propagator saturation
  */
-class PropagationSaturationUtils(
-  theory : OstrichStringTheory
-) {
+trait PropagationSaturationUtils {
+  val theory : OstrichStringTheory
+
   import theory.{
     str_len, str_in_re, str_char_count, str_in_re_id, str_to_re,
     re_from_str, re_from_ecma2020, re_from_ecma2020_flags,

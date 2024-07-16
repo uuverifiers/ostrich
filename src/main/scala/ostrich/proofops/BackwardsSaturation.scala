@@ -60,8 +60,9 @@ import ostrich.automata.Automaton
  * Expects str_in_re not to occur, only str_in_re_id.
  */
 class BackwardsSaturation(
-  theory : OstrichStringTheory
-) extends SaturationProcedure("ForwardsPropagation") {
+  val theory : OstrichStringTheory
+) extends SaturationProcedure("ForwardsPropagation")
+  with PropagationSaturationUtils {
   import theory.{ str_len, str_in_re_id, FunPred }
 
   /**
@@ -71,15 +72,12 @@ class BackwardsSaturation(
    */
   type ApplicationPoint = (Atom, Option[Atom])
 
-  val autDatabase = theory.autDatabase
-  val satUtils = new PropagationSaturationUtils(theory)
-
   override def extractApplicationPoints(
     goal : Goal
   ) : Iterator[ApplicationPoint] = {
-    val funApps = satUtils.getFunApps(goal)
-    val termConstraintMap = satUtils.getInitialConstraints(goal)
-    val sortedFunApps = satUtils.sortFunApps(funApps, termConstraintMap)
+    val funApps = getFunApps(goal)
+    val termConstraintMap = getInitialConstraints(goal)
+    val sortedFunApps = sortFunApps(funApps, termConstraintMap)
 
     val applicationPoints = for {
       (apps, res) <- sortedFunApps;
@@ -100,7 +98,7 @@ class BackwardsSaturation(
       case Some(a) => {
         a.pred match {
           case `str_in_re_id` =>
-            satUtils.getAutomatonSize(satUtils.decodeRegexId(a, false))
+            getAutomatonSize(decodeRegexId(a, false))
           // will be a str_len == 0 as we only return those
           case FunPred(`str_len`) => 1
           // will not happen
@@ -124,7 +122,7 @@ class BackwardsSaturation(
 
     val (funApp, argCon) = appPoint
     val (op, args, res, formula)
-      = satUtils.getFunApp(stringFunctionTranslator, funApp) match {
+      = getFunApp(stringFunctionTranslator, funApp) match {
           case Some(app) => app
           case None =>
             throw new Exception(
@@ -139,13 +137,13 @@ class BackwardsSaturation(
     // In backwards propagation, the constraints on the arguments are
     // used to avoid constraints on yi being to general / too many
     // disjunctions
-    val termConstraintMap = satUtils.getInitialConstraints(goal)
+    val termConstraintMap = getInitialConstraints(goal)
 
     val argAuts = for (a <- args)
       yield termConstraintMap.get(a)
-        .map(_.map(atom => satUtils.atomConstraintToAut(a, Some(atom))).toSeq)
-        .getOrElse(Seq(satUtils.atomConstraintToAut(a, None)))
-    val resAut = satUtils.atomConstraintToAut(res, argCon)
+        .map(_.map(atom => atomConstraintToAut(a, Some(atom))).toSeq)
+        .getOrElse(Seq(atomConstraintToAut(a, None)))
+    val resAut = atomConstraintToAut(res, argCon)
 
     val (newConstraints, _) = op(argAuts, resAut)
     val argCases = newConstraints.map(argCS => {

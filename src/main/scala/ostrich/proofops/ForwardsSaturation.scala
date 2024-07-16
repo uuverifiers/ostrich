@@ -60,8 +60,9 @@ import ostrich.automata.Automaton
  * Expects str_in_re not to occur, only str_in_re_id.
  */
 class ForwardsSaturation(
-  theory : OstrichStringTheory
-) extends SaturationProcedure("ForwardsPropagation") {
+  val theory : OstrichStringTheory
+) extends SaturationProcedure("ForwardsPropagation")
+  with PropagationSaturationUtils {
   import theory.{ str_len, str_in_re_id, FunPred }
 
   /**
@@ -71,22 +72,19 @@ class ForwardsSaturation(
    */
   type ApplicationPoint = (Atom, Seq[Option[Atom]])
 
-  val autDatabase = theory.autDatabase
-  val satUtils = new PropagationSaturationUtils(theory)
-
   override def extractApplicationPoints(
     goal : Goal
   ) : Iterator[ApplicationPoint] = {
-    val funApps = satUtils.getFunApps(goal)
-    val termConstraintMap = satUtils.getInitialConstraints(goal)
-    val sortedFunApps = satUtils.sortFunApps(funApps, termConstraintMap)
+    val funApps = getFunApps(goal)
+    val termConstraintMap = getInitialConstraints(goal)
+    val sortedFunApps = sortFunApps(funApps, termConstraintMap)
 
     val applicationPoints = for {
       (apps, res) <- sortedFunApps;
       (op, args, formula) <- apps;
       argConSeqs = args.map(
         termConstraintMap.get(_)
-          .map(_.filter(satUtils.isNotNonZeroLenConstraint).map(Some(_)).toSeq)
+          .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
           // Use [None] instead of [] for no constraint
           // (helps Cartesian product)
           .map(cons => if (cons.isEmpty) Seq(None) else cons)
@@ -106,7 +104,7 @@ class ForwardsSaturation(
       case Some(a) => {
         a.pred match {
           case `str_in_re_id` =>
-            satUtils.getAutomatonSize(satUtils.decodeRegexId(a, false))
+            getAutomatonSize(decodeRegexId(a, false))
           // will be a str_len == 0 as we only return those
           case FunPred(`str_len`) => 1
           // will not happen
@@ -130,7 +128,7 @@ class ForwardsSaturation(
 
     val (funApp, argCons) = appPoint
     val (op, args, res, formula)
-      = satUtils.getFunApp(stringFunctionTranslator, funApp) match {
+      = getFunApp(stringFunctionTranslator, funApp) match {
           case Some(app) => app
           case None =>
             throw new Exception(
@@ -139,7 +137,7 @@ class ForwardsSaturation(
         }
 
     val argAuts = (args zip argCons).map({ case (arg, cons) =>
-      Seq(satUtils.atomConstraintToAut(arg, cons))
+      Seq(atomConstraintToAut(arg, cons))
     })
     val resultConstraint = op.forwardApprox(argAuts);
     val autId = autDatabase.automaton2Id(resultConstraint);
