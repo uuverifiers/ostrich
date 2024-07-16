@@ -77,11 +77,9 @@ class BackwardsSaturation(
   ) : Iterator[ApplicationPoint] = {
     val funApps = getFunApps(goal)
     val termConstraintMap = getInitialConstraints(goal)
-    val sortedFunApps = sortFunApps(funApps, termConstraintMap)
 
     val applicationPoints = for {
-      (apps, res) <- sortedFunApps;
-      (_, _, formula) <- apps;
+      (_, _, res, formula) <- funApps;
       regex <- termConstraintMap.get(res)
         .map(_.map(Some(_)))
         .getOrElse(Seq(None))

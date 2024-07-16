@@ -135,7 +135,7 @@ trait PropagationSaturationUtils {
    * argTerms is the sequence of terms that are the arguments to the
    * application. resultTerm is the term to compare with the result of
    * the application. formula is the full atom (e.g. x = replaceall(y,
-   * s, z))
+   * s, z)).
    */
   def getFunApps(
     goal : Goal
@@ -191,61 +191,6 @@ trait PropagationSaturationUtils {
       case _ =>
         None
     }
-  }
-
-  /**
-   * Sort the funApps into order of application
-   *
-   * @param funApps the list of funApps
-   * @param termConstraints map of atoms that put constraints on the
-   * terms of the constraints (see getInitialConstraints)
-   * @return the funApps sorted in order of application
-   */
-  def sortFunApps(
-    funApps : Seq[(PreOp, Seq[Term], Term, Atom)],
-    termConstraints : MMultiMap[Term, Atom]
-  ) : Seq[(Seq[(PreOp, Seq[Term], Atom)], Term)] = {
-    val argTermNum = new MHashMap[Term, Int]
-    for ((_, _, res, _) <- funApps)
-      argTermNum.put(res, 0)
-    for ((t, _) <- termConstraints)
-      argTermNum.put(t, 0)
-    for ((_, args, _, _) <- funApps; a <- args)
-      argTermNum.put(a, argTermNum.getOrElse(a, 0) + 1)
-
-    var ignoredApps = new ArrayBuffer[(PreOp, Seq[Term], Term, Atom)]
-    var remFunApps  = funApps
-    val sortedApps  = new ArrayBuffer[(Seq[(PreOp, Seq[Term], Atom)], Term)]
-
-    while (!remFunApps.isEmpty) {
-      val (selectedApps, otherApps) =
-        remFunApps partition { case (_, _, res, _) =>
-          argTermNum(res) == 0 ||
-            strDatabase.isConcrete(res) }
-
-      if (selectedApps.isEmpty) {
-        if (ignoredApps.isEmpty)
-          Console.err.println(
-            "Warning: cyclic definitions found, ignoring some function " +
-              "applications")
-        ignoredApps += remFunApps.head
-        remFunApps = remFunApps.tail
-      } else {
-        remFunApps = otherApps
-
-        for ((_, args, _, _) <- selectedApps; a <- args)
-          argTermNum.put(a, argTermNum.getOrElse(a, 0) - 1)
-
-        val appsPerRes = selectedApps groupBy (_._3)
-        val nonArgTerms = (selectedApps map (_._3)).distinct
-
-        for (t <- nonArgTerms)
-          sortedApps +=
-            ((for ((op, args, _, f) <- appsPerRes(t)) yield (op, args, f), t))
-      }
-    }
-
-    sortedApps.toSeq
   }
 
   /**

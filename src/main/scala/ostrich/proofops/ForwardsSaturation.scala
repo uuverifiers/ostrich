@@ -77,11 +77,9 @@ class ForwardsSaturation(
   ) : Iterator[ApplicationPoint] = {
     val funApps = getFunApps(goal)
     val termConstraintMap = getInitialConstraints(goal)
-    val sortedFunApps = sortFunApps(funApps, termConstraintMap)
 
     val applicationPoints = for {
-      (apps, res) <- sortedFunApps;
-      (op, args, formula) <- apps;
+      (op, args, res, formula) <- funApps;
       argConSeqs = args.map(
         termConstraintMap.get(_)
           .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
