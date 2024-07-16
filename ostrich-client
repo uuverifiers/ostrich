@@ -56,6 +56,11 @@ startDaemon() {
 
         mv "$tempportfile" "$portfile"
         rm "$lockfile"
+
+        # Make sure that the daemon knows about the string portfolios; for
+        # this, we have to start solving some initial string problem
+
+        $BASEDIR/ostrich-client -timeout=0 $BASEDIR/tests/1234.corecstrs.readable.smt2 >/dev/null
     fi
 }
 
@@ -70,9 +75,9 @@ if [ ! -f "$portfile" ]; then
     startDaemon
 fi
 
- mainProcess=$$
+mainProcess=$$
 
- outputlogfile=`mktemp`
+outputlogfile=`mktemp`
 
 success=1
 until [ $success -eq 0 ]; do
@@ -89,7 +94,7 @@ until [ $success -eq 0 ]; do
 
         for var; do
 	    case "$var" in
-                [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -regexTranslator=*)
+                [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh | -regexTranslator=* | [+-]forwardPropagation | [+-]backwardPropagation | [+-]nielsenSplitter)
                     if [ x"$ostrichParams" = x"" ]; then
                         ostrichParams=$var
                     else

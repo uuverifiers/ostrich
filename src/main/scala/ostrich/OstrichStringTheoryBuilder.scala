@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ * Copyright (c) 2019-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -39,19 +39,28 @@ import ap.util.CmdlParser
 
 import scala.collection.mutable.ArrayBuffer
 
+object OstrichStringTheoryBuilder {
+
+  val version = "1.3.5"
+
+  PortfolioSetup
+
+}
+
 /**
  * The entry class of the Ostrich string solver.
  */
 class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
+  import OstrichStringTheoryBuilder._
+
   val name = "OSTRICH"
-  val version = "1.3"
 
   Console.withOut(Console.err) {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2023")
+    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2024")
     println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
@@ -59,7 +68,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   def setAlphabetSize(w : Int) : Unit = ()
 
-  protected var eager, forward, minimizeAuts, useParikh = false
+  protected var eager, forwardPropagation, minimizeAuts, useParikh = false
+  protected var backwardPropagation, nielsenSplitter = true
+
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
 
@@ -74,8 +85,12 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       useLen = OFlags.LengthOptions.On
     case CmdlParser.ValueOpt("length", "auto") =>
       useLen = OFlags.LengthOptions.Auto
-    case CmdlParser.Opt("forward", value) =>
-      forward = value
+    case CmdlParser.Opt("forwardPropagation", value) =>
+      forwardPropagation = value
+    case CmdlParser.Opt("backwardPropagation", value) =>
+      backwardPropagation = value
+    case CmdlParser.Opt("nielsenSplitter", value) =>
+      nielsenSplitter = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
@@ -120,7 +135,9 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
-                                    forwardApprox           = forward,
+                                    forwardPropagation      = forwardPropagation,
+                                    backwardPropagation     = backwardPropagation,
+                                    nielsenSplitter         = nielsenSplitter,
                                     minimizeAutomata        = minimizeAuts,
                                     regexTranslator         = regexTrans))
   }

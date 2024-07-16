@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Oliver Markgraf. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -152,6 +152,48 @@ object BricsAutomaton {
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
+
+  def eqLengthAutomata(length : Int) : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder
+
+    val states =
+      (for (n <- 0 to length) yield builder.getNewState).toIndexedSeq
+
+
+    builder.setInitialState(states(0))
+    for (i <- 0 until length){
+      builder.addTransition(states(i), BricsTLabelOps.sigmaLabel,states(i+1))
+    }
+    builder.setAccept(states(length), isAccepting = true)
+    builder.getAutomaton
+  }
+
+  def boundedLengthAutomata(lowerBound : Int,
+                            upperBound : Option[Int]) : BricsAutomaton = {
+    val upperBoundValue = upperBound.getOrElse(-1)
+    val numberOfStates = math.max(lowerBound,upperBoundValue)
+
+    val builder = new BricsAutomatonBuilder
+    // lb k -> have k+1 states and last state with sigma and accept
+    // ub k -> return k+1 states, every state up to k accept, no loop on last
+    val states =
+      (for (_ <- 0 to numberOfStates) yield builder.getNewState).toIndexedSeq
+
+    builder.setInitialState(states(0))
+    for (i <- 0 until numberOfStates){
+      builder.addTransition(states(i), BricsTLabelOps.sigmaLabel,states(i+1))
+      if (i >= lowerBound && i <= upperBoundValue){
+        builder.setAccept(states(i), isAccepting = true)
+      }
+    }
+    builder.setAccept(states(numberOfStates), isAccepting = true)
+    // no upper bound -> last state has loop
+    if (upperBoundValue == -1){
+      builder.addTransition(states(numberOfStates),
+                            BricsTLabelOps.sigmaLabel,states(numberOfStates))
+    }
+    builder.getAutomaton
+  }
 
   /**
    * A new automaton that accepts all strings x <= str (lexicographical ordering)

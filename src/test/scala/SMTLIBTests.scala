@@ -107,8 +107,6 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
   property("failedProp.smt2") =
     checkFileOpts("tests/failedProp.smt2", "unknown", "", s"-timeout=$shortTimeout")
-  property("failedProp.smt2 +forward") =
-    checkFileOpts("tests/failedProp.smt2", "unsat", "+forward", s"-timeout=$shortTimeout")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
@@ -341,6 +339,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("len-bug.smt2") =
     checkFile("tests/len-bug.smt2", "unsat")
+  property("monadic-length.smt2") =
+    checkFile("tests/monadic-length.smt2", "sat")
 
   property("prefix.smt2") =
     checkFile("tests/prefix.smt2", "sat")
@@ -359,9 +359,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str.at-3b.smt2", "unsat")
   property("str.at-3c.smt2") =
     checkFile("tests/str.at-3c.smt2", "unsat")
-// TODO: does not work anymore with Nielsen?
-//  property("str.at-bug.smt2") =
-//    checkFile("tests/str.at-bug.smt2", "sat")
+  property("str.at-bug.smt2") =
+    checkFile("tests/str.at-bug.smt2", "sat")
 
   property("email-regex.smt2") =
     checkFile("tests/email-regex.smt2", "sat")

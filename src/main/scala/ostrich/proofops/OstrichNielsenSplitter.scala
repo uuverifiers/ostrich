@@ -456,6 +456,9 @@ class OstrichNielsenSplitter(goal : Goal,
    * Apply the Nielsen transformation to some selected equation.
    */
   def splitEquation : Seq[Plugin.Action] = {
+    if (!flags.nielsenSplitter){
+      return List()
+    }
     val multiGroups =
       concatPerRes filter {
         case (res, lits) => lits.size >= 2 && !(strDatabase isConcrete res)
@@ -564,7 +567,6 @@ class OstrichNielsenSplitter(goal : Goal,
 
       import TerForConvenience._
       implicit val o = order
-
       List(
         Plugin.AxiomSplit(List(),
                           List((zeroSym === strDatabase.str2Id(""), List()),

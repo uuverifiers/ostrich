@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 package ostrich.automata
 
-import ostrich.{ECMARegexParser, OFlags, OstrichStringTheory}
+import ostrich.{AutomatonParser, ECMARegexParser, OFlags, OstrichStringTheory}
 import ap.basetypes.IdealInt
 import ap.parser.IExpression.Const
 import ap.parser._
@@ -285,7 +285,7 @@ class ECMAToSymbAFA2(theory : OstrichStringTheory, parser: ECMARegexParser) {
         builder.emptyAtomic2AFA(dir)
 
       case IFunApp(`re_charrange`, Seq(Const(l), Const(u))) =>
-        builder.charrangeAtomic2AFA(dir, new Range(l.intValue, u.intValue+1, 1))
+        builder.charrangeAtomic2AFA(dir, Range(l.intValue, u.intValue+1, 1))
 
       case IFunApp(`re_allchar`, _) => builder.allcharAtomic2AFA(dir)
 
@@ -333,7 +333,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  re_opt_?, re_loop_?,
                  re_opt, re_comp, re_loop, str_to_re, re_from_str, re_capture,
                  re_begin_anchor, re_end_anchor,
-                 re_from_ecma2020, re_from_ecma2020_flags,
+                 re_from_ecma2020, re_from_ecma2020_flags, re_from_automaton,
                  re_case_insensitive}
 
   import Regex2Aut._
@@ -857,9 +857,21 @@ class Regex2Aut(theory : OstrichStringTheory) {
     toBAutomaton(t, true)
 
   def buildAut(t : ITerm,
-               minimize : Boolean = true) : Automaton =
-    new BricsAutomaton(toBAutomaton(t, minimize))
+               minimize : Boolean = true) : Automaton = t match
+  {
+    case IFunApp(`re_from_automaton`, Seq(EncodedString(str))) => {
+      val parser = new AutomatonParser()
+      val res = parser.parseAutomaton(str)
+      res match {
+        case Left(a) => throw new Exception("Automata parsing re.from_automata went wrong " + a)
+        case Right(b) => b
 
+      }
+    }
+    case _ => {
+      new BricsAutomaton(toBAutomaton(t, minimize))
+    }
+  }
   private def numToUnicode(num : Int) : String =
     new String(Character.toChars(num))
 
