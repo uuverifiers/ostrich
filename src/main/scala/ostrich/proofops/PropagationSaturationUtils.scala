@@ -101,7 +101,7 @@ trait PropagationSaturationUtils {
           case `str_in_re_id` =>
             decodeRegexId(a, false)
           // will be a str_len == 0 as we only return those
-          case FunPred(`str_len`) =>
+          case FunPred(`str_len`) if a(1).isZero =>
             BricsAutomaton.fromString("")
           // will not happen
           case _ => {
@@ -196,7 +196,8 @@ trait PropagationSaturationUtils {
   /**
    * Get initial constraints on string vars
    *
-   * The atom will be str_in_re_id, or a str_len constraint
+   * The atom will be str_in_re_id, or a str_len constraint if enforces
+   * 0 len
    */
   def getInitialConstraints(goal: Goal) : MMultiMap[Term, Atom] = {
     val atoms = goal.facts.predConj
@@ -208,7 +209,8 @@ trait PropagationSaturationUtils {
 
     for (a <- atoms.positiveLits) a.pred match {
       case `str_in_re_id` => termConstraints.addBinding(a(0), a)
-      case FunPred(`str_len`) => termConstraints.addBinding(a(0), a)
+      case FunPred(`str_len`) if a(1).isZero
+        => termConstraints.addBinding(a(0), a)
       case _ => // nothing
     }
 

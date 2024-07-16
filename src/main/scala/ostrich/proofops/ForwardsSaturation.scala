@@ -103,7 +103,7 @@ class ForwardsSaturation(
           case `str_in_re_id` =>
             getAutomatonSize(decodeRegexId(a, false))
           // will be a str_len == 0 as we only return those
-          case FunPred(`str_len`) => 1
+          case FunPred(`str_len`) if a(1).isZero => 1
           // will not happen
           case _ => 0
         }
