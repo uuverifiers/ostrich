@@ -171,7 +171,7 @@ trait PropagationSaturationUtils {
         val rightVar = theory.StringSort.newConstant("rhs")
         Some((ConcatPreOp, List(a(0), rightVar), a(1), a))
       }
-      case FunPred(f) if rexOps contains f =>
+      case FunPred(f) if (rexOps contains f) || (f == `str_len`) =>
         None
       // next three cases prevent exception for supported string
       // functions that aren't apps
