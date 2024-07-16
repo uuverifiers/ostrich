@@ -490,7 +490,21 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (visitor3(visitor2(visitor1(f))), signature)
   }
 
+  object UnsupportedTermException extends Exception
+
   private def printEquations(f : IFormula) : Unit = {
+    import ap.parser._
+    import IExpression._
+    var cnt = 0
+    for (INamedPart(_, g) <- PartExtractor(f);
+         disjunct <- DNFConverter.mbDNF(~g)) {
+      println("==== Equation set #" + cnt)
+      cnt = cnt + 1
+      printEquationsHelp(disjunct)
+    }
+  }
+
+  private def printEquationsHelp(f : IFormula) : Unit = {
     import ap.parser._
     import IExpression._
     import ap.types.Sort
@@ -498,9 +512,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     import ostrich.automata.Regex2Aut
 
     val conjuncts =
-      (for (INamedPart(_, g) <- PartExtractor(f);
-            h <- LineariseVisitor(Transform2NNF(~g), IBinJunctor.And))
-       yield h).toList
+      LineariseVisitor(Transform2NNF(f), IBinJunctor.And).toList
 
     val equations =
       for (Eq(s ::: StringSort, t ::: StringSort) <- conjuncts) yield (s, t)
@@ -524,33 +536,40 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     def term2String(t : ITerm) : String = t match {
       case IFunApp(`str_empty`, _) =>
         ""
+      case IFunApp(`str_cons`, Seq(Regex2Aut.SmartConst(n), IFunApp(`str_empty`, _))) =>
+        niceTerminal(toCode(n))
       case IFunApp(`str_cons`, Seq(Regex2Aut.SmartConst(n), tail)) =>
-        niceTerminal(toCode(n)) + term2String(tail)
+        niceTerminal(toCode(n)) + " " + term2String(tail)
       case IFunApp(`str_++`, Seq(left, right)) =>
-        term2String(left) + term2String(right)
+        term2String(left) + " " + term2String(right)
       case IConstant(c) =>
         varNames(c)
+      case _ =>
+        throw UnsupportedTermException
     }
 
     val defLetter = 0
 
     val equationStrings =
-      for ((s, t) <- equations) yield {
+      for ((s, t) <- equations) yield try {
         (term2String(s), term2String(t)) match {
           case ("", str) =>
-            niceTerminal(defLetter) + " = " + niceTerminal(defLetter) + str
+            niceTerminal(defLetter) + " = " + niceTerminal(defLetter) + " " + str
           case (str, "") =>
-            niceTerminal(defLetter) + str + " = " + niceTerminal(defLetter)
+            niceTerminal(defLetter) + " " + str + " = " + niceTerminal(defLetter)
           case (str1, str2) =>
             str1 + " = " + str2
         }
+      } catch {
+        case UnsupportedTermException =>
+          niceTerminal(defLetter) + " = " + niceTerminal(defLetter)
       }
 
     if (characterCodes.isEmpty)
       characterCodes.put(0, 0)
 
-    println(s"Variables {${variables.map(varNames).mkString("")}}")
-    println(s"Terminals {${(for (k <- 0 until characterCodes.size) yield niceTerminal(k)).mkString("")}}")
+    println(s"Variables {${variables.map(varNames).mkString(",")}}")
+    println(s"Terminals {${(for (k <- 0 until characterCodes.size) yield niceTerminal(k)).mkString(",")}}")
 
     for (s <- equationStrings)
       println(s"Equation: $s")
@@ -558,14 +577,17 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     println("SatGlucose(0)")
   }
 
-  private def niceVarName(index : Int) : String = {
-    assert(index >= 0 && index <= 25, "too many variables")
-    ('A'.toInt + index).toChar.toString
-  }
-  private def niceTerminal(index : Int) : String = {
-    assert(index >= 0 && index <= 25, "too many letters")
-    ('a'.toInt + index).toChar.toString
-  }
+  private def niceVarName(index : Int) : String = indexToString(index, 'A')
+
+  private def niceTerminal(index : Int) : String = indexToString(index, 'a')
+
+  private def indexToString(index : Int, startLetter : Char) : String =
+    index match {
+      case index if index >= 0 && index <= 25 =>
+        (startLetter.toInt + index).toChar.toString
+      case index if index > 25 =>
+        startLetter.toString + (index - 25)
+    }
 
   override val reducerPlugin = new OstrichReducerFactory(this)
 
