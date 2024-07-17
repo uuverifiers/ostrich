@@ -63,6 +63,8 @@ class OstrichCut(theory : OstrichStringTheory) {
     // TODO: is it better to sort function application, start with
     // picking values from the leaves?
 
+    // TODO: we probably do not need cuts for all string variables.
+
     val stringVariables =
       for (a <- allAtoms.iterator;
            sorts = SortedPredicate argumentSorts a;
