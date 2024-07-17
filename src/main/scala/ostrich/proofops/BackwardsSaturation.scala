@@ -141,7 +141,10 @@ class BackwardsSaturation(
       ++ argCon.map(Seq(_)).getOrElse(Seq())
       ++ args.map(termConstraintMap.get(_).getOrElse(Seq())).toSeq.flatten
     )
-    Seq(AxiomSplit(assumptions, argCases, theory))
+
+    logSaturation("backward propagation") {
+      Seq(AxiomSplit(assumptions, argCases, theory))
+    }
   }
 
   /**

@@ -141,10 +141,12 @@ class ForwardsSaturation(
     val lautId = LinearCombination(IdealInt(autId));
     val assumptions = List(formula) ++ argCons.flatten
 
-    Seq(AddAxiom(
-      assumptions,
-      Conjunction.conj(str_in_re_id_app(Seq(lres, lautId)), goal.order),
-      theory
-    ))
+    logSaturation("forward propagation") {
+      Seq(AddAxiom(
+        assumptions,
+        Conjunction.conj(str_in_re_id_app(Seq(lres, lautId)), goal.order),
+        theory
+      ))
+    }
   }
 }

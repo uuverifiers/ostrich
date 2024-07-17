@@ -238,4 +238,10 @@ trait PropagationSaturationUtils {
         throw new Exception ("Could not decode regex id " + lc)
     }
   }
+
+  def logSaturation[A](category : String)(action : A) : A = {
+    if (OFlags.debug)
+      Console.err.println(f"Performing $category: $action")
+    action
+  }
 }
