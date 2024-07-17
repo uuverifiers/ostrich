@@ -186,7 +186,8 @@ trait PropagationSaturationUtils {
           case Some((op, args, res)) =>
             Some((op(), args, res, a))
           case _ =>
-            throw new Exception ("Cannot get fun app from literal " + a)
+            // ignore unknown string functions
+            None
         }
       case _ =>
         None
