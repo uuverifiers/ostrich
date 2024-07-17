@@ -39,7 +39,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
 import ap.terfor.{RichPredicate, Term}
-import ap.theories.SaturationProcedure
+import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
 import ostrich.automata.Automaton
@@ -167,4 +167,8 @@ class BackwardsSaturation(
 
     applicationPoints.toIterator
   }
+
+  override def isSoundForSat(
+    theories : Seq[Theory],
+    config : Theory.SatSoundnessConfig.Value) : Boolean = true
 }
