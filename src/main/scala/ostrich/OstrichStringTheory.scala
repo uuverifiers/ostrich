@@ -34,7 +34,10 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{BackwardsSaturation, ForwardsSaturation, OstrichClose, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
+import ostrich.proofops.{BackwardsSaturation, ForwardsSaturation,
+                         OstrichClose, OstrichNielsenSplitter,
+                         OstrichPredtoEqConverter, OstrichStrInReTranslator,
+                         OstrichCut}
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -343,6 +346,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
   private val strInReTranslator  = new OstrichStrInReTranslator(this)
+  private val cutter             = new OstrichCut(this)
 
   def plugin = Some(new Plugin {
 
@@ -378,7 +382,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
           nielsenSplitter.splitEquation                elseDo
           predToEq.lazyEnumeration                     elseDo
-          callBackwardProp(goal)
+          cutter.handleGoal(goal)
+          //callBackwardProp(goal)
 
         } catch {
           case t : ap.util.Timeout => throw t
@@ -408,6 +413,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         case OstrichSolver.BlockingActions(actions) => actions
       }
 
+/*
     override def computeModel(goal : Goal) : Seq[Plugin.Action] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
         List()
@@ -438,7 +444,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                              stringAssignments & lenAssignments,
                              OstrichStringTheory.this))
       }
-
+ */
   })
 
   //////////////////////////////////////////////////////////////////////////////
