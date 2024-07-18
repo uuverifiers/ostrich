@@ -63,7 +63,7 @@ import scala.collection.mutable.{MultiMap => MMultiMap}
  */
 class BackwardsSaturation(
   val theory : OstrichStringTheory
-) extends SaturationProcedure("ForwardsPropagation")
+) extends SaturationProcedure("BackwardsPropagation")
   with PropagationSaturationUtils {
   import theory.{ str_len, str_in_re_id, FunPred }
 
