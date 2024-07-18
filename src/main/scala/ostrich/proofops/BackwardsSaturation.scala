@@ -44,8 +44,6 @@ import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
 import ostrich.automata.Automaton
 
-import scala.collection.mutable.{MultiMap => MMultiMap}
-
 /**
  * A SaturationProcedure for backwards propagation.
  *
@@ -154,7 +152,7 @@ class BackwardsSaturation(
    * handleApplicationPoint
    */
   private def extractApplicationPoints(
-    goal : Goal, termConstraintMap : MMultiMap[Term, Atom]
+    goal : Goal, termConstraintMap : Map[Term, Seq[Atom]]
   ) : Iterator[ApplicationPoint] = {
     val funApps = getFunApps(goal)
 

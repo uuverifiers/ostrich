@@ -198,9 +198,9 @@ trait PropagationSaturationUtils {
    * Get initial constraints on string vars
    *
    * The atom will be str_in_re_id, or a str_len constraint if enforces
-   * 0 len
+   * 0 len. Atoms will be sorted by goal order.
    */
-  def getInitialConstraints(goal: Goal) : MMultiMap[Term, Atom] = {
+  def getInitialConstraints(goal: Goal) : Map[Term, Seq[Atom]] = {
     val atoms = goal.facts.predConj
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
@@ -215,7 +215,9 @@ trait PropagationSaturationUtils {
       case _ => // nothing
     }
 
-    termConstraints
+    termConstraints.map({ case (t, as) =>
+      (t, as.toSeq.sorted(goal.order.atomOrdering))
+    }).toMap
   }
 
   /**
