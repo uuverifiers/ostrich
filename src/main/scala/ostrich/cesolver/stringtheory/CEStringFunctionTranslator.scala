@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2023 Denghang Hu, Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -64,8 +64,8 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
                  str_replaceallcg, str_replacecg, str_extract}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
-  private val cgTranslator   = new Regex2PFA(theory,
-                                             new JavascriptPrioAutomatonBuilder)
+  private val builder        = new JavascriptPrioAutomatonBuilder(theory)
+  private val cgTranslator   = builder.regex2pfa
 
   private def regexAsTerm(t : Term) : Option[ITerm] =
     try {
@@ -80,10 +80,10 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
                     str_at, str_at_right, str_trim) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
-  
+
   def apply(a : Atom) : Option[(() => PreOp, Seq[Term], Term)] = a.pred match {
 
-    case FunPred(`str_len`) => 
+    case FunPred(`str_len`) =>
       Some((() => LengthCEPreOp(Internal2InputAbsy(a(1))), Seq(a(0)), a(1)))
 
     case FunPred(`str_++`) =>
@@ -100,7 +100,7 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
       val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
       val patternStr = strDatabase term2ListGet a(1) map(_.toChar)
       Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
-      
+
     case FunPred(`str_replacere`) if (strDatabase isConcrete a(2)) =>
       val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
       for (regex <- regexAsTerm(a(1))) yield {
@@ -110,12 +110,12 @@ class CEStringFunctionTranslator(theory : CEStringTheory,
           }
           (op, List(a(0)), a(3))
         }
-    case FunPred(`str_replaceall`) if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) => 
+    case FunPred(`str_replaceall`) if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
       val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
       val patternStr = strDatabase term2ListGet a(1) map(_.toChar)
       Some((() => ReplaceAllCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
 
-    case FunPred(`str_replaceallre`) if (strDatabase isConcrete a(2)) => 
+    case FunPred(`str_replaceallre`) if (strDatabase isConcrete a(2)) =>
       val matchStr = strDatabase term2ListGet a(2) map(_.toChar)
       for (regex <- regexAsTerm(a(1))) yield {
           val op = () => {
