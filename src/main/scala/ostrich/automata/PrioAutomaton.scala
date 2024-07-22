@@ -128,13 +128,18 @@ case class PrioAutomaton(
 
 // A PFA builder constructs PFA based on regular expression structure
 // following *certain* semantics of regex.
-abstract class PrioAutomatonBuilder {
+abstract class PrioAutomatonBuilder(val theory : OstrichStringTheory) {
 
   type State = PrioAutomaton.State
   type TLabel = PrioAutomaton.TLabel
   val LabelOps : TLabelOps[TLabel] = PrioAutomaton.LabelOps
   type SigmaTransition = PrioAutomaton.SigmaTransition
   type ETransition = PrioAutomaton.ETransition
+
+  /*
+   * The Regex2PFA associated with this builder
+   */
+  val regex2pfa = new Regex2PFA(theory, this)
 
   def none() : PrioAutomaton
   def epsilon() : PrioAutomaton
@@ -171,7 +176,6 @@ abstract class PrioAutomatonBuilder {
   // 2) if state s is an initial state of some automaton corresponding
   // to capture group i, so is the copyed state s'
   def duplicate(base : PrioAutomaton) : PrioAutomaton = {
-    import Regex2PFA.{capState, stateCap, capInit}
     import PrioAutomaton.getNewState
 
     base match {
@@ -233,11 +237,14 @@ abstract class PrioAutomatonBuilder {
           }
 
           // now the database ...
-          for (caps <- stateCap.get(oldstate).iterator; cap <- caps) {
-            stateCap.addBinding(newstate, cap)
-            capState.addBinding(cap, newstate)
-            if (capInit.getOrElse(cap, MSet()) contains oldstate) {
-              capInit.addBinding(cap, newstate)
+          for (
+            caps <- regex2pfa.stateCap.get(oldstate).iterator;
+            cap <- caps
+          ) {
+            regex2pfa.stateCap.addBinding(newstate, cap)
+            regex2pfa.capState.addBinding(cap, newstate)
+            if (regex2pfa.capInit.getOrElse(cap, MSet()) contains oldstate) {
+              regex2pfa.capInit.addBinding(cap, newstate)
             }
           }
         }
@@ -250,7 +257,8 @@ abstract class PrioAutomatonBuilder {
 
 }
 
-class PythonPrioAutomatonBuilder extends PrioAutomatonBuilder {
+class PythonPrioAutomatonBuilder(theory : OstrichStringTheory)
+  extends PrioAutomatonBuilder(theory) {
   // In python mode, we don't use the second component
   // of the accepted states because we don't differentiate these two types of acceptance condition
   // thus, **all accepting states are in F1**
@@ -443,7 +451,8 @@ class PythonPrioAutomatonBuilder extends PrioAutomatonBuilder {
 
 }
 
-class JavascriptPrioAutomatonBuilder extends PrioAutomatonBuilder {
+class JavascriptPrioAutomatonBuilder(theory : OstrichStringTheory)
+  extends PrioAutomatonBuilder(theory) {
   // In js mode, we use the first component F1 (res. F2) to denote accepting
   // states which only accepts empty (res. nonempty) traces.
   // to approximate the js semantics as precisely as possible,
@@ -796,17 +805,6 @@ object Regex2PFA {
       }
     }
   }
-
-  // mutable maps collecting info during translation
-  val capState =
-    new MHashMap[Int, MSet[State]]
-    with MMultiMap[Int, State]
-  val stateCap =
-    new MHashMap[State, MSet[Int]]
-    with MMultiMap[State, Int]
-  val capInit =
-    new MHashMap[Int, MSet[State]]
-    with MMultiMap[Int, State]
 }
 
 class Regex2PFA(theory : OstrichStringTheory, builder : PrioAutomatonBuilder) {
@@ -820,6 +818,17 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PrioAutomatonBuilder) {
   import theory.strDatabase.EncodedString
 
   private val simplifier = new Regex2Aut.DiffEliminator(theory)
+
+  // mutable maps collecting info during translation
+  val capState =
+    new MHashMap[Int, MSet[State]]
+    with MMultiMap[Int, State]
+  val stateCap =
+    new MHashMap[State, MSet[Int]]
+    with MMultiMap[State, Int]
+  val capInit =
+    new MHashMap[Int, MSet[State]]
+    with MMultiMap[Int, State]
 
   // this is the map from literal numbering to internal numbering of
   // capture groups. It is for translating the replacement string.
@@ -998,10 +1007,10 @@ class Regex2PFA(theory : OstrichStringTheory, builder : PrioAutomatonBuilder) {
 
     val (aut, _) = buildPatternImpl(simplifier(pat))
 
-    val state2Capture = (for ((s, caps) <- Regex2PFA.stateCap)
+    val state2Capture = (for ((s, caps) <- stateCap)
       yield (s, caps.toSet)).toMap
 
-    val cap2Init = (for ((cap, inits) <- Regex2PFA.capInit)
+    val cap2Init = (for ((cap, inits) <- capInit)
       yield (cap, inits.toSet)).toMap
 
     (aut, numCapture, state2Capture, cap2Init)
