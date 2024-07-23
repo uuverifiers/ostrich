@@ -56,8 +56,9 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_replaceallcg, str_replacecg, str_extract}
 
   private val regexExtractor = theory.RegexExtractor(facts.predConj)
-  private val cgTranslator   = new Regex2PFA(theory,
-                                             new JavascriptPrioAutomatonBuilder)
+  private val builder = new JavascriptPrioAutomatonBuilder(theory)
+  private val cgTranslator   = builder.regex2pfa
+
 
   private def regexAsTerm(t : Term) : Option[ITerm] =
     try {
