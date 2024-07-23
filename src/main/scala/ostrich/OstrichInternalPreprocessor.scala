@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -58,7 +58,13 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     // As a heuristic, we generate length predicate whenever the
     // problem already contained length constraints from the
     // beginning, or if the problem contains string concatenation
-    val useLength = theory.lengthNeeded(f) || (f.predicates contains _str_++)
+    val useLength =
+      flags.useLength match {
+        case OFlags.LengthOptions.Off  => false
+        case OFlags.LengthOptions.On   => true
+        case OFlags.LengthOptions.Auto =>
+          theory.lengthNeeded(f) || (f.predicates contains _str_++)
+      }
 
     if (!useLength)
       return f
