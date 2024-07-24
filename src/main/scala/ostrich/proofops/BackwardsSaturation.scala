@@ -42,7 +42,7 @@ import ap.terfor.{RichPredicate, Term}
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-import ostrich.automata.Automaton
+import ostrich.automata.{Automaton, BricsAutomaton}
 
 /**
  * A SaturationProcedure for backwards propagation.
@@ -98,6 +98,7 @@ class BackwardsSaturation(
   override def handleApplicationPoint(
     goal : Goal, appPoint : ApplicationPoint
   ) : Seq[Plugin.Action] = {
+
     val termConstraintMap = getInitialConstraints(goal)
     // return empty if appPoint no longer relevant
     if (!extractApplicationPoints(goal, termConstraintMap).contains(appPoint))
@@ -117,27 +118,40 @@ class BackwardsSaturation(
             )
         }
 
-    val argAuts = for (a <- args)
-      yield termConstraintMap.get(a)
-        .map(_.map(atom => atomConstraintToAut(a, Some(atom))).toSeq)
-        .getOrElse(Seq(atomConstraintToAut(a, None)))
+    val argAuts = for (aopt <- args)
+      yield aopt match {
+        case None => {
+          Seq(BricsAutomaton.makeAnyString())
+        }
+        case Some(a) => {
+          termConstraintMap.get(a)
+            .map(_.map(atom => atomConstraintToAut(a, Some(atom))).toSeq)
+            .getOrElse(Seq(atomConstraintToAut(a, None)))
+        }
+      }
     val resAut = atomConstraintToAut(res, argCon)
 
     val (newConstraints, _) = op(argAuts, resAut)
-    val argCases = newConstraints.map(argCS => {
-      (args zip argCS).map({ case (a, aut) =>
-        val autId = autDatabase.automaton2Id(aut)
-        val argTerm = LinearCombination(a, goal.order)
-        val lautId = LinearCombination(IdealInt(autId))
-        str_in_re_id_app(Seq(argTerm, lautId))
-      })
-    }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
-    .toSeq
+    // remove cases where one argument has no solutions
+    val argCases = newConstraints.filter(_.forall(!_.isEmpty))
+      .map(argCS => {
+        (args zip argCS).collect({
+          case (Some(a), aut) =>
+            val autId = autDatabase.automaton2Id(aut)
+            val argTerm = LinearCombination(a, goal.order)
+            val lautId = LinearCombination(IdealInt(autId))
+            str_in_re_id_app(Seq(argTerm, lautId))
+        })
+      }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
+      .toSeq
 
     val assumptions = (
       Seq(funApp)
       ++ argCon.map(Seq(_)).getOrElse(Seq())
-      ++ args.map(termConstraintMap.get(_).getOrElse(Seq())).toSeq.flatten
+      ++ args.collect({
+          case Some(a) =>
+            termConstraintMap.get(a).getOrElse(Seq())
+        }).toSeq.flatten
     )
 
     logSaturation("backward propagation") {

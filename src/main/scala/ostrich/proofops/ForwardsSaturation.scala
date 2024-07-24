@@ -42,7 +42,7 @@ import ap.theories.{SaturationProcedure, Theory}
 import ap.util.Combinatorics.cartesianProduct
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-import ostrich.automata.Automaton
+import ostrich.automata.{Automaton, BricsAutomaton}
 
 /**
  * A SaturationProcedure for forwards propagation.
@@ -80,14 +80,17 @@ class ForwardsSaturation(
 
     val applicationPoints = for {
       (op, args, res, formula) <- funApps;
-      argConSeqs = args.map(
-        termConstraintMap.get(_)
-          .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
-          // Use [None] instead of [] for no constraint
-          // (helps Cartesian product)
-          .map(cons => if (cons.isEmpty) Seq(None) else cons)
-          .getOrElse(Seq(None))
-      );
+      argConSeqs = args.map({
+        case None => Seq(None)
+        case Some(a) => {
+          termConstraintMap.get(a)
+            .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
+            // Use [None] instead of [] for no constraint
+            // (helps Cartesian product)
+            .map(cons => if (cons.isEmpty) Seq(None) else cons)
+            .getOrElse(Seq(None))
+        }
+      });
       argCons <- cartesianProduct(argConSeqs.toList)
     } yield (formula, argCons)
 
@@ -132,8 +135,9 @@ class ForwardsSaturation(
             )
         }
 
-    val argAuts = (args zip argCons).map({ case (arg, cons) =>
-      Seq(atomConstraintToAut(arg, cons))
+    val argAuts = (args zip argCons).map({
+      case (None, _) => Seq(BricsAutomaton.makeAnyString)
+      case (Some(arg), cons) => Seq(BricsAutomaton.makeAnyString)
     })
     val resultConstraint = op.forwardApprox(argAuts);
     val autId = autDatabase.automaton2Id(resultConstraint);

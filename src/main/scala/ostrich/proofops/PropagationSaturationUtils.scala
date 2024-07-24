@@ -136,10 +136,13 @@ trait PropagationSaturationUtils {
    * application. resultTerm is the term to compare with the result of
    * the application. formula is the full atom (e.g. x = replaceall(y,
    * s, z)).
+   *
+   * argTerms may be None which stands for "an unconstrained fresh
+   * value"
    */
   def getFunApps(
     goal : Goal
-  ) : Seq[(PreOp, Seq[Term], Term, Atom)] = {
+  ) : Seq[(PreOp, Seq[Option[Term]], Term, Atom)] = {
     val atoms = goal.facts.predConj
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
@@ -149,7 +152,7 @@ trait PropagationSaturationUtils {
     //
     // funApps -- each function application:
     //  (operation, arguments, result term, original formula containing app)
-    val funApps = new ArrayBuffer[(PreOp, Seq[Term], Term, Atom)]
+    val funApps = new ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]
 
     for (a <- atoms.positiveLits)
       getFunApp(stringFunctionTranslator, a).foreach(funApps += _)
@@ -160,16 +163,17 @@ trait PropagationSaturationUtils {
   /**
    * Split a fun app atom into (op, args, atom) (see getFunApps)
    *
-   * Or None if not a fun app
+   * Or None if not a fun app. An arg of None means that the argument is
+   * an unconstrained string
    */
   def getFunApp(
     stringFunctionTranslator : OstrichStringFunctionTranslator,
     a : Atom
-  ) : Option[(PreOp, Seq[Term], Term, Atom)] = {
+  ) : Option[(PreOp, Seq[Option[Term]], Term, Atom)] = {
     a.pred match {
       case `str_prefixof` => {
         val rightVar = theory.StringSort.newConstant("rhs")
-        Some((ConcatPreOp, List(a(0), rightVar), a(1), a))
+        Some((ConcatPreOp, List(Some(a(0)), None), a(1), a))
       }
       case FunPred(f) if (rexOps contains f) || (f == `str_len`) =>
         None
@@ -184,7 +188,12 @@ trait PropagationSaturationUtils {
       case p if (theory.predicates contains p) =>
         stringFunctionTranslator(a) match {
           case Some((op, args, res)) =>
-            Some((op(), args, res, a))
+            Some((
+              op(),
+              args.map(a => Some(a)).toSeq,
+              res,
+              a
+            ))
           case _ =>
             // ignore unknown string functions
             None
