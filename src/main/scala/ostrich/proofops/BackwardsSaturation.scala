@@ -121,7 +121,7 @@ class BackwardsSaturation(
     val argAuts = for (aopt <- args)
       yield aopt match {
         case None => {
-          Seq(BricsAutomaton.makeAnyString())
+          Seq(autDatabase.anyStringAut)
         }
         case Some(a) => {
           termConstraintMap.get(a)

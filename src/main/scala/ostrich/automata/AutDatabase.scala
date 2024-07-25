@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2020-2021 Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -147,6 +147,8 @@ class AutDatabase(theory : OstrichStringTheory,
                   minimizeAutomata : Boolean) {
 
   import AutDatabase._
+  import IExpression.toFunApplier // for e.g. re_* to become applicable
+  import theory.{re_*, re_allchar}
 
   protected val regex2Aut  = new Regex2Aut(theory)
 
@@ -162,6 +164,9 @@ class AutDatabase(theory : OstrichStringTheory,
 
   private val prefixSortedIntersectionTree = new SetTrie
   private val knownConflicts = new SuffixTrie
+
+  def anyStringId() : Int = regex2Id(re_*(re_allchar()))
+  def anyStringAut() : Automaton = id2Automaton(anyStringId()).get
 
   /**
    * Query the id of a regular expression.
@@ -302,7 +307,7 @@ class AutDatabase(theory : OstrichStringTheory,
         //  <==>
         // (aut1 & aut2.complement) = empty
         for (a1 <- id2AutomatonBE(aut1);
-             a2 <- id2AutomatonBE(aut2.complement)) yield 
+             a2 <- id2AutomatonBE(aut2.complement)) yield
           subsetRel.getOrElseUpdate((aut1, aut2),
                                     !AutomataUtils.areConsistentAutomata(
                                       List(a1, a2)))

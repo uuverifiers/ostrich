@@ -136,8 +136,8 @@ class ForwardsSaturation(
         }
 
     val argAuts = (args zip argCons).map({
-      case (None, _) => Seq(BricsAutomaton.makeAnyString)
-      case (Some(arg), cons) => Seq(BricsAutomaton.makeAnyString)
+      case (None, _) => Seq(autDatabase.anyStringAut)
+      case (Some(arg), cons) => Seq(autDatabase.anyStringAut)
     })
     val resultConstraint = op.forwardApprox(argAuts);
     val autId = autDatabase.automaton2Id(resultConstraint);

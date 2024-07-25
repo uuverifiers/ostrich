@@ -94,7 +94,7 @@ trait PropagationSaturationUtils {
         strDatabase.term2List(term).map({ w =>
           val str : String = w.map(i => i.toChar)(breakOut)
           BricsAutomaton.fromString(str)
-        }).getOrElse(BricsAutomaton.makeAnyString())
+        }).getOrElse(autDatabase.anyStringAut)
       }
       case Some(a) => {
         a.pred match {
