@@ -165,8 +165,9 @@ class AutDatabase(theory : OstrichStringTheory,
   private val prefixSortedIntersectionTree = new SetTrie
   private val knownConflicts = new SuffixTrie
 
-  def anyStringId() : Int = regex2Id(re_*(re_allchar()))
-  def anyStringAut() : Automaton = id2Automaton(anyStringId()).get
+  lazy val anyStringAut : Automaton
+    = regex2Aut.buildAut(re_*(re_allchar()), true)
+  lazy val anyStringId : Int = automaton2Id(anyStringAut)
 
   /**
    * Query the id of a regular expression.

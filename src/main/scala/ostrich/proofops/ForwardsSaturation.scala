@@ -42,7 +42,7 @@ import ap.theories.{SaturationProcedure, Theory}
 import ap.util.Combinatorics.cartesianProduct
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-import ostrich.automata.{Automaton, BricsAutomaton}
+import ostrich.automata.Automaton
 
 /**
  * A SaturationProcedure for forwards propagation.

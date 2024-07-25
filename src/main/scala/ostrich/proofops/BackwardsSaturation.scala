@@ -42,7 +42,7 @@ import ap.terfor.{RichPredicate, Term}
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-import ostrich.automata.{Automaton, BricsAutomaton}
+import ostrich.automata.Automaton
 
 /**
  * A SaturationProcedure for backwards propagation.
