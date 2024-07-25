@@ -172,7 +172,6 @@ trait PropagationSaturationUtils {
   ) : Option[(PreOp, Seq[Option[Term]], Term, Atom)] = {
     a.pred match {
       case `str_prefixof` => {
-        val rightVar = theory.StringSort.newConstant("rhs")
         Some((ConcatPreOp, List(Some(a(0)), None), a(1), a))
       }
       case FunPred(f) if (rexOps contains f) || (f == `str_len`) =>
