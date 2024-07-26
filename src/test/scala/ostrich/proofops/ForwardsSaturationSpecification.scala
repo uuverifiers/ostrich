@@ -44,6 +44,7 @@ import ap.proof.{ConstraintSimplifier, Vocabulary}
 import ap.terfor._
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
+import ap.terfor.preds.Atom
 import ap.util.Debug
 import org.scalacheck.Properties
 import ostrich.automata.{Automaton, BricsAutomaton}
@@ -123,11 +124,11 @@ object ForwardsSaturationSpecification
   val iZreplaceX = makeReplaceAll(x, "b", "c", z)
 
   property("Test Simple Replace App Points") = {
-    appPointsSimpleReplace == List((iYreplaceX, List(Some(iXinAorB), None)))
+    appPointsSimpleReplace == List((iYreplaceX, List(List(iXinAorB), List())))
   }
 
   property("Test Simple Replace Priorities") = {
-    prioritiesSimpleReplace == List(4)
+    prioritiesSimpleReplace == List(3)
   }
 
   property("Test Simple Replace Applied") = {
@@ -142,14 +143,18 @@ object ForwardsSaturationSpecification
   }
 
   property("Test Two X Constraints App Points") = {
-    appPointsReplaceTwoXCons.toSet == Set(
-      (iYreplaceX, List(Some(iXinABThenCstar), None)),
-      (iYreplaceX, List(Some(iXinABCstar), None))
+    equalAppPoints(
+      appPointsReplaceTwoXCons,
+      List(
+        (iYreplaceX, List(List(iXinABThenCstar), List())),
+        (iYreplaceX, List(List(iXinABCstar), List())),
+        (iYreplaceX, List(List(iXinABCstar, iXinABThenCstar), List()))
+      )
     )
   }
 
   property("Test Two X Constraints Priorities") = {
-    prioritiesReplaceTwoXCons.toSet == Set(2, 4)
+    prioritiesReplaceTwoXCons.toSet == Set(1, 3, 4)
   }
 
   property("Test Two X Constraints Applied") = {
@@ -171,20 +176,31 @@ object ForwardsSaturationSpecification
            ) => true
       case _ =>
         false
+    }) && appliedReplaceTwoXCons.exists(_ match {
+      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
+        if assumptions.toSet == Set(iXinABThenCstar, iYreplaceX, iXinABCstar) &&
+           isCorrectRegex(
+             newConstraint, y,
+             List("db", "dbcccc"), List("ab", "abccc", "dd")
+           ) => true
+      case _ =>
+        false
     })
   }
 
   property("Test Two Fun Apps App Points") = {
     appPointsTwoFuns.toSet == Set(
-      (iYreplaceX, List(Some(iXinABCstar), None)),
-      (iYreplaceX, List(Some(iXinABThenCstar), None)),
-      (iZreplaceX, List(Some(iXinABCstar), None)),
-      (iZreplaceX, List(Some(iXinABThenCstar), None))
+      (iYreplaceX, List(List(iXinABCstar), List())),
+      (iYreplaceX, List(List(iXinABThenCstar), List())),
+      (iYreplaceX, List(List(iXinABCstar, iXinABThenCstar), List())),
+      (iZreplaceX, List(List(iXinABCstar), List())),
+      (iZreplaceX, List(List(iXinABThenCstar), List())),
+      (iZreplaceX, List(List(iXinABCstar, iXinABThenCstar), List()))
     )
   }
 
   property("Test Two Fun Apps Priorities") = {
-    prioritiesTwoFuns.toSet == Set(2, 4)
+    prioritiesTwoFuns.toSet == Set(1, 3, 4)
   }
 
   property("Test Two Fun Apps") = {
@@ -200,6 +216,15 @@ object ForwardsSaturationSpecification
     }) && appliedTwoFuns.exists(_ match {
       case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
         if assumptions.toSet == Set(iXinABThenCstar, iYreplaceX) &&
+           isCorrectRegex(
+             newConstraint, y,
+             List("db", "dbcccc"), List("ab", "abccc", "dd")
+           ) => true
+      case _ =>
+        false
+    }) && appliedTwoFuns.exists(_ match {
+      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
+        if assumptions.toSet == Set(iXinABCstar, iXinABThenCstar, iYreplaceX) &&
            isCorrectRegex(
              newConstraint, y,
              List("db", "dbcccc"), List("ab", "abccc", "dd")
@@ -224,18 +249,26 @@ object ForwardsSaturationSpecification
            ) => true
       case _ =>
         false
+    }) && appliedTwoFuns.exists(_ match {
+      case Seq(AddAxiom(assumptions, SingleAtom(newConstraint), _))
+        if assumptions.toSet == Set(iXinABCstar, iXinABThenCstar, iZreplaceX) &&
+           isCorrectRegex(
+             newConstraint, z,
+             List("ac", "accccc", "acc"), List("ab", "abccc", "cb")
+           ) => true
+      case _ =>
+        false
     })
   }
 
   property("Test Str Len App Points") = {
     // the str_len(x) === 1 doesn't get translated to anything
     // propagatable at the moment
-    appPointsStrLen == List((iYreplaceX, List(None, None)))
+    appPointsStrLen == List((iYreplaceX, List(List(), List())))
   }
 
   property("Test Simple Replace Priorities") = {
-    // TODO: check
-    prioritiesStrLen == List(2)
+    prioritiesStrLen == List(0)
   }
 
   property("Test Simple Replace Applied") = {
@@ -249,5 +282,16 @@ object ForwardsSaturationSpecification
       case _ =>
         false
     })
+  }
+
+  private def equalAppPoints(
+    points1 : Seq[fwdsSat.ApplicationPoint],
+    points2 : Seq[(Formula, Seq[Seq[TerFor]])]
+  ) : Boolean = {
+    points1.map({ case (a, cons) =>
+      (a, cons.map(_.toSet))
+    }).toSet == points2.map({ case (a, cons) =>
+      (a, cons.map(_.toSet))
+    }).toSet
   }
 }

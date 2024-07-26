@@ -68,9 +68,11 @@ class ForwardsSaturation(
   /**
    * (funApp, argConstraints)
    * funApp -- x = f(y1, ..., yn)
-   * argConstraints -- str_in_re_id(yi, autid) or None for Sigma*
+   * argConstraints -- [l1, ..., ln] where each li is a list of
+   * str_in_re_id(yi, autid) or empty list for Sigma* that should be applied
+   * to yi.
    */
-  type ApplicationPoint = (Atom, Seq[Option[Atom]])
+  type ApplicationPoint = (Atom, Seq[Seq[Atom]])
 
   override def extractApplicationPoints(
     goal : Goal
@@ -81,27 +83,29 @@ class ForwardsSaturation(
     val applicationPoints = for {
       (op, args, res, formula) <- funApps;
       argConSeqs = args.map({
-        case None => Seq(None)
+        case None => Seq()
         case Some(a) => {
           termConstraintMap.get(a)
-            .map(_.filter(isNotNonZeroLenConstraint).map(Some(_)).toSeq)
-            // Use [None] instead of [] for no constraint
-            // (helps Cartesian product)
-            .map(cons => if (cons.isEmpty) Seq(None) else cons)
-            .getOrElse(Seq(None))
+            .map(_.filter(isNotNonZeroLenConstraint).toSeq)
+            .getOrElse(Seq())
         }
       });
-      argCons <- cartesianProduct(argConSeqs.toList)
+      argCons <- cartesianProduct(argConSeqs.map(cons =>
+        if (cons.isEmpty)
+          Seq(Seq())
+        else
+          cons.map(Seq(_))
+      ).toList).toSeq ++ (
+        if (argConSeqs.exists(_.size > 1)) Seq(argConSeqs) else Seq()
+      )
     } yield (formula, argCons)
 
     applicationPoints.toIterator
   }
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
-    p._2.map(_ match {
-      // None means arg in Sigma*
-      case None => 1
-      case Some(a) => {
+    p._2.map(
+      _.map(a =>
         a.pred match {
           case `str_in_re_id` =>
             getAutomatonSize(decodeRegexId(a, false))
@@ -110,8 +114,8 @@ class ForwardsSaturation(
           // will not happen
           case _ => 0
         }
-      }
-    }).sum
+      ).sum
+    ).sum
   }
 
   override def handleApplicationPoint(
@@ -137,7 +141,11 @@ class ForwardsSaturation(
 
     val argAuts = (args zip argCons).map({
       case (None, _) => Seq(autDatabase.anyStringAut)
-      case (Some(arg), cons) => Seq(atomConstraintToAut(arg, cons))
+      case (Some(arg), cons)
+        => if (cons.isEmpty)
+          Seq(atomConstraintToAut(arg, None))
+        else
+          cons.map(c => atomConstraintToAut(arg, Some(c)))
     })
     val resultConstraint = op.forwardApprox(argAuts);
     val autId = autDatabase.automaton2Id(resultConstraint);
