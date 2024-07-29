@@ -37,7 +37,7 @@ import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
 import ostrich.proofops.{BackwardsSaturation, ForwardsSaturation,
                          OstrichClose, OstrichNielsenSplitter,
                          OstrichPredtoEqConverter, OstrichStrInReTranslator,
-                         OstrichCut}
+                         OstrichCut, LengthAbstraction}
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -280,12 +280,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
-  val IntEnumerator = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
-  private val forwardSaturation = new ForwardsSaturation(this)
-  private val backwardsSaturation = new BackwardsSaturation(this)
+  val IntEnumerator       = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
+  val forwardSaturation   = new ForwardsSaturation(this)
+  val backwardsSaturation = new BackwardsSaturation(this)
+  val lengthAbstraction   = new LengthAbstraction(this)
 
   override val dependencies : Iterable[Theory] =
-    List(ModuloArithmetic, IntEnumerator, forwardSaturation,backwardsSaturation )
+    List(ModuloArithmetic, IntEnumerator,
+         forwardSaturation, backwardsSaturation,
+         lengthAbstraction)
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)

@@ -102,7 +102,8 @@ class OstrichCut(theory : OstrichStringTheory) {
         autDatabase.automaton2Id(negAutomaton)
 
       if (OFlags.debug)
-        Console.err.println(f"Performing cut: $stringVar == $acceptedWordId")
+        Console.err.println(
+          f"Performing cut: $stringVar == ${"\""}${strDatabase.id2Str(acceptedWordId)}${"\""}")
 
       List(Plugin.AxiomSplit(
              List(),
