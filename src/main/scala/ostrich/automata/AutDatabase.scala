@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2021 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2024 Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -152,14 +152,14 @@ class AutDatabase(theory : OstrichStringTheory,
 
   protected val regex2Aut  = new Regex2Aut(theory)
 
-  private var nextId     = 0
+  private var nextId       = 0
 
-  val regexes    = new MHashMap[ITerm, Int]
-  val id2Regex   = new MHashMap[Int, ITerm]
-  val id2Aut     = new MHashMap[Int, Automaton]
-  val id2CompAut = new MHashMap[Int, Automaton]
+  private val regexes      = new MHashMap[ITerm, Int]
+  protected val id2Regex   = new MHashMap[Int, ITerm]
+  private val id2Aut       = new MHashMap[Int, Automaton]
+  protected val id2CompAut = new MHashMap[Int, Automaton]
   // maps automata to IDs
-  val autTree    = new AutomatonTree
+  private val autTree      = new AutomatonTree
 
   private val subsetRel  =
     new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]
