@@ -158,6 +158,8 @@ class AutDatabase(theory : OstrichStringTheory,
   val id2Regex   = new MHashMap[Int, ITerm]
   val id2Aut     = new MHashMap[Int, Automaton]
   val id2CompAut = new MHashMap[Int, Automaton]
+  // maps automata to IDs
+  val autTree    = new AutomatonTree
 
   private val subsetRel  =
     new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]
@@ -186,9 +188,11 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   def automaton2Id(aut : Automaton) : Int =
     synchronized {
-      val id = nextId
-      nextId = nextId + 1
-      id2Aut.put(id, aut)
+      val id = autTree.insert(aut, nextId)
+      if (id == nextId) {
+        nextId = nextId + 1
+        id2Aut.put(id, aut)
+      }
       id
     }
 
