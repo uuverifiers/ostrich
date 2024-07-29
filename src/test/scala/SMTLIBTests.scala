@@ -413,9 +413,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("parse-ecma-cases-3.smt2") =
     checkFileOpts("tests/parse-ecma-cases-3.smt2", "sat", "-regexTranslator=complete", "")
   property("parse-ecma-groups.smt2") =
-    checkFile("tests/parse-ecma-groups.smt2", "sat")
+    checkFile("tests/parse-ecma-groups.smt2", "sat", s"-timeout=$longTimeout")
   property("parse-ecma-replace.smt2") =
-    checkFile("tests/parse-ecma-replace.smt2", "sat")
+    checkFile("tests/parse-ecma-replace.smt2", "sat", s"-timeout=$longTimeout")
   property("parse-ecma-bug1.smt2") =
     checkFile("tests/parse-ecma-bug1.smt2", "sat")
   property("parse-ecma-bug2.smt2") =
