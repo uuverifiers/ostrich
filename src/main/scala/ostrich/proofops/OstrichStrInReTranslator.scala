@@ -70,6 +70,8 @@ class OstrichStrInReTranslator(theory : OstrichStringTheory) {
           case _ : IllegalRegexException => None
         }
       
+      // TODO: we do not list all required assumptions in AddAxiom!
+      // also the atoms belonging not the regex have to be included
       (for (a   <- posLits;
             id  <- autIdFor(a(1)).toSeq;
             act <- List(AddAxiom(List(a),

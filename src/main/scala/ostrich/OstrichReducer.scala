@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021-2023 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2024 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -86,7 +86,8 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
     new OstrichReducer(theory,
                        new OstrichStringFunctionTranslator(theory, conj),
                        List(extractLanguageConstraints(conj.predConj, theory)),
-                       this)
+                       this,
+                       order)
 
   val _str_len      = FunPred(str_len)
   val _int_to_str   = FunPred(int_to_str)
@@ -99,10 +100,11 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
  * simplifying string formulas during proof construction.
  */
 class OstrichReducer protected[ostrich]
-           (theory : OstrichStringTheory,
-            funTranslator : OstrichStringFunctionTranslator,
-            languageConstraints: List[Map[Term, List[NamedAutomaton]]],
-            val factory : OstrichReducerFactory)
+           (theory              : OstrichStringTheory,
+            funTranslator       : OstrichStringFunctionTranslator,
+            languageConstraints : List[Map[Term, List[NamedAutomaton]]],
+            val factory         : OstrichReducerFactory,
+            order               : TermOrder)
       extends ReducerPlugin {
 
   import OstrichReducer._
@@ -120,22 +122,28 @@ class OstrichReducer protected[ostrich]
                      mode : ReducerPlugin.ReductionMode.Value) = this
 
   def addAssumptions(predConj : PredConj,
-                     mode : ReducerPlugin.ReductionMode.Value) = {
-    val newLangs = extractLanguageConstraints(predConj, theory)
-    if (newLangs.isEmpty)
-      this
-    else
-      new OstrichReducer(theory, funTranslator,
-                         newLangs :: languageConstraints,
-                         factory)
+                     mode : ReducerPlugin.ReductionMode.Value) =
+    mode match {
+      case ReducerPlugin.ReductionMode.Contextual => {
+        val newLangs =
+          extractLanguageConstraints(predConj, theory) match {
+            case m if m.isEmpty => languageConstraints
+            case m              => m :: languageConstraints
+          }
+        val newFunTranslator =
+          funTranslator.addFacts(Conjunction.conj(predConj, order), order)
+        new OstrichReducer(theory, newFunTranslator, newLangs, factory, order)
+      }
+      case _ =>
+        this
   }
   
   def finalReduce(conj : Conjunction) = conj
 
   def reduce(predConj : PredConj,
-             reducer : ReduceWithConjunction,
-             logger : ComputationLogger,
-             mode : ReducerPlugin.ReductionMode.Value)
+             reducer  : ReduceWithConjunction,
+             logger   : ComputationLogger,
+             mode     : ReducerPlugin.ReductionMode.Value)
            :  ReducerPlugin.ReductionResult = {
     reduce1(predConj, reducer, logger, mode) orElse
     reduce2(predConj, reducer, logger, mode)
@@ -145,11 +153,11 @@ class OstrichReducer protected[ostrich]
    * Reduction based on contextual knowledge.
    */
   private def reduce1(predConj : PredConj,
-                      reducer : ReduceWithConjunction,
-                      logger : ComputationLogger,
-                      mode : ReducerPlugin.ReductionMode.Value)
+                      reducer  : ReduceWithConjunction,
+                      logger   : ComputationLogger,
+                      mode     : ReducerPlugin.ReductionMode.Value)
                     : ReducerPlugin.ReductionResult = {
-    implicit val order = predConj.order
+    implicit val _order = order
     import TerForConvenience._
     import strDatabase.{isConcrete, hasValue, term2List, term2ListGet,
                         list2Id, str2Id, term2Str}
@@ -160,17 +168,25 @@ class OstrichReducer protected[ostrich]
            aut <- l.iterator)
       yield aut
 
-    ReducerPlugin.rewritePreds(predConj,
-                               (List(_str_empty, _str_cons,
-                                     str_in_re_id, _str_len, _str_char_count,
-                                     str_<=,
-                                     _int_to_str, _str_to_int,
-                                     str_prefixof, str_suffixof, str_contains,
-                                     FunPred(str_replace),
-                                     FunPred(str_replaceall)) ++
-                                  funTranslator.translatablePredicates).distinct,
-                               order,
-                               logger) { a =>
+    val rewritablePredicates =
+      (List(_str_empty, _str_cons, str_in_re_id, _str_len, _str_char_count,
+            str_<=, _int_to_str, _str_to_int,
+            str_prefixof, str_suffixof, str_contains,
+            FunPred(str_replace), FunPred(str_replaceall)) ++
+       funTranslator.translatablePredicates).distinct
+
+    // We inform the OstrichStringFunctionTranslator about the atoms
+    // that will not be rewritten. Those atoms might contain regex definitions,
+    // which the OstrichStringFunctionTranslator depends on.
+    lazy val extendedFunTranslator = {
+      val rewritable = rewritablePredicates.toSet
+      val otherAtoms = predConj.positiveLits.filter(a =>
+                         !rewritable(a.pred) && a.variables.isEmpty)
+      funTranslator.addFacts(conj(otherAtoms), order)
+    }
+
+    ReducerPlugin.rewritePreds(predConj, rewritablePredicates,
+                               order, logger) { a =>
       a.pred match {
         case `_str_empty` =>
           a.last === strDatabase.iTerm2Id(IFunApp(str_empty, List()))
@@ -390,20 +406,18 @@ class OstrichReducer protected[ostrich]
         }
 
         case p => {
-          try {
-          assert(funTranslator.translatablePredicates contains p, ("Unhandled case in reducer: " + p))
-          } catch {
-            case t : ap.util.Timeout => throw t
-            // case t : Throwable =>  { t.printStackTrace; throw t }
-          }
-          funTranslator(a) match {
+          assert(funTranslator.translatablePredicates contains p,
+                 "Unhandled case in reducer: " + p)
+          extendedFunTranslator(a) match {
             case Some((op, args, res)) if (args forall isConcrete) => {
               val argStrs = args map term2ListGet
               op().eval(argStrs) match {
                 case Some(resStr) =>
                   res === list2Id(resStr)
                 case None =>
-                  a
+                  // If the function is not defined for the given concrete
+                  // arguments, the atom cannot be satisfied.
+                  Conjunction.FALSE
               }
             }
             case _ =>

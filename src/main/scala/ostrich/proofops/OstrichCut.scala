@@ -68,7 +68,7 @@ class OstrichCut(theory : OstrichStringTheory) {
     val stringVariables =
       for (a <- allAtoms.iterator;
            sorts = SortedPredicate argumentSorts a;
-           (LinearCombination.SingleTerm(c : ConstantTerm), `StringSort`) <-
+           (LinearCombination.SingleTerm(c : ConstantTerm), StringSort) <-
              a.iterator zip sorts.iterator)
       yield c
 

@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -55,10 +55,17 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_replaceallre_longest, str_replacere_longest,
                  str_replaceallcg, str_replacecg, str_extract}
 
-  private val regexExtractor = theory.RegexExtractor(facts.predConj)
-  private val builder = new JavascriptPrioAutomatonBuilder(theory)
-  private val cgTranslator   = builder.regex2pfa
+  def addFacts(newFacts : Conjunction,
+               order    : TermOrder) : OstrichStringFunctionTranslator =
+    if (newFacts.isTrue)
+      this
+    else
+      new OstrichStringFunctionTranslator(
+        theory, Conjunction.conj(List(facts, newFacts), order))
 
+  private val regexExtractor = theory.RegexExtractor(facts.predConj)
+  private val builder        = new JavascriptPrioAutomatonBuilder(theory)
+  private val cgTranslator   = builder.regex2pfa
 
   private def regexAsTerm(t : Term) : Option[ITerm] =
     try {
