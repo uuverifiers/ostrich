@@ -357,8 +357,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       new ap.util.LRUCache[Conjunction,
                            Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
-    override def handleGoal(goal : Goal)
-                       : Seq[Plugin.Action] = {
+    override def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, theoryFlags)
 

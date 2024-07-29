@@ -32,23 +32,53 @@
 
 package ostrich.proofops
 
-import ap.terfor.TerForConvenience
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.{Atom, PredConj}
-import ap.terfor.{Term, TermOrder}
+import ap.terfor.{Term, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
 import ostrich._
 
 /**
  * Class to replace left-over <code>str.in_re</code> atoms with
- * <code>str_in_re_id</code> atoms.
+ * <code>str_in_re_id</code> atoms, and to turn negated
+ * <code>string_in_re_id</code> atoms into positive ones.
  */
 class OstrichStrInReTranslator(theory : OstrichStringTheory) {
   import theory._
 
-  def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
+  def handleGoal(goal : Goal) : Seq[Plugin.Action] =
+    // systematically making all regex constraints positive will
+    // currently introduce incompleteness; needs more thinking ...
+    /* negateRegexes(goal) ++ */ encodeAutomata(goal)
+
+  def negateRegexes(goal : Goal) : Seq[Plugin.Action] = {
+    val predConj = goal.facts.predConj
+
+    if (predConj.predicates contains str_in_re_id) {
+      implicit val to = goal.order
+      import TerForConvenience._
+      import Plugin.{AddAxiom, RemoveFacts}
+      import Conjunction.negate
+
+      val negLits = predConj.negativeLitsWithPred(str_in_re_id)
+
+      for (a     <- negLits;
+           id    =  a(1).constant.intValueSafe;
+           aut   =  autDatabase.id2ComplementedAutomaton(id).get;
+           newId =  autDatabase.automaton2Id(aut);
+           act   <- List(AddAxiom(List(negate(a, to)),
+                                  str_in_re_id(List(a(0), l(newId))),
+                                  theory),
+                         RemoveFacts(negate(a, to))))
+      yield act
+    } else {
+      List()
+    }
+  }
+
+  def encodeAutomata(goal : Goal) : Seq[Plugin.Action] = {
     val predConj = goal.facts.predConj
 
     if (predConj.predicates contains str_in_re) {
@@ -61,10 +91,13 @@ class OstrichStrInReTranslator(theory : OstrichStringTheory) {
       import Plugin.{AddAxiom, RemoveFacts}
       import Conjunction.negate
 
-      def autIdFor(t : Term) : Option[Int] = 
+      def autIdFor(t : Term, negate : Boolean) : Option[Int] = 
         try {
           val regex = regexExtractor regexAsTerm t
-          val aut   = autDatabase.regex2Automaton(regex)
+          val aut   = if (negate)
+                        autDatabase.regex2ComplementedAutomaton(regex)
+                      else
+                        autDatabase.regex2Automaton(regex)
           Some(autDatabase.automaton2Id(aut))
         } catch {
           case _ : IllegalRegexException => None
@@ -73,16 +106,16 @@ class OstrichStrInReTranslator(theory : OstrichStringTheory) {
       // TODO: we do not list all required assumptions in AddAxiom!
       // also the atoms belonging not the regex have to be included
       (for (a   <- posLits;
-            id  <- autIdFor(a(1)).toSeq;
+            id  <- autIdFor(a(1), false).toSeq;
             act <- List(AddAxiom(List(a),
                                  str_in_re_id(List(a(0), l(id))),
                                  theory),
                         RemoveFacts(a)))
        yield act) ++
       (for (a   <- negLits;
-            id  <- autIdFor(a(1)).toSeq;
+            id  <- autIdFor(a(1), true).toSeq;
             act <- List(AddAxiom(List(negate(a, to)),
-                                 negate(str_in_re_id(List(a(0), l(id))), to),
+                                 str_in_re_id(List(a(0), l(id))),
                                  theory),
                         RemoveFacts(negate(a, to))))
        yield act)

@@ -30,6 +30,7 @@
 
 package ostrich.proofops
 
+import ap.basetypes.IdealInt
 import ap.proof.goal.Goal
 import ap.theories.{SaturationProcedure, Theory}
 import ap.proof.theoryPlugins.Plugin
@@ -37,9 +38,10 @@ import ap.terfor.TerForConvenience
 import ap.terfor.preds.Atom
 import ap.terfor.substitutions.VariableSubst
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.linearcombination.LinearCombination
 
 import ostrich.{OstrichStringTheory, OFlags}
-import ostrich.automata.AtomicStateAutomaton
+import ostrich.automata.{Automaton, AtomicStateAutomaton, AutomataUtils}
 
 /**
  * Saturation procedure to add the length abstraction of regular
@@ -50,43 +52,108 @@ class LengthAbstraction (
 ) extends SaturationProcedure("ForwardsPropagation") {
   import theory.{_str_len, str_in_re_id, autDatabase}
   import autDatabase.id2Automaton
+  import AutomataUtils.findAcceptedWord
 
   /**
-   * str_in_re_id atoms.
+   * (str_in_re_id(x, autId), _str_len(x, y),
+   *  lower-bound-on-y, upper-bound-on-y)
    */
-  type ApplicationPoint = Atom
+  type ApplicationPoint = (Atom, Atom, IdealInt, Option[IdealInt])
 
   override def extractApplicationPoints(goal : Goal)
-                                      : Iterator[ApplicationPoint] =
-    if (theory.lengthNeeded(goal.facts))
-      goal.facts.predConj.positiveLitsWithPred(str_in_re_id).iterator
-    else
-      Iterator.empty
+                                             : Iterator[ApplicationPoint] = {
+    val predConj =
+      goal.facts.predConj
+    val strLenMap =
+      predConj.positiveLitsWithPred(_str_len).map(a => (a(0), a)).toMap
+    val reducer =
+      goal.reduceWithFacts
 
-  override def applicationPriority(goal : Goal, a : Atom) : Int = {
-    val aut = id2Automaton(a.last.constant.intValueSafe).get
-    val size = aut match {
-      case aut : AtomicStateAutomaton => aut.states.size
-      case _                          => 100
-    }
-    100 + size
+    for (reAtom  <- predConj.positiveLitsWithPred(str_in_re_id).iterator;
+         lenAtom <- strLenMap.get(reAtom(0)).iterator;
+         len     =  lenAtom(1))
+    yield (reAtom, lenAtom,
+           reducer.lowerBound(len).getOrElse(IdealInt.ZERO),
+           reducer.upperBound(len))
   }
 
+  private def getAut(reAtom : Atom) : Automaton =
+    reAtom.last match {
+      case LinearCombination.Constant(IdealInt(id)) =>
+        id2Automaton(id).get
+      case _ =>
+        throw new Exception("could not decode automaton in " + reAtom)
+    }
+
+  private def getAutSize(reAtom : Atom) : Option[Int] =
+    getAut(reAtom) match {
+      case aut : AtomicStateAutomaton => Some(aut.states.size)
+      case _                          => None
+    }
+
+  override def applicationPriority(goal : Goal,
+                                   p    : ApplicationPoint)
+                                        : Int =
+    p match {
+      case (_, _, IdealInt(lb), Some(IdealInt(ub))) if lb == ub =>
+        // just a single word length to test
+        0
+      case (reAtom, _, IdealInt(lb), Some(IdealInt(ub))) if ub - lb < 100 =>
+        // small range of values to test
+        (ub - lb) + getAutSize(reAtom).getOrElse(100)
+      case (reAtom, _, _, _) =>
+        // the full length abstraction is needed
+        500 + getAutSize(reAtom).getOrElse(100)
+    }
+
   override def handleApplicationPoint(goal : Goal,
-                                      a : Atom) : Seq[Plugin.Action] = {
-    if (goal.facts.predConj.positiveLitsAsSet contains a) {
+                                      p    : ApplicationPoint)
+                                           : Seq[Plugin.Action] = {
+    val (reAtom, lenAtom, _, _) = p
+    val posAtomsSet = goal.facts.predConj.positiveLitsAsSet
+
+    if (Set(reAtom, lenAtom) subsetOf posAtomsSet) {
       implicit val order = goal.order
       import TerForConvenience._
 
-      if (OFlags.debug)
-        Console.err.println("Computing length abstraction for " + a)
+      val reducer = goal.reduceWithFacts
+      val len     = lenAtom(1)
+      val aut     = getAut(reAtom)
 
-      val aut            = id2Automaton(a.last.constant.intValueSafe).get
-      val autAbstraction = aut.getLengthAbstraction
-      val lenFor         = exists(conj(_str_len(List(a(0), l(v(0)))),
-                                       autAbstraction))
+      // we compute new lower and upper bounds, the old bounds might
+      // be outdated
+      (reducer.lowerBound(len).getOrElse(IdealInt.ZERO),
+       reducer.upperBound(len)) match {
+        case (IdealInt(lb), Some(IdealInt(ub))) if lb == ub =>
+          if (findAcceptedWord(List(aut), lb).isDefined) {
+            List()
+          } else {
+            // contradiction, no word of the required length exists
+            assert(lenAtom(1).isConstant)
+            List(Plugin.CloseByAxiom(List(reAtom, lenAtom), theory))
+          }
+        case (IdealInt(lb), Some(IdealInt(ub))) if ub - lb < 100 => {
+          // just test each of the possible lengths individually
+          val impossibleLengths =
+            (for (l <- lb to ub; if findAcceptedWord(List(aut),l).isEmpty)
+             yield l).toList
+          if (impossibleLengths.isEmpty)
+            List()
+          else
+            List(Plugin.AddAxiom(List(reAtom, lenAtom),
+                                 impossibleLengths.map(l(_)) =/=/= len,
+                                 theory))
+        }
+        case _ => {
+          if (OFlags.debug)
+            Console.err.println("Computing length abstraction for " + reAtom)
 
-      List(Plugin.AddAxiom(List(a), lenFor, theory))
+          val lenAbstraction = aut.getLengthAbstraction
+          val lenFor = VariableSubst(0, List(len), order)(lenAbstraction)
+
+          List(Plugin.AddAxiom(List(reAtom, lenAtom), conj(lenFor), theory))
+        }
+      }
     } else {
       List()
     }
