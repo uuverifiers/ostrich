@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -53,69 +53,14 @@ object AutomataUtils {
    * The automata are required to all have the same label type (though this is
    * not checked statically)
    */
-  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean = {
-    val autsList = auts.toList
-    val visitedStates = new MHashSet[List[Any]]
-    val todo = new ArrayStack[List[Any]]
-
-    def isAccepting(states : List[Any]) : Boolean =
-          (auts.iterator zip states.iterator) forall {
-             case (aut, state) =>
-               aut.acceptingStates contains state.asInstanceOf[aut.State]
-          }
-
-    def enumNext(auts : List[AtomicStateAutomaton],
-                 states : List[Any],
-                 intersectedLabels : Any) : Iterator[List[Any]] =
-      auts match {
-        case List() =>
-          Iterator(List())
-        case aut :: otherAuts => {
-          val state :: otherStates = states
-          for ((to, label) <- aut.outgoingTransitions(
-                                state.asInstanceOf[aut.State]);
-               newILabel <- aut.LabelOps.intersectLabels(
-                             intersectedLabels.asInstanceOf[aut.TLabel],
-                             label).toSeq;
-               tailNext <- enumNext(otherAuts, otherStates, newILabel))
-          yield (to :: tailNext)
-        }
-      }
-
-    val initial = (autsList map (_.initialState))
-
-    if (isAccepting(initial))
-      return true
-
-    visitedStates += initial
-    todo push initial
-
-    while (!todo.isEmpty) {
-      val next = todo.pop
-      for (reached <- enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
-        if (visitedStates.add(reached)) {
-          if (isAccepting(reached))
-            return true
-          todo push reached
-        }
-    }
-
-    false
-  }
+  def areConsistentAtomicAutomata(auts : Seq[AtomicStateAutomaton]) : Boolean
+    = findAcceptedWordAtomic(auts).isDefined
 
   /**
    * Check whether there is some word accepted by all of the given automata.
    */
-  def areConsistentAutomata(auts : Seq[Automaton]) : Boolean =
-    if (auts.isEmpty) {
-      true
-    } else if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
-      areConsistentAtomicAutomata(
-        auts map (_.asInstanceOf[AtomicStateAutomaton])
-      )
-    } else {
-      !(auts reduceLeft (_ & _)).isEmpty
-    }
+  def areConsistentAutomata(auts : Seq[Automaton]) : Boolean
+    = findAcceptedWord(auts).isDefined
 
   /**
    * Check whether there is some word accepted by all of the given automata.
@@ -204,7 +149,7 @@ object AutomataUtils {
             enumNext(autsList, next, auts.head.LabelOps.sigmaLabel))
         if (visitedStates.add((reached, wSize + 1))) {
           val newW = let :: w
-          if (isAccepting(reached) && wSize + 1 == len)
+          if (isAccepting(reached) && len == wSize + 1)
             return Some(newW.reverse)
           if (wSize + 1 < len)
             todo push (reached, newW)
@@ -215,14 +160,103 @@ object AutomataUtils {
   }
 
   /**
+   * Find a word (of any length) accepted by all automata
+   *
+   * The automata are required to all have the same label type (though this is
+   * not checked statically)
+   */
+  def findAcceptedWordAtomic(
+    auts : Seq[AtomicStateAutomaton]
+  ) : Option[Seq[Int]] = {
+    val autsList = auts.toList
+    val visitedStates = new MHashSet[List[Any]]
+    // (list of automaton cur states, witnessing word)
+    val todo = new ArrayStack[(List[Any], Seq[Int])]
+
+    def isAccepting(states : List[Any]) : Boolean =
+          (auts.iterator zip states.iterator) forall {
+             case (aut, state) =>
+               aut.acceptingStates contains state.asInstanceOf[aut.State]
+          }
+
+    def enumNext(auts : List[AtomicStateAutomaton],
+                 states : List[Any],
+                 intersectedLabels : Any,
+                 goodChar : Int) : Iterator[(List[Any], Int)] =
+      auts match {
+        case List() =>
+          Iterator((List(), goodChar))
+        case aut :: otherAuts => {
+          val state :: otherStates = states
+          for ((to, label) <- aut.outgoingTransitions(
+                                state.asInstanceOf[aut.State]);
+               iLabels = intersectedLabels.asInstanceOf[aut.TLabel];
+               newILabel <- aut.LabelOps.intersectLabels(
+                             iLabels,
+                             label).toSeq;
+               iNewLabel = aut.LabelOps.enumLetters(iLabels);
+               if !iNewLabel.isEmpty;
+               newGoodChar = iNewLabel.next;
+               (tailNext, finalGoodChar) <- enumNext(
+                                            otherAuts,
+                                            otherStates,
+                                            newILabel,
+                                            newGoodChar
+                                          ))
+          yield ((to :: tailNext), finalGoodChar)
+        }
+      }
+
+    val initial = (autsList map (_.initialState))
+
+    if (isAccepting(initial))
+      return Some(Seq())
+
+    visitedStates += initial
+    todo push (initial, Seq())
+
+    while (!todo.isEmpty) {
+      val (next, witness) = todo.pop
+      for ((reached, byChar) <- enumNext(
+                                  autsList,
+                                  next,
+                                  auts.head.LabelOps.sigmaLabel,
+                                  0))
+        if (visitedStates.add(reached)) {
+          val nextWitness = witness :+ byChar
+          if (isAccepting(reached))
+            return Some(nextWitness)
+          todo push (reached, nextWitness)
+        }
+    }
+
+    None
+  }
+
+  /**
    * Check whether there is some word of length <code>len</code> accepted
    * by all of the given automata.
+   * Requires all automata to be AtomicStateAutomaton
    */
   def findAcceptedWord(auts : Seq[Automaton],
                        len : Int) : Option[Seq[Int]] =
     findAcceptedWordAtomic(for (aut <- auts)
                              yield aut.asInstanceOf[AtomicStateAutomaton],
                            len)
+
+  /**
+   * Find a word accepted by all automata
+   */
+  def findAcceptedWord(auts : Seq[Automaton]) : Option[Seq[Int]]
+    = if (auts.isEmpty) {
+      None
+    } else if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
+      findAcceptedWordAtomic(
+        auts map (_.asInstanceOf[AtomicStateAutomaton])
+      )
+    } else {
+      (auts reduceLeft (_ & _)).getAcceptedWord
+    }
 
   /**
    * Product of a number of given automata

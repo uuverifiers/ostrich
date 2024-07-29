@@ -131,11 +131,11 @@ class AutomatonTree {
       if (aut1 == aut2)
         return (0, None)
 
-      val w1 = (aut1 & !aut2).getAcceptedWord
+      val w1 = AutomataUtils.findAcceptedWord(Seq(aut1, !aut2))
       if (w1.isDefined)
         return (1, w1)
 
-      val w2 = (!aut1 & aut2).getAcceptedWord
+      val w2 = AutomataUtils.findAcceptedWord(Seq(!aut1, aut2))
       if (w2.isDefined)
         return (2, w2)
 
