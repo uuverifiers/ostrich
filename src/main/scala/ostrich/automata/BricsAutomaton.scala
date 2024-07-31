@@ -148,10 +148,16 @@ object BricsAutomaton {
   }
 
   /**
-   * A new automaton that accepts any string
+   * An automaton that accepts any string.
    */
   def makeAnyString() : BricsAutomaton =
       new BricsAutomaton(BAutomaton.makeAnyString)
+
+  /**
+   * An automaton that accepts no strings and represents the empty language.
+   */
+  def makeEmptyLang() : BricsAutomaton =
+      new BricsAutomaton(BAutomaton.makeEmpty)
 
   def eqLengthAutomata(length : Int) : BricsAutomaton = {
     val builder = new BricsAutomatonBuilder

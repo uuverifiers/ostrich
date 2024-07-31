@@ -167,9 +167,16 @@ class AutDatabase(theory : OstrichStringTheory,
   private val prefixSortedIntersectionTree = new SetTrie
   private val knownConflicts = new SuffixTrie
 
-  lazy val anyStringAut : Automaton
-    = regex2Aut.buildAut(re_*(re_allchar()), true)
-  lazy val anyStringId : Int = automaton2Id(anyStringAut)
+  val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
+  val anyStringId : Int        = automaton2Id(anyStringAut)
+
+  val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
+  val emptyLangId : Int        = automaton2Id(emptyLangAut)
+
+  synchronized {
+    id2CompAut.put(anyStringId, emptyLangAut)
+    id2CompAut.put(emptyLangId, anyStringAut)
+  }
 
   /**
    * Query the id of a regular expression.
@@ -341,6 +348,7 @@ class AutDatabase(theory : OstrichStringTheory,
 
   def emptyIntersection(auts : ArrayBuffer[NamedAutomaton]) : Boolean =
   {
+    println(f"checking $auts")
     synchronized {
       val autIds = new ArrayBuffer[Int]
       val autValues = new ArrayBuffer[Automaton]
