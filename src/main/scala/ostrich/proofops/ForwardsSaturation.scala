@@ -110,6 +110,8 @@ class ForwardsSaturation(
           case `str_in_re_id` =>
             getAutomatonSize(decodeRegexId(a, false))
           // will be a str_len == 0 as we only return those
+          // PR: this case should never occur, the OstrichReducer will
+          // replace any atom str_len(x) == 0 with x == ""!
           case FunPred(`str_len`) if a(1).isZero => 1
           // will not happen
           case _ => 0
