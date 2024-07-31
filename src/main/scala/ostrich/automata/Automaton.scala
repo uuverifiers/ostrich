@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -390,6 +390,7 @@ trait AtomicStateAutomaton extends Automaton {
 
     ////////////////////////////////////////////////////////////////////////////
 
+    val rawConstraint =
     disjFor(for (finalState <- acceptingStates)
             yield (uniqueLengthStates get finalState) match {
 
@@ -468,20 +469,18 @@ trait AtomicStateAutomaton extends Automaton {
 
       val matrix =
         conj(allEqs :: prodNonNeg :: prodImps ::: zImps)
-      val rawConstraint =
-        exists(prodVars.size + zVars.size, matrix)
-
-      val constraint =
-        ap.util.Timeout.withTimeoutMillis(1000) {
-          // best-effort attempt to get a quantifier-free version of the
-          // length abstraction
-          PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
-        } {
-          ReduceWithConjunction(Conjunction.TRUE, order)(rawConstraint)
-        }
-
-      constraint
+      exists(prodVars.size + zVars.size, matrix)
     }})
+
+    val prenexConstraint = PresburgerTools.toPrenex(rawConstraint)
+
+    ap.util.Timeout.withTimeoutMillis(1000) {
+      // best-effort attempt to get a quantifier-free version of the
+      // length abstraction
+      PresburgerTools.elimQuantifiersWithPreds(prenexConstraint)
+    } {
+      ReduceWithConjunction(Conjunction.TRUE, order)(prenexConstraint)
+    }
   }
 }
 

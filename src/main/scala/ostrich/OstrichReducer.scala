@@ -56,14 +56,17 @@ object OstrichReducer {
         languages.put(a(0),
                       PositiveAut(id) :: languages.getOrElse(a(0), List()))
       }
-
+/*
+    // We do not collect negative language constraints, since this would
+    // interfere with the class OstrichStrInReTranslator, which will
+    // systematically make all constraints positive.
     for (a <- conj negativeLitsWithPred theory.str_in_re_id)
       if (a(0).variables.isEmpty) {
         val id = regexAtomToId(a)
         languages.put(a(0),
                       ComplementedAut(id) :: languages.getOrElse(a(0), List()))
       }
-
+*/
     languages.toMap
   }
 

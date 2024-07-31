@@ -49,9 +49,7 @@ class OstrichStrInReTranslator(theory : OstrichStringTheory) {
   import theory._
 
   def handleGoal(goal : Goal) : Seq[Plugin.Action] =
-    // systematically making all regex constraints positive will
-    // currently introduce incompleteness; needs more thinking ...
-    /* negateRegexes(goal) ++ */ encodeAutomata(goal)
+    negateRegexes(goal) ++ encodeAutomata(goal)
 
   def negateRegexes(goal : Goal) : Seq[Plugin.Action] = {
     val predConj = goal.facts.predConj

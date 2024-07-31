@@ -49,7 +49,8 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton, AutomataUtils}
  */
 class LengthAbstraction (
   val theory : OstrichStringTheory
-) extends SaturationProcedure("ForwardsPropagation") {
+) extends SaturationProcedure("ForwardsPropagation")
+     with PropagationSaturationUtils {
   import theory.{_str_len, str_in_re_id, autDatabase}
   import autDatabase.id2Automaton
   import AutomataUtils.findAcceptedWord
@@ -85,12 +86,6 @@ class LengthAbstraction (
         throw new Exception("could not decode automaton in " + reAtom)
     }
 
-  private def getAutSize(reAtom : Atom) : Option[Int] =
-    getAut(reAtom) match {
-      case aut : AtomicStateAutomaton => Some(aut.states.size)
-      case _                          => None
-    }
-
   override def applicationPriority(goal : Goal,
                                    p    : ApplicationPoint)
                                         : Int =
@@ -100,10 +95,10 @@ class LengthAbstraction (
         0
       case (reAtom, _, IdealInt(lb), Some(IdealInt(ub))) if ub - lb < 100 =>
         // small range of values to test
-        (ub - lb) + getAutSize(reAtom).getOrElse(100)
+        (ub - lb) + getAutomatonSize(getAut(reAtom))
       case (reAtom, _, _, _) =>
         // the full length abstraction is needed
-        500 + getAutSize(reAtom).getOrElse(100)
+        500 + getAutomatonSize(getAut(reAtom))
     }
 
   override def handleApplicationPoint(goal : Goal,
@@ -146,7 +141,8 @@ class LengthAbstraction (
         }
         case _ => {
           if (OFlags.debug)
-            Console.err.println("Computing length abstraction for " + reAtom)
+            Console.err.println(
+              f"Computing length abstraction for $reAtom (size ${getAutomatonSize(aut)})")
 
           val lenAbstraction = aut.getLengthAbstraction
           val lenFor = VariableSubst(0, List(len), order)(lenAbstraction)
