@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2021-2024 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -113,7 +113,7 @@ class OstrichReducer protected[ostrich]
   import OstrichReducer._
 
   import theory.{_str_empty, _str_cons, _str_++, str_<=, _str_char_count,
-                 str_empty, str_cons, str_in_re_id, str_prefixof,
+                 str_empty, str_cons, str_in_re_id, str_prefixof, str_extract,
                  str_suffixof, str_contains,
                  str_replace, str_replaceall,
                  re_++, re_*, re_+, str_to_re, re_all, re_comp, re_charrange,
@@ -140,7 +140,7 @@ class OstrichReducer protected[ostrich]
       case _ =>
         this
   }
-  
+
   def finalReduce(conj : Conjunction) = conj
 
   def reduce(predConj : PredConj,

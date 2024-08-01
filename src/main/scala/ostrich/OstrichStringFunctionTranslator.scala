@@ -78,7 +78,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
     (for (f <- List(str_++, str_replace, str_replaceall,
                     str_replacere, str_replaceallre,
                     str_replacere_longest, str_replaceallre_longest,
-                    str_at, str_at_right, str_trim) ++
+                    str_at, str_at_right, str_trim,
+                    str_extract, str_replaceallcg, str_replacecg) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
 
