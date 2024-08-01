@@ -63,7 +63,7 @@ class ForwardsSaturation(
   val theory : OstrichStringTheory
 ) extends SaturationProcedure("ForwardsPropagation")
   with PropagationSaturationUtils {
-  import theory.{ str_len, str_in_re_id, FunPred }
+  import theory.{ str_len, str_in_re_id, FunPred, strDatabase}
 
   /**
    * (funApp, argConstraints)
@@ -82,6 +82,9 @@ class ForwardsSaturation(
 
     val applicationPoints = for {
       (op, args, res, formula) <- funApps;
+      // functions with only concrete args will be handled forwards by
+      // OstrichReducer
+      if (!args.forall(_.map(strDatabase.isConcrete).getOrElse(true)));
       argConSeqs = args.map({
         case None => Seq()
         case Some(a) => {
