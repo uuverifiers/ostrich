@@ -32,7 +32,7 @@
 
 package ostrich.automata
 
-import ap.basetypes.{SetTrie => BSetTrie}
+import ap.basetypes.SetTrie
 import ap.parser._
 
 import ostrich.{OstrichStringTheory, OFlags}
@@ -111,18 +111,15 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   private val autTree      = new AutomatonTree
 
-  private val subsetRel  =
-    new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]
-
   /**
    * Combinations of automata with non-empty intersection.
    */
-  private val nonEmptyIntersections = new BSetTrie[Int]
+  private val nonEmptyIntersections = new SetTrie[Int]
 
   /**
    * Combinations of automata with empty intersection.
    */
-  private val emptyIntersections    = new BSetTrie[Int]
+  private val emptyIntersections    = new SetTrie[Int]
 
   val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
   val emptyLangId : Int        = automaton2Id(emptyLangAut)
