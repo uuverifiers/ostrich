@@ -32,7 +32,7 @@
 
 package ostrich.automata
 
-import ostrich.OstrichStringTheory
+import ostrich.{OstrichStringTheory, OFlags}
 import ap.parser._
 
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, HashSet => MHashSet}
@@ -237,8 +237,11 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   def automaton2Id(aut : Automaton) : Int =
     synchronized {
+      println("checking ...")
       val id = autTree.insert(aut, nextId)
       if (id == nextId) {
+        if (OFlags.debug)
+          Console.err.println(f"Adding new automaton with id $id to database")
         nextId = nextId + 1
         id2Aut.put(id, aut)
       }

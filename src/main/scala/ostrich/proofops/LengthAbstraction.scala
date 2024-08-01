@@ -117,6 +117,7 @@ class LengthAbstraction (
 
       // we compute new lower and upper bounds, the old bounds might
       // be outdated
+      val actions =
       (reducer.lowerBound(len).getOrElse(IdealInt.ZERO),
        reducer.upperBound(len)) match {
         case (IdealInt(lb), Some(IdealInt(ub))) if lb == ub =>
@@ -140,15 +141,15 @@ class LengthAbstraction (
                                  theory))
         }
         case _ => {
-          if (OFlags.debug)
-            Console.err.println(
-              f"Computing length abstraction for $reAtom (size ${getAutomatonSize(aut)})")
-
           val lenAbstraction = aut.getLengthAbstraction
           val lenFor = VariableSubst(0, List(len), order)(lenAbstraction)
 
           List(Plugin.AddAxiom(List(reAtom, lenAtom), conj(lenFor), theory))
         }
+      }
+
+      logSaturation("length abstraction") {
+        actions
       }
     } else {
       List()
