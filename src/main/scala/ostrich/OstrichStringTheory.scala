@@ -347,6 +347,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   }
 
   private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
+  private val ostrichClose       = new OstrichClose(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
   private val strInReTranslator  = new OstrichStrInReTranslator(this)
   private val cutter             = new OstrichCut(this)
@@ -360,17 +361,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, theoryFlags)
-
       lazy val predToEq =
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, theoryFlags)
-      lazy val ostrichClose = new OstrichClose(goal, OstrichStringTheory.this, theoryFlags)
+
       goalState(goal) match {
 
         case Plugin.GoalState.Eager =>
           strInReTranslator.handleGoal(goal)
 
         case Plugin.GoalState.Intermediate => try {
-          ostrichClose.isConsistent                    elseDo
+          ostrichClose.handleGoal(goal)                elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo

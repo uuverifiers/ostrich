@@ -77,8 +77,8 @@ object OstrichCloseSpecification extends Properties("ostrichCloseSpecification")
     val goal = createGoalFor(formula1 & formula2 & formula3 & formula4)
     //println(goal)
 
-    val closeTest = new OstrichClose(goal, theory, theory.theoryFlags)
-    val valueClose = closeTest.isConsistent
+    val closeTest = new OstrichClose(theory)
+    val valueClose = closeTest.handleGoal(goal)
 
     // Check the specific regular expression that should be returned
     (valueClose != List())

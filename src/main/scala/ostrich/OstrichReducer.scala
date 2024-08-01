@@ -211,7 +211,11 @@ class OstrichReducer protected[ostrich]
 
         case `str_in_re_id` => {
           val autId = regexAtomToId(a)
-          if (isConcrete(a(0))) {
+          if (autId == autDatabase.emptyLangId) {
+            Conjunction.FALSE
+          } else if (autId == autDatabase.anyStringId) {
+            Conjunction.TRUE
+          } else if (isConcrete(a(0))) {
             val Some(str) = term2List(a(0))
             val Some(aut) = autDatabase.id2Automaton(autId)
             if (aut(str)) Conjunction.TRUE else Conjunction.FALSE

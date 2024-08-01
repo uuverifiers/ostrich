@@ -32,124 +32,39 @@
 
 package ostrich.proofops
 
+import ap.basetypes.IdealInt
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.{Atom, PredConj}
 import ap.terfor.{Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
+
 import ostrich._
-import ostrich.automata.AutDatabase.{ComplementedAut, NamedAutomaton, PositiveAut}
+import ostrich.automata.AutDatabase.NamedAutomaton
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.{HashMap => MHashMap}
 
-class OstrichClose(goal : Goal,
-                         theory : OstrichStringTheory,
-                         flags : OFlags)  {
-  import theory.{str_in_re, str_in_re_id, autDatabase}
+class OstrichClose(theory : OstrichStringTheory)  {
+  import theory.{str_in_re_id, autDatabase}
+  import LinearCombination.Constant
 
-  implicit val order: TermOrder = goal.order
+  // Atoms with predicate str_in_re, and negated str_in_re_id predicates
+  // are now handled in the proof rule OstrichStrInReConverter
 
+  def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
+    val facts: Conjunction = goal.facts
+    val predConj: PredConj = facts.predConj
+    val order = goal.order
 
-  val facts: Conjunction = goal.facts
-  val predConj: PredConj = facts.predConj
-  private val posRegularExpressions = predConj.positiveLitsWithPred(str_in_re_id) ++ predConj.positiveLitsWithPred(str_in_re)
-  private val negRegularExpressions = predConj.negativeLitsWithPred(str_in_re_id) ++ predConj.negativeLitsWithPred(str_in_re)
+    val regexGroups = predConj.positiveLitsWithPred(str_in_re_id).groupBy(_(0))
+    implicit val lcOrdering = order.lcOrdering
 
-  def isConsistent : Seq[Plugin.Action] = {
-
-    val regexes    = new MHashMap[Term, ArrayBuffer[NamedAutomaton]]
-
-    def decodeRegexId(a : Atom, complemented : Boolean) : Unit = a(1) match {
-      case LinearCombination.Constant(id) => {
-        val autOption =
-          if (complemented)
-            autDatabase.id2ComplementedAutomaton(id.intValueSafe)
-          else
-            autDatabase.id2Automaton(id.intValueSafe)
-
-        autOption match {
-          case Some(aut) => {
-            if (regexes.contains(a.head)){
-              if (complemented){
-                regexes(a.head) += ComplementedAut(id.intValueSafe)
-              }
-              else {
-                regexes(a.head) += PositiveAut(id.intValueSafe)
-              }
-            }
-            else {
-              if (complemented){
-                regexes(a.head) = ArrayBuffer(ComplementedAut(id.intValueSafe))
-
-              }
-              else {
-                regexes(a.head) = ArrayBuffer(PositiveAut(id.intValueSafe))
-              }
-            }
-
-          }
-          case None =>
-            throw new Exception ("Could not decode regex id " + a(1))
-        }
-      }
-      case lc =>
-        throw new Exception ("Could not decode regex id " + lc)
-    }
-
-    val regexExtractor =
-      theory.RegexExtractor(goal)
-
-    for (a <- posRegularExpressions) a.pred match {
-      case `str_in_re` => {
-        val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2Automaton(regex)
-        val id = autDatabase.automaton2Id(aut)
-        if (regexes.contains(a.head)){
-          regexes(a.head) += PositiveAut(id)
-        }
-        else {
-          regexes(a.head) = ArrayBuffer(PositiveAut(id))
-        }
-      }
-      case `str_in_re_id` =>
-        decodeRegexId(a, complemented = false)
-    }
-    for (a <- negRegularExpressions) a.pred match {
-      case `str_in_re` => {
-        val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2ComplementedAutomaton(regex)
-        val id = autDatabase.automaton2Id(aut)
-
-        if (regexes.contains(a.head)){
-          regexes(a.head) += ComplementedAut(id)
-        }
-        else {
-          regexes(a.head) = ArrayBuffer(ComplementedAut(id))
-        }
-      }
-      case `str_in_re_id` =>
-        decodeRegexId(a, complemented = true)
-    }
-
-    for ((term, autSequence) <- regexes) {
-      if (autDatabase.emptyIntersection(autSequence)){
-        val conflict: ArrayBuffer[Atom] = new ArrayBuffer()
-        for (form <- predConj.positiveLitsWithPred(str_in_re_id)){
-          if (form.contains(term)){
-            conflict.append(form)
-          }
-        }
-        for (form <- predConj.negativeLitsWithPred(str_in_re_id)){
-          if (form.contains(term)){
-            conflict.append(form)
-          }
-        }
-
-        return Seq(Plugin.CloseByAxiom(conflict, theory))
-      }
-    }
-    Seq()
+    for ((c, atoms) <- regexGroups.toSeq.sortBy(_._1);
+         if atoms.size > 1;
+         ids = for (Seq(_, Constant(IdealInt(id))) <- atoms) yield id;
+         if autDatabase.emptyIntersection(ids.toSet))
+    yield Plugin.CloseByAxiom(atoms, theory)
   }
 }

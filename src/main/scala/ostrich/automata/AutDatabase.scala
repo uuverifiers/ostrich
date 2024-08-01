@@ -32,97 +32,19 @@
 
 package ostrich.automata
 
-import ostrich.{OstrichStringTheory, OFlags}
+import ap.basetypes.{SetTrie => BSetTrie}
 import ap.parser._
+
+import ostrich.{OstrichStringTheory, OFlags}
 
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, HashSet => MHashSet}
 
-class SuffixTrieNode {
-  var children: Map[Int, SuffixTrieNode] = Map()
-  var isEndOfSet: Boolean = false
-
-  def insert(set: Seq[Int]): Unit = {
-    var currentNode = this
-    for (elem <- set) {
-      if (!currentNode.children.contains(elem)) {
-        currentNode.children += (elem -> new SuffixTrieNode)
-      }
-      currentNode = currentNode.children(elem)
-    }
-    currentNode.isEndOfSet = true
-  }
-
-
-  def contains(set: Seq[Int]): Boolean = {
-    var currentNode = this
-    for (elem <- set) {
-      if (currentNode.isEndOfSet) {
-        return true
-      }
-      if (!currentNode.children.contains(elem)) {
-        return false
-      }
-      currentNode = currentNode.children(elem)
-    }
-    currentNode.isEndOfSet
-  }
-
-}
-
-class SuffixTrie {
-  private val root = new SuffixTrieNode
-
-  def insert(set: Seq[Int]): Unit = {
-    root.insert(set)
-  }
-
-  def contains(set: Seq[Int]): Boolean = {
-    root.contains(set)
-  }
-
-}
-
-class TrieNode {
-  var children: Map[Int, TrieNode] = Map()
-
-  def insert(set: Seq[Int]): Unit = {
-    var currentNode = this
-    for (elem <- set) {
-      if (!currentNode.children.contains(elem)) {
-        currentNode.children += (elem -> new TrieNode)
-      }
-      currentNode = currentNode.children(elem)
-    }
-  }
-
-
-  def contains(set: Seq[Int]): Boolean = {
-    var currentNode = this
-    for (elem <- set) {
-      if (!currentNode.children.contains(elem)) {
-        return false
-      }
-      currentNode = currentNode.children(elem)
-    }
-    true
-  }
-
-}
-
-class SetTrie {
-  private val root = new TrieNode
-
-  def insert(set: Seq[Int]): Unit = {
-    root.insert(set)
-  }
-
-  def contains(set: Seq[Int]): Boolean = {
-    root.contains(set)
-  }
-
-}
-
 object AutDatabase {
+
+  object NamedAutomaton {
+    def apply(id : Int, complemented : Boolean) =
+      if (complemented) ComplementedAut(id) else PositiveAut(id)
+  }
 
   abstract sealed class NamedAutomaton (val id : Int) {
     def complement : NamedAutomaton
@@ -192,8 +114,15 @@ class AutDatabase(theory : OstrichStringTheory,
   private val subsetRel  =
     new MHashMap[(NamedAutomaton, NamedAutomaton), Boolean]
 
-  private val prefixSortedIntersectionTree = new SetTrie
-  private val knownConflicts = new SuffixTrie
+  /**
+   * Combinations of automata with non-empty intersection.
+   */
+  private val nonEmptyIntersections = new BSetTrie[Int]
+
+  /**
+   * Combinations of automata with empty intersection.
+   */
+  private val emptyIntersections    = new BSetTrie[Int]
 
   val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
   val emptyLangId : Int        = automaton2Id(emptyLangAut)
@@ -204,6 +133,8 @@ class AutDatabase(theory : OstrichStringTheory,
   synchronized {
     id2CompAut.put(anyStringId, emptyLangId)
     id2CompAut.put(emptyLangId, anyStringId)
+    nonEmptyIntersections += Set(anyStringId)
+    emptyIntersections    += Set(emptyLangId)
   }
 
   /**
@@ -233,11 +164,12 @@ class AutDatabase(theory : OstrichStringTheory,
     }
 
   /**
-   * Add a new automaton to the database.
+   * Add an automaton to the database. If the database already contains
+   * an equivalent automaton, the old id will be returned, ensuring
+   * that distinct ids always map to automata representing distinct languages.
    */
   def automaton2Id(aut : Automaton) : Int =
     synchronized {
-      println("checking ...")
       val id = autTree.insert(aut, nextId)
       if (id == nextId) {
         if (OFlags.debug)
@@ -264,20 +196,25 @@ class AutDatabase(theory : OstrichStringTheory,
     id2ComplementedAutomaton(regex2Id(regexTerm)).get
 
   /**
-   * Query the id of a regular expression.
+   * Retrieve the regular expression for a given id.
+   * If no regular expression is stored for the given id,
+   * <code>None</code> is returned.
    */
   def id2Regex(id : Int) : Option[ITerm] =
     synchronized { id2Regex get id }
 
   /**
-   * Query the automaton that belongs to the regular expression with given id.
+   * Retrieve the automaton for a given id. If no automaton is stored for the
+   * given id, <code>None</code> is returned.
    */
   def id2Automaton(id : Int) : Option[Automaton] =
     synchronized { id2Aut get id }
 
   /**
-   * Query the complemented automaton that belongs to the regular
-   * expression with given id.
+   * Retrieve the complemented automaton that belongs to the automaton
+   * with the given id. If the database does not contain any automaton with
+   * this id, <code>None</code> is returned. As a side effect, this method
+   * might compute the complement of the automaton with the given id.
    */
   def id2ComplementedAutomaton(id : Int) : Option[Automaton] =
     synchronized {
@@ -286,7 +223,9 @@ class AutDatabase(theory : OstrichStringTheory,
 
   /**
    * Query the id of the complemented automaton for the automaton with given
-   * id.
+   * id. If the database does not contain any automaton with this id,
+   * <code>None</code> is returned. As a side effect, this method might compute
+   * the complement of the automaton with the given id.
    */
   def id2ComplementedId(id : Int) : Option[Int] =
     synchronized {
@@ -295,9 +234,10 @@ class AutDatabase(theory : OstrichStringTheory,
         case None =>
           id2Automaton(id) match {
             case Some(aut) => {
-              val compAut = automaton2Id(!aut)
-              id2CompAut.put(id, compAut)
-              Some(compAut)
+              val compId = automaton2Id(!aut)
+              id2CompAut.put(id, compId)
+              id2CompAut.put(compId, id)
+              Some(compId)
             }
             case None =>
               None
@@ -306,20 +246,42 @@ class AutDatabase(theory : OstrichStringTheory,
     }
 
   /**
-   * Query the complemented automaton that belongs to the regular
-   * expression with given id;
-   * return the automaton only if it is already in the database.
+   * Query the complemented automaton that belongs to the automaton with given
+   * id; return the automaton only if it is already available in the database.
    */
   def id2ComplementedAutomatonBE(id : Int) : Option[Automaton] =
     synchronized {
-      for (compId <- id2CompAut get id;
-           aut <- id2Automaton(compId))
-      yield aut
+      for (compId <- id2CompAut get id; aut <- id2Automaton(compId)) yield aut
+    }
+
+  /**
+   * Convert a named automaton to an id. If necessary, this will
+   * add the complemented automaton to the database. The method will fail
+   * with an exception if the name of an automaton is given that does not
+   * exist.
+   */
+  def namedAutToId(n : NamedAutomaton) : Int =
+    n match {
+      case PositiveAut(id)     => id
+      case ComplementedAut(id) => id2ComplementedId(id).get
+    }
+
+  /**
+   * Convert a named automaton to an id. If complementation is required,
+   * and the resulting automata have not been computed yet, or if 
+   * the specified automaton does not exist, the method will return
+   * <code>None</code>.
+   */
+  def namedAutToIdBE(n : NamedAutomaton) : Option[Int] =
+    n match {
+      case PositiveAut(id)     => Some(id)
+      case ComplementedAut(id) => synchronized { id2CompAut get id }
     }
 
   /**
    * Query the automaton that belongs to the regular expression with
-   * given id.
+   * given id. If the database does not contain any automaton with this id,
+   * <code>None</code> is returned.
    */
   def id2Automaton(id : NamedAutomaton) : Option[Automaton] = id match {
     case PositiveAut(id)     => id2Automaton(id)
@@ -329,6 +291,8 @@ class AutDatabase(theory : OstrichStringTheory,
   /**
    * Query the automaton that belongs to the given id;
    * return a complemented automaton only if it is already in the database.
+   * If the database does not contain any automaton with this id,
+   * <code>None</code> is returned as well.
    */
   def id2AutomatonBE(id : NamedAutomaton) : Option[Automaton] = id match {
     case PositiveAut(id)     => id2Automaton(id)
@@ -337,90 +301,59 @@ class AutDatabase(theory : OstrichStringTheory,
 
   /**
    * Check whether <code>aut1</code> specifies a subset of <code>aut2</code>.
+   * If no automata with the given names exist in the database, the method
+   * will fail with an exception.
    */
   def isSubsetOf(aut1 : NamedAutomaton, aut2 : NamedAutomaton) : Boolean =
-    if (aut1.id < aut2.id) {
-      synchronized {
-        // aut1 <= aut2
-        //  <==>
-        // (aut1 & aut2.complement) = empty
-        subsetRel.getOrElseUpdate((aut1, aut2),
-                                  !AutomataUtils.areConsistentAutomata(
-                                    List(id2Automaton(aut1).get,
-                                         id2Automaton(aut2.complement).get)))
-      }
-    } else if (aut1.id > aut2.id) {
-      isSubsetOf(aut2.complement, aut1.complement)
-    } else {
-      true
-    }
+    // aut1 <= aut2
+    //  <==>
+    // (aut1 & aut2.complement) = empty
+    emptyIntersection(aut1, aut2.complement)
 
   /**
    * Check whether <code>aut1</code> specifies a subset of <code>aut2</code>;
    * the check is only carried out when all required automata are already in
-   * the database.
+   * the database and no additional complementation steps are necessary.
    */
   def isSubsetOfBE(aut1 : NamedAutomaton,
                    aut2 : NamedAutomaton) : Option[Boolean] =
-    if (aut1.id < aut2.id) {
-      synchronized {
-        // aut1 <= aut2
-        //  <==>
-        // (aut1 & aut2.complement) = empty
-        for (a1 <- id2AutomatonBE(aut1);
-             a2 <- id2AutomatonBE(aut2.complement)) yield
-          subsetRel.getOrElseUpdate((aut1, aut2),
-                                    !AutomataUtils.areConsistentAutomata(
-                                      List(a1, a2)))
-      }
-    } else if (aut1.id > aut2.id) {
-      isSubsetOfBE(aut2.complement, aut1.complement)
-    } else {
-      Some(true)
-    }
+    for (id1 <- namedAutToIdBE(aut1);
+         id2 <- namedAutToIdBE(aut2.complement))
+    yield emptyIntersection(Set(id1, id2))
 
   /**
    * Check whether <code>aut1</code> and <code>aut2</code> have empty
    * intersection.
+   * If no automata with the given names exist in the database, the method
+   * will fail with an exception.
    */
   def emptyIntersection(aut1 : NamedAutomaton,
                         aut2 : NamedAutomaton) : Boolean =
-  {
-    val tmp = isSubsetOf(aut1, aut2.complement)
-    synchronized {
-      if (tmp) {
-        knownConflicts.insert(Seq(aut1.id, aut2.id).sorted)
-      }
-      tmp
-    }
-  }
+    emptyIntersection(Set(namedAutToId(aut1), namedAutToId(aut2)))
 
-  def emptyIntersection(auts : ArrayBuffer[NamedAutomaton]) : Boolean =
-  {
+  /**
+   * Check whether the automata with the given ids have empty intersection.
+   * If no automata with the given ids exist in the database, the method
+   * will fail with an exception.
+   * 
+   * TODO: move the expensive step out of the synchronized block?
+   */
+  def emptyIntersection(ids : Set[Int]) : Boolean =
     synchronized {
-      val autIds = new ArrayBuffer[Int]
-      val autValues = new ArrayBuffer[Automaton]
-      for (aut <- auts){
-        autIds += aut.id
-        autValues += id2Automaton(aut).get
-      }
-      autIds.sorted
-      if (knownConflicts.contains(autIds)){
-        return true
-      }
-      if (prefixSortedIntersectionTree.contains(autIds)){
-        return false
-      }
-
-      if (AutomataUtils.areConsistentAutomata(autValues)){
-        prefixSortedIntersectionTree.insert(autIds)
+      if (nonEmptyIntersections.containsSuperset(ids)) {
         false
-      }
-      else {
-        knownConflicts.insert(autIds)
+      } else if (emptyIntersections.containsSubset(ids)) {
         true
+      } else {
+        val auts = ids.toSeq.sorted.map(id => id2Automaton(id).get)
+        if (AutomataUtils.areConsistentAutomata(auts)) {
+          nonEmptyIntersections += ids
+          false
+        } else {
+          emptyIntersections += ids
+          true
+        }
       }
     }
-  }
 
 }
