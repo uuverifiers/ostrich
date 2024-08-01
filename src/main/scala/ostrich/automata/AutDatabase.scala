@@ -154,11 +154,39 @@ class AutDatabase(theory : OstrichStringTheory,
 
   private var nextId       = 0
 
+  /**
+   * Map from regular expressions to ids. Ids are assigned based on the
+   * languages, two distinct regular expressions describing the same
+   * language will be assigned the same id.
+   */
   private val regexes      = new MHashMap[ITerm, Int]
-  protected val id2Regex   = new MHashMap[Int, ITerm]
+
+  /**
+   * Map from ids to the corresponding regular expression. Not every id
+   * present in the database has to correspond to a regular expression,
+   * since we internally create new automata without ever going through
+   * regular expressions.
+   */
+  private val id2Regex     = new MHashMap[Int, ITerm]
+
+  /**
+   * Map from ids to the corresponding automaton. The key set of this map
+   * is guaranteed to be a superset of the key set of the
+   * <code>regexes</code> map. Distinct ids are guaranteed to be mapped to
+   * automata describing distinct languages. 
+   */
   private val id2Aut       = new MHashMap[Int, Automaton]
-  protected val id2CompAut = new MHashMap[Int, Automaton]
-  // maps automata to IDs
+
+  /**
+   * Map from ids to the ids of the complement automata. This map is populated
+   * lazily and will typically only cover a subset of the ids present in the
+   * <code>id2Aut</code> map.
+   */
+  private val id2CompAut   = new MHashMap[Int, Int]
+
+  /**
+   * Tree data-structure to map automata to IDs.
+   */
   private val autTree      = new AutomatonTree
 
   private val subsetRel  =
@@ -167,15 +195,15 @@ class AutDatabase(theory : OstrichStringTheory,
   private val prefixSortedIntersectionTree = new SetTrie
   private val knownConflicts = new SuffixTrie
 
-  val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
-  val anyStringId : Int        = automaton2Id(anyStringAut)
-
   val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
   val emptyLangId : Int        = automaton2Id(emptyLangAut)
 
+  val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
+  val anyStringId : Int        = automaton2Id(anyStringAut)
+
   synchronized {
-    id2CompAut.put(anyStringId, emptyLangAut)
-    id2CompAut.put(emptyLangId, anyStringAut)
+    id2CompAut.put(anyStringId, emptyLangId)
+    id2CompAut.put(emptyLangId, anyStringId)
   }
 
   /**
@@ -183,11 +211,25 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   def regex2Id(regexTerm : ITerm) : Int =
     synchronized {
-      regexes.getOrElseUpdate(regexTerm, {
-                                val id = nextId
-                                nextId = nextId + 1
-                                id2Regex.put(id, regexTerm)
-                                id })
+      regexes.get(regexTerm) match {
+        case None     => addRegex(regexTerm)
+        case Some(id) => id
+      }
+    }
+
+  /**
+   * Add a regex that is not yet in the <code>regex2Id</code> map.
+   * This will check whether we already know the language represented by
+   * the regex, and in this case assign the same id.
+   */
+  private def addRegex(regexTerm : ITerm) : Int =
+    synchronized {
+      require(!regexes.contains(regexTerm))
+      val aut = regex2Aut.buildAut(regexTerm, minimizeAutomata)
+      val id = automaton2Id(aut)
+      regexes.put(regexTerm, id)
+      id2Regex.getOrElseUpdate(id, regexTerm)
+      id
     }
 
   /**
@@ -204,38 +246,30 @@ class AutDatabase(theory : OstrichStringTheory,
     }
 
   /**
+   * Convert a regular expression to an automaton, adding both
+   * the expression and the automaton to the database as a side effect.
+   */
+  def regex2Automaton(regexTerm : ITerm) : Automaton =
+    id2Automaton(regex2Id(regexTerm)).get
+
+  /**
+   * Convert the complement of a regular expression to an automaton, adding
+   * the (non-complemented) expression, the automaton, and the complemented
+   * automaton to the database as a side effect.
+   */
+  def regex2ComplementedAutomaton(regexTerm : ITerm) : Automaton =
+    id2ComplementedAutomaton(regex2Id(regexTerm)).get
+
+  /**
    * Query the id of a regular expression.
    */
   def id2Regex(id : Int) : Option[ITerm] =
-    synchronized {
-      id2Regex get id
-    }
+    synchronized { id2Regex get id }
 
   /**
    * Query the automaton that belongs to the regular expression with given id.
    */
   def id2Automaton(id : Int) : Option[Automaton] =
-    synchronized {
-      (id2Aut get id) match {
-        case r@Some(_) => r
-        case None =>
-          (id2Regex get id) match {
-            case Some(regex) => {
-              val aut = regex2Aut.buildAut(regex, minimizeAutomata)
-              id2Aut.put(id, aut)
-              Some(aut)
-            }
-            case None =>
-              None
-          }
-      }
-    }
-
-  /**
-   * Query the automaton that belongs to the regular expression with given id;
-   * return the automaton only if it is already in the database.
-   */
-  def id2AutomatonBE(id : Int) : Option[Automaton] =
     synchronized { id2Aut get id }
 
   /**
@@ -244,12 +278,21 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   def id2ComplementedAutomaton(id : Int) : Option[Automaton] =
     synchronized {
+      id2ComplementedId(id).flatMap(id2Automaton)
+    }
+
+  /**
+   * Query the id of the complemented automaton for the automaton with given
+   * id.
+   */
+  def id2ComplementedId(id : Int) : Option[Int] =
+    synchronized {
       (id2CompAut get id) match {
         case r@Some(_) => r
         case None =>
           id2Automaton(id) match {
             case Some(aut) => {
-              val compAut = !aut
+              val compAut = automaton2Id(!aut)
               id2CompAut.put(id, compAut)
               Some(compAut)
             }
@@ -265,7 +308,11 @@ class AutDatabase(theory : OstrichStringTheory,
    * return the automaton only if it is already in the database.
    */
   def id2ComplementedAutomatonBE(id : Int) : Option[Automaton] =
-    synchronized { id2CompAut get id }
+    synchronized {
+      for (compId <- id2CompAut get id;
+           aut <- id2Automaton(compId))
+      yield aut
+    }
 
   /**
    * Query the automaton that belongs to the regular expression with
@@ -277,12 +324,11 @@ class AutDatabase(theory : OstrichStringTheory,
   }
 
   /**
-   * Query the automaton that belongs to the regular expression with
-   * given id;
-   * return the automaton only if it is already in the database.
+   * Query the automaton that belongs to the given id;
+   * return a complemented automaton only if it is already in the database.
    */
   def id2AutomatonBE(id : NamedAutomaton) : Option[Automaton] = id match {
-    case PositiveAut(id)     => id2AutomatonBE(id)
+    case PositiveAut(id)     => id2Automaton(id)
     case ComplementedAut(id) => id2ComplementedAutomatonBE(id)
   }
 
@@ -348,7 +394,6 @@ class AutDatabase(theory : OstrichStringTheory,
 
   def emptyIntersection(auts : ArrayBuffer[NamedAutomaton]) : Boolean =
   {
-    println(f"checking $auts")
     synchronized {
       val autIds = new ArrayBuffer[Int]
       val autValues = new ArrayBuffer[Automaton]
@@ -374,17 +419,5 @@ class AutDatabase(theory : OstrichStringTheory,
       }
     }
   }
-
-  /**
-   * Query the automaton that belongs to a regular expression.
-   */
-  def regex2Automaton(regexTerm : ITerm) : Automaton =
-    id2Automaton(regex2Id(regexTerm)).get
-
-  /**
-   * Query the complemented automaton that belongs to a regular expression.
-   */
-  def regex2ComplementedAutomaton(regexTerm : ITerm) : Automaton =
-    id2ComplementedAutomaton(regex2Id(regexTerm)).get
 
 }
