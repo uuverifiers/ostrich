@@ -32,11 +32,14 @@ package ostrich.proofops
 
 import ap.parser.IFunction
 import ap.proof.goal.Goal
+import ap.terfor.TerForConvenience.term2RichLC
 import ap.terfor.Term
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
 import ostrich._
-import ostrich.automata.{Automaton, BricsAutomaton, AtomicStateAutomaton}
+import ostrich.automata.{
+  Automaton, BricsAutomaton, AtomicStateAutomaton, AutomataUtils
+}
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.preop.{ConcatPreOp, PreOp}
 
@@ -254,11 +257,18 @@ trait PropagationSaturationUtils {
   }
 
   def formulaTermInAut(t : Term, aut : Automaton, goal : Goal) : Formula = {
-    val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
+    val word = AutomataUtils.isSingletonIfAtomic(aut)
     val lt = LinearCombination(t, goal.order);
-    val autId = autDatabase.automaton2Id(aut);
-    val lautId = LinearCombination(IdealInt(autId));
-    str_in_re_id_app(Seq(lt, lautId))
+    if (word.isDefined) {
+      val w = word.head
+      val wordId = strDatabase.list2Id(w)
+      term2RichLC(t)(goal.order) === LinearCombination(IdealInt(wordId))
+    } else {
+      val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
+      val autId = autDatabase.automaton2Id(aut);
+      val lautId = LinearCombination(IdealInt(autId));
+      str_in_re_id_app(Seq(lt, lautId))
+    }
   }
 
   def logSaturation[A](category : String)(action : A) : A = {
