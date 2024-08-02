@@ -656,8 +656,6 @@ object AutomataUtils {
     //   Some(w) to indicate (q1, ..., qn) can be reached by word w
     //   None to indicate it can be reached by two distinct words (or more)
     val reachedByWord = new MHashMap[List[Any], Option[Seq[Int]]]
-    // (q1, ..., qn) -> Q means all product states in Q can be reached from q
-    val statesReachableFrom = new MHashMap[List[Any], MHashSet[List[Any]]]
     // worklist of (q1, ..., qn) reached and to be processed
     val worklist = new MStack[List[Any]]
 
@@ -673,8 +671,6 @@ object AutomataUtils {
         lbl = lblAny.asInstanceOf[headAut.TLabel]
         if headAut.LabelOps.isNonEmptyLabel(lbl.asInstanceOf[headAut.TLabel])
       ) {
-        statesReachableFrom.getOrElse(q, new MHashSet()).add(qnext)
-
         // reachedByWord.get(q) will be defined else q not in worklist
         val wordToq = reachedByWord.get(q).head
         val singleCharTran = headAut.LabelOps.isSingleton(lbl)
@@ -711,11 +707,8 @@ object AutomataUtils {
           if (isAccepting(auts, qnext))
             return None
           reachedByWord.put(qnext, None)
-          for (qreach <- statesReachableFrom.getOrElse(qnext, Set())) {
-            if (isAccepting(auts, qreach))
-              return None
-            reachedByWord.put(qreach, None)
-          }
+          // now we know there are two words, search again
+          worklist.push(qnext)
         }
       }
     }
@@ -733,4 +726,14 @@ object AutomataUtils {
 
   def isSingleton(aut : AtomicStateAutomaton) : Option[Seq[Int]] =
     isSingleton(List(aut))
+
+  /**
+   * Version of isSingleton that says "No" for non AtomicStateAutomaton
+   */
+  def isSingletonIfAtomic(aut : Automaton) : Option[Seq[Int]] = {
+    if (aut.isInstanceOf[AtomicStateAutomaton])
+      isSingleton(aut.asInstanceOf[AtomicStateAutomaton])
+    else
+      None
+  }
 }

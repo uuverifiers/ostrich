@@ -100,6 +100,31 @@ object AutomataUtilsSpecification
     builder.getAutomaton
   }
 
+  val autAThenBStar = {
+    val builder = new BricsAutomatonBuilder
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+    builder.setInitialState(q0)
+    builder.addTransition(q0, ('a', 'a'),  q1)
+    builder.addTransition(q1, ('b', 'b'),  q0)
+    builder.setAccept(q1, true)
+    builder.getAutomaton
+  }
+
+  val autABMaybe = {
+    val builder = new BricsAutomatonBuilder
+    val q0 = builder.getNewState
+    val q1 = builder.getNewState
+    val q2 = builder.getNewState
+    builder.setInitialState(q0)
+    builder.addTransition(q0, ('a', 'a'),  q1)
+    builder.addTransition(q1, ('b', 'b'),  q2)
+    builder.setAccept(q1, true)
+    builder.setAccept(q2, true)
+    builder.getAutomaton
+  }
+
+
   def seq(s : String) = s.map(_.toInt)
 
   property("isSingleton(a)") = {
@@ -134,7 +159,15 @@ object AutomataUtilsSpecification
     AutomataUtils.isSingleton(autAOrBThenCAlt).isEmpty
   }
 
-  property("isSingleton(a*b) alt") = {
+  property("isSingleton(a*b)") = {
     AutomataUtils.isSingleton(autAStarB).isEmpty
+  }
+
+  property("isSingleton((ab)*)") = {
+    AutomataUtils.isSingleton(autAThenBStar).isEmpty
+  }
+
+  property("isSingleton((ab)?)") = {
+    AutomataUtils.isSingleton(autABMaybe).isEmpty
   }
 }
