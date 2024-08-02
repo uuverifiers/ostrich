@@ -32,9 +32,9 @@ package ostrich.proofops
 
 import ap.parser.IFunction
 import ap.proof.goal.Goal
+import ap.terfor.Term
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
-import ap.terfor.Term
 import ostrich._
 import ostrich.automata.{Automaton, BricsAutomaton, AtomicStateAutomaton}
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
@@ -47,6 +47,9 @@ import scala.collection.mutable.{
   MultiMap => MMultiMap,
   Set => MSet
 }
+import ap.terfor.Formula
+import ap.basetypes.IdealInt
+import ap.terfor.RichPredicate
 
 /**
  * Utility methods for propagator saturation
@@ -248,6 +251,14 @@ trait PropagationSaturationUtils {
       case lc =>
         throw new Exception ("Could not decode regex id " + lc)
     }
+  }
+
+  def formulaTermInAut(t : Term, aut : Automaton, goal : Goal) : Formula = {
+    val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
+    val lt = LinearCombination(t, goal.order);
+    val autId = autDatabase.automaton2Id(aut);
+    val lautId = LinearCombination(IdealInt(autId));
+    str_in_re_id_app(Seq(lt, lautId))
   }
 
   def logSaturation[A](category : String)(action : A) : A = {

@@ -30,19 +30,15 @@
 
 package ostrich.proofops
 
-import ap.basetypes.IdealInt
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AddAxiom
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
-import ap.terfor.{RichPredicate, Term}
 import ap.theories.{SaturationProcedure, Theory}
 import ap.util.Combinatorics.cartesianProduct
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-import ostrich.automata.Automaton
 
 /**
  * A SaturationProcedure for forwards propagation.
@@ -132,7 +128,6 @@ class ForwardsSaturation(
 
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
-    val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
 
     val (funApp, argCons) = appPoint
     val (op, args, res, formula)
@@ -153,15 +148,14 @@ class ForwardsSaturation(
           cons.map(c => atomConstraintToAut(arg, Some(c)))
     })
     val resultConstraint = op.forwardApprox(argAuts);
-    val autId = autDatabase.automaton2Id(resultConstraint);
-    val lres = LinearCombination(res, goal.order);
-    val lautId = LinearCombination(IdealInt(autId));
+
+    val resFmla = formulaTermInAut(res, resultConstraint, goal)
     val assumptions = List(formula) ++ argCons.flatten
 
     logSaturation("forward propagation") {
       Seq(AddAxiom(
         assumptions,
-        Conjunction.conj(str_in_re_id_app(Seq(lres, lautId)), goal.order),
+        Conjunction.conj(resFmla, goal.order),
         theory
       ))
     }

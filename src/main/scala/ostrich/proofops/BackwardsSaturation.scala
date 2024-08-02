@@ -30,19 +30,15 @@
 
 package ostrich.proofops
 
-import ap.basetypes.IdealInt
-import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AxiomSplit
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
-import ap.terfor.{RichPredicate, Term}
+import ap.terfor.Term
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-import ostrich.automata.Automaton
 
 /**
  * A SaturationProcedure for backwards propagation.
@@ -108,7 +104,6 @@ class BackwardsSaturation(
 
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
-    val str_in_re_id_app = new RichPredicate(str_in_re_id, goal.order)
 
     val (funApp, argCon) = appPoint
     val (op, args, res, formula)
@@ -138,11 +133,7 @@ class BackwardsSaturation(
     val argCases = newConstraints.filter(_.forall(!_.isEmpty))
       .map(argCS => {
         (args zip argCS).collect({
-          case (Some(a), aut) =>
-            val autId = autDatabase.automaton2Id(aut)
-            val argTerm = LinearCombination(a, goal.order)
-            val lautId = LinearCombination(IdealInt(autId))
-            str_in_re_id_app(Seq(argTerm, lautId))
+          case (Some(a), aut) => formulaTermInAut(a, aut, goal)
         })
       }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
       .toSeq
