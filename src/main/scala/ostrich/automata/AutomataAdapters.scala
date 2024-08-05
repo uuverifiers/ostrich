@@ -307,4 +307,94 @@ case class NestedAutomaton(inner: AtomicStateAutomaton,
       AutomataUtils.nestAutomata(inner, a, outer)
     ) { }
 
+/**
+ * Any string of len between bounds (inclusive)
+ *
+ * Lower bound of None means 0
+ * Upper bound of None means anything >= lower bound
+ */
+case class LengthBoundedAutomaton(
+  aut : AtomicStateAutomaton,
+  val lowerBound : Option[Int],
+  val upperBound : Option[Int]
+) extends AtomicStateAutomatonAdapter[AtomicStateAutomaton](aut) {
+  private val maxCount = upperBound.map(_ + 1).getOrElse(
+    lowerBound.map(_ + 1).getOrElse(0)
+  )
+
+  // build states on the fly to represent pairs (s, c)
+  // where s is a state of the underlying aut
+  // and c is how many steps taken from init
+  private val builder = underlying.getBuilder
+  private val stateMap = new MHashMap[(State, Int), State]
+  private val revStateMap = new MHashMap[State, (State, Int)]
+
+  override lazy val initialState = encodeState(underlying.initialState, 0)
+  override lazy val acceptingStates =
+    for (
+      s <- underlying.acceptingStates;
+      c <- acceptingCounts;
+      encS = encodeState(s, c);
+      if states.contains(encS)
+    )
+      yield encS
+  override lazy val states = getReachableStates()
+    for (
+      s <- underlying.states;
+      c <- 0 to maxCount
+    )
+      yield encodeState(s, c)
+
+  override def isAccept(s : State) : Boolean = {
+    val (underlyingState, count) = decodeState(s)
+    underlying.isAccept(underlyingState) && isAcceptingCount(count)
+  }
+
+  override def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
+    val (underlyingFrom, count) = decodeState(from)
+    for ((s, l) <- underlying.outgoingTransitions(underlyingFrom))
+         yield (encodeState(s, nextCountState(count)), l)
+  }
+
+  private def encodeState(underlyingState : State, count : Int) : State = {
+    val s = (underlyingState, count)
+    if (!stateMap.contains(s)) {
+      val encS = builder.getNewState
+      stateMap.put(s, encS)
+      revStateMap.put(encS, s)
+      encS
+    } else {
+      stateMap(s)
+    }
+  }
+
+  private def decodeState(s : State) : (State, Int) = {
+    revStateMap.getOrElse(s, { (builder.getNewState, maxCount) })
+  }
+
+  private def nextCountState(s : Int) : Int =
+    if (s >= maxCount) maxCount else s + 1
+
+  private def acceptingCounts : Range =
+    lowerBound.getOrElse(0) to upperBound.getOrElse(maxCount)
+
+  private def isAcceptingCount(c : Int) : Boolean =
+    lowerBound.getOrElse(0) <= c && c <= upperBound.getOrElse(maxCount)
+
+  private def getReachableStates() : Set[State] = {
+    val states = new MLinkedHashSet[State]
+    val worklist = new ArrayStack[State]
+
+    states += initialState
+    worklist.push(initialState)
+
+    while (!worklist.isEmpty) {
+      for ((s, _) <- outgoingTransitions(worklist.pop)) {
+        if (states.add(s))
+          worklist.push(s)
+      }
+    }
+    states.toSet
+  }
+}
 
