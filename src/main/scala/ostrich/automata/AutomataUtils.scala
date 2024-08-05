@@ -96,50 +96,6 @@ object AutomataUtils {
   }
 
   /**
-   * Check whether there is some word of length <code>len</code> accepted
-   * by all of the given automata.
-   * The automata are required to all have the same label type (though this is
-   * not checked statically)
-   */
-  def findAcceptedWordAtomic(auts : Seq[AtomicStateAutomaton],
-                             len : Int) : Option[Seq[Int]] = {
-    val autsList = auts.toList
-    val headAut = autsList.head
-    val visitedStates = new MHashSet[(List[Any], Int)]
-    val todo = new ArrayStack[(List[Any], List[Int])]
-
-    val initial = (autsList map (_.initialState))
-
-    if (isAccepting(autsList, initial) && len == 0)
-      return Some(List())
-
-    visitedStates += ((initial, 0))
-    todo push ((initial, List()))
-
-    while (!todo.isEmpty) {
-      val (next, w) = todo.pop
-      val wSize = w.size
-      for (
-        (reached, lblAny)
-          <- enumNext(autsList, next, headAut.LabelOps.sigmaLabel);
-        lbl = lblAny.asInstanceOf[headAut.TLabel]
-        if headAut.LabelOps.isNonEmptyLabel(lbl)
-      ) {
-        val let = headAut.LabelOps.enumLetters(lbl).next
-        if (visitedStates.add((reached, wSize + 1))) {
-          val newW = let :: w
-          if (isAccepting(autsList, reached) && len == wSize + 1)
-            return Some(newW.reverse)
-          if (wSize + 1 < len)
-            todo push (reached, newW)
-        }
-      }
-    }
-
-    None
-  }
-
-  /**
    * Check if list of states are all accepting in list of automata
    *
    * @param auts the list of automata in order the states belong to
@@ -241,9 +197,35 @@ object AutomataUtils {
    */
   def findAcceptedWord(auts : Seq[Automaton],
                        len : Int) : Option[Seq[Int]] =
-    findAcceptedWordAtomic(for (aut <- auts)
-                             yield aut.asInstanceOf[AtomicStateAutomaton],
-                           len)
+    findAcceptedWord(auts, Some(len), Some(len))
+
+  /**
+   * Check whether there is some word of length in range accepted
+   * by all of the given automata.
+   * None means no lower/upper bound.
+   * Requires all automata to be AtomicStateAutomaton
+   */
+  def findAcceptedWord(auts : Seq[Automaton],
+                       lowerBound : Option[Int],
+                       upperBound : Option[Int]) : Option[Seq[Int]] =
+    auts match {
+      case Nil => None
+      case head::tail => {
+        if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
+          findAcceptedWordAtomic(
+            LengthBoundedAutomaton(
+              head.asInstanceOf[AtomicStateAutomaton],
+              lowerBound,
+              upperBound
+            ) :: tail.map(_.asInstanceOf[AtomicStateAutomaton])
+          )
+        } else {
+          throw new UnsupportedOperationException(
+            "Finding words of a given length for non-atomic static automata"
+          )
+        }
+      }
+    }
 
   /**
    * Find a word accepted by all automata

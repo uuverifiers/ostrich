@@ -43,7 +43,9 @@ import ap.terfor.conjunctions.Conjunction
 import ap.types.SortedPredicate
 
 import ostrich._
-import ostrich.automata.{AutomataUtils, BricsAutomaton}
+import ostrich.automata.{
+  AtomicStateAutomaton, AutomataUtils, BricsAutomaton, LengthBoundedAutomaton
+}
 
 /**
  * Class to pick concrete values of string variables. This proof rule
@@ -58,6 +60,9 @@ class OstrichCut(theory : OstrichStringTheory) {
     implicit val order = goal.order
 
     val predConj = goal.facts.predConj
+    // TODO: assumes only one len constraint per term?
+    val strLenMap =
+      predConj.positiveLitsWithPred(_str_len).map(a => (a(0), a(1))).toMap
     val allAtoms = predConj.positiveLits ++ predConj.negativeLits
 
     // TODO: is it better to sort function application, start with
@@ -87,29 +92,58 @@ class OstrichCut(theory : OstrichStringTheory) {
       val productAut =
         AutomataUtils.product(auts)
 
-      // TODO: also take length constraints into account!
+      // also take length constraints into account
+      val reducer = goal.reduceWithFacts
+      val lowerLenBound = strLenMap
+        .get(stringVar)
+        .map(reducer.lowerBound)
+        .flatten
+        .map(_.intValue)
+      val upperLenBound = strLenMap
+        .get(stringVar)
+        .map(reducer.upperBound)
+        .flatten
+        .map(_.intValue)
 
-      // we should be able to rely on the product automaton describing
-      // a non-empty language
-      val acceptedWord =
-        productAut.getAcceptedWord.get
-      val acceptedWordId =
-        strDatabase.list2Id(acceptedWord)
+      val acceptedWord = if (productAut.isInstanceOf[AtomicStateAutomaton]) {
+        AutomataUtils.findAcceptedWord(
+          List(productAut),
+          lowerLenBound,
+          upperLenBound
+        )
+      } else {
+        productAut.getAcceptedWord
+      }
 
-      val negAutomaton =
-        !BricsAutomaton.fromString(strDatabase.id2Str(acceptedWordId))
-      val negAutomatonId =
-        autDatabase.automaton2Id(negAutomaton)
+      if (acceptedWord.isDefined) {
+        val acceptedWordId =
+          strDatabase.list2Id(acceptedWord.get)
 
-      if (OFlags.debug)
-        Console.err.println(
-          f"Performing cut: $stringVar == ${"\""}${strDatabase.id2Str(acceptedWordId)}${"\""}")
+        val negAutomaton =
+          !BricsAutomaton.fromString(strDatabase.id2Str(acceptedWordId))
+        val negAutomatonId =
+          autDatabase.automaton2Id(negAutomaton)
 
-      List(Plugin.AxiomSplit(
-             List(),
-             List((stringVar === acceptedWordId, List()),
-                  (str_in_re_id(List(stringVarLC, l(negAutomatonId))), List())),
-             theory))
+        if (OFlags.debug)
+          Console.err.println(
+            f"Performing cut: $stringVar == ${"\""}${strDatabase.id2Str(acceptedWordId)}${"\""}")
+
+        List(Plugin.AxiomSplit(
+               List(),
+               List((stringVar === acceptedWordId, List()),
+                    (str_in_re_id(List(stringVarLC, l(negAutomatonId))), List())),
+               theory))
+      } else {
+        val rcons =
+          predConj.positiveLitsWithPred(str_in_re_id)
+            .filter(_.head == stringVarLC)
+            .toSeq
+        val lcons =
+          predConj.positiveLitsWithPred(_str_len)
+            .filter(_(0) == stringVar)
+            .toSeq
+        List(Plugin.CloseByAxiom(rcons ++ lcons, theory))
+      }
     } else {
       List()
     }
