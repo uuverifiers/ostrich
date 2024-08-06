@@ -271,6 +271,55 @@ trait PropagationSaturationUtils {
     }
   }
 
+  private def resultTermAppearsElsewhere(term: Term, funApps: Seq[(PreOp, Seq[Option[Term]], Term, Atom)], originalElem: (PreOp, Seq[Option[Term]], Term, Atom)): Boolean = {
+    funApps.exists { case (op, args, resTerm, atom) =>
+      // Check if the term appears in the arguments or as the result term,
+      // excluding its original position
+      if (originalElem == (op, args, resTerm, atom)) {
+        false
+      } else {
+        args.flatten.contains(term) || resTerm == term
+      }
+    }
+  }
+
+  // Helper function to check if any terms in the sequence of options appear elsewhere
+  private def argsAppearElsewhere(args: Seq[Option[Term]], funApps: Seq[(PreOp, Seq[Option[Term]], Term, Atom)], currentElem: (PreOp, Seq[Option[Term]], Term, Atom)): Boolean = {
+    args.flatten.exists(term => resultTermAppearsElsewhere(term, funApps, currentElem))
+  }
+
+  def getCutOrder(goal: Goal): Seq[(PreOp, Seq[Option[Term]], Term, Atom)] = {
+    val orderOfRemoval = ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]()
+    // Get initial function applications
+    val initialFunApps = getFunApps(goal)
+    val funApps = ArrayBuffer(initialFunApps: _*) // Make a mutable copy
+    var changed = true
+
+    while (changed && funApps.nonEmpty) {
+      changed = false
+      val toRemove = ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]()
+
+      // Check each element and mark for removal if it satisfies the condition
+      for (elem <- funApps) {
+        val (_, args, resultTerm, _) = elem
+        if (!resultTermAppearsElsewhere(resultTerm, funApps, elem)){
+          orderOfRemoval += elem
+          toRemove += elem
+        }
+        if (!argsAppearElsewhere(args, funApps, elem)){
+          toRemove += elem
+        }
+      }
+
+      // Remove the marked elements
+      if (toRemove.nonEmpty) {
+        changed = true
+        funApps --= toRemove
+      }
+    }
+    orderOfRemoval
+  }
+
   def logSaturation[A](category : String)(action : A) : A = {
     if (OFlags.debug)
       Console.err.println(f"Performing $category: $action")
