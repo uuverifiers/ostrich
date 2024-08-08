@@ -1,10 +1,22 @@
 type token =
   | Lrange
-  | Label of (string)
-  | Lint of (int)
+  | Label of (
+# 30 "ori.mly"
+        string
+# 7 "ori.ml"
+)
+  | Lint of (
+# 31 "ori.mly"
+        int
+# 12 "ori.ml"
+)
   | Leol
   | LAutomaton
-  | Lsingle of (string)
+  | Lsingle of (
+# 33 "ori.mly"
+        string
+# 19 "ori.ml"
+)
   | LState
   | LInitial
   | Lconcat
@@ -25,11 +37,23 @@ type token =
   | Lsepa
   | Lassign
   | Leq
-  | Lstr of (int list)
-  | Lvar of (string)
-  | Lresult of (string)
+  | Lstr of (
+# 38 "ori.mly"
+        int list
+# 44 "ori.ml"
+)
+  | Lvar of (
+# 39 "ori.mly"
+        string
+# 49 "ori.ml"
+)
+  | Lresult of (
+# 40 "ori.mly"
+        string
+# 54 "ori.ml"
+)
 
-open Parsing;;
+open Parsing
 let _ = parse_error;;
 # 3 "ori.mly"
 
@@ -56,7 +80,7 @@ let rec consTrans i l = match l with
 let consAuto l = if l = [] then {init = [0]; trans = [{origin = 0; kind = 0; toL = []}]}
     	       	 else {init = [0]; trans = (consTrans 0 l)} ;;
 
-# 60 "ori.ml"
+# 84 "ori.ml"
 let yytransl_const = [|
   257 (* Lrange *);
   260 (* Leol *);
@@ -215,21 +239,21 @@ let yyact = [|
     Obj.repr(
 # 58 "ori.mly"
                                   ((_1,_2))
-# 219 "ori.ml"
+# 243 "ori.ml"
                : (Trans.str_cons list) * string))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 1 : 'strConss) in
     Obj.repr(
 # 59 "ori.mly"
                            ((_1,"non"))
-# 226 "ori.ml"
+# 250 "ori.ml"
                : (Trans.str_cons list) * string))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : 'strCon) in
     Obj.repr(
 # 61 "ori.mly"
             ([_1])
-# 233 "ori.ml"
+# 257 "ori.ml"
                : 'strConss))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 1 : 'strCon) in
@@ -237,21 +261,21 @@ let yyact = [|
     Obj.repr(
 # 62 "ori.mly"
                                       (_1 :: _2)
-# 241 "ori.ml"
+# 265 "ori.ml"
                : 'strConss))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : string) in
     Obj.repr(
 # 64 "ori.mly"
                     (_1)
-# 248 "ori.ml"
+# 272 "ori.ml"
                : 'Lid))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : string) in
     Obj.repr(
 # 65 "ori.mly"
                   (_1)
-# 255 "ori.ml"
+# 279 "ori.ml"
                : 'Lid))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 8 : 'Lid) in
@@ -260,7 +284,7 @@ let yyact = [|
     Obj.repr(
 # 68 "ori.mly"
                                                           (Strconcat (_1, _5, _7))
-# 264 "ori.ml"
+# 288 "ori.ml"
                : 'strCon))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 3 : 'Lid) in
@@ -268,7 +292,7 @@ let yyact = [|
     Obj.repr(
 # 69 "ori.mly"
                                                 (Regexcon (_1, consAuto _3))
-# 272 "ori.ml"
+# 296 "ori.ml"
                : 'strCon))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 2 : 'Lid) in
@@ -276,21 +300,21 @@ let yyact = [|
     Obj.repr(
 # 70 "ori.mly"
                                  (Regexcon (_1, _3))
-# 280 "ori.ml"
+# 304 "ori.ml"
                : 'strCon))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 1 : 'automata) in
     Obj.repr(
 # 75 "ori.mly"
                   (_1)
-# 287 "ori.ml"
+# 311 "ori.ml"
                : 'automataEnd))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : 'automaton) in
     Obj.repr(
 # 78 "ori.mly"
                     ([_1])
-# 294 "ori.ml"
+# 318 "ori.ml"
                : 'automata))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 1 : 'automaton) in
@@ -298,7 +322,7 @@ let yyact = [|
     Obj.repr(
 # 79 "ori.mly"
                           ( _1 :: _2 )
-# 302 "ori.ml"
+# 326 "ori.ml"
                : 'automata))
 ; (fun __caml_parser_env ->
     let _2 = (Parsing.peek_val __caml_parser_env 2 : 'initstate) in
@@ -306,40 +330,40 @@ let yyact = [|
     Obj.repr(
 # 83 "ori.mly"
                                                     ({init=_2; trans=_3})
-# 310 "ori.ml"
+# 334 "ori.ml"
                : 'automaton))
 ; (fun __caml_parser_env ->
     let _2 = (Parsing.peek_val __caml_parser_env 1 : string) in
     Obj.repr(
 # 84 "ori.mly"
                                               (consAuto (str_code_l1 0 _2))
-# 317 "ori.ml"
+# 341 "ori.ml"
                : 'automaton))
 ; (fun __caml_parser_env ->
     let _4 = (Parsing.peek_val __caml_parser_env 0 : int) in
     Obj.repr(
 # 90 "ori.mly"
                                 ([_4])
-# 324 "ori.ml"
+# 348 "ori.ml"
                : 'initstate))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 93 "ori.mly"
                        ("accept")
-# 330 "ori.ml"
+# 354 "ori.ml"
                : 'tlabel))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 94 "ori.mly"
                        ("reject")
-# 336 "ori.ml"
+# 360 "ori.ml"
                : 'tlabel))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : 'epsilon) in
     Obj.repr(
 # 97 "ori.mly"
                        ( _1 )
-# 343 "ori.ml"
+# 367 "ori.ml"
                : 'transitions))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 1 : 'transition) in
@@ -347,13 +371,13 @@ let yyact = [|
     Obj.repr(
 # 98 "ori.mly"
                                      (_1 :: _2)
-# 351 "ori.ml"
+# 375 "ori.ml"
                : 'transitions))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 101 "ori.mly"
                                                (  [] )
-# 357 "ori.ml"
+# 381 "ori.ml"
                : 'epsilon))
 ; (fun __caml_parser_env ->
     let _2 = (Parsing.peek_val __caml_parser_env 5 : int) in
@@ -362,14 +386,14 @@ let yyact = [|
     Obj.repr(
 # 105 "ori.mly"
                                                ({origin=_2; kind=(label2kind _4); toL=_7})
-# 366 "ori.ml"
+# 390 "ori.ml"
                : 'transition))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : 'emptyto) in
     Obj.repr(
 # 108 "ori.mly"
                   ( _1)
-# 373 "ori.ml"
+# 397 "ori.ml"
                : 'ttos))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 1 : 'tto) in
@@ -377,13 +401,13 @@ let yyact = [|
     Obj.repr(
 # 109 "ori.mly"
                      ( _1 :: _2 )
-# 381 "ori.ml"
+# 405 "ori.ml"
                : 'ttos))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 112 "ori.mly"
                                          ([])
-# 387 "ori.ml"
+# 411 "ori.ml"
                : 'emptyto))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 2 : 'sspec) in
@@ -391,7 +415,7 @@ let yyact = [|
     Obj.repr(
 # 115 "ori.mly"
                            ({label=_1; target=(_3)})
-# 395 "ori.ml"
+# 419 "ori.ml"
                : 'tto))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 2 : 'range) in
@@ -399,7 +423,7 @@ let yyact = [|
     Obj.repr(
 # 116 "ori.mly"
                                         ({label=_1; target=(_3)})
-# 403 "ori.ml"
+# 427 "ori.ml"
                : 'tto))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 3 : 'sspec) in
@@ -407,81 +431,81 @@ let yyact = [|
     Obj.repr(
 # 117 "ori.mly"
                                ({label=(String.concat "-" [_1;">"]); target=(_4)})
-# 411 "ori.ml"
+# 435 "ori.ml"
                : 'tto))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 120 "ori.mly"
                ("\\u002d")
-# 417 "ori.ml"
+# 441 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 121 "ori.mly"
                                         ("]")
-# 423 "ori.ml"
+# 447 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 122 "ori.mly"
               ("[")
-# 429 "ori.ml"
+# 453 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 123 "ori.mly"
                ("(")
-# 435 "ori.ml"
+# 459 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 124 "ori.mly"
                 (")")
-# 441 "ori.ml"
+# 465 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 125 "ori.mly"
               (",")
-# 447 "ori.ml"
+# 471 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 126 "ori.mly"
                ("{")
-# 453 "ori.ml"
+# 477 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 127 "ori.mly"
                 ("}")
-# 459 "ori.ml"
+# 483 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 128 "ori.mly"
              (":")
-# 465 "ori.ml"
+# 489 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     Obj.repr(
 # 129 "ori.mly"
               (";")
-# 471 "ori.ml"
+# 495 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : string) in
     Obj.repr(
 # 130 "ori.mly"
               (_1)
-# 478 "ori.ml"
+# 502 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 0 : int) in
     Obj.repr(
 # 131 "ori.mly"
              (string_of_int _1)
-# 485 "ori.ml"
+# 509 "ori.ml"
                : 'sspec))
 ; (fun __caml_parser_env ->
     let _1 = (Parsing.peek_val __caml_parser_env 2 : 'sspec) in
@@ -489,7 +513,7 @@ let yyact = [|
     Obj.repr(
 # 134 "ori.mly"
                           (String.concat "-" [_1;_3])
-# 493 "ori.ml"
+# 517 "ori.ml"
                : 'range))
 (* Entry strCons *)
 ; (fun __caml_parser_env -> raise (Parsing.YYexit (Parsing.peek_val __caml_parser_env 0)))

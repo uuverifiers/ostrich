@@ -7,7 +7,7 @@ arbitrary-precision integers.
 
 The module is simply named `Z`.  Its interface is similar to that of
 the `Int32`, `Int64` and `Nativeint` modules from the OCaml standard
-library, with some additional functions.  See the file `z.mlip` for
+library, with some additional functions.  See the file `z.mli` for
 documentation.
 
 The implementation uses GMP (the GNU Multiple Precision arithmetic
@@ -26,6 +26,9 @@ polymorphic comparison operators (`=`, `<`, `>`, etc.).
 Additional features include:
 * a module `Q` for rationals, built on top of `Z` (see `q.mli`)
 * a compatibility layer `Big_int_Z` that implements the same API as Big_int from the legacy `Num` library, but uses `Z` internally
+
+Support for [js_of_ocaml](https://github.com/ocsigen/js_of_ocaml/) is
+provided by [Zarith_stubs_js](https://github.com/janestreet/zarith_stubs_js).
 
 ## REQUIREMENTS
 

@@ -1,10 +1,22 @@
 type token =
   | Lrange
-  | Label of (string)
-  | Lint of (int)
+  | Label of (
+# 30 "ori.mly"
+        string
+# 7 "ori.mli"
+)
+  | Lint of (
+# 31 "ori.mly"
+        int
+# 12 "ori.mli"
+)
   | Leol
   | LAutomaton
-  | Lsingle of (string)
+  | Lsingle of (
+# 33 "ori.mly"
+        string
+# 19 "ori.mli"
+)
   | LState
   | LInitial
   | Lconcat
@@ -25,9 +37,21 @@ type token =
   | Lsepa
   | Lassign
   | Leq
-  | Lstr of (int list)
-  | Lvar of (string)
-  | Lresult of (string)
+  | Lstr of (
+# 38 "ori.mly"
+        int list
+# 44 "ori.mli"
+)
+  | Lvar of (
+# 39 "ori.mly"
+        string
+# 49 "ori.mli"
+)
+  | Lresult of (
+# 40 "ori.mly"
+        string
+# 54 "ori.mli"
+)
 
 val strCons :
   (Lexing.lexbuf  -> token) -> Lexing.lexbuf -> (Trans.str_cons list) * string
