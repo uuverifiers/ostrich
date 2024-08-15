@@ -111,6 +111,31 @@ object AutomataUtils {
     }
 
   /**
+   * Check if list of states are all accepting in list of automata
+   *
+   * @param auts the list of automata in order the states belong to
+   * @param negAuts list of negative automata that should not accept
+   * @param states pair of the list of positive states to check
+   * (states[i] must be of type auts[i].State) and the list of negative
+   * states to check (should be a set of states of negAuts[i].State and
+   * counted as accepting if **no** member of the set is accepting)
+   */
+  private def isAccepting(
+    auts : List[AtomicStateAutomaton],
+    negAuts : List[AtomicStateAutomaton],
+    states : (List[_], List[Set[_]])
+  ) : Boolean =
+    (auts.iterator zip states._1.iterator).forall({
+      case (aut, state) =>
+        aut.acceptingStates.contains(state.asInstanceOf[aut.State])
+    }) && (negAuts.iterator zip states._2.iterator).forall({
+      case (aut, stateSet) =>
+        !stateSet.exists({ state =>
+          aut.acceptingStates contains state.asInstanceOf[aut.State]
+        })
+    })
+
+  /**
    * Enum next states of list of automata
    *
    * All auts must have same label type, not checked statically
@@ -144,43 +169,103 @@ object AutomataUtils {
   }
 
   /**
+   * Enum next state sets of list of automata
+   *
+   * All auts must have same label type, not checked statically
+   *
+   * @param auts the list of automata in order the states belong to
+   * @param stateSets the list of sets of states to check
+   * (states of states[i] must be of type auts[i].State)
+   * @param intersectedLabels enum all next states that use a char
+   * compatible with the given label. Must be common label type of all
+   * automata, not checked statically
+   * @return list of reachable state sets paired with label reachable by
+   */
+  def enumNextSets(
+    auts : List[AtomicStateAutomaton],
+    stateSets : List[Set[_]],
+    intersectedLabels : Any
+  ) : Iterator[(List[Set[_]], Any)] = {
+    auts match {
+      case List() =>
+        Iterator((List(), intersectedLabels))
+      case aut :: otherAuts => {
+        val stateSetAny :: otherStateSets = stateSets
+        val stateSet = stateSetAny.asInstanceOf[Set[aut.State]]
+        for ((to, label) <- enumOutgoingFromSet(aut)(stateSet);
+             newILabel <- aut.LabelOps.intersectLabels(
+                           intersectedLabels.asInstanceOf[aut.TLabel],
+                           label).toSeq;
+             (next, let) <- enumNextSets(otherAuts, otherStateSets, newILabel)
+        )
+        yield (to :: next, let)
+      }
+    }
+  }
+
+  /**
+   * Enumerate outgoing transitions from a set of states of an automaton
+   *
+   * @param aut the automaton
+   * @param stateSet the set of states
+   * @return iterator over next possible sets of states and labels
+   * (subset construction)
+   */
+  def enumOutgoingFromSet(aut : AtomicStateAutomaton)(stateSet : Set[aut.State])
+      : Iterator[(Set[aut.State], aut.TLabel)] =
+    for (label <- aut.labelEnumerator.enumDisjointLabelsComplete.iterator)
+      yield (aut.getImage(stateSet, label), label)
+
+  /**
    * Find a word (of any length) accepted by all automata
    *
    * The automata are required to all have the same label type (though this is
    * not checked statically)
+   *
+   * negAuts optionally specifies automata that should not accept the
+   * word
    */
   def findAcceptedWordAtomic(
-    auts : Seq[AtomicStateAutomaton]
+    auts : Seq[AtomicStateAutomaton],
+    negAuts : Seq[AtomicStateAutomaton] = Seq()
   ) : Option[Seq[Int]] = {
-    if (auts.isEmpty)
+    if (auts.isEmpty && negAuts.isEmpty)
       return Some(Seq())
 
     val autsList = auts.toList
-    val headAut = auts.head
-    val visitedStates = new MHashSet[List[Any]]
-    // (list of automaton cur states, witnessing word)
-    val todo = new ArrayStack[(List[Any], Seq[Int])]
+    val negAutsList = negAuts.toList
+    val headAut = auts.headOption.getOrElse(negAutsList.head)
+    // list of aut states and sets of neg aut states
+    val visitedStates = new MHashSet[(List[Any], List[Set[_]])]
+    // (list of automaton cur states, neg aut sets of states, witnessing word)
+    val todo = new ArrayStack[((List[Any], List[Set[_]]), Seq[Int])]
 
-    val initial = (autsList map (_.initialState))
+    val initial = (
+      autsList map (_.initialState),
+      negAutsList map (a => Set(a.initialState))
+    )
 
-    if (isAccepting(autsList, initial))
+    if (isAccepting(autsList, negAutsList, initial))
       return Some(Seq())
 
     visitedStates += initial
     todo push (initial, Seq())
 
     while (!todo.isEmpty) {
-      val (next, witness) = todo.pop
+      val ((nextPos, nextNeg), witness) = todo.pop
       for (
-        (reached, lblAny)
-          <- enumNext(autsList, next, auts.head.LabelOps.sigmaLabel);
-        lbl = lblAny.asInstanceOf[headAut.TLabel]
+        (reachedPos, lblPosAny)
+          <- enumNext(autsList, nextPos, auts.head.LabelOps.sigmaLabel);
+        (reachedNeg, lblAny)
+          <- enumNextSets(negAutsList, nextNeg, lblPosAny);
+        lbl = lblAny.asInstanceOf[headAut.TLabel];
         if headAut.LabelOps.isNonEmptyLabel(lbl)
       ) {
         val byChar = headAut.LabelOps.enumLetters(lbl).next
+        val reached = (reachedPos, reachedNeg)
         if (visitedStates.add(reached)) {
           val nextWitness = witness :+ byChar
-          if (isAccepting(autsList, reached))
+          if (isAccepting(autsList, negAutsList, reached))
             return Some(nextWitness)
           todo push (reached, nextWitness)
         }
@@ -228,17 +313,25 @@ object AutomataUtils {
     }
 
   /**
-   * Find a word accepted by all automata
+   * Find a word accepted by all automata and rejected by negs
    */
-  def findAcceptedWord(auts : Seq[Automaton]) : Option[Seq[Int]]
-    = if (auts.isEmpty) {
+  def findAcceptedWord(
+    auts : Seq[Automaton],
+    negAuts : Seq[Automaton] = Seq()
+  ) : Option[Seq[Int]]
+    = if (auts.isEmpty && negAuts.isEmpty) {
       None
-    } else if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
+    } else if (
+      auts.forall(a => a.isInstanceOf[AtomicStateAutomaton])
+      && negAuts.forall(a => a.isInstanceOf[AtomicStateAutomaton])
+    ) {
       findAcceptedWordAtomic(
-        auts map (_.asInstanceOf[AtomicStateAutomaton])
+        auts map (_.asInstanceOf[AtomicStateAutomaton]),
+        negAuts map (_.asInstanceOf[AtomicStateAutomaton])
       )
     } else {
-      (auts reduceLeft (_ & _)).getAcceptedWord
+      val allAuts = auts ++ negAuts.map(!_)
+      (allAuts reduceLeft (_ & _)).getAcceptedWord
     }
 
   /**
