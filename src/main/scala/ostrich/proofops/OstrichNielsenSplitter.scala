@@ -248,7 +248,9 @@ class OstrichNielsenSplitter(goal : Goal,
    */
   def decompositionPointsWithLits(lit : Atom) : Seq[DecompPoint] = {
     import LinearCombination.Constant
-
+    if (!lengthMap.contains(lit(0)) || !lengthMap.contains(lit(1)) ){
+      return List()
+    }
     val rawPoints = decompositionPoints(lit)
 
     def splitLits(decomp : DecompPoint) : Seq[DecompPoint] = decomp match {
