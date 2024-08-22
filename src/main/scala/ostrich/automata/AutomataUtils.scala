@@ -161,6 +161,7 @@ object AutomataUtils {
              newILabel <- aut.LabelOps.intersectLabels(
                            intersectedLabels.asInstanceOf[aut.TLabel],
                            label).toSeq;
+             if aut.LabelOps.isNonEmptyLabel(newILabel);
              (tailNext, let) <- enumNext(otherAuts, otherStates, newILabel)
         )
         yield (to :: tailNext, let)
@@ -192,10 +193,9 @@ object AutomataUtils {
       case aut :: otherAuts => {
         val stateSetAny :: otherStateSets = stateSets
         val stateSet = stateSetAny.asInstanceOf[Set[aut.State]]
-        for ((to, label) <- enumOutgoingFromSet(aut)(stateSet);
-             newILabel <- aut.LabelOps.intersectLabels(
-                           intersectedLabels.asInstanceOf[aut.TLabel],
-                           label).toSeq;
+        val iLabel = intersectedLabels.asInstanceOf[aut.TLabel]
+        for ((to, newILabel) <- enumOutgoingFromSet(aut)(stateSet, iLabel);
+             if aut.LabelOps.isNonEmptyLabel(newILabel);
              (next, let) <- enumNextSets(otherAuts, otherStateSets, newILabel)
         )
         yield (to :: next, let)
@@ -208,13 +208,23 @@ object AutomataUtils {
    *
    * @param aut the automaton
    * @param stateSet the set of states
-   * @return iterator over next possible sets of states and labels
+   * @param label intersect next labels within this label
+   * @return iterator over next possible sets of states and (non-empty) labels
    * (subset construction)
    */
-  def enumOutgoingFromSet(aut : AtomicStateAutomaton)(stateSet : Set[aut.State])
+  def enumOutgoingFromSet(
+    aut : AtomicStateAutomaton
+  )(
+    stateSet : Set[aut.State],
+    label : aut.TLabel
+  )
       : Iterator[(Set[aut.State], aut.TLabel)] =
-    for (label <- aut.labelEnumerator.enumDisjointLabelsComplete.iterator)
-      yield (aut.getImage(stateSet, label), label)
+    for (
+      fullLabel <- aut.labelEnumerator.enumDisjointLabelsComplete.iterator;
+      iLabel <- aut.LabelOps.intersectLabels(label, fullLabel);
+      if aut.LabelOps.isNonEmptyLabel(iLabel)
+    )
+      yield (aut.getImage(stateSet, iLabel), iLabel)
 
   /**
    * Find a word (of any length) accepted by all automata
