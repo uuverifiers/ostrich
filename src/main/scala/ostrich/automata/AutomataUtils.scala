@@ -251,13 +251,22 @@ object AutomataUtils {
     visitedStates += initial
     todo push (initial, Seq())
 
+    def timeoutCheck() = {
+      ap.util.Timeout.check
+      true
+    }
+
     while (!todo.isEmpty) {
       val ((nextPos, nextNeg), witness) = todo.pop
       for (
         (reachedPos, lblPosAny)
           <- enumNext(autsList, nextPos, auts.head.LabelOps.sigmaLabel);
+        if timeoutCheck();
+        lblPos = lblPosAny.asInstanceOf[headAut.TLabel];
+        if headAut.LabelOps.isNonEmptyLabel(lblPos);
         (reachedNeg, lblAny)
           <- enumNextSets(negAutsList, nextNeg, lblPosAny);
+        if timeoutCheck();
         lbl = lblAny.asInstanceOf[headAut.TLabel];
         if headAut.LabelOps.isNonEmptyLabel(lbl)
       ) {
