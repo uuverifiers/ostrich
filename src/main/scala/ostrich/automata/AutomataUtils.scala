@@ -313,15 +313,21 @@ object AutomataUtils {
                        lowerBound : Option[Int],
                        upperBound : Option[Int]) : Option[Seq[Int]] =
     auts match {
-      case Nil => None
-      case head::tail => {
+      case Seq() =>
+        (lowerBound, upperBound) match {
+          case (Some(lb), Some(ub)) if lb > ub => None
+          case (_, Some(ub)) if ub < 0         => None
+          case (None, _)                       => Some(List())
+          case (Some(lb), _)                   => Some((0 until lb).map(_ => 0))
+        }
+      case head +: tail => {
         if (auts forall (_.isInstanceOf[AtomicStateAutomaton])) {
           findAcceptedWordAtomic(
             LengthBoundedAutomaton(
               head.asInstanceOf[AtomicStateAutomaton],
               lowerBound,
               upperBound
-            ) :: tail.map(_.asInstanceOf[AtomicStateAutomaton])
+            ) +: tail.map(_.asInstanceOf[AtomicStateAutomaton])
           )
         } else {
           throw new UnsupportedOperationException(
