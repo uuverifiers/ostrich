@@ -384,7 +384,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
           nielsenSplitter.splitEquation                elseDo
           predToEq.lazyEnumeration                     elseDo
-          cutter.handleGoal(goal)
+          cutter.handleGoal(goal, true)
           //callBackwardProp(goal)
 
         } catch {
@@ -415,6 +415,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         case OstrichSolver.BlockingActions(actions) => actions
       }
 
+      /*
+    override def computeModel(goal : Goal) : Seq[Plugin.Action] = {
+      println("computeModel")
+      cutter.handleGoal(goal, true)
+    }
+*/
 /*
     override def computeModel(goal : Goal) : Seq[Plugin.Action] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {

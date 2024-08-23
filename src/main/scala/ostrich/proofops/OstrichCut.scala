@@ -40,44 +40,148 @@ import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.{Atom, PredConj}
 import ap.terfor.{Term, TermOrder, ConstantTerm}
 import ap.terfor.conjunctions.Conjunction
+import ap.theories.TheoryRegistry
 import ap.types.SortedPredicate
+import ap.parameters.Param
+import ap.util.{Tarjan, Seqs}
+
+import LinearCombination.SingleTerm
 
 import ostrich._
 import ostrich.automata.{
   AtomicStateAutomaton, AutomataUtils, BricsAutomaton, LengthBoundedAutomaton
 }
 
+import scala.collection.mutable.{HashSet => MHashSet}
+
 /**
  * Class to pick concrete values of string variables. This proof rule
  * is currently only applied when everything else has finished.
  */
-class OstrichCut(theory : OstrichStringTheory) {
+class OstrichCut(val theory : OstrichStringTheory)
+      extends PropagationSaturationUtils {
 
   import theory._
 
-  def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
-    val predConj = goal.facts.predConj
-    val allAtoms = predConj.positiveLits ++ predConj.negativeLits
-
-    // TODO: is it better to sort function application, start with
-    // picking values from the leaves?
-
-    // TODO: we probably do not need cuts for all string variables.
-
+  def handleGoal(goal : Goal, cutEverything : Boolean) : Seq[Plugin.Action] = {
     val stringVariables =
-      for (a <- allAtoms.iterator;
-           sorts = SortedPredicate argumentSorts a;
-           (LinearCombination.SingleTerm(c : ConstantTerm), StringSort) <-
-             a.iterator zip sorts.iterator)
-      yield c
+      if (cutEverything) findAllStringVars(goal) else findCutVars(goal)
 
-    if (stringVariables.hasNext) {
-      cutForVar(goal, stringVariables.next())
+    if (stringVariables.nonEmpty) {
+      val rand = Param.RANDOM_DATA_SOURCE(goal.settings)
+      cutForVar(goal, rand.pick(stringVariables))
     } else {
       List()
     }
   }
 
+  private def findAllStringVars(goal : Goal) : IndexedSeq[ConstantTerm] = {
+    val predConj = goal.facts.predConj
+    val allAtoms = predConj.positiveLits ++ predConj.negativeLits
+
+    (for (a <- allAtoms.iterator;
+          sorts = SortedPredicate argumentSorts a;
+          (LinearCombination.SingleTerm(c : ConstantTerm), StringSort) <-
+            a.iterator zip sorts.iterator)
+     yield c).toVector.distinct
+  }
+
+  /**
+   * Find cut variables by building the dependency graph induced by
+   * string function applications and computing its strongly connected
+   * components. There are three cases in which we need to introduce
+   * cuts for the possible values of string variable <code>x</code>:
+   * <code>x</code> occurs in an SCC together with other string variables;
+   * <code>x</code> occurs as the result variable of multiple function
+   * applications; or there are other formulas (not belonging to the theory
+   * of strings) that refer to <code>x</code>. We return the set of all
+   * string variables that such variables <code>x</code> depend on.
+   */
+  private def findCutVars(goal : Goal) : IndexedSeq[ConstantTerm] = {
+    val predConj = goal.facts.predConj
+    val allAtoms = predConj.positiveLits ++ predConj.negativeLits
+
+    val funApps = getFunApps(goal)
+    val stringVars =
+      (for ((_, args, res, _) <- funApps;
+            Some(SingleTerm(c : ConstantTerm)) <- args ++ List(Some(res)))
+       yield c).toIndexedSeq.distinct
+
+    // build the dependency graph
+
+    def containsArg(t : FunAppTuple, c : ConstantTerm) =
+      t._2.exists {
+        case Some(SingleTerm(`c`)) => true
+        case _ => false
+      }
+
+    type GraphNode = Either[ConstantTerm, FunAppTuple]
+    val depGraph = new Tarjan.Graph[GraphNode] {
+      val nodes =
+        stringVars.map(Left(_)) ++ funApps.map(Right(_))
+      def successors(n : GraphNode) =
+        n match {
+          case Left(c) =>
+            for (t <- funApps.iterator; if containsArg(t, c)) yield Right(t)
+          case Right((_, _, SingleTerm(c : ConstantTerm), _)) =>
+            Iterator(Left(c))
+          case _ =>
+            Iterator()
+        }
+    }
+
+    // compute strongly connected components
+
+    val sccs = Tarjan(depGraph)
+
+    println(sccs)
+
+    // string variables that occur as the result of multiple function
+    // applications
+
+    val multiplyAssignedVars =
+      (for ((SingleTerm(c : ConstantTerm), apps) <- funApps.groupBy(_._3);
+            if apps.size > 1)
+       yield c).toSet
+
+    // compute string variables that are used by non-theory atoms
+
+    val nonTheoryAtoms =
+      allAtoms filterNot {
+        a => TheoryRegistry.lookupSymbol(a.pred) match {
+          case Some(`theory`) => true
+          case _ => false
+        }
+      }
+
+    val nonTheoryAtomVars =
+      (for (a <- nonTheoryAtoms; c <- a.constants) yield c).toSet
+
+    // compute all string variables to be considered in cuts
+    
+    val cutNodes = new MHashSet[GraphNode]
+
+    for (scc <- sccs.reverse) {
+      val sccVars =
+        for (Left(c) <- scc) yield c
+      if (sccVars.size > 1 ||
+          !Seqs.disjointSeq(nonTheoryAtomVars, sccVars) ||
+          !Seqs.disjointSeq(multiplyAssignedVars, sccVars) ||
+          scc.exists(n => depGraph.successors(n) exists cutNodes))
+        cutNodes ++= scc
+    }
+
+    println(cutNodes)
+
+    val cutVars = for (Left(c) <- cutNodes.toSeq) yield c
+    goal.order.sort(cutVars).toVector
+  }
+
+  /**
+   * Perform a cut for one specific string variable: split the proof into
+   * the cases <code>x = w</code> and <code>x != w</code>, for some string
+   * <code>w</code> in the domain of <code>x</code>.
+   */
   private def cutForVar(goal : Goal,
                         stringVar : ConstantTerm) : Seq[Plugin.Action] = {
     import TerForConvenience._
@@ -111,7 +215,7 @@ class OstrichCut(theory : OstrichStringTheory) {
       .map(reducer.upperBound)
       .flatten
       .map(_.intValue)
-println(auts)
+
     val acceptedWord =
       AutomataUtils.findAcceptedWord(auts, lowerLenBound, upperLenBound)
 
@@ -124,9 +228,11 @@ println(auts)
       val negAutomatonId =
         autDatabase.automaton2Id(negAutomaton)
 
-      if (OFlags.debug)
+      if (OFlags.debug) {
+        val str = strDatabase.id2Str(acceptedWordId)
         Console.err.println(
-          f"Performing cut: $stringVar == ${"\""}${strDatabase.id2Str(acceptedWordId)}${"\""}")
+          f"Performing cut: $stringVar == ${"\""}${str}${"\""} (length ${str.size})")
+      }
 
       List(Plugin.AxiomSplit(
             List(),

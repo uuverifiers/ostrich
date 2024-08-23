@@ -133,6 +133,8 @@ trait PropagationSaturationUtils {
     }
   }
 
+  type FunAppTuple = (PreOp, Seq[Option[Term]], Term, Atom)
+
   /**
    * The function applications that appear in the goal
    *
@@ -148,7 +150,7 @@ trait PropagationSaturationUtils {
    */
   def getFunApps(
     goal : Goal
-  ) : Seq[(PreOp, Seq[Option[Term]], Term, Atom)] = {
+  ) : Seq[FunAppTuple] = {
     val atoms = goal.facts.predConj
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
@@ -163,7 +165,7 @@ trait PropagationSaturationUtils {
     for (a <- atoms.positiveLits)
       getFunApp(stringFunctionTranslator, a).foreach(funApps += _)
 
-    funApps
+    funApps.toSeq
   }
 
   /**
@@ -175,7 +177,7 @@ trait PropagationSaturationUtils {
   def getFunApp(
     stringFunctionTranslator : OstrichStringFunctionTranslator,
     a : Atom
-  ) : Option[(PreOp, Seq[Option[Term]], Term, Atom)] = {
+  ) : Option[FunAppTuple] = {
     a.pred match {
       case `str_prefixof` => {
         Some((ConcatPreOp, List(Some(a(0)), None), a(1), a))
