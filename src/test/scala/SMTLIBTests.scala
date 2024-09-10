@@ -65,6 +65,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("suffix-5.smt2") =
     checkFile("tests/suffix-5.smt2", "unsat")
 
+  property("prefix-suffix.smt2") =
+    checkFile("tests/prefix-suffix.smt2", "unsat")
+
   property("contains-1.smt2") =
     checkFile("tests/contains-1.smt2", "sat")
   property("contains-2.smt2") =
