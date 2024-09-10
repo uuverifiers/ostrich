@@ -110,6 +110,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
   property("failedProp.smt2") =
     checkFileOpts("tests/failedProp.smt2", "unknown", "", s"-timeout=$shortTimeout")
+  property("failedProp2.smt2") =
+    checkFileOpts("tests/failedProp2.smt2", "unknown", "", s"-timeout=$shortTimeout")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
