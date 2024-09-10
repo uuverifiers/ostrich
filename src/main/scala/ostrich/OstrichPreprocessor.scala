@@ -81,37 +81,37 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     }
  */
 
+    case (IAtom(`str_prefixof`, _), Seq(x,y)) if (x == y) => {
+        IBoolLit(true)
+    }
+
+    case (IAtom(`str_suffixof`, _), Seq(x,y)) if (x == y) => {
+      IBoolLit(true)
+    }
+
+    case (IAtom(`str_contains`, _), Seq(x,y)) if (x == y) => {
+      IBoolLit(true)
+    }
+
     case (IAtom(`str_prefixof`, _),
           Seq(subStr@ConcreteString(_), bigStr : ITerm)) => {
       val asRE = re_++(str_to_re(subStr), re_all())
       str_in_re(bigStr, asRE)
     }
 
-  /**  case (IAtom(`str_prefixof`, _),
-    Seq(x,y)) if (x == y) => {
-        IBoolLit(true)
-    } */
-
-    case (IAtom(`str_suffixof`, _), Seq(x,y)) if (x == y) => {
-      IBoolLit(true)
-    }
-    case (IAtom(`str_contains`, _), Seq(x,y)) if (x == y) => {
-      IBoolLit(true)
-    }
-/*
     case (IAtom(`str_prefixof`, _),
           Seq(subStr : ITerm, bigStr : ITerm)) if ctxt.polarity < 0 => {
       val s = VariableShiftVisitor(subStr, 0, 1)
       val t = VariableShiftVisitor(bigStr, 0, 1)
       StringSort.ex(str_++(s, v(0, StringSort)) === t)
     }
- */
 
     case (IAtom(`str_suffixof`, _),
           Seq(subStr@ConcreteString(_), bigStr : ITerm)) => {
       val asRE = re_++(re_all(), str_to_re(subStr))
       str_in_re(bigStr, asRE)
     }
+
     case (IAtom(`str_suffixof`, _),
           Seq(subStr : ITerm, bigStr : ITerm)) if ctxt.polarity < 0 => {
       val s = VariableShiftVisitor(subStr, 0, 1)
