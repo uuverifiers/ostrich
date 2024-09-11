@@ -241,6 +241,7 @@ object BricsAutomaton {
       builder.setAccept(states(n), isAccepting = true)
     }
 
+    builder.setAccept(states.last, isAccepting = true)
     builder.getAutomaton
   }
   /**
@@ -285,7 +286,6 @@ object BricsAutomaton {
       builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
       // we read c < x -> go to sink state
       builder.addTransition(states(n),builder.LabelOps.interval((c+1).toChar, Char.MaxValue), sink_state)
-      builder.setAccept(states(n), isAccepting = true)
     }
     // we are equal up to this point -> can read any letter afterwards and be bigger
     builder.setAccept(states.last, isAccepting = true)
