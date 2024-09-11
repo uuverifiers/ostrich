@@ -477,8 +477,14 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str-leq12.smt2", "sat")
   property("str-leq13") =
     checkFile("tests/str-leq13.smt2", "error")
+  property("str-leq14") =
+    checkFile("tests/str-leq14.smt2", "unsat")
   property("str-lt") =
     checkFile("tests/str-lt.smt2", "sat")
   property("str-lt2") =
     checkFile("tests/str-lt2.smt2", "unsat")
+  property("str-leq-reflexive") =
+    checkFile("tests/str-leq-reflexive.smt2", "sat")
+  property("str-leq-reflexive-2") =
+    checkFile("tests/str-leq-reflexive-2.smt2", "sat")
 }
