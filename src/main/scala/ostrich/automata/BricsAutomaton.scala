@@ -462,45 +462,63 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
     new BricsTLabelEnumerator(disjointLabels.iterator ++ Iterator((a, a)))
 
   private def calculateDisjointLabels() : MTreeSet[(Char,Char)] = {
-    var disjoint = new MTreeSet[(Char, Char)]()
+    val disjoint = MTreeSet[(Char, Char)]()
 
-    val mins = new MTreeSet[Char]
-    val maxes = new MTreeSet[Char]
-    for ((min, max) <- labels) {
-      mins += min
-      maxes += max
-    }
-
-    val imin = mins.iterator
-    val imax = maxes.iterator
-
-    if (!imin.hasNext)
+    if (labels.isEmpty)
       return disjoint
 
-    var curMin = imin.next
-    var nextMax = imax.next
-    while (imin.hasNext) {
-      val nextMin = imin.next
-      if (nextMin <= nextMax) {
-        disjoint += ((curMin, (nextMin-1).toChar))
-        curMin = nextMin
+    // create opening and closing copies of each interval, order by
+    // open/close with opening intervals first in the case of a tie.
+    // then do a pass over the line picking out the disjoint labels
+    // the Boolean means open if false, close if true.
+    val intervalOrdering = Ordering[(Char, Boolean, Char)].on({
+      x : ((Char, Char), Boolean) =>
+        if (x._2) (x._1._2, x._2, x._1._1) else (x._1._1, x._2, x._1._2)
+    })
+    var openCloseLabels
+      = new MTreeSet[((Char, Char), Boolean)]()(intervalOrdering)
+    for (l <- labels) {
+      openCloseLabels += ((l, false))
+      openCloseLabels += ((l, true))
+    }
+
+    // iterate over open/close intervals, keep track of how many pairs
+    // are "still open" so we can output nothing if they are all closed
+    var openCount = 0
+    var lastOpen : Option[Char] = None
+    for (((lb, ub), closing) <- openCloseLabels) {
+      if (closing) {
+        openCount -= 1
+        // if we're closing something we haven't closed already
+        if (lastOpen.isDefined && lastOpen.get <= ub) {
+          disjoint += ((lastOpen.get, ub))
+          if (openCount == 0) {
+            lastOpen = None
+          } else {
+            if (ub == Char.MaxValue) {
+              lastOpen = None
+            } else {
+              lastOpen = Some((ub + 1).toChar)
+            }
+          }
+        }
       } else {
-        disjoint += ((curMin, nextMax))
-        curMin = nextMin
-        nextMax = imax.next
+        openCount += 1
+        if (!lastOpen.isDefined) {
+          lastOpen = Some(lb)
+        } else {
+          val lastOpenVal = lastOpen.get
+          if (lb == lastOpenVal) {
+            // ignore
+          } else {
+            disjoint += ((lastOpenVal, (lb - 1).toChar))
+            lastOpen = Some(lb)
+          }
+        }
       }
     }
 
-    disjoint += ((curMin, nextMax))
-    curMin = (nextMax + 1).toChar
-
-    while (imax.hasNext) {
-      val nextMax = imax.next
-      disjoint += ((curMin, nextMax))
-      curMin = (nextMax + 1).toChar
-    }
-
-    disjoint
+    return disjoint
   }
 
   private def calculateDisjointLabelsComplete() : List[(Char, Char)] = {

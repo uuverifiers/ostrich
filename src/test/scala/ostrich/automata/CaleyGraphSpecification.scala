@@ -152,6 +152,4 @@ object CaleyGraphSpecification
 
     caleyGraphHasBoxes(baut, nodes)
   }
-
-
 }
