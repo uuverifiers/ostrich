@@ -98,11 +98,21 @@ class OstrichNielsenSplitter(goal : Goal,
                   : Option[(LinearCombination, LinearCombination)] =
     for (lits <- concatPerRes get t) yield (lits.head(0), lits.head(1))
 
-  def lengthFor(t : LinearCombination) : LinearCombination =
-    if (strDatabase isConcrete t)
-      LinearCombination((strDatabase term2ListGet t).size)
-    else
-      lengthMap(t)
+  def lengthFor(t: LinearCombination): LinearCombination = {
+    if (strDatabase.isConcrete(t)) {
+      // Handle concrete terms
+      LinearCombination((strDatabase.term2ListGet(t)).size)
+    } else {
+      // Handle the case where the lengthMap does not contain the term
+      lengthMap.getOrElse(t, {
+        if (debug) {
+          Console.err.println(s"No length found for term: $t, returning zero length")
+        }
+        LinearCombination.ZERO
+      })
+    }
+  }
+
 
   def eval(t           : LinearCombination,
            lengthModel : ReduceWithConjunction) : Int = {
@@ -248,9 +258,7 @@ class OstrichNielsenSplitter(goal : Goal,
    */
   def decompositionPointsWithLits(lit : Atom) : Seq[DecompPoint] = {
     import LinearCombination.Constant
-    if (!lengthMap.contains(lit(0)) || !lengthMap.contains(lit(1)) ){
-      return List()
-    }
+
     val rawPoints = decompositionPoints(lit)
 
     def splitLits(decomp : DecompPoint) : Seq[DecompPoint] = decomp match {
