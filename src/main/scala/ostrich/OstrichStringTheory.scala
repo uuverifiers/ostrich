@@ -480,6 +480,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
+    ap.CmdlMain.stackTraces = true
     printEquations(f)
 
     val visitor1 = new OstrichPreprocessor (this)
@@ -492,12 +493,105 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   object UnsupportedTermException extends Exception
 
+
+  private def simpleDNFConverter(f : IFormula) : Seq[IFormula] = {
+    import ap.parser._
+    import IExpression._
+    import IBinJunctor._
+    import Quantifier._
+
+  object Literal {
+    def unapply(t : IExpression) : Option[IFormula] = t match {
+      case LeafFormula(t) => Some(t)
+      case t@INot(sub) => {
+        Some(t)
+      }
+      case _ => None
+    }
+  }
+
+  object ToDNF extends CollectingVisitor[Unit, IFormula] {
+    def apply(f : IFormula) : IFormula = this.visit(f, ())
+    
+    override def preVisit(t : IExpression,
+                          arg : Unit) : PreVisitResult =
+      t match {
+        case Literal(t) =>
+          // do not look into atoms
+          ShortCutResult(t)
+        case IFormulaITE(cond, left, right) =>
+          TryAgain((cond & left) | (Transform2NNF(~cond) | right), ())
+        case IBinFormula(Eqv, left, right) =>
+          TryAgain((left & right) | Transform2NNF(~left & ~right), ())
+        case _ =>
+          KeepArg
+      }
+  
+    def postVisit(t : IExpression, arg : Unit,
+                  subres : Seq[IFormula]) : IFormula = {
+      t match {
+        case t@IBinFormula(And, _, _) =>
+          Conj2DNF(t update subres)
+        case t : IFormula =>
+          t update subres
+      }
+    }
+  }
+  
+  object Conj2DNF extends CollectingVisitor[Unit, IFormula] {
+    def apply(f : IFormula) : IFormula = this.visit(f, ())
+    
+    override def preVisit(t : IExpression, arg : Unit) : PreVisitResult =
+      t match {
+        case IBinFormula(And, IBinFormula(Or, f1, f2), f3) => {
+          TryAgain((f1 & f3) | (f2 & f3), ())
+        }
+        case IBinFormula(And, f3, IBinFormula(Or, f1, f2)) => {
+          TryAgain((f3 & f1) | (f3 & f2), ())
+        }
+        case IBinFormula(Or, _, _) =>
+          KeepArg
+        case t : IFormula =>
+          ShortCutResult(t)
+      }
+  
+    def postVisit(t : IExpression, arg : Unit,
+                  subres : Seq[IFormula]) : IFormula =
+      t.asInstanceOf[IFormula] update subres
+  }
+
+  LineariseVisitor(ToDNF(Transform2NNF(f)), IBinJunctor.Or).toList
+  }
+
+    private def simpleDNFConverter2(f : IFormula) : Seq[IFormula] = {
+      import ap.parser._
+      import IExpression._
+      import IBinJunctor._
+
+      val startTime = System.currentTimeMillis
+      def contSplitting : Boolean =
+        System.currentTimeMillis - startTime <= 10000
+
+      val simplifier = new Simplifier(splittingLimit = 10000) {
+        override protected def furtherSimplifications(expr : IExpression) =
+          expr match {
+            case IBinFormula(And, IBinFormula(Or, f1, f2), f3) if contSplitting =>
+              (f1 & f3) | (f2 & f3)
+            case IBinFormula(And, f3, IBinFormula(Or, f1, f2)) if contSplitting =>
+              (f3 & f1) | (f3 & f2)
+            case expr => expr
+          }
+      }
+      LineariseVisitor(simplifier(~EquivExpander(~f)), IBinJunctor.Or).toSeq
+    }
+
+
   private def printEquations(f : IFormula) : Unit = {
     import ap.parser._
     import IExpression._
     var cnt = 0
     for (INamedPart(_, g) <- PartExtractor(f);
-         disjunct <- DNFConverter.mbDNF(~g)) {
+         disjunct <- simpleDNFConverter2(~g)) {
       println("==== Equation set #" + cnt)
       cnt = cnt + 1
       printEquationsHelp(disjunct)
