@@ -65,6 +65,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("suffix-5.smt2") =
     checkFile("tests/suffix-5.smt2", "unsat")
 
+  property("prefix-suffix.smt2") =
+    checkFile("tests/prefix-suffix.smt2", "unsat")
+
   property("contains-1.smt2") =
     checkFile("tests/contains-1.smt2", "sat")
   property("contains-2.smt2") =
@@ -107,6 +110,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
   property("failedProp.smt2") =
     checkFileOpts("tests/failedProp.smt2", "unknown", "", s"-timeout=$shortTimeout")
+  property("failedProp2.smt2") =
+    checkFileOpts("tests/failedProp2.smt2", "unknown", "", s"-timeout=$shortTimeout")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
@@ -472,8 +477,14 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str-leq12.smt2", "sat")
   property("str-leq13") =
     checkFile("tests/str-leq13.smt2", "error")
+  property("str-leq14") =
+    checkFile("tests/str-leq14.smt2", "unsat")
   property("str-lt") =
     checkFile("tests/str-lt.smt2", "sat")
   property("str-lt2") =
     checkFile("tests/str-lt2.smt2", "unsat")
+  property("str-leq-reflexive") =
+    checkFile("tests/str-leq-reflexive.smt2", "sat")
+  property("str-leq-reflexive-2") =
+    checkFile("tests/str-leq-reflexive-2.smt2", "sat")
 }

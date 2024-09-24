@@ -87,7 +87,7 @@ class OstrichSolver(theory : OstrichStringTheory,
                  re_from_ecma2020, re_from_ecma2020_flags,
                  re_case_insensitive,
                  str_replace, str_replacere, str_replaceall, str_replaceallre,
-                 str_prefixof,
+                 str_prefixof, str_suffixof,
                  re_none, re_all, re_allchar, re_charrange,
                  re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?, re_opt, re_opt_?,
                  re_comp, re_loop, re_loop_?, re_eps, re_capture, re_reference,
@@ -196,6 +196,10 @@ class OstrichSolver(theory : OstrichStringTheory,
       case `str_prefixof` => {
         val rightVar = theory.StringSort.newConstant("rhs")
         funApps += ((ConcatPreOp, List(a(0), rightVar), a(1)))
+      }
+      case `str_suffixof` => {
+        val leftVar = theory.StringSort.newConstant("lhs")
+        funApps += ((ConcatPreOp, List(leftVar, a(0)), a(1)))
       }
       case FunPred(f) if rexOps contains f =>
         // nothing
