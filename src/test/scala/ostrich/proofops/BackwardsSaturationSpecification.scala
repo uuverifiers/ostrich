@@ -85,7 +85,6 @@ object BackwardsSaturationSpecification
   val formulaZreplaceXY = z === str_replaceall(x, "a", y)
 
   val bwdsSat = new BackwardsSaturation(theory)
-
   val (
     appPointsSimpleReplace,
     prioritiesSimpleReplace,
@@ -143,22 +142,22 @@ object BackwardsSaturationSpecification
 
   property("Test Simple Replace Applied") = {
     appliedSimpleReplace.exists(_ match {
-      case Seq(AxiomSplit(
-        assumptions, cases, _
-      ))
-        if assumptions.toSet == Set(iYinAorB, iYreplaceX)
-          && isSplitCases(
-            cases.map(_._1).toSeq,
-            Seq(Seq(
-              (x, List("b"), List("a", "d", "bb")),
-              // d in Sigma*..
-              (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List())
-            ))
-          ) => true
-      case _ =>
+      case Seq(AxiomSplit(assumptions, cases, _))
+        if {
+          val correctAssumptions = assumptions.toSet == Set(iYinAorB, iYreplaceX)
+          val correctCases = isSplitCases(cases.map(_._1).toSeq, Seq(Seq(
+            (strDatabase.str2Id("d"), List("a", "bc", "xyz"), List()),
+              (x, List("b"), List("a", "d", "bb"))
+
+          )))
+          correctAssumptions && correctCases
+        } => true
+      case _ => {
         false
+      }
     })
   }
+
 
   property("Test Two Y Constraints App Points") = {
     appPointsReplaceTwoYCons.toSet == Set(
@@ -314,10 +313,15 @@ object BackwardsSaturationSpecification
    * sequence of tuples as passed to isConjunctionOf
    */
   private def isSplitCases(
-    cases : Seq[Conjunction],
-    tests : Seq[Seq[(ITerm, Seq[String], Seq[String])]]
-  ) : Boolean
-    = cases.forall(conj => tests.exists(test => isConjunctionOf(conj, test)))
+                            cases: Seq[Conjunction],
+                            tests: Seq[Seq[(ITerm, Seq[String], Seq[String])]]
+                          ): Boolean = {
+    cases.zipWithIndex.forall { case (conj, index) =>
+      val result = tests.exists(test => isConjunctionOf(conj, test))
+      result
+    }
+  }
+
 
 
   /**
@@ -331,11 +335,34 @@ object BackwardsSaturationSpecification
    * isCorrectRegex.
    */
   private def isConjunctionOf(
-    conj : Conjunction,
-    tests : Seq[(ITerm, Seq[String], Seq[String])]
-  ) : Boolean = {
-    tests.forall({ case (term, pos, neg) =>
-      conj.groundAtoms.exists(isCorrectRegex(_, term, pos, neg))
-    })
+                               conj: Conjunction,
+                               tests: Seq[(ITerm, Seq[String], Seq[String])]
+                             ): Boolean = {
+
+    tests.forall { case (term, pos, neg) =>
+      val result = (conj.groundAtoms).exists { atom =>
+        val regexResult = isCorrectRegex(atom, term, pos, neg)
+        regexResult
+      }
+      val result2 = (conj.arithConj.positiveEqs).exists {atom =>
+        //println(s" strDatabase 1 ${strDatabase.id2Str(atom.constant.intValueSafe)}")
+        val equalString = strDatabase.id2Str(atom.constant.intValueSafe.abs)
+        var returnResult = true
+        for (positive <- pos){
+          if (positive != equalString){
+            returnResult = false
+          }
+        }
+        for (negative <- neg){
+          if (negative == equalString){
+            returnResult = false
+          }
+        }
+        returnResult
+      }
+      result || result2
+    }
   }
+
+
 }
