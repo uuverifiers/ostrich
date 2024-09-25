@@ -63,7 +63,7 @@ trait PropagationSaturationUtils {
   import theory.{
     str_len, str_in_re, str_char_count, str_in_re_id, str_to_re,
     re_from_str, re_from_ecma2020, re_from_ecma2020_flags,
-    re_case_insensitive, str_prefixof, re_none, re_all, re_allchar,
+    re_case_insensitive, str_prefixof, str_suffixof, re_none, re_all, re_allchar,
     re_charrange, re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+,
     re_+?, re_opt, re_opt_?, re_comp, re_loop, re_loop_?, re_eps,
     re_capture, re_reference, re_begin_anchor, re_end_anchor, FunPred,
@@ -181,6 +181,9 @@ trait PropagationSaturationUtils {
     a.pred match {
       case `str_prefixof` => {
         Some((ConcatPreOp, List(Some(a(0)), None), a(1), a))
+      }
+      case `str_suffixof` => {
+        Some((ConcatPreOp, List(None, Some(a(0))), a(1), a))
       }
       case FunPred(f) if (rexOps contains f) || (f == `str_len`) =>
         None
