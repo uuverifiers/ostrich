@@ -367,30 +367,19 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       goalState(goal) match {
 
         case Plugin.GoalState.Eager =>
-          strInReTranslator.handleGoal(goal)
-
-        case Plugin.GoalState.Intermediate => try {
+          strInReTranslator.handleGoal(goal)           elseDo
           ostrichClose.handleGoal(goal)                elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
           predToEq.reducePredicatesToEquations
 
-        } catch {
-          case t : ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
-        }
+        case Plugin.GoalState.Intermediate =>
+          nielsenSplitter.splitEquation
 
-        case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
-          nielsenSplitter.splitEquation                elseDo
+        case Plugin.GoalState.Final =>
           predToEq.lazyEnumeration                     elseDo
           cutter.handleGoal(goal, true)
-          //callBackwardProp(goal)
-
-        } catch {
-          case t : ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
-        }
 
       }
     }
@@ -497,12 +486,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
+    val visitor0 = new OstrichFactorizer   (this)
     val visitor1 = new OstrichPreprocessor (this)
     val visitor2 = new OstrichRegexEncoder (this)
-    // Added by Riccardo
     val visitor3 = new OstrichStringEncoder(this)
 
-    (visitor3(visitor2(visitor1(f))), signature)
+    (visitor3(visitor2(visitor1(visitor0(f)))), signature)
   }
 
   override val reducerPlugin = new OstrichReducerFactory(this)

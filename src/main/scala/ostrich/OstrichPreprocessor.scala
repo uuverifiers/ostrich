@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,8 @@ package ostrich
 import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Pre-processor for reducing some operators to more basic ones.
@@ -184,12 +186,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       ))))))
     }
 
+    /*
     case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm,
               Const(begin),
               Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(end))))
         if bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
       str_trim(bigStr, begin, end - begin)
+*/
 
       // TODO: need proper condition for length
 /*
@@ -268,6 +272,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         bigStrVar === shiftedBigStr &
         beginVar  === shiftedBegin &
         lenVar    === shiftedLen &
+        str_len(resultVar) <= lenVar &
 	ite(
 	  lenVar >= 0 & beginVar >= 0 & beginVar + lenVar <= str_len(bigStrVar),
           strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
@@ -294,29 +299,33 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
     // keep str.at with concrete index, we will later translate it
     // to a transducer
+    /*
     case (IFunApp(`str_at`, _), Seq(bigStr : ITerm, Const(_))) =>
       t update subres
-
+*/
     // keep str.at_last with concrete index, we will later translate it
     // to a transducer
+    /*
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm,
               Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))))
         if bigStr == bigStr2 && offset >= 1 =>
       str_at_right(bigStr, offset - 1)
-
+*/
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm, index : ITerm)) => {
       val shBigStr3 = VariableShiftVisitor(bigStr, 0, 3)
       val shIndex3  = VariableShiftVisitor(index, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
+        str_len(v(2, StringSort)) <= 1 &
         ite(
           shIndex3 < 0 | shIndex3 >= str_len(shBigStr3),
           v(2, StringSort) === "",
           strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
           str_len(v(1, StringSort)) === shIndex3 &
-          str_in_re(v(2, StringSort), re_allchar())
+          str_in_re(v(2, StringSort), re_allchar()) &
+          str_len(v(2, StringSort)) === 1
         )
       )))
     }
@@ -460,3 +469,44 @@ class OstrichStringEncoder(theory : OstrichStringTheory)
     }
 }
 
+/**
+ * Factor out certain common sub-expressions, whose translation
+ * to more basic string functions is complicated.
+ */
+class OstrichFactorizer(theory : OstrichStringTheory) {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula = {
+    val parts =
+    for (INamedPart(name, f) <- PartExtractor(f)) yield {
+      val skeleton = SubExprAbbreviator(f, factor _).asInstanceOf[IFormula]
+      val newF = quanConsts(Quantifier.ALL, newConsts.toSeq,
+                           factoredExpressions ==> skeleton)
+      clear()
+      INamedPart(name, newF)
+    }
+    or(parts)
+  }
+
+  def clear() = {
+    newConsts.clear()
+    factoredExpressions = i(true)
+  }
+
+  private val newConsts = new ArrayBuffer[ConstantTerm]
+  private var factoredExpressions : IFormula = i(true)
+
+  private def factor(e : IExpression) : IExpression = e match {
+    case e@IFunApp(`str_indexof` | `str_at` | `str_substr`, _)
+              if ContainsSymbol.isClosed(e) => {
+      val sort = Sort.sortOf(e)
+      val c = sort.newConstant("X")
+      newConsts += c
+      factoredExpressions = factoredExpressions &&& (e === c)
+      c
+    }
+    case e => e
+  }
+
+}
