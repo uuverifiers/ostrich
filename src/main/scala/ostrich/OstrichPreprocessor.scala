@@ -172,6 +172,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           reUnion(List(containingStr) ++ forbiddenSuffixREs : _*)
 
       eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
+        // it helps to keep the function application around, since it enforces
+        // functional consistency of the results
+        (str_indexof(shiftedBigStr, subStr, shiftedStartIndex) === resultVar) &
         suffixDef1 &
          ((resultVar === -1 &
             suffixDef3 &

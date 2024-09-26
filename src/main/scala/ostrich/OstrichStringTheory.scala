@@ -286,9 +286,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val lengthAbstraction   = new LengthAbstraction(this)
 
   override val dependencies : Iterable[Theory] =
-    List(ModuloArithmetic, IntEnumerator,
-         forwardSaturation, backwardsSaturation,
-         lengthAbstraction)
+    List(ModuloArithmetic,
+         IntEnumerator,
+         forwardSaturation,
+         backwardsSaturation,
+         lengthAbstraction
+         )
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)
@@ -314,6 +317,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                    str_replaceallcg, str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str,
+                   str_indexof,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
