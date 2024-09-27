@@ -400,6 +400,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("substring2b.smt2") =
     checkFile("tests/substring2b.smt2", "sat")
 
+  property("str-term-small-rw_164.smt2") =
+    checkFile("tests/str-term-small-rw_164.smt2", "unsat")
+
   property("parse-regex.smt2") =
     checkFile("tests/parse-regex.smt2", "sat")
   property("parse-regex2.smt2") =
