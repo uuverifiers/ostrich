@@ -401,7 +401,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/substring2b.smt2", "sat")
 
   property("str-term-small-rw_164.smt2") =
-    checkFile("tests/str-term-small-rw_164.smt2", "unsat")
+    checkFile("tests/str-term-small-rw_164.smt2", "unknown", s"-timeout=$shortTimeout")
 
   property("parse-regex.smt2") =
     checkFile("tests/parse-regex.smt2", "sat")

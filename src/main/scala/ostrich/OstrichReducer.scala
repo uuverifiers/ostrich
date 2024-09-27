@@ -36,9 +36,12 @@ import ostrich.automata.{AutDatabase, BricsAutomaton}
 import ap.basetypes.IdealInt
 import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
 import ap.terfor.{ComputationLogger, Formula, TerForConvenience, Term, TermOrder}
-import ap.terfor.conjunctions.{Conjunction, NegatedConjunctions, Quantifier, ReduceWithConjunction, ReducerPlugin, ReducerPluginFactory}
+import ap.terfor.conjunctions.{Conjunction, NegatedConjunctions, Quantifier,
+                               ReduceWithConjunction, ReducerPlugin,
+                              ReducerPluginFactory}
 import ap.terfor.arithconj.ArithConj
 import ap.terfor.preds.{Atom, PredConj, Predicate}
+import ap.terfor.linearcombination.LinearCombination
 import ap.util.PeekIterator
 import AutDatabase.{ComplementedAut, NamedAutomaton, PositiveAut}
 
@@ -83,7 +86,8 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
       extends ReducerPluginFactory {
   import OstrichReducer.extractLanguageConstraints
 
-  import theory.{str_len, int_to_str, str_to_int, str_prefixof, FunPred}
+  import theory.{str_len, int_to_str, str_to_int, str_prefixof, str_indexof,
+                 FunPred}
 
   def apply(conj : Conjunction, order : TermOrder) =
     new OstrichReducer(theory,
@@ -95,6 +99,7 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
   val _str_len      = FunPred(str_len)
   val _int_to_str   = FunPred(int_to_str)
   val _str_to_int   = FunPred(str_to_int)
+  val _str_indexof  = FunPred(str_indexof)
 
 }
 
@@ -118,7 +123,7 @@ class OstrichReducer protected[ostrich]
                  str_replace, str_replaceall,
                  re_++, re_*, re_+, str_to_re, re_all, re_comp, re_charrange,
                  strDatabase, autDatabase, FunPred, string2Term, int2Char}
-  import factory.{_str_len, _int_to_str, _str_to_int}
+  import factory.{_str_len, _int_to_str, _str_to_int, _str_indexof}
   def passQuantifiers(num : Int) = this
 
   def addAssumptions(arithConj : ArithConj,
@@ -173,7 +178,7 @@ class OstrichReducer protected[ostrich]
 
     val rewritablePredicates =
       (List(_str_empty, _str_cons, str_in_re_id, _str_len, _str_char_count,
-            str_<=, _int_to_str, _str_to_int,
+            str_<=, _int_to_str, _str_to_int, _str_indexof,
             str_prefixof, str_suffixof, str_contains,
             FunPred(str_replace), FunPred(str_replaceall)) ++
        funTranslator.translatablePredicates).distinct
@@ -331,7 +336,6 @@ class OstrichReducer protected[ostrich]
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(1), l(autId)))
           } else if (isConcrete(a(1))) {
-
             val str   = term2Str(a(1)).get
             val autId = autDatabase.automaton2Id(
               BricsAutomaton.suffixAutomaton(str))
@@ -350,7 +354,6 @@ class OstrichReducer protected[ostrich]
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(0), l(autId)))
           } else if (isConcrete(a(0))) {
-
             val str   = term2Str(a(0)).get
             val autId = autDatabase.automaton2Id(
               BricsAutomaton.containsAutomaton(str))
@@ -375,6 +378,33 @@ class OstrichReducer protected[ostrich]
           } else {
             a
           }
+
+        case `_str_indexof` => {
+          import LinearCombination.Constant
+          import strDatabase.IntEncodedString
+          (a(0), a(1), a(2), a(3)) match {
+            case (_, _, Constant(startIndex), result)
+              if startIndex < 0 =>
+                result === -1
+            case (IntEncodedString(bigStr), _, Constant(startIndex), result)
+              if startIndex > bigStr.size =>
+                result === -1
+            case (IntEncodedString(bigStr), IntEncodedString(searchStr),
+                  Constant(IdealInt(startIndex)), result) => {
+              val searchLen = searchStr.size
+              val matches =
+                for (ind <- (startIndex to (bigStr.size - searchLen)).iterator;
+                     if bigStr.substring(ind, ind + searchLen) == searchStr)
+                yield ind
+              if (matches.hasNext)
+                result === matches.next
+              else
+                result === -1
+            }
+            case _ =>
+              a
+          }
+        }
 
         case FunPred(`str_replace` | `str_replaceall`) if a(1) == a(2) =>
           a(0) === a(3)
