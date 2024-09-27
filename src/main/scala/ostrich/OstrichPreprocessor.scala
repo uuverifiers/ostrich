@@ -275,7 +275,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         bigStrVar === shiftedBigStr &
         beginVar  === shiftedBegin &
         lenVar    === shiftedLen &
-        str_len(resultVar) <= lenVar &
+        (str_len(resultVar) <= lenVar | str_len(resultVar) <= 0) &
 	ite(
 	  lenVar >= 0 & beginVar >= 0 & beginVar + lenVar <= str_len(bigStrVar),
           strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &

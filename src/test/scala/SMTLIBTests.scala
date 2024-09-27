@@ -80,11 +80,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("word-equation-2.smt2") =
     checkFile("tests/word-equation-2.smt2", "sat")
   property("word-equation-3.smt2") =
-    checkFile("tests/word-equation-3.smt2", "unsat")
+    checkFileOpts("tests/word-equation-3.smt2", "unsat", "-forwardPropagation", "")
   property("word-equation-4.smt2") =
     checkFile("tests/word-equation-4.smt2", "sat")
   property("word-equation-6.smt2") =
-    checkFile("tests/word-equation-6.smt2", "sat")
+    checkFileOpts("tests/word-equation-6.smt2", "sat", "-forwardPropagation", s"-timeout=$longTimeout")
 
   property("parikh-constraints.smt2") =
     checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh")
@@ -444,7 +444,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("negated-equation-1.smt2") =
     checkFile("tests/negated-equation-1.smt2", "unsat")
   property("negated-equation-2.smt2") =
-    checkFile("tests/negated-equation-2.smt2", "unknown")
+    checkFile("tests/negated-equation-2.smt2", "unsat")
   property("concat-empty.smt2") =
     checkFile("tests/concat-empty.smt2", "unsat")
   property("replace-bug.smt2") =

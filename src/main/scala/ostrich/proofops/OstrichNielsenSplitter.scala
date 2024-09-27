@@ -360,12 +360,14 @@ class OstrichNielsenSplitter(goal : Goal,
             val otherDecomp = splitPoints(leftLen)
             stop = true
 
-            Console.err.println("Decomposing equation:")
-            Console.err.println("  " +
+            if (debug) {
+              Console.err.println("Decomposing equation:")
+              Console.err.println("  " +
                                   term2String(otherDecomp.atom(0)) + " . " +
                                   term2String(otherDecomp.atom(1)) + " == " +
                                   term2String(decomp.atom(0)) + " . " +
                                   term2String(decomp.atom(1)))
+            }
 
             actions += Plugin.RemoveFacts(conj(lit))
 
@@ -513,14 +515,16 @@ class OstrichNielsenSplitter(goal : Goal,
                   null,
                   splitLit1(1), List())
 
-    Console.err.println(
-      "Applying Nielsen transformation (# word equations: " + multiGroupNum +
-        ")")
-    Console.err.println("  " +
+    if (debug) {
+      Console.err.println(
+        "Applying Nielsen transformation (# word equations: " + multiGroupNum +
+          ")")
+      Console.err.println("  " +
                           term2String(splitLit1(0)) + " . " +
                           term2String(splitLit1(1)) + " == " +
                           term2String(splitLit2(0)) + " . " +
                           term2String(splitLit2(1)))
+    }
 
     val nil = strDatabase.str2Id("")
 
@@ -573,7 +577,8 @@ class OstrichNielsenSplitter(goal : Goal,
 
     if (zeroSyms.hasNext) {
       val zeroSym = zeroSyms.next
-      Console.err.println("Assuming " + zeroSym + " = \"\"")
+      if (debug)
+        Console.err.println("Assuming " + zeroSym + " = \"\"")
 
       import TerForConvenience._
       implicit val o = order
@@ -587,14 +592,16 @@ class OstrichNielsenSplitter(goal : Goal,
       val split    = chooseSplit(splitLit1, splitLit2, lengthRed)
       val splitSym = split._3
 
-      Console.err.println(
-        "Applying Nielsen transformation (# word equations: " + multiGroupNum +
-          "), splitting " + term2String(splitSym))
-      Console.err.println("  " +
+      if (debug) {
+        Console.err.println(
+          "Applying Nielsen transformation (# word equations: " + multiGroupNum +
+            "), splitting " + term2String(splitSym))
+        Console.err.println("  " +
                             term2String(splitLit1(0)) + " . " +
                             term2String(splitLit1(1)) + " == " +
                             term2String(splitLit2(0)) + " . " +
                             term2String(splitLit2(1)))
+      }
 
       val f1 = splittingFormula(split, splitLit2)
       val f2 = diffLengthFormula(split, splitLit2)
