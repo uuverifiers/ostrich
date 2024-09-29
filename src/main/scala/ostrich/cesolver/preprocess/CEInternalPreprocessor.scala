@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2023 Denghang Hu. All rights reserved.
+ * Copyright (c) 2023 Denghang Hu, Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,35 +29,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package ostrich.cesolver.preprocess
 
-package ostrich.cesolver.convenience
-
-import ostrich.cesolver.automata.BricsAutomatonWrapper
-import ostrich.automata.Automaton
-import ostrich.automata.BricsAutomaton
-import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ap.terfor.TermOrder
+import ap.terfor.conjunctions.Conjunction
+import ostrich.cesolver.stringtheory.CEStringTheory
+import ostrich.OFlags
 import ostrich.cesolver.util.ParikhUtil
-object CostEnrichedConvenience {
-  def automaton2CostEnriched(
-      auts: Seq[Automaton]
-  ): Seq[CostEnrichedAutomatonBase] = {
-    ParikhUtil.log("CostEnrichedConvenience.automaton2CostEnriched: convert automata to cost-enriched automata")
-    auts.map(automaton2CostEnriched(_))
-  }
 
-  def automaton2CostEnriched(aut: Automaton): CostEnrichedAutomatonBase = {
-    ParikhUtil.log("CostEnrichedConvenience.automaton2CostEnriched: convert automaton to cost-enriched automaton")
-    if (
-      aut.isInstanceOf[CostEnrichedAutomatonBase]
-    ) {
-      aut.asInstanceOf[CostEnrichedAutomatonBase]
-    } else if (aut.isInstanceOf[BricsAutomaton]) {
-      BricsAutomatonWrapper(aut.asInstanceOf[BricsAutomaton].underlying)
-    } else {
-      val e = new Exception(s"Automaton $aut is not a cost-enriched automaton")
-      // e.printStackTrace()
-      throw e
-    }
+class CEInternalPreprocessor(theory: CEStringTheory, flags: OFlags) {
+  def preprocess(f: Conjunction, order: TermOrder): Conjunction = {
+    ParikhUtil.todo("CEInternalPreprocessor does nothing now", 3)
+    f
   }
-
 }

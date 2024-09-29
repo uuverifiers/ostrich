@@ -29,43 +29,29 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package ostrich.cesolver.stringtheory
+
+import ostrich.automata.{Transducer}
 
 import ap.Signature
 import ap.basetypes.IdealInt
-import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp,
-                  Internal2InputAbsy}
+import ap.parser.{IFormula, IExpression}
 import IExpression.Predicate
-import ap.theories.strings._
-import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
-import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
-import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
-import ap.terfor.conjunctions.{Conjunction, IdentityReducerPluginFactory}
-import ap.terfor.preds.Atom
+import ap.theories.Incompleteness
+import ap.terfor.{Term, TermOrder, TerForConvenience}
+import ap.terfor.conjunctions.Conjunction
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
-import ap.parameters.Param
 import ap.util.Seqs
 
-import ostrich.automata.{Transducer, AutDatabase}
-import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
-import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
+import ostrich.cesolver.preprocess.CEPreprocessor
 import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
 import ostrich.OstrichEqualityPropagator
-
 import ostrich.cesolver.automata.CEAutDatabase
-import ostrich.cesolver.preprocess.CEPreprocessor
-import ostrich.cesolver.core.FinalConstraints
-import ostrich.cesolver.util.ParikhUtil
-
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.collection.{Map => GMap}
-
-
-object CEStringTheory {
-  val alphabetSize = 0x10000
-}
+import ostrich.cesolver.preprocess.CEInternalPreprocessor
+import ap.parser.IFunction
+import ap.types.MonoSortedIFunction
+import ap.types.Sort.Integer
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -77,7 +63,28 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
   private val ceSolver = new CESolver(this, flags)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
 
-  lazy val ceAutDatabase = new CEAutDatabase(this, flags.minimizeAutomata)
+  lazy val ceAutDatabase = new CEAutDatabase(this, flags)
+
+   // substring special cases 
+  lazy val str_substr_0_lenMinus1 = 
+    new MonoSortedIFunction("str_substr_0_lenMinus1", List(StringSort), StringSort, true, false)
+  lazy val str_substr_lenMinus1_1 = 
+    new MonoSortedIFunction("str_substr_lenMinus1_1", List(StringSort), StringSort, true, false)
+  lazy val str_substr_n_lenMinusM = 
+    new MonoSortedIFunction("str_substr_n_lenMinusM", List(StringSort, Integer, Integer), StringSort, true, false)
+  lazy val str_substr_0_indexofc0 = 
+    new MonoSortedIFunction("str_substr_0_indexofc0", List(StringSort, StringSort), StringSort, true, false)
+  lazy val str_substr_0_indexofc0Plus1 = 
+    new MonoSortedIFunction("str_substr_0_indexofc0Plus1", List(StringSort, StringSort), StringSort, true, false)
+  lazy val str_substr_indexofc0Plus1_tail = 
+    new MonoSortedIFunction("str_substr_indexofc0Plus1_tail", List(StringSort, StringSort), StringSort, true, false)
+
+  lazy val specialSubstrFucs = List(
+    str_substr_0_lenMinus1, str_substr_n_lenMinusM, str_substr_lenMinus1_1, 
+    str_substr_0_indexofc0, str_substr_0_indexofc0Plus1, str_substr_indexofc0Plus1_tail
+  )
+
+  override protected def  extraExtraFunctions: Seq[IFunction] = specialSubstrFucs
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
@@ -123,26 +130,13 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
 
         case Plugin.GoalState.Intermediate =>
           Seq()
-//           try {
-//             breakCyclicEquations(goal).getOrElse(List()) elseDo
-//               nielsenSplitter.decompSimpleEquations elseDo
-//               nielsenSplitter.decompEquations elseDo
-//               predToEq.reducePredicatesToEquations
-
-//           } catch {
-//             case t: ap.util.Timeout => throw t
-// //          case t : Throwable =>  { t.printStackTrace; throw t }
-//           }
 
         case Plugin.GoalState.Final =>
-          try { //  Console.withOut(Console.err)
-            // nielsenSplitter.splitEquation elseDo
-            //   predToEq.lazyEnumeration elseDo
+          try { 
             callBackwardProp(goal)
-
           } catch {
             case t: ap.util.Timeout => throw t
-            // case t: Throwable       => { t.printStackTrace; throw t }
+            case t: Throwable       => { t.printStackTrace; throw t }
           }
 
       }
@@ -156,13 +150,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
           case Some(m) =>
             equalityPropagator.handleSolution(goal, m)
           case None =>
-            if (Param.PROOF_CONSTRUCTION(goal.settings))
-              // TODO: only list the assumptions that were actually
-              // needed for the proof to close.
-              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
-                                       CEStringTheory.this))
-            else
-              List(Plugin.AddFormula(Conjunction.TRUE))
+            List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
@@ -222,7 +210,12 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
   override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
-    f
+
+    val preprocessor = new CEInternalPreprocessor(this, flags)
+    preprocessor.preprocess(f, order)
   }
 
+  // TODO: ADD Reducer Plugin
+  // override val reducerPlugin  = 
+  //   new CEReducerFactory(this)
 }

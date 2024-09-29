@@ -33,22 +33,22 @@
 package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
-import ostrich.cesolver.automata.CostEnrichedAutomaton
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import PreOpUtil.{automatonWithLen, automatonWithLenLessThan}
 import ostrich.cesolver.automata.CEBasicOperations.{intersection, concatenate}
-import ostrich.automata.BricsAutomaton
 import ap.parser.ITerm
 import ap.parser.IExpression._
-import ap.parser.IIntLit
 import ostrich.cesolver.util.TermGenerator
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
+import ap.basetypes.IdealInt
+import ap.parser.IBinJunctor
 
 object SubStringCEPreOp {
-  def apply(beginIdx: ITerm, length: ITerm) =
+  
+
+  def apply(beginIdx: ITerm, length: ITerm) = {
     new SubStringCEPreOp(beginIdx, length)
+  }
 }
 
 /** Pre-operator for substring constraint.
@@ -58,121 +58,61 @@ object SubStringCEPreOp {
   *   the max length of subtring
   */
 class SubStringCEPreOp(beginIdx: ITerm, length: ITerm) extends CEPreOp {
-  private val termGen = TermGenerator(hashCode())
+  private val termGen = TermGenerator()
 
   override def toString(): String =
     "subStringCEPreOp"
+
+  private def normalPreimage(res: CostEnrichedAutomatonBase): Automaton = {
+    val resLen = termGen.lenTerm
+    val resWithLen =
+      intersection(res, LengthCEPreOp.lengthPreimage(resLen, false))
+    val prefixLen = termGen.lenTerm
+    val prefix = LengthCEPreOp.lengthPreimage(prefixLen, false)
+    val suffixLen = termGen.lenTerm
+    val suffix = LengthCEPreOp.lengthPreimage(suffixLen, false)
+    val preimage = concatenate(Seq(prefix, resWithLen, suffix))
+    val argLen = prefixLen + resLen + suffixLen
+    val epsilonResFormula =
+      (length <= 0 | beginIdx < 0 | beginIdx > argLen - 1) & resLen === 0
+    val nonEpsilonResFormula =
+      ((resLen <= length & suffixLen === 0) | (resLen === length & suffixLen > 0)) & beginIdx === prefixLen
+    preimage.regsRelation = connectSimplify(
+      Seq(preimage.regsRelation, (epsilonResFormula | nonEpsilonResFormula)),
+      IBinJunctor.And
+    )
+    preimage
+  }
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    var preimages = Iterator[Seq[Automaton]]()
-    var preimagesOfEmptyStr = Iterator[Seq[Automaton]]()
-    val res = automaton2CostEnriched(resultConstraint)
-    if (res.isAccept(res.initialState)) {
-      // empty string result
-      val preimageOfEmp1 = BricsAutomatonWrapper.makeAnyString
-      preimageOfEmp1.regsRelation = and(Seq(
-        preimageOfEmp1.regsRelation,
-        length <= 0
-      ))
-      val preimageOfEmp2 = beginIdx match {
-        case  IIntLit(value) => {
-          automatonWithLenLessThan(value.intValueSafe)
-        }
-        case _ => {
-          val searchedStrLen = termGen.lenTerm
-          val preimage = LengthCEPreOp.lengthPreimage(searchedStrLen)
-          preimage.regsRelation = and(Seq(
-            preimage.regsRelation,
-            searchedStrLen <= beginIdx
-          ))
-          preimage
-        }
-      }
-      for (r <- res.registers) {
-        // make sure all registers are 0
-        preimageOfEmp1.regsRelation =
-          and(Seq(preimageOfEmp1.regsRelation, r === 0))
-        preimageOfEmp2.regsRelation =
-          and(Seq(preimageOfEmp2.regsRelation, r === 0))
-      }
-      // transmit the result automaton's registers info
-      preimageOfEmp1.regsRelation =
-        and(Seq(preimageOfEmp1.regsRelation, res.regsRelation))
-      preimageOfEmp2.regsRelation =
-        and(Seq(preimageOfEmp2.regsRelation, res.regsRelation))
 
-      preimagesOfEmptyStr =
-        Iterator(Seq(preimageOfEmp1), Seq(preimageOfEmp2))
-    }
-    val beginIdxPrefix = beginIdx match {
-      case IIntLit(value) => {
-        automatonWithLen(value.intValueSafe)
-      }
-      case _ => {
-        LengthCEPreOp.lengthPreimage(beginIdx)
-      }
-    }
-
-    val middleSubStr = length match {
-      case IIntLit(value) => {
-        intersection(
-          automatonWithLen(value.intValueSafe),
-          res
+    val res = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
+    (beginIdx, length) match {
+      // substring(x, 0, 1)
+      case (Const(IdealInt(0)), Const(IdealInt(1))) => {
+        val preImage = concatenate(
+          Seq(
+            intersection(res, LengthCEPreOp.lengthPreimage(1)),
+            BricsAutomatonWrapper.makeAnyString()
+          )
         )
+        if (res.isAccept(res.initialState))
+          preImage.setAccept(preImage.initialState, true)
+        (Iterator(Seq(preImage)), Seq())
       }
-      case _ => {
-        intersection(
-          LengthCEPreOp.lengthPreimage(length),
-          res
-        )
-      }
+      // normal case
+      case _ => (Iterator(Seq(normalPreimage(res))), Seq())
     }
-
-    val smallLenSuffix = length match {
-      case IIntLit(value) => {
-        intersection(
-          automatonWithLenLessThan(value.intValueSafe),
-          res
-        )
-      }
-      case _ => {
-        val smallLen = termGen.lenTerm
-        val smallLenSuffix = intersection(
-          LengthCEPreOp.lengthPreimage(smallLen),
-          res
-        )
-        smallLenSuffix.regsRelation = and(Seq(
-          smallLenSuffix.regsRelation,
-          smallLen <= length
-        ))
-        smallLenSuffix
-      }
-    }
-    val anyStrSuffix = BricsAutomatonWrapper.makeAnyString
-
-    val preimage1 = concatenate(Seq(
-      beginIdxPrefix,
-      middleSubStr,
-      anyStrSuffix
-    ))
-
-    val preimage2 = concatenate(
-      Seq(beginIdxPrefix, smallLenSuffix)
-    )
-
-    preimages = Iterator(Seq(preimage1), Seq(preimage2))
-
-    (preimagesOfEmptyStr ++ preimages, Seq())
   }
 
   def eval(arguments: Seq[Seq[Int]]): Option[Seq[Int]] = {
     val beginIdx = arguments(1)(0)
     val length = arguments(2)(0)
     val bigString = arguments(0)
-    if (beginIdx < 0 || length < 0) {
+    if (beginIdx < 0 || length < 0 || beginIdx > bigString.length - 1) {
       Some(Seq()) // empty string
     } else {
       Some(bigString.slice(beginIdx, beginIdx + length))

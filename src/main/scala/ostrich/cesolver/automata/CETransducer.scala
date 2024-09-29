@@ -42,6 +42,7 @@ import scala.collection.mutable.{
 import ostrich.automata.TLabelOps
 import ostrich.automata.BricsTLabelOps
 import ostrich.automata.Transducer._
+import ostrich.cesolver.util.ParikhUtil
 
 object CETransducer {
   type State = CostEnrichedAutomatonBase#State
@@ -154,7 +155,7 @@ class CETransducer {
       internals: Iterable[(State, State, Seq[Int])] = Iterable()
   ): CostEnrichedAutomatonBase =
     /* Exploration.measure("transducer pre-op") */ {
-
+      ParikhUtil.log("Computing pre-image of transducer")
       val ceAut = new CostEnrichedAutomatonBase
       ceAut.registers = aut.registers
       ceAut.regsRelation = aut.regsRelation
@@ -188,7 +189,7 @@ class CETransducer {
 
       // collect silent transitions during main loop and eliminate them
       // after (TODO: think of more efficient solution)
-      val silentTransitions = new MHashMap[State, MSet[State]]
+      new MHashMap[State, MSet[State]]
         with MMultiMap[State, State]
 
       def sumVec(v1: Seq[Int], v2: Seq[Int]) =
@@ -419,6 +420,7 @@ class CETransducer {
     * Assumes transducer is functional, so returns the first found output
     */
   def apply(input: String, internal: String = ""): Option[String] = {
+    ParikhUtil.log("Applying transducer to input")
     if (input.size == 0 && isAccept(_initialState))
       return Some("")
 
@@ -505,6 +507,7 @@ class CETransducer {
   }
 
   def minimize() = {
+    ParikhUtil.log("Minimizing transducer")
     def dest(t: TTransition): State = t._3
     def edest(t: TETransition): State = t._2
 
@@ -551,12 +554,12 @@ class CETransducer {
     }
 
     _acceptingStates.retain(bwdReach.contains(_))
-    _lblTrans.retain((k, v) => bwdReach.contains(k))
-    _eTrans.retain((k, v) => bwdReach.contains(k))
-    _lblTrans.foreach({ case (k, v) =>
+    _lblTrans.retain((k, _) => bwdReach.contains(k))
+    _eTrans.retain((k, _) => bwdReach.contains(k))
+    _lblTrans.foreach({ case (_, v) =>
       v.retain(t => bwdReach.contains(dest(t)))
     })
-    _eTrans.foreach({ case (k, v) =>
+    _eTrans.foreach({ case (_, v) =>
       v.retain(t => bwdReach.contains(edest(t)))
     })
   }

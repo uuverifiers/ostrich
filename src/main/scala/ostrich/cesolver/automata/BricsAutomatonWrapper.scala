@@ -38,8 +38,8 @@ import dk.brics.automaton.{
   Automaton => BAutomaton
 }
 
-// import scala.collection.JavaConverters.asScala
-import scala.collection.JavaConversions.{asScalaSet, asScalaIterator}
+import scala.collection.JavaConverters._
+import ostrich.cesolver.util.ParikhUtil
 
 object BricsAutomatonWrapper {
 
@@ -52,13 +52,15 @@ object BricsAutomatonWrapper {
   def apply(underlying: BAutomaton): BricsAutomatonWrapper = 
     new BricsAutomatonWrapper(underlying)
 
-  /** Build CostEnriched automaton from a regular expression in brics format
-    */
-  def apply(pattern: String): BricsAutomatonWrapper =
+  def apply(pattern: String): BricsAutomatonWrapper = {
+    ParikhUtil.log("BricsAutomatonWrapper.apply: build automaton from regex pattern " + pattern)
     BricsAutomatonWrapper(new RegExp(pattern).toAutomaton(false))
+  }
 
-  def fromString(str: String): BricsAutomatonWrapper =
+  def fromString(str: String): BricsAutomatonWrapper = {
+    ParikhUtil.log("BricsAutomatonWrapper.fromString: build automaton from string " + str)
     BricsAutomatonWrapper(BasicAutomata makeString str)
+  }
 
   def makeAnyString(): BricsAutomatonWrapper =
     BricsAutomatonWrapper(BAutomaton.makeAnyString)
@@ -68,13 +70,6 @@ object BricsAutomatonWrapper {
 
   def makeEmptyString(): BricsAutomatonWrapper = 
     BricsAutomatonWrapper(BAutomaton.makeEmptyString())
-
-  /** Check whether we should avoid ever minimising the given automaton.
-    */
-  def neverMinimize(aut: BAutomaton): Boolean =
-    aut.getSingleton != null || aut.getNumberOfStates > MINIMIZE_LIMIT
-
-  private val MINIMIZE_LIMIT = 100000
 }
 
 /** Wrapper for the dk.brics.automaton. Extend dk.brics.automaton with
@@ -83,13 +78,14 @@ object BricsAutomatonWrapper {
 class BricsAutomatonWrapper(val underlying: BAutomaton)
     extends CostEnrichedAutomatonBase {
 
-  override def initialState_= (s: State) = underlying.setInitialState(s)
-
-  override def initialState: State = underlying.getInitialState()
+  private val old2new = underlying.getStates().asScala.map(s => (s, newState())).toMap
   
   // initialize
-  for (s <- underlying.getStates()){
-    for (t <- s.getTransitions())
-      addTransition(s, (t.getMin(), t.getMax()), t.getDest(), Seq())
+  initialState = old2new(underlying.getInitialState())
+  for (s <- underlying.getStates().asScala){
+    for (t <- s.getTransitions().asScala)
+      addTransition(old2new(s), (t.getMin(), t.getMax()), old2new(t.getDest()), Seq())
   }
+  for (s <- underlying.getAcceptStates().asScala)
+    setAccept(old2new(s),true)
 }
