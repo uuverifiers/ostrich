@@ -281,7 +281,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
 
   def getAcceptedWord: Option[Seq[Int]] = {
-    if (!regsRelation.isTrue | registers.nonEmpty) {
+    if (registers.nonEmpty) {
       throw new UnsupportedOperationException
     }
     val seenlist = new MHashSet[State]

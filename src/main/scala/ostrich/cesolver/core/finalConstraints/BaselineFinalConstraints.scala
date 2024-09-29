@@ -61,7 +61,7 @@ class BaselineFinalConstraints(
     )
   }
 
-  def getRegsRelation: IFormula =
+  private def getRegsRelation: IFormula =
     connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
 
   def getModel(partialModel: PartialModel): Option[Seq[Int]] = {

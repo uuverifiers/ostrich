@@ -85,23 +85,6 @@ trait FinalConstraints {
 
   val regsTerms: Seq[ITerm]
 
-  // protected var regTermsModel: Map[ITerm, IdealInt]
-
-  // accessors and mutators-------------------------------------------
   def getModel(partialModel: PartialModel): Option[Seq[Int]]
 
-  def getRegsRelation: IFormula 
-
-  // def setRegTermsModel(partialModel: PartialModel): Unit = {
-  //   regTermsModel = Map()
-  //   for (term <- getRegisters)
-  //     regTermsModel += (term -> evalTerm(term, partialModel))
-  // }
-
-  // def setRegTermsModel(termModel: Map[ITerm, IdealInt]): Unit = {
-  //   regTermsModel = Map()
-  //   for (term <- getRegisters)
-  //     regTermsModel += (term -> termModel(term))
-  // }
-  // accessors and mutators-------------------------------------------
 }
