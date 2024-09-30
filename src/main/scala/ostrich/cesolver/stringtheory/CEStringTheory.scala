@@ -52,6 +52,8 @@ import ostrich.cesolver.preprocess.CEInternalPreprocessor
 import ap.parser.IFunction
 import ap.types.MonoSortedIFunction
 import ap.types.Sort.Integer
+import ostrich.cesolver.preprocess.CEReducerFactory
+import ostrich.cesolver.util.ParikhUtil.throwWithStackTrace
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -136,7 +138,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
             callBackwardProp(goal)
           } catch {
             case t: ap.util.Timeout => throw t
-            // case t: Throwable       => { t.printStackTrace; throw t }
+            case t: Throwable       => throwWithStackTrace(t)
           }
 
       }
@@ -216,6 +218,6 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
   }
 
   // TODO: ADD Reducer Plugin
-  // override val reducerPlugin  = 
-  //   new CEReducerFactory(this)
+  override val reducerPlugin  = 
+    new CEReducerFactory(this)
 }

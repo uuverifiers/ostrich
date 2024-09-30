@@ -148,7 +148,6 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
           )
         )
       // substring special cases ----------------------------------------------
-
       case FunPred(`str_indexof`) if strDatabase isConcrete a(1) =>
         val matchStr = strDatabase term2ListGet a(1)
         Some(

@@ -37,28 +37,11 @@ import ostrich.automata.AutDatabase
 import ostrich.automata.Automaton
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.OFlags
+import ostrich.automata.AutDatabase
 
 class CEAutDatabase(theory: OstrichStringTheory, flags: OFlags)
-    extends OldAutDatabase(theory, flags.minimizeAutomata) {
-  import OldAutDatabase._
+    extends AutDatabase(theory, flags.minimizeAutomata) {
+  import AutDatabase._
 
   override val regex2Aut = new Regex2CEAut(theory, flags)
-
-  override def id2ComplementedAutomaton(id: Int): Option[Automaton] =
-    synchronized {
-      (id2CompAut get id) match {
-        case r @ Some(_) => r
-        case None =>
-          id2Automaton(id) match {
-            case Some(aut) => {
-              val compAut = !aut
-              id2CompAut.put(id, compAut)
-              Some(compAut)
-            }
-            case None =>
-              None
-          }
-      }
-    }
-
 }

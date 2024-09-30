@@ -483,8 +483,9 @@ object ParikhUtil {
   }
 
   def throwWithStackTrace(e: Throwable) = {
-    throw e
     if (debugOpt)
       e.printStackTrace
+    throw e
+    
   }
 }
