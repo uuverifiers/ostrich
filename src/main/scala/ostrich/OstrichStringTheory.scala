@@ -377,7 +377,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           predToEq.reducePredicatesToEquations
 
         case Plugin.GoalState.Intermediate =>
-          nielsenSplitter.splitEquation
+          if (theoryFlags.nielsenSplitter)
+            nielsenSplitter.splitEquation
+          else
+            List()
 
         case Plugin.GoalState.Final =>
           predToEq.lazyEnumeration                     elseDo
