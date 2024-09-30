@@ -46,7 +46,8 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton}
 class OstrichInternalPreprocessor(theory : OstrichStringTheory,
                                   flags : OFlags) {
   import theory.{FunPred, StringSort, str_len, _str_len, _str_char_count,
-                 str_++, _str_++, str_in_re_id, strDatabase, autDatabase}
+                 str_++, _str_++, str_in_re_id, str_indexof,
+                 strDatabase, autDatabase}
   import LinearCombination.Constant
 
   private val p = theory.functionPredicateMap
@@ -150,6 +151,18 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
               a
             else
               !conj(charCountConstraints) | a
+          }
+
+          // add constraints about the range of str.indexof
+          case FunPred(`str_indexof`) if negated => {
+            val shifter  = VariableShiftSubst(0, 2, order)
+            val shiftedA = shifter(a)
+
+            exists(2, conj(List(shiftedA,
+                                _str_len(List(shiftedA(0), l(v(0)))),
+                                _str_len(List(shiftedA(1), l(v(1)))),
+                                shiftedA(3) >= -1,
+                                v(0) >= shiftedA(3) + v(1))))
           }
 
           case _ =>
