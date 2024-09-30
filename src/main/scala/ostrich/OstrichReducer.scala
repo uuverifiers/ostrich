@@ -382,29 +382,40 @@ class OstrichReducer protected[ostrich]
         case `_str_indexof` => {
           import LinearCombination.Constant
           import strDatabase.IntEncodedString
+
           (a(0), a(1), a(2), a(3)) match {
-            case (_, _, Constant(startIndex), result)
-              if startIndex < 0 =>
-                result === -1
+            case (_, _, Constant(startIndex), result) if startIndex < 0 =>
+              result === -1
+
             case (IntEncodedString(bigStr), _, Constant(startIndex), result)
               if startIndex > bigStr.size =>
-                result === -1
+              result === -1
+
             case (IntEncodedString(bigStr), IntEncodedString(searchStr),
-                  Constant(IdealInt(startIndex)), result) => {
+            Constant(IdealInt(startIndex)), result) => {
               val searchLen = searchStr.size
-              val matches =
-                for (ind <- (startIndex to (bigStr.size - searchLen)).iterator;
-                     if bigStr.substring(ind, ind + searchLen) == searchStr)
-                yield ind
-              if (matches.hasNext)
-                result === matches.next
-              else
+              val matches = for {
+                ind <- (startIndex to (bigStr.size - searchLen)).iterator
+                if bigStr.substring(ind, ind + searchStr.size) == searchStr
+              } yield ind
+
+              if (matches.hasNext) {
+                val matchIndex = matches.next
+                result === matchIndex
+              } else {
                 result === -1
+              }
             }
+            case (_,_,_, result) if a(0) == a(1) => {
+              result === -1 | result === 0
+            }
+
             case _ =>
               a
           }
         }
+
+
 
         case FunPred(`str_replace` | `str_replaceall`) if a(1) == a(2) =>
           a(0) === a(3)
