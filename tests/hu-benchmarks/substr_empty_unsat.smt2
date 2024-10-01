@@ -9,6 +9,7 @@
 (assert (str.in_re b (re.union (str.to_re "hh") (str.to_re "bb"))))
 (assert (= (str.substr a i j) ""))
 (assert (< i 3))
+(assert (> i 0))
 (assert (> j 0))
 
 (check-sat)
