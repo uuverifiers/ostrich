@@ -193,6 +193,15 @@ class OstrichReducer protected[ostrich]
       funTranslator.addFacts(conj(otherAtoms), order)
     }
 
+    object LowerBoundedTerm {
+      def unapply(lc : LinearCombination) : Option[IdealInt] =
+        reducer.lowerBound(lc)
+    }
+    object UpperBoundedTerm {
+      def unapply(lc : LinearCombination) : Option[IdealInt] =
+        reducer.upperBound(lc)
+    }
+
     ReducerPlugin.rewritePreds(predConj, rewritablePredicates,
                                order, logger) { a =>
       a.pred match {
@@ -383,24 +392,17 @@ class OstrichReducer protected[ostrich]
           import LinearCombination.Constant
           import strDatabase.IntEncodedString
           (a(0), a(1), a(2), a(3)) match {
-            case (_, _, Constant(startIndex), result)
-              if startIndex < 0 =>
-                result === -1
-            case (IntEncodedString(bigStr), _, Constant(startIndex), result)
-              if startIndex > bigStr.size =>
-                result === -1
+            case (_, _, UpperBoundedTerm(b), result) if b < 0 =>
+              result === -1
+
+            case (IntEncodedString(bigStr), _, LowerBoundedTerm(b), result)
+              if b > bigStr.size =>
+              result === -1
+
             case (IntEncodedString(bigStr), IntEncodedString(searchStr),
-                  Constant(IdealInt(startIndex)), result) => {
-              val searchLen = searchStr.size
-              val matches =
-                for (ind <- (startIndex to (bigStr.size - searchLen)).iterator;
-                     if bigStr.substring(ind, ind + searchLen) == searchStr)
-                yield ind
-              if (matches.hasNext)
-                result === matches.next
-              else
-                result === -1
-            }
+                  Constant(IdealInt(startIndex)), result) =>
+              result === bigStr.indexOf(searchStr, startIndex)
+
             case _ =>
               a
           }

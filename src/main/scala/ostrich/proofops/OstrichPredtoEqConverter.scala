@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2024 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,8 @@ class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
   import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
-                 strDatabase, str_to_int, int_to_str, StringSort, FunPred}
+                 strDatabase, str_to_int, int_to_str, str_indexof,
+                 StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
 
@@ -168,21 +169,27 @@ class OstrichPredtoEqConverter(goal : Goal,
       List()
     }
 
-  def enumStrToIntValues(a : Atom) : Seq[Plugin.Action] = {
-    for (lit <- List(a);
-         if !a.last.isConstant;
-         enumAtom = conj(theory.IntEnumerator.enumIntValuesOf(a.last, order));
+  private def enumIntValues(lc : LinearCombination) : Option[Plugin.Action] =
+    for (t <- Some(lc);
+         if !t.isConstant;
+         enumAtom = conj(theory.IntEnumerator.enumIntValuesOf(t, order));
          if !goal.reduceWithFacts(enumAtom).isTrue)
     yield Plugin.AddAxiom(List(), enumAtom, theory)
-  }
 
-  def enumIntToStrValues(a : Atom) : Seq[Plugin.Action] = {
-    for (lit <- List(a);
-         if !a.head.isConstant;
-         enumAtom = conj(theory.IntEnumerator.enumIntValuesOf(a.head, order));
-         if !goal.reduceWithFacts(enumAtom).isTrue)
-    yield Plugin.AddAxiom(List(), enumAtom, theory)
-  }
+  def enumIndexofStartIndex(a : Atom) : Seq[Plugin.Action] =
+    if (a(0).isConstant && a(1).isConstant) {
+      enumIntValues(a(2)) match {
+        case Some(act) => {
+          val bigStr = strDatabase.term2ListGet(a(0))
+          List(Plugin.CutSplit((a(2) >= 0) & (a(2) <= bigStr.size),
+                               List(act), List()))
+        }
+        case None =>
+          List()
+      }
+    } else {
+      List()
+    }
 
   def propStrToIntLength(a : Atom, len : Term) : Seq[Plugin.Action] = {
     (for (IdealInt(bound) <- goal.reduceWithFacts.upperBound(len);
@@ -221,12 +228,15 @@ class OstrichPredtoEqConverter(goal : Goal,
 
   def lazyEnumeration : Seq[Plugin.Action] = {
     val a = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_int));
-                  act <- enumStrToIntValues(lit)) yield act)
+                  act <- enumIntValues(lit.last).toSeq) yield act)
 
     val b = (for (lit <- predConj.positiveLitsWithPred(FunPred(int_to_str));
-                  act <- enumIntToStrValues(lit)) yield act)
+                  act <- enumIntValues(lit.head).toSeq) yield act)
 
-    a ++ b
+    val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_indexof));
+                  act <- enumIndexofStartIndex(lit)) yield act)
+
+    a ++ b ++ c
   }
 
 }
