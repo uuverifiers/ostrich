@@ -54,6 +54,8 @@ import ap.types.MonoSortedIFunction
 import ap.types.Sort.Integer
 import ostrich.cesolver.preprocess.CEReducerFactory
 import ostrich.cesolver.util.ParikhUtil.throwWithStackTrace
+import ap.terfor.conjunctions.IdentityReducerPlugin
+import ap.terfor.conjunctions.IdentityReducerPluginFactory
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -115,6 +117,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
 
   private val unsupportedPreds = predicates.toSet -- supportedPreds
 
+  override val dependencies = List()
 
   override def plugin = Some(new Plugin {
 

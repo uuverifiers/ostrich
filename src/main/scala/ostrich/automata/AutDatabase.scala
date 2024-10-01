@@ -121,11 +121,11 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   private val emptyIntersections    = new SetTrie[Int]
 
-  val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
-  val emptyLangId : Int        = automaton2Id(emptyLangAut)
+  lazy val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
+  lazy val emptyLangId : Int        = automaton2Id(emptyLangAut)
 
-  val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
-  val anyStringId : Int        = automaton2Id(anyStringAut)
+  lazy val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
+  lazy val anyStringId : Int        = automaton2Id(anyStringAut)
 
   synchronized {
     id2CompAut.put(anyStringId, emptyLangId)

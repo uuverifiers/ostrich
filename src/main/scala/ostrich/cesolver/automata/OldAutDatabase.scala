@@ -39,22 +39,6 @@ import ap.parser._
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
-object OldAutDatabase {
-
-  abstract sealed class NamedAutomaton (val id : Int) {
-    def complement : NamedAutomaton
-  }
-
-  case class PositiveAut    (_id : Int) extends NamedAutomaton (_id) {
-    def complement = ComplementedAut(id)
-  }
-
-  case class ComplementedAut(_id : Int) extends NamedAutomaton (_id) {
-    def complement = PositiveAut(id)
-  }
-
-}
-
 /**
  * NOTE: this is the old version of the automaton database, the main
  * version (outside of the cesolver directory) has changed significantly.
@@ -67,7 +51,7 @@ object OldAutDatabase {
 class OldAutDatabase(theory : OstrichStringTheory,
                      minimizeAutomata : Boolean) {
 
-  import OldAutDatabase._
+  import AutDatabase._
 
   protected val regex2Aut  = new Regex2Aut(theory)
 

@@ -83,7 +83,7 @@ class UnaryBasedSolver(
     lProver.addConstantsRaw(newConsts)
     lProver !! finalArith
 
-    ParikhUtil.debugPrintln(finalArith)
+    ParikhUtil.debugPrintln("finalArith is " + finalArith)
 
     lProver.checkSat(false)
     val status = measure(

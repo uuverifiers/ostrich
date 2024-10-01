@@ -37,11 +37,8 @@ import ostrich.automata.AutDatabase
 import ostrich.automata.Automaton
 import ostrich.cesolver.util.ParikhUtil
 import ostrich.OFlags
-import ostrich.automata.AutDatabase
 
 class CEAutDatabase(theory: OstrichStringTheory, flags: OFlags)
-    extends AutDatabase(theory, flags.minimizeAutomata) {
-  import AutDatabase._
-
+    extends OldAutDatabase(theory, flags.minimizeAutomata) {
   override val regex2Aut = new Regex2CEAut(theory, flags)
 }

@@ -285,21 +285,20 @@ class CostEnrichedAutomatonBase extends Automaton {
       throw new UnsupportedOperationException
     }
     val seenlist = new MHashSet[State]
-    val worklist = new MStack[State]
-    var acceptedword = Seq[Int]()
-    worklist.push(initialState)
+    val worklist = new MStack[(State, Seq[Int])]
+    worklist.push((initialState, Seq()))
     seenlist.add(initialState)
     while (!worklist.isEmpty) {
-      val s = worklist.pop
+      val (s, word) = worklist.pop
       if (isAccept(s)) {
-        return Some(acceptedword)
+        return Some(word)
       }
       for (
         (to, (lbl, _), _) <- outgoingTransitionsWithVec(s)
         if !seenlist.contains(to)
       ) {
-        acceptedword = acceptedword :+ lbl.toInt
-        worklist.push(to)
+        val newWord = word :+ lbl.toInt
+        worklist.push((to, newWord))
         seenlist.add(to)
       }
     }
@@ -312,7 +311,7 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
   def apply(word: Seq[Int]): Boolean = {
     ParikhUtil.log("Naively run word on CEFA without registers. Indeed, the CEFA with registers can be easily supported in the future.")
-    if (registers.nonEmpty) throw new UnsupportedOperationException
+    // if (registers.nonEmpty) throw new UnsupportedOperationException
     BasicOperations.run(toBricsAutomaton(this), word.map(_.toChar).mkString)
   }
 
@@ -379,7 +378,7 @@ class CostEnrichedAutomatonBase extends Automaton {
         )})\"]""")
     }
     strbuilder.append("\n")
-    strbuilder.append(s"        '${registers.mkString(", ")}' [shape=plaintext]")
+    strbuilder.append(s"""        \"${registers.mkString(", ")}\" [shape=plaintext]""")
     strbuilder.append("\n      }")
     writer.closeAfterWrite(strbuilder.toString())
   }
