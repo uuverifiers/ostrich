@@ -209,12 +209,11 @@ class OstrichPredtoEqConverter(goal : Goal,
    */
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
     //TODO rewrite positive prefix, suffix, contains
-
     val a = (for (lit <- predConj.negativeLitsWithPred(str_prefixof);
                   act <- reduceNegPrefixToEquation(lit)) yield act)
 
     val b = (for (lit <- predConj.negativeLitsWithPred(str_suffixof);
-                  act <- reduceNegPrefixToEquation(lit)) yield act)
+                  act <- reduceNegSuffixToEquation(lit)) yield act)
 
     val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_replace));
                   act <- rewriteStrReplace(lit)) yield act)
