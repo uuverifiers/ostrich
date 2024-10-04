@@ -84,7 +84,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("word-equation-4.smt2") =
     checkFile("tests/word-equation-4.smt2", "sat")
   property("word-equation-6.smt2") =
-    checkFileOpts("tests/word-equation-6.smt2", "sat", "-forwardPropagation", s"-timeout=$longTimeout")
+    checkFileOpts("tests/word-equation-6.smt2", "sat", "-forwardPropagation,-backwardPropagation", s"-timeout=$longTimeout")
 
   property("parikh-constraints.smt2") =
     checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh")
