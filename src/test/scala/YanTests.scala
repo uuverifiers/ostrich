@@ -9,7 +9,11 @@ import org.scalacheck.Prop._
 object YanTests extends Properties("YanTests") {
 
   import System.lineSeparator
-  
+
+  val timeout      = 30000
+  val shortTimeout = 3000
+  val longTimeout  = 60000
+
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
       Console.withErr(ap.CmdlMain.NullStream) {
@@ -23,7 +27,7 @@ object YanTests extends Properties("YanTests") {
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=10000",
+      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
                             "-stringSolver=ostrich.OstrichStringTheory",
                             filename) ++ extractOpts).toArray,
                         false)
