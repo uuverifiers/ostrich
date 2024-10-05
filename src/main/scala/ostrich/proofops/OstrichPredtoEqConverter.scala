@@ -55,8 +55,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
-  import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
-                 strDatabase, str_to_int, int_to_str, str_indexof,
+  import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace, str_contains,
+                 strDatabase, str_to_int, int_to_str, str_indexof, str_at,
                  StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
@@ -73,6 +73,72 @@ class OstrichPredtoEqConverter(goal : Goal,
   def resolveConcat(t : LinearCombination)
   : Option[(LinearCombination, LinearCombination)] =
     for (lits <- concatPerRes get t) yield (lits.head(0), lits.head(1))
+
+  def reducePosStrAt(t : Atom) : Seq[Plugin.Action] = {
+    // TODO
+    return List()
+  }
+
+
+  def reducePosPrefixToEquation(t : Atom) : Seq[Plugin.Action] = {
+    /**
+     * Input : prefix_of(x,y) is true iff x is prefix of y
+     * y = xz
+     *
+     */
+    import TerForConvenience._
+
+    val builder = new FormulaBuilder(goal,theory)
+    val x = t(0)
+    val y = t(1)
+    val z = builder.newVar(StringSort)
+    builder.addConcatN(Seq(x,z),y)
+
+    List(Plugin.RemoveFacts(conj(t)),
+      Plugin.AddAxiom(Seq(conj(t)),
+        builder.result, theory))
+  }
+
+  def reducePosSuffixToEquation(t : Atom) : Seq[Plugin.Action] = {
+    /**
+     * Input : suffix_of(x,y) is true iff x is suffix of y
+     * y = zx
+     *
+     */
+    import TerForConvenience._
+
+    val builder = new FormulaBuilder(goal,theory)
+    val x = t(0)
+    val y = t(1)
+    val z = builder.newVar(StringSort)
+    builder.addConcatN(Seq(z,x),y)
+
+    List(Plugin.RemoveFacts(conj(t)),
+      Plugin.AddAxiom(Seq(conj(t)),
+        builder.result, theory))
+  }
+
+  def reducePosContainsToEquation(t : Atom) : Seq[Plugin.Action] = {
+    /**
+     * Input : contains(x,y) is true iff x contains y
+     * x = z1yz2
+     *
+     */
+    import TerForConvenience._
+
+    val builder = new FormulaBuilder(goal,theory)
+    val x = t(0)
+    val y = t(1)
+    val z1 = builder.newVar(StringSort)
+    val z2 = builder.newVar(StringSort)
+
+    builder.addConcatN(Seq(z1,y, z2),x)
+
+    List(Plugin.RemoveFacts(conj(t)),
+      Plugin.AddAxiom(Seq(conj(t)),
+        builder.result, theory))
+  }
+
 
   def reduceNegPrefixToEquation(t : Atom) : Seq[Plugin.Action] = {
     /**
@@ -155,7 +221,7 @@ class OstrichPredtoEqConverter(goal : Goal,
                          theory))
   }
 
-  def rewriteStrReplace(a : Atom) : Seq[Plugin.Action] =
+  def rewriteStrReplace(a : Atom) : Seq[Plugin.Action] = {
     if (strDatabase.hasValue(a(0), List())) {
       import TerForConvenience._
       List(
@@ -168,6 +234,7 @@ class OstrichPredtoEqConverter(goal : Goal,
     } else {
       List()
     }
+  }
 
   private def enumIntValues(lc : LinearCombination) : Option[Plugin.Action] =
     for (t <- Some(lc);
@@ -203,12 +270,14 @@ class OstrichPredtoEqConverter(goal : Goal,
 
   /**
    *  Convert predicates to equations. Supported predicates at the moment
-   *  are negative literals of str_prefix
+   *  are literals of str_prefix, str_suffix and positive literals of
+   *  str_replace, str_to_int, str_contains
    *
    * @return Sequences of Actions to be executed
    */
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
-    //TODO rewrite positive prefix, suffix, contains
+    println(s"enter reduce pred ${predConj} what else we got ${facts}")
+
     val a = (for (lit <- predConj.negativeLitsWithPred(str_prefixof);
                   act <- reduceNegPrefixToEquation(lit)) yield act)
 
@@ -222,7 +291,22 @@ class OstrichPredtoEqConverter(goal : Goal,
                   len <- (lengthMap get lit(0)).toSeq;
                   act <- propStrToIntLength(lit, len)) yield act)
 
-    a ++ b ++ c ++ d
+    val e = (for (lit <- predConj.positiveLitsWithPred(str_prefixof);
+                  act <- reducePosPrefixToEquation(lit)) yield act)
+
+    val f = (for (lit <- predConj.positiveLitsWithPred(str_suffixof);
+                  act <- reducePosSuffixToEquation(lit)) yield act)
+
+    val g = (for (lit <- predConj.positiveLitsWithPred(str_contains);
+                  act <- reducePosContainsToEquation(lit)) yield act)
+
+   /* val h = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_at));
+                  act <- reducePosStrAt(lit)) yield act)
+
+    val i = (for (lit <- predConj.negativeLitsWithPred(FunPred(str_at));
+                  act <- reducePosStrAt(lit)) yield act)*/
+
+    a ++ b ++ c ++ d ++ e ++ f ++ g
   }
 
   def lazyEnumeration : Seq[Plugin.Action] = {
