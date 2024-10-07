@@ -276,7 +276,7 @@ class OstrichPredtoEqConverter(goal : Goal,
    * @return Sequences of Actions to be executed
    */
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
-    println(s"enter reduce pred ${predConj} what else we got ${facts}")
+    // println(s"enter reduce pred ${predConj} what else we got ${facts}")
 
     val a = (for (lit <- predConj.negativeLitsWithPred(str_prefixof);
                   act <- reduceNegPrefixToEquation(lit)) yield act)
