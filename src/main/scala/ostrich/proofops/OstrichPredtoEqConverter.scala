@@ -33,7 +33,6 @@
 package ostrich.proofops
 
 import ostrich._
-
 import ap.basetypes.IdealInt
 import ap.parameters.Param
 import ap.proof.ModelSearchProver
@@ -51,12 +50,13 @@ import ap.basetypes.IdealInt.ZERO
 import scala.::
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
+import scala.runtime.Nothing$
 
 class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
   import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace, str_contains,
-                 strDatabase, str_to_int, int_to_str, str_indexof, str_at,
+                 strDatabase, str_to_int, int_to_str, str_indexof, str_at,str_empty,
                  StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
@@ -236,6 +236,62 @@ class OstrichPredtoEqConverter(goal : Goal,
     }
   }
 
+  def rewriteStrReplaceToEquation(a : Atom) : Seq[Plugin.Action] = {
+    //println(s"enter rewrite with ${a}")
+    import TerForConvenience._
+    val x = a(0)
+    val y = a(1)
+    val replace = a(2)
+    val result = a(3)
+    val builder = new FormulaBuilder(goal, theory)
+    val newVars = for (_ <- 0 to 1) yield builder.newVar(StringSort)
+
+    builder.addConcatN(Seq(newVars(0),replace,newVars(1)), result)
+    builder.addConcatN(Seq(newVars(0),y,newVars(1)), x)
+    builder.addNegContains(newVars(0), y)
+    val ax1 = builder.buildContains(x,y)
+
+    val builder1 = new FormulaBuilder(goal, theory)
+    builder1.addConcatN(Seq(x), result)
+
+    val builder2 = new FormulaBuilder(goal, theory)
+    builder2.addConcatN(Seq(replace, x), result)
+    val formula = conj(Seq(y) === 0)
+    //println(s"froula $formula")
+
+    val case1 = (conj(ax1, builder.result), Seq())
+    //val case1 = (conj(a),List())
+
+    val case2 = (conj(!conj(ax1), builder1.result),Seq(Plugin.RemoveFacts(conj(a))))
+    //println(s"case1: $case1")
+    val case3 = (conj(formula, builder2.result), Seq(Plugin.RemoveFacts(conj(a))))
+    //println(s"case2: $case2")
+
+    val action = Plugin.AxiomSplit(Seq(a), Seq(case1,case2, case3),theory)
+    //val action1 = Plugin.RemoveFacts(conj(a))
+    //val action2 = Plugin.AddAxiom(Seq(conj(a)), (conj(ax1, builder.result, !conj(negContains1)) | conj(!conj(ax1), builder1.result)), theory)
+    //println(s"x $x y $y replace $replace result $result")
+    //Seq(action1,action2)
+    //println(s"return the action $action")
+    Seq(action)
+
+
+  }
+
+  def removeEquationInStrReplace(a : Atom) : Seq[Plugin.Action] = {
+    //println(s"enter rewrite with ${a}")
+    import TerForConvenience._
+    val x = a(0)
+    val y = a(1)
+    val replace = a(2)
+    val result = a(3)
+    val builder = new FormulaBuilder(goal, theory)
+
+    Seq()
+
+
+  }
+
   private def enumIntValues(lc : LinearCombination) : Option[Plugin.Action] =
     for (t <- Some(lc);
          if !t.isConstant;
@@ -276,16 +332,17 @@ class OstrichPredtoEqConverter(goal : Goal,
    * @return Sequences of Actions to be executed
    */
   def reducePredicatesToEquations : Seq[Plugin. Action] = {
-    // println(s"enter reduce pred ${predConj} what else we got ${facts}")
 
+    //println(s"facts: $facts")
     val a = (for (lit <- predConj.negativeLitsWithPred(str_prefixof);
                   act <- reduceNegPrefixToEquation(lit)) yield act)
 
     val b = (for (lit <- predConj.negativeLitsWithPred(str_suffixof);
                   act <- reduceNegSuffixToEquation(lit)) yield act)
-
     val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_replace));
                   act <- rewriteStrReplace(lit)) yield act)
+    val c1 = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_replace));
+                  act <- removeEquationInStrReplace(lit)) yield act)
 
     val d = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_int));
                   len <- (lengthMap get lit(0)).toSeq;
@@ -300,11 +357,6 @@ class OstrichPredtoEqConverter(goal : Goal,
     val g = (for (lit <- predConj.positiveLitsWithPred(str_contains);
                   act <- reducePosContainsToEquation(lit)) yield act)
 
-   /* val h = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_at));
-                  act <- reducePosStrAt(lit)) yield act)
-
-    val i = (for (lit <- predConj.negativeLitsWithPred(FunPred(str_at));
-                  act <- reducePosStrAt(lit)) yield act)*/
 
     a ++ b ++ c ++ d ++ e ++ f ++ g
   }
@@ -318,8 +370,10 @@ class OstrichPredtoEqConverter(goal : Goal,
 
     val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_indexof));
                   act <- enumIndexofStartIndex(lit)) yield act)
+    val d = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_replace));
+              act <- rewriteStrReplaceToEquation(lit)) yield act)
 
-    a ++ b ++ c
+    a ++ b ++ c ++ d
   }
 
 }

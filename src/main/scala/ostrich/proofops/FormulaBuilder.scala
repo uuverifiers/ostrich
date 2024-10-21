@@ -47,7 +47,7 @@ import ap.proof.goal.Goal
  */
 class FormulaBuilder(goal   : Goal,
                      theory : OstrichStringTheory) {
-  import theory.{_str_++, _str_len, _str_char_count, strDatabase, StringSort}
+  import theory.{_str_++, _str_len, _str_char_count, str_contains, strDatabase, StringSort}
 
   implicit val o = goal.order
   import TerForConvenience._
@@ -62,6 +62,16 @@ class FormulaBuilder(goal   : Goal,
   val characters =
     (for (a <- predConj.positiveLitsWithPred(_str_char_count).iterator)
      yield a(0).constant.intValueSafe).toSet
+
+  def buildContains(left : Term, right : Term)  : Formula = {
+    str_contains(List(l(left), l(right)))
+  }
+  def addContains(left : Term, right : Term)  : Unit = {
+    matrixFors += str_contains(List(l(left), l(right)))
+  }
+  def addNegContains(left : Term, right : Term)  : Unit = {
+    matrixFors += !conj(str_contains(List(l(left), l(right))))
+  }
 
   def newVar(s : Sort) : VariableTerm = {
     val res = VariableTerm(varSorts.size)
