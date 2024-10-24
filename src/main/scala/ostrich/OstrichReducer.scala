@@ -339,9 +339,10 @@ class OstrichReducer protected[ostrich]
         case `str_suffixof` =>
           if (isConcrete(a(0))) {
             assert(a(0).isConstant)
-            val asRE  = IFunApp(re_++,
-              List(IFunApp(re_all, List()),IFunApp(str_to_re, List(a(0).constant))
-                ))
+            val asRE = {
+              import IExpression._
+              re_++(re_all(), str_to_re(a(0).constant))
+            }
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(1), l(autId)))
           } else if (isConcrete(a(1))) {
@@ -356,10 +357,10 @@ class OstrichReducer protected[ostrich]
         case `str_contains` =>
           if (isConcrete(a(1))) {
             assert(a(1).isConstant)
-            val asRE  =
-              IFunApp(re_++,
-              List(IFunApp(re_all, List()),IFunApp(str_to_re, List(a(1).constant))
-              , IFunApp(re_all, List())))
+            val asRE  = {
+              import IExpression._
+              re_++(re_all(), re_++(str_to_re(a(1).constant), re_all()))
+            }
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(0), l(autId)))
           } else if (isConcrete(a(0))) {
@@ -374,9 +375,10 @@ class OstrichReducer protected[ostrich]
         case `str_prefixof` =>
           if (isConcrete(a(0))) {
             assert(a(0).isConstant)
-            val asRE  = IFunApp(re_++,
-                                List(IFunApp(str_to_re, List(a(0).constant)),
-                                     IFunApp(re_all, List())))
+            val asRE  = {
+              import IExpression._
+              re_++(str_to_re(a(0).constant), re_all())
+            }
             val autId = autDatabase.regex2Id(asRE)
             str_in_re_id(List(a(1), l(autId)))
           } else if (isConcrete(a(1))) {
