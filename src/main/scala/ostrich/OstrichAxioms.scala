@@ -48,7 +48,7 @@ class OstrichAxioms(theory : OstrichStringTheory) {
   // Ideally, we just would use theory.order here, but that
   // does not seem to be set up correctly (we are too early?)
   implicit val order : TermOrder =
-    TermOrder.EMPTY.extendPred(List(str_contains, _str_++))
+    TermOrder.EMPTY.extendPred(List(str_contains, _str_++, _str_replace))
 
   private val CSo = CharSort
   private val SSo = StringSort
@@ -66,6 +66,18 @@ class OstrichAxioms(theory : OstrichStringTheory) {
       (!conj(str_contains(List(l(v(0)), l(v(3))))) &
         !conj(str_contains(List(l(v(1)), l(v(3))))))))))
 
-  val axioms : Conjunction = not_contains_concat
+  /*
+   * !str.contains(x,y) & str.replace(x,y,z, res) ->
+   * !str.contains(x,y) & res = x
+   */
+  val not_contains_replace : Conjunction =
+    forall(forall(forall(forall(
+      (_str_replace(List(l(v(0)), l(v(1)), l(v(2)), l(v(3)))) &
+        !conj(str_contains(List(l(v(0)), l(v(1))))))
+        ==>
+        (conj(l(v(3)) === l(v(0))) & !conj(str_contains(List(l(v(0)), l(v(1))))))))))
+
+  //val axioms : Conjunction = Conjunction.TRUE
+  val axioms : Conjunction = conj(not_contains_concat, not_contains_replace)
 
 }
