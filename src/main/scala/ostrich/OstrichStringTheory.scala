@@ -299,6 +299,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val _str_++         = functionPredicateMap(str_++)
   val _str_len        = functionPredicateMap(str_len)
   val _str_char_count = functionPredicateMap(str_char_count)
+  val _str_replace = functionPredicateMap(str_replace)
+  val _str_replaceall = functionPredicateMap(str_replaceall)
+
+  val _str_substr = functionPredicateMap(str_substr)
 
   val axioms          = new OstrichAxioms(this).axioms
 
@@ -312,9 +316,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof, str_<=) ++
+    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof, str_<=, str_contains) ++
     (for (f <- Set(str_empty, str_cons, str_at,
-                   str_++, str_replace, str_replaceall,
+      str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre,
                    str_replacere_longest, str_replaceallre_longest,
                    str_replaceallcg, str_replacecg, str_to_re,
