@@ -50,7 +50,7 @@ lazy val commonSettings = Seq(
                           ),
 //
   scalaVersion          := "2.11.12",
-  crossScalaVersions    := Seq("2.11.12", "2.12.17"),
+  crossScalaVersions    := Seq("2.11.12", "2.12.20"),
   scalacOptions         += "-deprecation",
   fork in run           := true,
   cancelable in Global  := true,
@@ -82,10 +82,10 @@ lazy val root = (project in file(".")).
     mainClass in Compile := Some("ostrich.OstrichMain"),
     unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
-    resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
+//    resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
 //
-    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2024-03-22",
+//    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2024-11-08",
   //  libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
     libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
