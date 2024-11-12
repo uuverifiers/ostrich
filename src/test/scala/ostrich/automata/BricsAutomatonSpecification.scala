@@ -21,7 +21,7 @@ object BricsAutomatonSpecification extends Properties("BricsAutomaton") {
     val aut = builder.getAutomaton
     val disjoint = Set(aut.labelEnumerator.enumDisjointLabels)
 
-    println(disjoint)
+//    println(disjoint)
 
     true
   }
