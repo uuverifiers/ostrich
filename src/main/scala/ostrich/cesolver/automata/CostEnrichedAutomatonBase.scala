@@ -1,34 +1,32 @@
-/**
- * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2023 Denghang Hu. All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * 
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- * 
- * * Neither the name of the authors nor the names of their
- *   contributors may be used to endorse or promote products derived from
- *   this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+/** This file is part of Ostrich, an SMT solver for strings. Copyright (c) 2023
+  * Denghang Hu. All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+  *
+  * * Redistributions of source code must retain the above copyright notice,
+  * this list of conditions and the following disclaimer.
+  *
+  * * Redistributions in binary form must reproduce the above copyright notice,
+  * this list of conditions and the following disclaimer in the documentation
+  * and/or other materials provided with the distribution.
+  *
+  * * Neither the name of the authors nor the names of their contributors may be
+  * used to endorse or promote products derived from this software without
+  * specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
 
 package ostrich.cesolver.automata
 
@@ -37,8 +35,7 @@ import ostrich.automata._
 import scala.collection.mutable.{
   HashMap => MHashMap,
   Stack => MStack,
-  HashSet => MHashSet,
-  ArrayBuffer
+  HashSet => MHashSet
 }
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
@@ -48,15 +45,8 @@ import dk.brics.automaton.{State => BState}
 import dk.brics.automaton.BasicOperations
 import CEBasicOperations.toBricsAutomaton
 import java.io.File
-import ap.parser.ITerm
-import ap.parser.IFormula
-import ap.parser.IExpression._
-import ap.parser.IExpression
-import ostrich.cesolver.util.ParikhUtil
-import ap.terfor.inequalities.InEqConj
-import ostrich.cesolver.util.TermGenerator
-import ostrich.cesolver.util.ConstSubstVisitor
-import ostrich.cesolver.automata.CEBasicOperations.complement
+import ap.parser.{ITerm, IFormula, IExpression}
+import ostrich.cesolver.util.{ParikhUtil, TermGenerator, ConstSubstVisitor}
 
 /** This is the implementation of cost-enriched finite automaton(CEFA). Each
   * transition of CEFA contains a vector of integers, which is used to record
@@ -67,7 +57,7 @@ import ostrich.cesolver.automata.CEBasicOperations.complement
   * automation accepting words of length less than 10.
   */
 class CostEnrichedAutomatonBase extends Automaton {
-  
+
   type State = BState
   type TLabel = (Char, Char)
   type Update = Seq[Int]
@@ -149,7 +139,9 @@ class CostEnrichedAutomatonBase extends Automaton {
     val newAut = new CostEnrichedAutomatonBase
     val old2new = states.map(s => s -> newAut.newState()).toMap
     newAut.initialState = old2new(initialState)
-    val regSubst = registers.map{case t => t -> TermGenerator().registerTerm}.toMap
+    val regSubst = registers.map { case t =>
+      t -> TermGenerator().registerTerm
+    }.toMap
     newAut.registers = regSubst.values.toSeq
     newAut.regsRelation = new ConstSubstVisitor().apply(regsRelation, regSubst)
     for ((from, lbl, to, vec) <- transitionsWithVec) {
@@ -208,7 +200,7 @@ class CostEnrichedAutomatonBase extends Automaton {
       s: State
   ): Iterable[(State, (Char, Char), Seq[Int])] =
     _state2transtions.get(s) match {
-      case None      => Iterable.empty
+      case None           => Iterable.empty
       case Some(transSet) => transSet
     }
 
@@ -218,7 +210,8 @@ class CostEnrichedAutomatonBase extends Automaton {
     _state2incomingTranstions.get(t) match {
       case None => Iterable.empty
       // incoming states may not be reachable from initial state, filter them out
-      case Some(transSet) => transSet.filter(trans => states.toSet.contains(trans._1))
+      case Some(transSet) =>
+        transSet.filter(trans => states.toSet.contains(trans._1))
     }
 
   def transitionsWithVec: Iterable[(State, TLabel, State, Seq[Int])] = {
@@ -310,7 +303,9 @@ class CostEnrichedAutomatonBase extends Automaton {
     CEBasicOperations.complement(this)
   }
   def apply(word: Seq[Int]): Boolean = {
-    ParikhUtil.log("Naively run word on CEFA without registers. Indeed, the CEFA with registers can be easily supported in the future.")
+    ParikhUtil.log(
+      "Naively run word on CEFA without registers. Indeed, the CEFA with registers can be easily supported in the future."
+    )
     // if (registers.nonEmpty) throw new UnsupportedOperationException
     BasicOperations.run(toBricsAutomaton(this), word.map(_.toChar).mkString)
   }
@@ -354,8 +349,8 @@ class CostEnrichedAutomatonBase extends Automaton {
     """
   }
 
-  def toDot(suffix: String) : Unit = {
-    if(!ParikhUtil.debugOpt) return
+  def toDot(suffix: String): Unit = {
+    if (!ParikhUtil.debugOpt) return
     states.zipWithIndex.toMap
     val outdir = "dot" + File.separator + LocalDate.now().toString
     new File(outdir).mkdirs()
@@ -378,7 +373,9 @@ class CostEnrichedAutomatonBase extends Automaton {
         )})\"]""")
     }
     strbuilder.append("\n")
-    strbuilder.append(s"""        \"${registers.mkString(", ")}\" [shape=plaintext]""")
+    strbuilder.append(
+      s"""        \"${registers.mkString(", ")}\" [shape=plaintext]"""
+    )
     strbuilder.append("\n      }")
     writer.closeAfterWrite(strbuilder.toString())
   }

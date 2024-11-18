@@ -46,10 +46,7 @@ import ap.parser.{IFormula, IBinJunctor, IExpression}
 import ap.api.SimpleAPI
 import ap.parser.SymbolCollector
 import ostrich.OFlags
-import ap.parser.IFunction
 import scala.collection.mutable.Stack
-import scala.collection.immutable.VectorBuilder
-import ap.parser.IFunApp
 
 object ParikhUtil {
 

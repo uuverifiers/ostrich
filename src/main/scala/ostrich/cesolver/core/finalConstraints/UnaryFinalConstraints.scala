@@ -39,7 +39,6 @@ import ap.parser.IExpression._
 import ap.parser.IBinJunctor
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
-import ap.parser.IBoolLit
 
 class UnaryFinalConstraints(
     strDataBaseId: ITerm,

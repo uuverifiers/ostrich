@@ -32,11 +32,7 @@
 
 package ostrich.cesolver.stringtheory
 
-import ostrich.automata.{
-  Regex2PFA,
-  JavascriptPrioAutomatonBuilder,
-  BricsTransducer
-}
+import ostrich.automata.BricsTransducer
 import ostrich.preop._
 
 import ap.parser.ITerm

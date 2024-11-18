@@ -37,10 +37,8 @@ import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ParikhExploration._
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ap.parser.ITerm
-import ostrich.cesolver.util.ParikhUtil
 import ostrich.OFlags
 import ap.parser.IFormula
-import ap.api.SimpleAPI
 
 class ParikhStore(
     t: ITerm,

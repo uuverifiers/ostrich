@@ -48,7 +48,6 @@ import ap.parser.ITerm
 import ap.parser.IExpression._
 import ap.parser.IExpression.Const
 import ostrich.cesolver.util.TermGenerator
-import ostrich.cesolver.util.ParikhUtil
 import ap.parser.IBinJunctor
 
 object IndexOfCEPreOp {

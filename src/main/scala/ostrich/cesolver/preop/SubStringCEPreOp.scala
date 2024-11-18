@@ -39,7 +39,6 @@ import ostrich.cesolver.automata.CEBasicOperations.{intersection, concatenate}
 import ap.parser.ITerm
 import ap.parser.IExpression._
 import ostrich.cesolver.util.TermGenerator
-import ostrich.cesolver.util.ParikhUtil
 import ap.basetypes.IdealInt
 import ap.parser.IBinJunctor
 

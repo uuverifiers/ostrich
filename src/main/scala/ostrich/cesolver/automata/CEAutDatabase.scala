@@ -33,9 +33,6 @@
 package ostrich.cesolver.automata
 
 import ostrich.OstrichStringTheory
-import ostrich.automata.AutDatabase
-import ostrich.automata.Automaton
-import ostrich.cesolver.util.ParikhUtil
 import ostrich.OFlags
 
 class CEAutDatabase(theory: OstrichStringTheory, flags: OFlags)

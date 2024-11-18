@@ -46,7 +46,6 @@ import scala.collection.immutable.VectorBuilder
 import ostrich.automata.Automaton
 import ostrich.OstrichStringTheory
 import ostrich.cesolver.util.ParikhUtil
-import scala.collection.mutable.ArrayBuffer
 import ostrich.OFlags
 
 class Regex2CEAut(theory: OstrichStringTheory, flags: OFlags)

@@ -33,12 +33,9 @@
 package ostrich.cesolver.stringtheory
 
 import ostrich._
-import ostrich.automata.TransducerTranslator
 
-import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
 
-import scala.collection.mutable.ArrayBuffer
 import ostrich.OFlags
 import OFlags.CEABackend.{Unary, Baseline}
 import ostrich.cesolver.util.ParikhUtil
@@ -90,8 +87,6 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
     case str =>
       super.parseParameter(str)
   }
-
-  import StringTheoryBuilder._
 
   private var createdTheory = false
 

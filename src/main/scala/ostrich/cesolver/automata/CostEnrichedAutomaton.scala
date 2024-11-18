@@ -35,7 +35,6 @@ package ostrich.cesolver.automata
 import ostrich.automata.TLabelEnumerator
 import scala.collection.mutable.{
   TreeSet => MTreeSet,
-  HashMap => MHashMap,
   HashSet => MHashSet
 }
 import ostrich.cesolver.util.ParikhUtil.debugPrintln

@@ -53,8 +53,6 @@ import ap.theories.ModuloArithmetic
 import ap.types.Sort.Integer
 import ostrich.cesolver.preprocess.CEReducerFactory
 import ostrich.cesolver.util.ParikhUtil.throwWithStackTrace
-import ap.terfor.conjunctions.IdentityReducerPlugin
-import ap.terfor.conjunctions.IdentityReducerPluginFactory
 import ostrich.cesolver.preprocess.CEPredtoEqConverter
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -34,13 +34,9 @@ package ostrich.cesolver.core.finalConstraints
 
 import ap.api.PartialModel
 import ap.basetypes.IdealInt
-import ap.parser.IExpression._
-import ap.parser.IFormula
 import ap.parser.ITerm
 import ostrich.OFlags
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
-import ostrich.cesolver.util.ParikhUtil
-import ap.parser.IBinJunctor
 
 
 object FinalConstraints {

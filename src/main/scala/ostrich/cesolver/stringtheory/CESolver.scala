@@ -32,7 +32,7 @@
 
 package ostrich.cesolver.stringtheory
 
-import ostrich.automata.{Automaton, BricsAutomaton}
+import ostrich.automata.Automaton
 import ostrich.preop.PreOp
 
 import ap.SimpleAPI
@@ -40,7 +40,6 @@ import ap.parser.IFunction
 import ap.terfor.{Term, TerForConvenience, ConstantTerm, OneTerm}
 import ap.terfor.preds.Atom
 import ap.terfor.linearcombination.LinearCombination
-import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
@@ -60,7 +59,6 @@ import ostrich.{OFlags, OstrichSolver}
 import ostrich.cesolver.preop.ConcatCEPreOp
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
-import ap.parser.IFunApp
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
