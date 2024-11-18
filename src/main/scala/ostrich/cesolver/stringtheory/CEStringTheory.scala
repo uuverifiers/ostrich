@@ -49,11 +49,13 @@ import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.cesolver.preprocess.CEInternalPreprocessor
 import ap.parser.IFunction
 import ap.types.MonoSortedIFunction
+import ap.theories.ModuloArithmetic
 import ap.types.Sort.Integer
 import ostrich.cesolver.preprocess.CEReducerFactory
 import ostrich.cesolver.util.ParikhUtil.throwWithStackTrace
 import ap.terfor.conjunctions.IdentityReducerPlugin
 import ap.terfor.conjunctions.IdentityReducerPluginFactory
+import ostrich.cesolver.preprocess.CEPredtoEqConverter
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -187,7 +189,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
 
   private val unsupportedPreds = predicates.toSet -- supportedPreds
 
-  override val dependencies = List()
+  override val dependencies =  List(ModuloArithmetic, IntEnumerator)
 
   override def plugin = Some(new Plugin {
 
@@ -197,7 +199,8 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
       ]](3)
 
     override def handleGoal(goal: Goal): Seq[Plugin.Action] = {
-    // TODO: ADD more heuristic rules
+      // TODO: ADD more heuristic rules
+      val pred2EqConverter = new CEPredtoEqConverter(goal, CEStringTheory.this)
       goalState(goal) match {
 
         case Plugin.GoalState.Eager =>
@@ -207,7 +210,8 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
           Seq()
 
         case Plugin.GoalState.Final =>
-          Seq()
+          pred2EqConverter.lazyEnumeration elseDo
+          callBackwardProp(goal)
       }
     }
 
@@ -223,54 +227,50 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
         }
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
+        case t: ap.util.Timeout                     => throw t
+        case t: Throwable                           => throwWithStackTrace(t)
       }
 
     override def computeModel(goal: Goal): Seq[Plugin.Action] =
       if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
         List()
       } else {
-        try {
-          val model = (modelCache(goal.facts) {
-            ceSolver.findStringModel(goal)
-          }).get
-          implicit val order = goal.order
-          import TerForConvenience._
+        val model = (modelCache(goal.facts) {
+          ceSolver.findStringModel(goal)
+        }).get
+        implicit val order = goal.order
+        import TerForConvenience._
 
-          val stringAssignments =
-            conj(
-              for ((x, Right(w)) <- model)
-                yield (x === strDatabase.list2Id(w))
-            )
-
-          import TerForConvenience._
-          val lenAssignments =
-            eqZ(
-              for (
-                (x, Left(len)) <- model;
-                if x.constants subsetOf order.orderedConstants
-              )
-                yield l(x - len)
-            )
-
-          val stringFormulas =
-            conj(goal.facts.iterator filter { f =>
-              !Seqs.disjointSeq(f.predicates, predicates)
-            })
-
-          List(
-            Plugin.RemoveFacts(stringFormulas),
-            Plugin.AddAxiom(
-              List(stringFormulas),
-              stringAssignments & lenAssignments,
-              CEStringTheory.this
-            )
+        val stringAssignments =
+          conj(
+            for ((x, Right(w)) <- model)
+              yield (x === strDatabase.list2Id(w))
           )
-        } catch {
-          case t: ap.util.Timeout => throw t
-          case t: Throwable       => throwWithStackTrace(t)
-        }
-      }
 
+        import TerForConvenience._
+        val lenAssignments =
+          eqZ(
+            for (
+              (x, Left(len)) <- model;
+              if x.constants subsetOf order.orderedConstants
+            )
+              yield l(x - len)
+          )
+
+        val stringFormulas =
+          conj(goal.facts.iterator filter { f =>
+            !Seqs.disjointSeq(f.predicates, predicates)
+          })
+
+        List(
+          Plugin.RemoveFacts(stringFormulas),
+          Plugin.AddAxiom(
+            List(stringFormulas),
+            stringAssignments & lenAssignments,
+            CEStringTheory.this
+          )
+        )
+      }
   })
 
   override def iPreprocess(

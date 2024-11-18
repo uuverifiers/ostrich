@@ -103,4 +103,8 @@ object DenghangTests extends Properties("DenghangTests") {
   property("bug-58-replace-re") =
     checkFile("tests/bug-58-replace-re.smt2", "sat")
 
+  // integration tests for str_to_int
+  property("str_to_int_sat.smt2") =
+    checkFile("tests/hu-benchmarks/str_to_int_sat.smt2", "sat")
+
 }

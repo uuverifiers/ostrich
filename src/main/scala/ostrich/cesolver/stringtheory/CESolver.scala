@@ -514,10 +514,10 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         }
       }
 
-      if (result.isDefined)
-        Console.err.println("   ... sat")
-      else
-        Console.err.println("   ... unsat")
+      // if (result.isDefined)
+      //   Console.err.println("   ... sat")
+      // else
+      //   Console.err.println("   ... unsat")
 
       result
     }
