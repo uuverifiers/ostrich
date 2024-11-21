@@ -161,21 +161,34 @@ class CEStringFunctionTranslator(theory: CEStringTheory, facts: Conjunction)
 
       case FunPred(`str_replace`)
           if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
-        val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
+        val replacement = strDatabase term2ListGet a(2) map (_.toChar)
         val patternStr = strDatabase term2ListGet a(1) map (_.toChar)
-        Some((() => ReplaceCEPreOp(patternStr, matchStr), Seq(a(0)), a(3)))
+        Some((() => ReplaceCEShortestPreOp(patternStr, replacement), Seq(a(0)), a(3)))
 
       case FunPred(`str_replacere`) if (strDatabase isConcrete a(2)) =>
-        val matchStr = strDatabase term2ListGet a(2) map (_.toChar)
+        val replacement = strDatabase term2ListGet a(2) map (_.toChar)
         for (regex <- regexAsTerm(a(1))) yield {
           val op = () => {
             val aut = ceAutDatabase
               .regex2Automaton(regex)
               .asInstanceOf[CostEnrichedAutomatonBase]
-            ReplaceCEPreOp(aut, matchStr)
+            ReplaceCEShortestPreOp(aut, replacement)
           }
           (op, List(a(0)), a(3))
         }
+
+      case FunPred(`str_replacere_longest`) if (strDatabase isConcrete a(2)) =>
+        val replacement = strDatabase term2ListGet a(2) map (_.toChar)
+        for (regex <- regexAsTerm(a(1))) yield {
+          val op = () => {
+            val aut = ceAutDatabase
+              .regex2Automaton(regex)
+              .asInstanceOf[CostEnrichedAutomatonBase]
+            ReplaceCELongestPreOp(aut, replacement)
+          }
+          (op, List(a(0)), a(3))
+        }
+      
       case FunPred(`str_replaceall`)
           if (strDatabase isConcrete a(2)) && (strDatabase isConcrete a(1)) =>
         val matchStr = strDatabase term2ListGet a(2) map (_.toChar)

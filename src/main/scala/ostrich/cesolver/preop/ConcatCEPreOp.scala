@@ -41,7 +41,7 @@ import ap.parser.IBinJunctor
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "concatCEPreOp"
 
-  def addConcatPreRegsFormula(
+  private def addConcatPreRegsFormula(
       concatLeft: CostEnrichedAutomatonBase,
       concatRight: CostEnrichedAutomatonBase,
       result: CostEnrichedAutomatonBase

@@ -102,6 +102,12 @@ object DenghangTests extends Properties("DenghangTests") {
     checkFile("tests/bug-56-replace-bug2.smt2", "sat")
   property("bug-58-replace-re") =
     checkFile("tests/bug-58-replace-re.smt2", "sat")
+  property("replace_empty_string.smt2") =
+    checkFile("tests/hu-benchmarks/replace_empty_string.smt2", "sat") 
+  property("replace_shortest_sat.smt2") =
+    checkFile("tests/hu-benchmarks/replace_shortest_sat.smt2", "sat")
+  property("replace_longest_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/replace_longest_unsat.smt2", "unsat")
 
   // integration tests for str_to_int
   property("str_to_int_sat.smt2") =

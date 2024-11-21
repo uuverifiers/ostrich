@@ -410,7 +410,7 @@ object ParikhUtil {
     parikhImage
   }
 
-  /** find all states vec triple (s, t, v) such that s ---str--> t and vec is
+  /** find all states vec triple (s, t, v) such that s ---(str,v)--> t and v is
     * the sum of updates on the path
     */
   def partition(
