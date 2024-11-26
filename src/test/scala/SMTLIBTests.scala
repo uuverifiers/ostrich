@@ -80,6 +80,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/contains-5.smt2", "sat")
   property("contains-6.smt2") =
     checkFile("tests/contains-6.smt2", "sat")
+  property("contains-7.smt2") =
+    checkFile("tests/contains-7.smt2", "sat")
+  property("contains-8.smt2") =
+    checkFile("tests/contains-8.smt2", "sat")
 
   property("word-equation.smt2") =
     checkFile("tests/word-equation.smt2", "sat")

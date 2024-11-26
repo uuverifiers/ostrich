@@ -32,27 +32,18 @@ package ostrich.proofops
 
 import ap.parser.IFunction
 import ap.proof.goal.Goal
-import ap.terfor.TerForConvenience.term2RichLC
-import ap.terfor.Term
+import ap.terfor.TerForConvenience.{l, term2RichLC}
+import ap.terfor.{Formula, RichPredicate, Term, TermOrder}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
 import ostrich._
-import ostrich.automata.{
-  Automaton, BricsAutomaton, AtomicStateAutomaton, AutomataUtils
-}
+import ostrich.automata.{AtomicStateAutomaton, AutomataUtils, Automaton, BricsAutomaton}
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.preop.{ConcatPreOp, PreOp}
 
 import scala.collection.breakOut
-import scala.collection.mutable.{
-  ArrayBuffer,
-  HashMap => MHashMap,
-  MultiMap => MMultiMap,
-  Set => MSet
-}
-import ap.terfor.Formula
+import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, MultiMap => MMultiMap, Set => MSet}
 import ap.basetypes.IdealInt
-import ap.terfor.RichPredicate
 
 /**
  * Utility methods for propagator saturation
@@ -61,7 +52,7 @@ trait PropagationSaturationUtils {
   val theory : OstrichStringTheory
 
   import theory.{
-    str_len, str_in_re, str_char_count, str_in_re_id, str_to_re,
+    str_len, str_in_re, str_char_count, str_in_re_id, str_to_re, str_contains,
     re_from_str, re_from_ecma2020, re_from_ecma2020_flags,
     re_case_insensitive, str_prefixof, str_suffixof, re_none, re_all, re_allchar,
     re_charrange, re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+,
@@ -290,7 +281,7 @@ trait PropagationSaturationUtils {
 
   // Helper function to check if any terms in the sequence of options appear elsewhere
   private def argsAppearElsewhere(args: Seq[Option[Term]], funApps: Seq[(PreOp, Seq[Option[Term]], Term, Atom)], currentElem: (PreOp, Seq[Option[Term]], Term, Atom)): Boolean = {
-    args.flatten.exists(term => resultTermAppearsElsewhere(term, funApps, currentElem))
+    args.flatten.exists(term => resultTermAppearsElsewhere(term, funApps, currentElem)) || currentElem._4.pred == FunPred(theory.str_replaceallre) || currentElem._4.pred == FunPred(theory.str_replaceall)
   }
 
   def getCutOrder(goal: Goal): Seq[(PreOp, Seq[Option[Term]], Term, Atom)] = {
@@ -312,8 +303,11 @@ trait PropagationSaturationUtils {
           toRemove += elem
         }
         if (!argsAppearElsewhere(args, funApps, elem)){
+
+          orderOfRemoval += elem
           toRemove += elem
         }
+
       }
 
       // Remove the marked elements
@@ -324,6 +318,71 @@ trait PropagationSaturationUtils {
     }
     orderOfRemoval
   }
+
+  def chainFree(goal: Goal): Boolean = {
+    val orderOfRemoval = ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]()
+    // Get initial function applications
+    val initialFunApps = getFunApps(goal)
+    val funApps = ArrayBuffer(initialFunApps: _*) // Make a mutable copy
+    var changed = true
+
+    while (changed && funApps.nonEmpty) {
+      changed = false
+      val toRemove = ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]()
+
+      // Check each element and mark for removal if it satisfies the condition
+      for (elem <- funApps) {
+        val (_, args, resultTerm, _) = elem
+        if (!resultTermAppearsElsewhere(resultTerm, funApps, elem)){
+          orderOfRemoval += elem
+          toRemove += elem
+        }
+        if (!argsAppearElsewhere(args, funApps, elem)){
+          orderOfRemoval += elem
+          toRemove += elem
+        }
+
+      }
+
+      // Remove the marked elements
+      if (toRemove.nonEmpty) {
+        changed = true
+        funApps --= toRemove
+      }
+    }
+     funApps.isEmpty
+  }
+
+  def straightLine(goal: Goal): Boolean = {
+    val orderOfRemoval = ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]()
+    // Get initial function applications
+    val initialFunApps = getFunApps(goal)
+    val funApps = ArrayBuffer(initialFunApps: _*) // Make a mutable copy
+    var changed = true
+
+    while (changed && funApps.nonEmpty) {
+      changed = false
+      val toRemove = ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]()
+
+      // Check each element and mark for removal if it satisfies the condition
+      for (elem <- funApps) {
+        val (_, args, resultTerm, _) = elem
+        if (!resultTermAppearsElsewhere(resultTerm, funApps, elem)){
+          orderOfRemoval += elem
+          toRemove += elem
+        }
+
+      }
+
+      // Remove the marked elements
+      if (toRemove.nonEmpty) {
+        changed = true
+        funApps --= toRemove
+      }
+    }
+    funApps.isEmpty
+  }
+
 
   def logSaturation[A](category : String)(action : A) : A = {
     if (OFlags.debug)

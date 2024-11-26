@@ -34,7 +34,7 @@ import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AxiomSplit
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.Atom
+import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.Term
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringFunctionTranslator
@@ -59,7 +59,7 @@ class BackwardsSaturation(
   val theory : OstrichStringTheory
 ) extends SaturationProcedure("BackwardsPropagation")
   with PropagationSaturationUtils {
-  import theory.{ str_len, str_in_re_id, FunPred }
+  import theory.{ str_len, str_in_re_id, FunPred,strDatabase }
 
   /**
    * (funApp, argConstraint)
@@ -73,15 +73,30 @@ class BackwardsSaturation(
   ) : Iterator[ApplicationPoint] = extractApplicationPoints(
     goal, getInitialConstraints(goal)
   )
+  def computePenalty(predicate: Predicate): Int = predicate match {
+    case FunPred(theory.str_++) => 100
+    // Add more cases for other predicates and their respective penalties
+    case _ => 0 // No penalty for other cases
+  }
+
+  def computeConstantBonus(p : ApplicationPoint) : Int = {
+    var bonus = 0
+    for (test <- p._1.elements){
+      if (strDatabase.isConcrete(test)) {
+        bonus = bonus -5
+      }
+    }
+    bonus
+  }
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
     p._2 match {
       // None means arg in Sigma*
-      case None => 1
+      case None => 500
       case Some(a) => {
         a.pred match {
           case `str_in_re_id` =>
-            getAutomatonSize(decodeRegexId(a, false))
+            getAutomatonSize(decodeRegexId(a, false)) + computePenalty(p._1.pred) + computeConstantBonus(p)
           // will be a str_len == 0 as we only return those
           // PR: this case should never occur, the OstrichReducer will
           // replace any atom str_len(x) == 0 with x == ""!

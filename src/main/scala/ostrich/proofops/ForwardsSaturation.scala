@@ -34,8 +34,9 @@ import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AddAxiom
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.Atom
+import ap.terfor.preds.{Atom, Predicate}
 import ap.theories.{SaturationProcedure, Theory}
+import ap.types.SortedPredicate
 import ap.util.Combinatorics.cartesianProduct
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
@@ -102,12 +103,31 @@ class ForwardsSaturation(
     applicationPoints.toIterator
   }
 
+  def computePenalty(predicate: Predicate): Int = predicate match {
+    case FunPred(theory.str_replaceallre) => 100
+    // Add more cases for other predicates and their respective penalties
+    case otherPredicate if otherPredicate == FunPred(theory.str_replaceall) => 100
+    case _ => 0 // No penalty for other cases
+  }
+
+  def computeConstantBonus(p : ApplicationPoint) : Int = {
+    var bonus = 0
+    for (test <- p._1.elements){
+      if (strDatabase.isConcrete(test)) {
+        bonus = bonus -5
+      }
+    }
+    bonus
+  }
+
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
-    p._2.map(
+
+
+    val priority = p._2.map(
       _.map(a =>
         a.pred match {
           case `str_in_re_id` =>
-            getAutomatonSize(decodeRegexId(a, false))
+            getAutomatonSize(decodeRegexId(a, false)) + computePenalty(p._1.pred) + computeConstantBonus(p)
           // will be a str_len == 0 as we only return those
           // PR: this case should never occur, the OstrichReducer will
           // replace any atom str_len(x) == 0 with x == ""!
@@ -117,6 +137,7 @@ class ForwardsSaturation(
         }
       ).sum
     ).sum
+    if (priority == 0) 100 else priority
   }
 
   override def handleApplicationPoint(
@@ -125,7 +146,6 @@ class ForwardsSaturation(
     // return empty if appPoint no longer relevant
     if (!extractApplicationPoints(goal).contains(appPoint))
       return List()
-
     val stringFunctionTranslator =
         new OstrichStringFunctionTranslator(theory, goal.facts)
 

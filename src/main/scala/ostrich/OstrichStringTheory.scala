@@ -34,10 +34,7 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{BackwardsSaturation, ForwardsSaturation,
-                         OstrichClose, OstrichNielsenSplitter,
-                         OstrichPredtoEqConverter, OstrichStrInReTranslator,
-                         OstrichCut, LengthAbstraction}
+import ostrich.proofops.{BackwardsSaturation, CutSaturation, ForwardsSaturation, LengthAbstraction, OstrichClose, OstrichCut, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -287,12 +284,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val forwardSaturation   = new ForwardsSaturation(this)
   val backwardsSaturation = new BackwardsSaturation(this)
   val lengthAbstraction   = new LengthAbstraction(this)
+  val cutSaturation = new CutSaturation(this)
 
   override val dependencies : Iterable[Theory] =
     List(ModuloArithmetic, IntEnumerator) ++
     List(forwardSaturation).filter(_ => theoryFlags.forwardPropagation) ++
     List(backwardsSaturation).filter(_ => theoryFlags.backwardPropagation) ++
-    List(lengthAbstraction)    
+    List(lengthAbstraction)  ++ List(cutSaturation)
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)

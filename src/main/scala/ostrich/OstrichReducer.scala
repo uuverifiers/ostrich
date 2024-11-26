@@ -426,28 +426,26 @@ class OstrichReducer protected[ostrich]
 
         case FunPred(`str_replaceall`) if hasValue(a(1), List()) =>
           a(0) === a(3)
-        case FunPred(`str_replace`)  =>
-          {
-            val concatLits   = predConj.positiveLitsWithPred(_str_++)
-            val concatPerRes = concatLits groupBy (_(2))
-            val multiGroups = {
-              concatPerRes filter {
-                case (res, _) => res== a(0) && !(strDatabase isConcrete res)
-              }
 
-            }
-            val result: Option[Atom] = multiGroups.collectFirst {
-              case (_, atoms) if atoms.exists(atomSeq => atomSeq.head == a(1)) =>
-                val a1: Atom = _str_++(List(a(2),atoms.head(1), a(3)))
-                a1
-            }
-
-            val res = result match {
-              case Some(atom) => atom
-              case None => a
-            }
-            res
+        case FunPred(`str_replace`) if {
+          val concatLits = predConj.positiveLitsWithPred(_str_++)
+          val concatPerRes = concatLits groupBy (_(2))
+          concatPerRes.exists {
+            case (res, atoms) =>
+              res == a(0) && !(strDatabase isConcrete res) &&
+                atoms.exists(atomSeq => atomSeq.head == a(1))
           }
+        } =>
+          val concatLits = predConj.positiveLitsWithPred(_str_++)
+          val concatPerRes = concatLits groupBy (_(2))
+          val multiGroups = concatPerRes.filter {
+            case (res, _) => res == a(0) && !(strDatabase isConcrete res)
+          }
+          val Some(atom) = multiGroups.collectFirst {
+            case (_, atoms) if atoms.exists(atomSeq => atomSeq.head == a(1)) =>
+              _str_++(List(a(2), atoms.head(1), a(3)))
+          }
+          atom
 
         case `str_<=` if (isConcrete(a(1))) => {
           val autId =
