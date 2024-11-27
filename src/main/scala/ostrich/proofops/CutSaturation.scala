@@ -72,8 +72,7 @@ class CutSaturation(
     implicit val o: TermOrder = goal.order
     import TerForConvenience._
     val action = appPoint.pred match {
-      case FunPred(`str_replace`) | FunPred(`str_replaceall`) => {
-        // TODO: Check if this is useful or just slows down when appPoint(1) is constant
+      case FunPred(`str_replace`) | FunPred(`str_replaceall`) if (!appPoint(0).isConstant & !appPoint(1).isConstant) => {
         val contains : (Conjunction, Seq[Nothing]) = (str_contains(List(l(appPoint(0)), l(appPoint(1)))), Seq())
         val negContains : (Conjunction, Seq[Nothing]) = (!conj(str_contains(List(l(appPoint(0)), l(appPoint(1))))), Seq())
         Seq(AxiomSplit(Seq(conj(appPoint)),Seq(contains, negContains), theory))
