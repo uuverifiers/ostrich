@@ -58,8 +58,18 @@ class CutSaturation(
 
   override def extractApplicationPoints(goal: Goal): Iterator[ApplicationPoint] = {
     val predicates = Seq(str_replace, str_replaceall, str_replacere, str_replaceallre)
-    predicates.iterator.flatMap(pred => goal.facts.predConj.positiveLitsWithPred(FunPred(pred)))
+
+    predicates.iterator.flatMap { pred =>
+      goal.facts.predConj.positiveLitsWithPred(FunPred(pred)).filter { appPoint =>
+        appPoint.pred match {
+          case FunPred(`str_replace`) | FunPred(`str_replaceall`) =>
+            !(appPoint(0).isConstant || appPoint(1).isConstant) // Exclude if either is a constant
+          case _ => true // Include all other cases
+        }
+      }
+    }
   }
+
 
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
@@ -72,7 +82,7 @@ class CutSaturation(
     implicit val o: TermOrder = goal.order
     import TerForConvenience._
     val action = appPoint.pred match {
-      case FunPred(`str_replace`) | FunPred(`str_replaceall`) if (!appPoint(0).isConstant & !appPoint(1).isConstant) => {
+      case FunPred(`str_replace`) | FunPred(`str_replaceall`) => {
         val contains : (Conjunction, Seq[Nothing]) = (str_contains(List(l(appPoint(0)), l(appPoint(1)))), Seq())
         val negContains : (Conjunction, Seq[Nothing]) = (!conj(str_contains(List(l(appPoint(0)), l(appPoint(1))))), Seq())
         Seq(AxiomSplit(Seq(conj(appPoint)),Seq(contains, negContains), theory))
