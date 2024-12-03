@@ -44,7 +44,7 @@ import ap.theories.{Incompleteness, ModuloArithmetic, Theory, TheoryRegistry}
 import ap.types.{MonoSortedIFunction, MonoSortedPredicate, ProxySort, Sort}
 import ap.terfor.{ConstantTerm, TerForConvenience, Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.Atom
+import ap.terfor.preds.{Atom, Predicate}
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
 import ap.parameters.Param
@@ -250,6 +250,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
 
+  val agePred = MonoSortedPredicate("age", List(StringSort, Sort.Integer, Sort.Integer))
+
   val strDatabase = new StrDatabase(this)
 
   //////////////////////////////////////////////////////////////////////////////
@@ -264,7 +266,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
-                     extraPredicates = List(str_in_re_id))
+                     extraPredicates = List(str_in_re_id, agePred))
   val predicates =
     predefPredicates ++ funPredicates ++ (transducersWithPreds map (_._2))
 
@@ -314,7 +316,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof, str_<=, str_contains) ++
+    Set(str_in_re, str_in_re_id, agePred, str_prefixof, str_suffixof, str_<=, str_contains) ++
     (for (f <- Set(str_empty, str_cons, str_at,
       str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre,

@@ -35,11 +35,11 @@ import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AxiomSplit
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
-import ap.terfor.Term
+import ap.terfor.{TerForConvenience, Term, TermOrder}
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
-
+import scala.collection.mutable.{HashMap => MHashMap}
 /**
  * A SaturationProcedure for backwards propagation.
  *
@@ -59,7 +59,9 @@ class BackwardsSaturation(
   val theory : OstrichStringTheory
 ) extends SaturationProcedure("BackwardsPropagation")
   with PropagationSaturationUtils {
-  import theory.{ str_len, str_in_re_id, FunPred,strDatabase }
+  import theory.{ str_len, str_in_re_id, FunPred,strDatabase, str_++ }
+
+  private val atomToFunApp = new MHashMap[Atom, FunAppTuple]()
 
   /**
    * (funApp, argConstraint)
@@ -91,8 +93,14 @@ class BackwardsSaturation(
 
   override def applicationPriority(goal : Goal, p : ApplicationPoint) : Int = {
     p._2 match {
-      // None means arg in Sigma*
-      case None => 500
+      // None means arg in Sigma* or constant string
+      case None =>
+        if (strDatabase.isConcrete(atomToFunApp(p._1)._3)){
+          0
+        }
+        else{
+          500
+        }
       case Some(a) => {
         a.pred match {
           case `str_in_re_id` =>
@@ -111,7 +119,6 @@ class BackwardsSaturation(
   override def handleApplicationPoint(
     goal : Goal, appPoint : ApplicationPoint
   ) : Seq[Plugin.Action] = {
-
     val termConstraintMap = getInitialConstraints(goal)
     // return empty if appPoint no longer relevant
     if (!extractApplicationPoints(goal, termConstraintMap).contains(appPoint))
@@ -141,14 +148,24 @@ class BackwardsSaturation(
             .getOrElse(Seq(atomConstraintToAut(a, None)))
         }
       }
+    import TerForConvenience._
     val resAut = atomConstraintToAut(res, argCon)
-
+    val age = getAge(res, l(autDatabase.automaton2Id(resAut)), goal)
     val (newConstraints, _) = op(argAuts, resAut)
+    implicit val o: TermOrder = goal.order
     // remove cases where one argument has no solutions
     val argCases = newConstraints.filter(_.forall(!_.isEmpty))
       .map(argCS => {
         (args zip argCS).collect({
-          case (Some(a), aut) => formulaTermInAut(a, aut, goal)
+          case (Some(a), aut) => {
+            if (!a.isConstant) {
+              // TODO REMOVE YOUnger AGEs
+              conj(List(formulaTermInAut(a, aut, goal), buildAge(a,autDatabase.automaton2Id(aut), age+1, goal)))
+            }
+            else {
+              formulaTermInAut(a, aut, goal)
+            }
+          }
         })
       }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
       .toSeq
@@ -179,11 +196,21 @@ class BackwardsSaturation(
     val funApps = getFunApps(goal)
 
     val applicationPoints = for {
-      (_, _, res, formula) <- funApps;
+      (op, args, res, formula) <- funApps
       regex <- termConstraintMap.get(res)
         .map(_.map(Some(_)))
         .getOrElse(Seq(None))
-    } yield (formula, regex)
+      if (formula.pred match {
+      case FunPred(`str_++`) => {
+        regex.isDefined | strDatabase.isConcrete(res)
+      } // Skip if pred matches `str.++` and regex is None
+      case _ => true // Include all other cases
+    })
+    } yield {
+      atomToFunApp.put(formula, (op, args, res, formula))
+      (formula, regex)
+    }
+
 
     applicationPoints.toIterator
   }

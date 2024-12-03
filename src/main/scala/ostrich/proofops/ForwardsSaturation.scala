@@ -33,10 +33,10 @@ package ostrich.proofops
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AddAxiom
+import ap.terfor.{TerForConvenience, TermOrder}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.theories.{SaturationProcedure, Theory}
-import ap.types.SortedPredicate
 import ap.util.Combinatorics.cartesianProduct
 import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
@@ -60,7 +60,7 @@ class ForwardsSaturation(
   val theory : OstrichStringTheory
 ) extends SaturationProcedure("ForwardsPropagation")
   with PropagationSaturationUtils {
-  import theory.{ str_len, str_in_re_id, FunPred, strDatabase}
+  import theory.{ str_len, str_in_re_id, FunPred, strDatabase, str_++}
 
   /**
    * (funApp, argConstraints)
@@ -70,7 +70,6 @@ class ForwardsSaturation(
    * to yi.
    */
   type ApplicationPoint = (Atom, Seq[Seq[Atom]])
-
   override def extractApplicationPoints(
     goal : Goal
   ) : Iterator[ApplicationPoint] = {
@@ -81,7 +80,7 @@ class ForwardsSaturation(
       (op, args, res, formula) <- funApps;
       // functions with only concrete args will be handled forwards by
       // OstrichReducer
-      if (!args.forall(_.map(strDatabase.isConcrete).getOrElse(true)));
+      if (!args.forall(_.forall(strDatabase.isConcrete)) | strDatabase.isConcrete(res));
       argConSeqs = args.map({
         case None => Seq()
         case Some(a) => {
@@ -97,9 +96,13 @@ class ForwardsSaturation(
           cons.map(Seq(_))
       ).toList).toSeq ++ (
         if (argConSeqs.exists(_.size > 1)) Seq(argConSeqs) else Seq()
-      )
+        )
+      if !(formula.pred match {
+        case FunPred(`str_++`) if argCons.flatten.isEmpty =>
+          !args.exists(_.forall(strDatabase.isConcrete)) // Skip when formula.pred is str.++ and argCons is empty but not constant
+        case _ => false // Include other cases
+      })
     } yield (formula, argCons)
-
     applicationPoints.toIterator
   }
 
@@ -170,12 +173,30 @@ class ForwardsSaturation(
     val resultConstraint = op.forwardApprox(argAuts);
 
     val resFmla = formulaTermInAut(res, resultConstraint, goal)
-    val assumptions = List(formula) ++ argCons.flatten
 
+    val minAge = if (argCons.flatten.isEmpty) {
+      0 // Return 0 if argCons is empty
+    } else {
+      argCons.flatten.map { arg =>
+        getAge(arg(0), arg(1), goal)
+      }.min
+    }
+    import TerForConvenience._
+    implicit val o: TermOrder = goal.order
+    val tmpOption = if (!res.isConstant) {
+      // TODO max oder min age?
+      Some(buildAge(res, autDatabase.automaton2Id(resultConstraint), minAge + 1, goal))
+    } else {
+      None
+    }
+
+    val conjunctionTerms = List(resFmla) ++ tmpOption.toList
+
+    val assumptions = List(formula) ++ argCons.flatten
     logSaturation("forward propagation") {
       Seq(AddAxiom(
         assumptions,
-        Conjunction.conj(resFmla, goal.order),
+        Conjunction.conj(conjunctionTerms, goal.order),
         theory
       ))
     }

@@ -405,6 +405,9 @@ class OstrichReducer protected[ostrich]
                   Constant(IdealInt(startIndex)), result) =>
               result === bigStr.indexOf(searchStr, startIndex)
 
+            case (a, b, _, result) if result.constant.intValueSafe == -1 =>
+              !conj(str_contains(List(a,b)))
+
             case _ =>
               a
           }

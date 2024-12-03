@@ -33,7 +33,7 @@ package ostrich.proofops
 import ap.parser.IFunction
 import ap.proof.goal.Goal
 import ap.terfor.TerForConvenience.{l, term2RichLC}
-import ap.terfor.{Formula, RichPredicate, Term, TermOrder}
+import ap.terfor.{Formula, RichPredicate, TerForConvenience, Term}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
 import ostrich._
@@ -52,7 +52,7 @@ trait PropagationSaturationUtils {
   val theory : OstrichStringTheory
 
   import theory.{
-    str_len, str_in_re, str_char_count, str_in_re_id, str_to_re, str_contains,
+    str_len, str_in_re, str_char_count, str_in_re_id, str_to_re, str_contains, agePred,
     re_from_str, re_from_ecma2020, re_from_ecma2020_flags,
     re_case_insensitive, str_prefixof, str_suffixof, re_none, re_all, re_allchar,
     re_charrange, re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+,
@@ -70,6 +70,24 @@ trait PropagationSaturationUtils {
   )
 
   val autDatabase = theory.autDatabase
+
+  def getAge(variable : Term, regex : Term, goal : Goal) : Int = {
+    for (a <- goal.facts.predConj.positiveLitsWithPred(agePred)){
+      if (variable == a(0) && regex == a(1)){
+        //return innerhalb von for ist langsam
+        return a(2).head._1.intValueSafe
+      }
+    }
+    0
+  }
+
+  def buildAge(variable : Term, autId : Int, age : Int, goal : Goal) : Atom = {
+    import TerForConvenience._
+    implicit val o = goal.order
+    agePred(List(l(variable),l(autId), l(age)))
+  }
+
+
 
   /**
    * Convert an atom to Automaton

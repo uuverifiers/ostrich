@@ -35,9 +35,9 @@ import ap.proof.theoryPlugins.Plugin
 import ap.proof.theoryPlugins.Plugin.AxiomSplit
 import ap.terfor.{TerForConvenience,  TermOrder}
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.{Atom}
+import ap.terfor.preds.Atom
 import ap.theories.{SaturationProcedure, Theory}
-import ostrich.{OstrichStringTheory}
+import ostrich.OstrichStringTheory
 
 /**
  * A SaturationProcedure for Cut propagation.
@@ -51,8 +51,8 @@ class CutSaturation(
   /**
    * (funApp)
    * funApp -- replace(x,y,z) = res | replace_all(x,y,z) = res | replace_re(x, regex,z) = res | replace_all_re(x, regex,z) = res
-   * Add axiom for str.replace split str.contains(y) | !str.contains(y)
-   * Add
+   * Add axiom for str.replace split str.contains(x,y) | !str.contains(x,y)
+   * Add axiom for str.replace_re split str.in_re(x,regex) | !str.in_re(x, regex)
    */
   type ApplicationPoint = (Atom)
 

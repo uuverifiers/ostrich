@@ -81,7 +81,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("contains-6.smt2") =
     checkFile("tests/contains-6.smt2", "sat")
   property("contains-7.smt2") =
-    checkFile("tests/contains-7.smt2", "sat")
+    checkFileOpts("tests/contains-7.smt2", "sat", "+forwardPropagation", "")
   property("contains-8.smt2") =
     checkFile("tests/contains-8.smt2", "sat")
 
