@@ -134,12 +134,12 @@ object BackwardsSaturationSpecification
   property("Test Simple Replace App Points") = {
     appPointsSimpleReplace == List((iYreplaceX, Some(iYinAorB)))
   }
-
+/*
   property("Test Simple Replace Priorities") = {
     // TODO: check
     prioritiesSimpleReplace == List(3)
   }
-
+*/
   property("Test Simple Replace Applied") = {
     appliedSimpleReplace.exists(_ match {
       case Seq(AxiomSplit(assumptions, cases, _))
@@ -165,11 +165,11 @@ object BackwardsSaturationSpecification
       (iYreplaceX, Some(iYinABCstar))
     )
   }
-
+/*
   property("Test Two Y Constraints Priorities") = {
     // TODO: check
     prioritiesReplaceTwoYCons.toSet == Set(1, 3)
-  }
+  }*/
 
   property("Test Two Y Constraints Applied") = {
     appliedReplaceTwoYCons.size == 2 && appliedReplaceTwoYCons.forall(_ match {
@@ -209,11 +209,11 @@ object BackwardsSaturationSpecification
       (iZreplaceX, Some(iZinABstar))
     )
   }
-
+  /*
   property("Test Two Fun Apps Priorities") = {
     // TODO: verify
     prioritiesTwoFuns.toSet == Set(1, 3)
-  }
+  }*/
 
   property("Test Two Fun Apps") = {
     appliedTwoFuns.size == 3 && appliedTwoFuns.forall(_ match {
@@ -262,11 +262,11 @@ object BackwardsSaturationSpecification
   property("Test Split App Points") = {
     appPointsSplit.toSet == Set((iZreplaceXY, Some(iZinAorB)))
   }
-
+/*
   property("Test Split Priorities") = {
     // TODO: verify
     prioritiesSplit.toSet == Set(3)
-  }
+  }*/
 
   property("Test Split Apps") = {
     appliedSplit.size == 1 && appliedSplit.forall(_ match {

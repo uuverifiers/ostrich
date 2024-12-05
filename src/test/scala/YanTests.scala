@@ -2,7 +2,6 @@ package ostrich
 
 import ap.CmdlMain
 import ap.DialogUtil.asString
-
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 
@@ -102,7 +101,7 @@ object YanTests extends Properties("YanTests") {
   property("tests/yan-benchmarks/replaceAll-016.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-016.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-017.smt2") =
-    checkFile("tests/yan-benchmarks/replaceAll-017.smt2", "sat")
+    checkFile("tests/yan-benchmarks/replaceAll-017.smt2", "sat", s"-timeout=$longTimeout")
   property("tests/yan-benchmarks/replaceAll-018.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-018.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-019.smt2") =

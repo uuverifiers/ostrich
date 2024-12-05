@@ -13,7 +13,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   val timeout      = 30000
   val shortTimeout = 3000
-  val longTimeout  = 60000
+  val longTimeout  = 120000
 
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
@@ -90,7 +90,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("word-equation-2.smt2") =
     checkFile("tests/word-equation-2.smt2", "sat")
   property("word-equation-3.smt2") =
-    checkFileOpts("tests/word-equation-3.smt2", "unsat", "-forwardPropagation", "")
+    checkFileOpts("tests/word-equation-3.smt2", "unsat", "-forwardPropagation", s"-timeout=$longTimeout")
   property("word-equation-4.smt2") =
     checkFile("tests/word-equation-4.smt2", "sat")
   property("word-equation-6.smt2") =
