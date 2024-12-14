@@ -34,7 +34,7 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{BackwardsSaturation, CutSaturation, ForwardsSaturation, LengthAbstraction, OstrichClose, OstrichCut, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
+import ostrich.proofops.{BackwardsSaturation, CutSaturation, ForwardsSaturation, LengthAbstraction, OstrichClose, OstrichCut, OstrichIntersect, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -283,10 +283,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
   val IntEnumerator       = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
-  val forwardSaturation   = new ForwardsSaturation(this)
-  val backwardsSaturation = new BackwardsSaturation(this)
-  val lengthAbstraction   = new LengthAbstraction(this)
-  val cutSaturation = new CutSaturation(this)
+  private val forwardSaturation   = new ForwardsSaturation(this)
+  private val backwardsSaturation = new BackwardsSaturation(this)
+  private val lengthAbstraction   = new LengthAbstraction(this)
+  private val cutSaturation = new CutSaturation(this)
 
   override val dependencies : Iterable[Theory] =
     List(ModuloArithmetic, IntEnumerator) ++
@@ -359,6 +359,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
   private val ostrichClose       = new OstrichClose(this)
+  private val intersectionRule = new OstrichIntersect(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
   private val strInReTranslator  = new OstrichStrInReTranslator(this)
   private val cutter             = new OstrichCut(this)
@@ -380,6 +381,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
         case Plugin.GoalState.Eager =>
           strInReTranslator.handleGoal(goal)           elseDo
           ostrichClose.handleGoal(goal)                elseDo
+          intersectionRule.handleGoal(goal)            elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
