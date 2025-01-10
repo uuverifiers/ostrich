@@ -62,7 +62,7 @@ case class OFlags(
                               OFlags.LengthOptions.Auto,
   useParikhConstraints    : Boolean = true,
   minimizeAutomata        : Boolean = false,
-  forwardPropagation      : Boolean = true,
+  forwardPropagation      : Boolean = false,
   backwardPropagation     : Boolean = true,
   nielsenSplitter         : Boolean = true,
   regexTranslator         : OFlags.RegexTranslator.Value =
