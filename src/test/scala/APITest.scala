@@ -23,7 +23,6 @@ object APITest extends Properties("APITest") {
   import IExpression._
 
   property("concat") =
-    Console.withErr(ap.CmdlMain.NullStream) {
     SimpleAPI.withProver(enableAssert = true) { p =>
       import p._
 
@@ -54,10 +53,9 @@ object APITest extends Properties("APITest") {
 
         ??? == ProverStatus.Sat
       }
-    }}
+    }
 
   property("head-tail") =
-    Console.withErr(ap.CmdlMain.NullStream) {
     SimpleAPI.withProver(enableAssert = true) { p =>
       import p._
 
@@ -67,33 +65,31 @@ object APITest extends Properties("APITest") {
       scope {
         !! (x ++ y === y ++ x)
 
-        // scope {
-        //   !! (str_len(x) === 2)
-        //   !! (str_len(y) === 5)
-        //   !! (x =/= "")
+        scope {
+          !! (str_len(x) === 2)
+          !! (str_len(y) === 5)
+          !! (x =/= "")
 
-        //   println(???)             // currently this cannot be handled
-        //   println("x = " + evalToTerm(x))
-        //   println("y = " + evalToTerm(y))
+          expect(???, ProverStatus.Sat)
+          assert(asString(eval(x)) + asString(eval(y)) ==
+                   asString(eval(y)) + asString(eval(x)))
+          assert(asString(eval(x)).size == 2)
+          assert(asString(eval(y)).size == 5)
+        }
 
-        //   scope {
-        //     ?? (str_head(x) === str_head(str_tail(x)))
-        //     println(???)
-        //   }
-        // }
-
-        !! ("abcxyz" === x ++ y)    // this special case is supported
+        scope {
+          !! ("abcxyz" === x ++ y)
         
-        expect(???, ProverStatus.Sat)
-        assert(asString(eval(y)) + asString(eval(x)) == "abcxyz")
+          expect(???, ProverStatus.Sat)
+          assert(asString(eval(y)) + asString(eval(x)) == "abcxyz")
 
-        ?? (x === "" | y === "")
-        ??? == ProverStatus.Valid
+          ?? (x === "" | y === "")
+          ??? == ProverStatus.Valid
+        }
       }
-    }}
+    }
 
   property("len-no-regex") =
-    Console.withErr(ap.CmdlMain.NullStream) {
     SimpleAPI.withProver(enableAssert = true) { p =>
       import p._
 
@@ -106,10 +102,9 @@ object APITest extends Properties("APITest") {
       // not actually satisfy the length constraint
       !! (x === evalToTerm(x))
       ??? == ProverStatus.Sat
-    }}
+    }
 
   property("integer") = 
-    Console.withErr(ap.CmdlMain.NullStream) {
       SimpleAPI.withProver(enableAssert = true) { p => 
           import p._
           val i = createConstant("i")
@@ -117,6 +112,5 @@ object APITest extends Properties("APITest") {
           !! (i === j)
           ??? == ProverStatus.Sat
       }
-    }
 
 }
