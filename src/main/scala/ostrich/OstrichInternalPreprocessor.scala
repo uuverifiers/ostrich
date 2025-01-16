@@ -71,7 +71,10 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
       return f
 
     val characters =
+      if (flags.useParikhConstraints)
         interestingCharacters(f).toSeq.sorted
+      else
+        List()
 
     val funTranslator =
       new OstrichStringFunctionTranslator(theory, Conjunction.TRUE)
