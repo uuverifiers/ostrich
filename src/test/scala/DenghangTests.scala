@@ -3,6 +3,7 @@ package ostrich.cesolver
 import ap.CmdlMain
 import ap.DialogUtil.asString
 import org.scalacheck.Properties
+import ostrich.SMTLIBTests.checkFileOpts
 
 object DenghangTests extends Properties("DenghangTests") {
 
@@ -65,7 +66,7 @@ object DenghangTests extends Properties("DenghangTests") {
   property("indexof_var_sat.smt2") =
     checkFile("tests/hu-benchmarks/indexof_var_sat.smt2", "sat")
   property("indexof_var_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_var_unsat.smt2", "unsat")
+    checkFileOpts("tests/hu-benchmarks/indexof_var_unsat.smt2", "unsat", "+forwardPropagation,-length=on" )
   property("indexof_empty_sat.smt2") =
     checkFile("tests/hu-benchmarks/indexof_empty_sat.smt2", "sat")
   property("indexof_empty_sat2.smt2") =
