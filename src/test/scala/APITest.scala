@@ -113,4 +113,20 @@ object APITest extends Properties("APITest") {
           ??? == ProverStatus.Sat
       }
 
+  property("string model test") =
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        val s = "str" : ITerm
+
+        addAssertion(x === s)
+
+        ??? == ProverStatus.Sat &&
+        partialModel.evalToTerm(x) == Some(s) &&
+        evalToTerm(x) == s &&
+        withCompleteModel(e => e.evalToTerm(x)) == s
+      }
+    }
+
 }

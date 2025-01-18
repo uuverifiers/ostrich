@@ -508,9 +508,8 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
       if (closing) {
         openCount -= 1
         // if we're closing something we haven't closed already
-        if (lastOpen.isDefined) {
-          if (lastOpen.get <= ub)
-            disjoint += ((lastOpen.get, ub))
+        if (lastOpen.isDefined && lastOpen.get <= ub) {
+          disjoint += ((lastOpen.get, ub))
           if (openCount == 0) {
             lastOpen = None
           } else {

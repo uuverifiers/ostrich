@@ -31,7 +31,7 @@ object AutomatonParserTest
 
         val exampleInput = "automaton value_0 {init s0; s0 -> s0 [0, 31]; s0 -> s1 [32, 32]; s0 -> s0 [33, 65535]; s1 -> s1 [0, 65535]; accepting s0,s1;};"
     val result = new AutomatonParser().parseAutomaton(exampleInput)
-    println(result)
+//    println(result)
     result.isRight
   }
   property("parse two initial states") = {
