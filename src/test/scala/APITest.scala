@@ -129,7 +129,9 @@ object APITest extends Properties("APITest") {
         addAssertion(x === s)
 
         ??? == ProverStatus.Sat &&
-        partialModel.evalToTerm(x) == Some(s)
+        partialModel.evalToTerm(x) == Some(s) &&
+        evalToTerm(x) == s &&
+        withCompleteModel(e => e.evalToTerm(x)) == s
       }
     }
 
