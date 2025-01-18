@@ -379,28 +379,37 @@ object BricsTLabelOps extends TLabelOps[(Char, Char)] {
     }
   }
 
-  def subtractLetters(as : Iterable[Char],
-                      lbl : (Char, Char)) : Iterable[(Char, Char)] = {
-    val (min, max) = lbl
-    var curMax = max
-    var res = List[(Char, Char)]()
 
-    // reverse order for list pushing
-    val revSortedChars : List[Char] = as.toList.sortWith(_ > _)
+  def subtractLetters(as: Iterable[Char], lbl: (Char, Char)): Iterable[(Char, Char)] = {
+    val (start, end) = lbl
 
-    for (a <- revSortedChars) {
-      if (a < min)
-        return (min, curMax)::res
+    // Convert `as` to a sorted set to efficiently check for exclusions
+    val excludeSet = as.toSet
 
-      if (a < curMax)
-        res = ((a+1).toChar, curMax)::res
-
-      curMax = (a-1).toChar
-      if (curMax < min)
-        return res
+    // Helper function to generate intervals by excluding characters
+    def createIntervals(remaining: List[Char], currentStart: Char, result: List[(Char, Char)]): List[(Char, Char)] = {
+      remaining match {
+        case Nil =>
+          if (currentStart <= end) (currentStart, end) :: result // Add the last remaining interval
+          else result
+        case head :: tail =>
+          if (head < currentStart) {
+            // Skip characters outside the interval range
+            createIntervals(tail, currentStart, result)
+          } else if (head == currentStart) {
+            // Move start to the next character if the current character is excluded
+            createIntervals(tail, (currentStart + 1).toChar, result)
+          } else {
+            // If there's a gap, add the current interval and move to the next
+            val newInterval = (currentStart, (head - 1).toChar)
+            createIntervals(tail, (head + 1).toChar, newInterval :: result)
+          }
+      }
     }
 
-    return (min, curMax)::res
+    // Create intervals by excluding characters from `as`
+    val sortedExcludes = excludeSet.filter(c => c >= start && c <= end).toList.sorted
+    createIntervals(sortedExcludes, start, List()).reverse
   }
 
   /**
