@@ -114,7 +114,6 @@ object APITest extends Properties("APITest") {
       }
 
   property("string model test") =
-    Console.withErr(ap.CmdlMain.NullStream) {
       SimpleAPI.withProver(enableAssert = true) { p => 
         import p._
         val x = createConstant("x", StringSort)
@@ -127,6 +126,5 @@ object APITest extends Properties("APITest") {
         evalToTerm(x) == s &&
         withCompleteModel(e => e.evalToTerm(x)) == s
       }
-    }
 
 }
