@@ -75,7 +75,7 @@ class OstrichIntersect(theory : OstrichStringTheory)  {
         val productAutomaton = AutomataUtils.product(automata)
         val newId = autDatabase.automaton2Id(productAutomaton)
         val res = str_in_re_id(List(l(c), l(newId)))
-        val remove = Plugin.RemoveFacts(conj(atoms))
+        val remove = Plugin.RemoveFacts(conj(atoms.filterNot(_ == res)))
         val addaxiom = Plugin.AddAxiom(Seq(conj(atoms)), res, theory)
 
         Seq(remove, addaxiom)
