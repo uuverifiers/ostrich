@@ -153,7 +153,7 @@ class StrDatabase(theory : OstrichStringTheory) {
         t
       case Some(IFunApp(`str_cons`,
                         Seq(head, IIntLit(IdealInt(tail))))) =>
-        str_cons(head, id2ITerm(tail))
+        str_cons(theory.int2Char(head), id2ITerm(tail))
       case None =>
         id2FreshITerm(id)
       case _ =>
@@ -201,13 +201,23 @@ class StrDatabase(theory : OstrichStringTheory) {
    * of an empty string, or of a string that consists of a single
    * <code>str.cons</code>, and some id as tail.
    */
-  private def atomic2Id(atomicStr : IFunApp) : Int = synchronized {
-    str2IdMap.getOrElseUpdate(atomicStr,
-                              {
-                                val id = nextFreeId
-                                id2StrMap.put(id, atomicStr)
-                                id
-                              })
+  private def atomic2Id(atomicStr : IFunApp) : Int = {
+    assert(atomicStr match {
+             case IFunApp(`str_empty`, Seq()) =>
+               true
+             case IFunApp(`str_cons`, Seq(IIntLit(_), IIntLit(_))) =>
+               true
+             case _ =>
+               false
+           })
+    synchronized {
+      str2IdMap.getOrElseUpdate(atomicStr,
+                                {
+                                  val id = nextFreeId
+                                  id2StrMap.put(id, atomicStr)
+                                  id
+                                })
+    }
   }
 
   /**

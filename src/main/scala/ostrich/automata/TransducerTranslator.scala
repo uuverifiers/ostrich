@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -341,7 +341,7 @@ object TransducerTranslator {
 
   /**
    * Visitor that eliminates the <code>ModuloArithmetic.int_cast</code>
-   * function.
+   * and <code>ModuloArithmetic.mod_cast</code> functions.
    */
   private object IntCastEliminator extends CollectingVisitor[Unit, IExpression]{
     def apply(f : IFormula) : IFormula =
@@ -349,7 +349,11 @@ object TransducerTranslator {
     def postVisit(t : IExpression, arg : Unit,
                   subres : Seq[IExpression]) : IExpression =
       t match {
-        case IFunApp(ModuloArithmetic.int_cast, _) => subres.head
+        case IFunApp(ModuloArithmetic.int_cast, _) =>
+          subres.head
+        case IFunApp(ModuloArithmetic.mod_cast,
+                     Seq(Const(lower), Const(upper), Const(value))) =>
+          ModuloArithmetic.evalModCast(lower, upper,value)
         case _ => t update subres
       }
   }
