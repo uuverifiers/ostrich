@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2025 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,8 @@ class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
   import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
-                 strDatabase, str_to_int, int_to_str, StringSort, FunPred}
+                 strDatabase, str_to_int, str_to_code, int_to_str,
+                 StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
 
@@ -176,6 +177,14 @@ class OstrichPredtoEqConverter(goal : Goal,
     yield Plugin.AddAxiom(List(), enumAtom, theory)
   }
 
+  def enumStrToCodeValues(a : Atom) : Seq[Plugin.Action] = {
+    for (lit <- List(a);
+         if !a.last.isConstant;
+         enumAtom = conj(theory.IntEnumerator.enumIntValuesOf(a.last, order));
+         if !goal.reduceWithFacts(enumAtom).isTrue)
+    yield Plugin.AddAxiom(List(), enumAtom, theory)
+  }
+
   def enumIntToStrValues(a : Atom) : Seq[Plugin.Action] = {
     for (lit <- List(a);
          if !a.head.isConstant;
@@ -226,7 +235,10 @@ class OstrichPredtoEqConverter(goal : Goal,
     val b = (for (lit <- predConj.positiveLitsWithPred(FunPred(int_to_str));
                   act <- enumIntToStrValues(lit)) yield act)
 
-    a ++ b
+    val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_code));
+                  act <- enumStrToCodeValues(lit)) yield act)
+
+    a ++ b ++ c
   }
 
 }

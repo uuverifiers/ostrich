@@ -135,4 +135,44 @@ object APITest extends Properties("APITest") {
       }
     }
 
+  property("str.from_code") =
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x")
+        !! (str_from_code(x) === str_from_code(x))
+        ??? == ProverStatus.Sat
+      }
+    }
+
+  property("str.to_code") =
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        !! (str_to_code(x) > 0)
+        ??? == ProverStatus.Sat
+      }
+    }
+
+  property("str.to_code big") =
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        !! (str_to_code(x) > 1000000000)
+        ??? == ProverStatus.Unsat
+      }
+    }
+
+  property("str.to_int") =
+    Console.withErr(ap.CmdlMain.NullStream) {
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        !! (str_to_int(x) > 12345)
+        ??? == ProverStatus.Sat
+      }
+    }
+
 }

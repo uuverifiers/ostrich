@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -328,40 +328,28 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           Seq(ConcreteString(str1), ConcreteString(str2))) =>
       string2Term(str1 + str2)
 
-    case (IFunApp(`str_from_code`, _), Seq(Const(code))) =>
-      if (code >= 0 & code < theory.alphabetSize)
-        str_cons(code, str_empty())
-      else
-        str_empty()
-
-    case (IFunApp(`str_from_code`, _), Seq(code : ITerm)) =>
-      ite(code >= 0 & code < theory.alphabetSize,
-          str_cons(code, str_empty()),
-          str_empty())
-
     case (IFunApp(`str_from_char`, _), Seq(c : ITerm)) =>
       str_cons(c, str_empty())
 
     case (IAtom(`str_<`, _), Seq(s : ITerm, t : ITerm)) =>
       str_<=(s, t) & (s =/= t)
 
-/*
-    // Currently we just under-approximate and assume that the considered
-    // string is "0"
-    case (IFunApp(`str_to_int`, _), Seq(str : ITerm)) => {
-      Console.err.println(
-        "Warning: str.to.int not fully supported")
-      eps(shiftVars(str, 1) === string2Term("0") &&& v(0) === 0)
+    case (IFunApp(`str_to_code`, _), Seq(str : ITerm)) => {
+      eps((v(0) === shiftVars(str_to_code(str), 1)) &
+          (v(0) >= -1) & (v(0) < theory.alphabetSize))
     }
 
-    // Currently we just under-approximate and assume that the considered
-    // integer is 0
-    case (IFunApp(`int_to_str`, _), Seq(t : ITerm)) => {
-      Console.err.println(
-        "Warning: int.to.str not fully supported")
-      eps(shiftVars(t, 1) === 0 &&& v(0) === string2Term("0"))
+    case (IFunApp(`str_from_code`, _), Seq(Const(code))) =>
+      if (code >= 0 & code < theory.alphabetSize)
+        str_cons(code, str_empty())
+      else
+        str_empty()
+
+    case (IFunApp(`str_from_code`, _), Seq(c : ITerm)) => {
+      eps(ite(shiftVars(c, 1) >= 0 & shiftVars(c, 1) < theory.alphabetSize,
+              shiftVars(c, 1) === str_to_code(v(0)),
+              v(0) === str_empty()))
     }
-*/
 
     case (IFunApp(`re_range`, _),
           Seq(IFunApp(`str_cons`, Seq(lower, IFunApp(`str_empty`, _))),
