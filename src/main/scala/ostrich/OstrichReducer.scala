@@ -1,7 +1,7 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021-2024 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
- *
+ * Copyright (c) 2021-2025 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -87,7 +87,7 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
   import OstrichReducer.extractLanguageConstraints
 
   import theory.{str_len, int_to_str, str_to_int, str_prefixof, str_indexof,
-                 FunPred}
+                 str_to_code, FunPred}
 
   def apply(conj : Conjunction, order : TermOrder) =
     new OstrichReducer(theory,
@@ -100,6 +100,7 @@ class OstrichReducerFactory protected[ostrich] (theory : OstrichStringTheory)
   val _int_to_str   = FunPred(int_to_str)
   val _str_to_int   = FunPred(str_to_int)
   val _str_indexof  = FunPred(str_indexof)
+  val _str_to_code  = FunPred(str_to_code)
 
 }
 
@@ -122,8 +123,9 @@ class OstrichReducer protected[ostrich]
                  str_suffixof, str_contains,
                  str_replace, str_replaceall,
                  re_++, re_*, re_+, str_to_re, re_all, re_comp, re_charrange,
+                 re_allchar,
                  strDatabase, autDatabase, FunPred, string2Term, int2Char}
-  import factory.{_str_len, _int_to_str, _str_to_int, _str_indexof}
+  import factory.{_str_len, _int_to_str, _str_to_int, _str_indexof, _str_to_code}
   def passQuantifiers(num : Int) = this
 
   def addAssumptions(arithConj : ArithConj,
@@ -178,7 +180,7 @@ class OstrichReducer protected[ostrich]
 
     val rewritablePredicates =
       (List(_str_empty, _str_cons, str_in_re_id, _str_len, _str_char_count,
-            str_<=, _int_to_str, _str_to_int, _str_indexof,
+            str_<=, _int_to_str, _str_to_int, _str_to_code, _str_indexof,
             str_prefixof, str_suffixof, str_contains,
             FunPred(str_replace), FunPred(str_replaceall)) ++
        funTranslator.translatablePredicates).distinct
@@ -304,7 +306,7 @@ class OstrichReducer protected[ostrich]
           } else if (a(1).isConstant) {
             a(1).constant match {
               case IdealInt.MINUS_ONE => {
-                // argument must be something different from a decimal number
+                // string must be something different from a decimal number
                 val autId = {
                   import IExpression._
                   val re =
@@ -322,6 +324,33 @@ class OstrichReducer protected[ostrich]
                 }
                 str_in_re_id(List(a(0), l(autId)))
               }
+              case _ =>
+                Conjunction.FALSE
+            }
+          } else {
+            a
+          }
+
+        case `_str_to_code` =>
+          if (isConcrete(a(0))) {
+            val str = term2ListGet(a(0))
+            if (str.size == 1 &&
+                str.head >= 0 && str.head < theory.alphabetSize)
+              a.last === str.head
+            else
+              a
+          } else if (a(1).isConstant) {
+            a(1).constant match {
+              case IdealInt.MINUS_ONE => {
+                // string must have length different from one
+                val autId = {
+                  import IExpression._
+                  autDatabase.regex2Id(re_comp(re_allchar()))
+                }
+                str_in_re_id(List(a(0), l(autId)))
+              }
+              case const if const.signum >= 0 && const < theory.alphabetSize =>
+                a(0) === strDatabase.list2Id(List(const.intValue))
               case _ =>
                 Conjunction.FALSE
             }
