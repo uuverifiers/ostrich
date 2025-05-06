@@ -89,8 +89,8 @@ object PortfolioSetup {
             2000),
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(baseSettings,
-              ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,-nielsenSplitter"),
-            f"-stringSolver=$ostrichStringTheory:+forwardPropagation,+backwardPropagation,-nielsenSplitter",
+              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter"),
+            f"-stringSolver=$ostrichStringTheory:+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter",
             1000000000,
             2000),
           ParallelFileProver.Configuration(
