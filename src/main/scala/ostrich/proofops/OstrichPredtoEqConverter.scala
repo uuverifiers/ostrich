@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022-2024 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2025 Oliver Markgraf, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -55,8 +55,9 @@ import scala.runtime.Nothing$
 class OstrichPredtoEqConverter(goal : Goal,
                                theory : OstrichStringTheory,
                                flags : OFlags)  {
-  import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace, str_contains,
-                 strDatabase, str_to_int, int_to_str, str_indexof, str_at,str_empty,
+  import theory.{str_prefixof, str_suffixof, _str_++, _str_len, str_replace,
+                 str_contains, strDatabase, str_to_int, str_to_code,
+                 int_to_str, str_indexof, str_at,
                  StringSort, FunPred}
   import OFlags.debug
   import TerForConvenience._
@@ -325,7 +326,10 @@ class OstrichPredtoEqConverter(goal : Goal,
     val c = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_indexof));
                   act <- enumIndexofStartIndex(lit)) yield act)
 
-    a ++ b ++ c
+    val d = (for (lit <- predConj.positiveLitsWithPred(FunPred(str_to_code));
+                  act <- enumIntValues(lit.last)) yield act)
+
+    a ++ b ++ c ++ d
   }
 
 }

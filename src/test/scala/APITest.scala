@@ -127,4 +127,36 @@ object APITest extends Properties("APITest") {
         withCompleteModel(e => e.evalToTerm(x)) == s
       }
 
+  property("str.from_code") =
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x")
+        !! (str_from_code(x) === str_from_code(x))
+        ??? == ProverStatus.Sat
+      }
+
+  property("str.to_code") =
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        !! (str_to_code(x) > 0)
+        ??? == ProverStatus.Sat
+      }
+
+  property("str.to_code big") =
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        !! (str_to_code(x) > 1000000000)
+        ??? == ProverStatus.Unsat
+      }
+
+  property("str.to_int") =
+      SimpleAPI.withProver(enableAssert = true) { p => 
+        import p._
+        val x = createConstant("x", StringSort)
+        !! (str_to_int(x) > 12345)
+        ??? == ProverStatus.Sat
+      }
+
 }
