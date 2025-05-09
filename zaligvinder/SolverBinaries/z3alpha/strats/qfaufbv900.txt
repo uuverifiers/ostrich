@@ -1,0 +1,1 @@
+(if (> num-exprs 9245) (then aig aig qfaufbv) (if (> size 192) (then reduce-bv-size reduce-args simplify qfaufbv) (if (> num-consts 52) (then purify-arith purify-arith qfaufbv) (then solve-eqs (using-params simplify :elim_and false :blast_distinct false :local_ctx false :som false :flat false) elim-uncnstr ackermannize_bv smt))))

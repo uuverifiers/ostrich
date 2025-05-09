@@ -1,0 +1,1 @@
+(or-else (try-for (or-else (try-for (then solve-eqs bv) 2000) (or-else (try-for (or-else (try-for (then solve-eqs smt) 2000) (then (using-params simplify :elim_and false :blast_distinct false :local_ctx false :som false :flat false) dt2bv max-bv-sharing bit-blast smt)) 8000) (then max-bv-sharing bit-blast bv))) 128000) (then solve-eqs bv))

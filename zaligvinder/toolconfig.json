@@ -1,0 +1,22 @@
+{
+  "Binaries" : {
+		"Z3" : {
+			"path" : "/home/hudh/github/ostrich/zaligvinder/SolverBinaries/z3/z3"
+		},
+		"CVC5" : {
+				"path" : "/home/hudh/github/ostrich/zaligvinder/SolverBinaries/cvc5/cvc5"
+		},
+		"OSTRICH2" : {
+				"path" : "/home/hudh/github/ostrich/zaligvinder/SolverBinaries/ostrich2/ostrich"
+		},
+		"OSTRICH1" : {
+				"path" : "/home/hudh/github/ostrich/zaligvinder/SolverBinaries/ostrich1/ostrich"
+		},
+		"Z3alpha" : {
+				"path" : "/home/hudh/github/ostrich/zaligvinder/SolverBinaries/z3alpha/z3alpha.py"
+		},
+		"Z3noodler" : {
+				"path" : "/home/hudh/github/ostrich/zaligvinder/SolverBinaries/z3-noodler/z3"
+		}
+  }
+}

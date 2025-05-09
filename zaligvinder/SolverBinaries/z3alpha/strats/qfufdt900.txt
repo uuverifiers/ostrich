@@ -1,0 +1,1 @@
+(if (> size 13018) (if (> size 21181) (then ctx-simplify smt) (then (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false) (using-params smt :random_seed 500))) (then elim-uncnstr propagate-values simplify smt))

@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": [
+    "./zaligvinder"
+  ],
+  "files.watcherExclude": {
+    "**/target": true
+  }
+}
