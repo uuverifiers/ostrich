@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 2.0.10">
+<meta name="author" content="A string solving benchmark framework">
+<title>ZaligVinder:</title>
+<link rel="stylesheet" type="text/css" href="ascii.css">
+<link rel="stylesheet" type="text/css" href="css.css">
+<link rel="stylesheet" href="clarity-icons.min.css">
+<script src="clarity-icons.min.js"></script>
+</head>
+<body class="article toc2 toc-left">
+<div id="header">
+<h1>ZaligVinder:</h1>
+<div class="details">
+<span id="author" class="author">A string solving benchmark framework</span><br>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_demo">GUI Demonstration</a></li>
+<li><a href="#_setting_up_zaligvinder">Setting up ZaligVinder</a></li>
+<li><a href="#_a_short_guide_for_the_zaligvinder_webapp">A short guide for the ZaligVinder WebApp</a>
+<ul class="sectlevel2">
+<li><a href="#_getting_started">Getting Started</a></li>
+<li><a href="#_benchmark_summary">Benchmark Summary</a></li>
+<li><a href="#_tool_comparison">Tool Comparison</a></li>
+</ul>
+</li>
+<li><a href="#_availability">Availability</a>
+<ul class="sectlevel2">
+<li><a href="#_binary">Binary</a></li>
+<li><a href="#_a_comparison_on_the_collection_of_benchmarks">A comparison on the collection of benchmarks</a></li>
+<li><a href="#_pyex">PyEx</a></li>
+<li><a href="#_pisa">Pisa</a></li>
+<li><a href="#_norn_benchmarks">Norn Benchmarks</a></li>
+<li><a href="#_trau_light">Trau Light</a></li>
+<li><a href="#_leetcode_strings">Leetcode Strings</a></li>
+<li><a href="#_ibm_appscan">IBM Appscan</a></li>
+<li><a href="#_sloth_tests">Sloth Tests</a></li>
+<li><a href="#_woorpje_word_equations">Woorpje Word Equations</a></li>
+<li><a href="#_kaluza">Kaluza</a></li>
+<li><a href="#_kaluze_woorpje">kaluze_woorpje</a></li>
+<li><a href="#_stringfuzz_tests">StringFuzz Tests</a></li>
+<li><a href="#_z3str3_regression_test">z3Str3 Regression Test</a></li>
+<li><a href="#_cashew_suite">Cashew Suite</a></li>
+<li><a href="#_joaco_suite">JOACO Suite</a></li>
+<li><a href="#_stranger_benchmarks">Stranger Benchmarks</a></li>
+<li><a href="#_kausler_suite">Kausler Suite</a></li>
+</ul>
+</li>
+<li><a href="#_people_involved">People involved</a></li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The increased interest in string solving in the recent years has made
+it very hard to identify the right tool to address a particular user&#8217;s purpose. Firstly, there is a multitude of string solving, each addressing essentially some subset of the general problem. Generally, the addressed fragments are relevant and well motivated, but
+the lack of comparisons between the existing tools on an equal set of benchmarks cannot go unnoticed, especially as a common framework to compare solvers seems to be missing. In this paper we gather a set of relevant benchmarks and introduce our new benchmarking framework ZaligVinder to address this purpose.</p>
+</div>
+</div>
+</div>
+
+
+<div class="sect1">
+<h2 id="_demo">GUI Demonstration</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<iframe src="https://drive.google.com/file/d/1IGijIuIrX4P1doty5ZmFx8IWRRcdx_P8/preview" width="970" height="480" frameborder="0"></iframe>
+
+In case the above video is not showing up, try <a href="https://drive.google.com/file/d/1IGijIuIrX4P1doty5ZmFx8IWRRcdx_P8/view">here</a>.
+
+
+
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setting_up_zaligvinder">Setting up ZaligVinder</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>All steps to setup this benchmark framework are discribed in the coresponding paper.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_a_short_guide_for_the_zaligvinder_webapp">A short guide for the ZaligVinder WebApp</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>On the upper end of our web app you can choose between three categories which are explained briefly.</p>
+</div>
+<div class="sect2">
+<h3 id="_getting_started">Getting Started</h3>
+<div class="paragraph">
+<p>This is the current page. It shows you nothing more than this small guide.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_benchmark_summary">Benchmark Summary</h3>
+<div class="paragraph">
+<p>This pages displays a summary for all of your benchmark sets and tracks.</p>
+</div>
+<div class="paragraph">
+<p>The sub navigation on the right hand side allows you to choose a specific track or the summary for a whole set of benchmarks. You may have to scroll down to view other tracks.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/subnav.png" alt="Sub navigation">
+</div>
+</div>
+<div class="paragraph">
+<p>Each page offers the user an overview table of grouped instances. The table holds the tool name, how many instances are declared as satisfiable resp. unsatisfiable, unknown instances (the solver terminates without a result before getting killed by the timeout limit), misclassification of an instance (error - currently done by a majority vote between all results of the solvers), timed out instances, the total amount within a track/set of benchmarks, and the overall solving time.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/overview.png" alt="Overview table">
+</div>
+</div>
+<div class="paragraph">
+<p>The second table shows a ranking of each solver participating on a track. The grading is easily modifiable and currently is done as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Instance declared correctly: +(<code>#solver</code> / <code>#pos</code>) Points, meaning the fastest correctly classifying solver gets most of the points.</p>
+</li>
+<li>
+<p>Unknown declared instance before timeout kills the solver: +1 Point.</p>
+</li>
+<li>
+<p>Timeout: -1 Point.</p>
+</li>
+<li>
+<p>Error: -<code>#solver</code> Points.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>where <code>#solver</code> is the amount of solvers being part of a benchmark set and <code>#pos</code> the position of the solver within all solvers who classified an instance correctly.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/ranks.png" alt="Ranking table">
+</div>
+</div>
+<div class="paragraph">
+<p>The first diagram shows a distribution for each solver distinguishing between satisfiable/unsatisfiable and timed out resp. unknown instances.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/distribution.png" alt="Distribution diagram">
+</div>
+</div>
+<div class="paragraph">
+<p>The next set of diagrams show the same distribution as before as a pie diagram. This makes an easier identification possible in some cases.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/pie.png" alt="Pie diagram">
+</div>
+</div>
+<div class="paragraph">
+<p>A cactus diagram follows. In these kind of plots all instances are sorted by their solving time and listed ascending as a point within a line diagram.
+The first cactus plot lists all instances of a track / benchmark set. It gives an intuition of how quick a solver classifies all instances over time. The structure of a cactus plot automatically holds all timed out instances in the end.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/cactus_unk.png" alt="Cactus plot with unknowns and errors">
+</div>
+</div>
+<div class="paragraph">
+<p>Excluding the unknowns an errors gives an intuition of how quick a solver comes up with the correct answers. By clicking on a label of the graph, the user is able to active/deactivate a specific solver.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/cactus.png" alt="Cactus plot w/o unknowns and errors">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tool_comparison">Tool Comparison</h3>
+<div class="paragraph">
+<p>This page offers you the opportunity to compare different solvers per instances; finding out what instances caused a good or a bad behaviour.</p>
+</div>
+<div class="paragraph">
+<p>The navigation between different tracks and benchmark summaries is again done using the side navigation as explained previously.</p>
+</div>
+<div class="paragraph">
+<p>The top box allows you to choose between the available solvers by clicking on a label. Solvers highlighted in green are part of the current comparison. You can disable them by simply clicking the x. White labelled solvers are not part of the comparison. Active them again by a click.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/label.png" alt="Tool selection">
+</div>
+</div>
+<div class="paragraph">
+<p>The comparison table holds the following elements:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The instance name - corresponding to the input file. Click on the file icon <clr-icon shape="file"></clr-icon> to view the instance.</p>
+</li>
+<li>
+<p>For each solver (listed in the first row of the table):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A Result classified by an icon <clr-icon shape="check"></clr-icon> means the solver classified the instance as satisfiable,<clr-icon shape="times"></clr-icon> unsatisfiable and <clr-icon shape="unknown-status"></clr-icon> as unknown or timed out.</p>
+</li>
+<li>
+<p>Time to solve the instance</p>
+</li>
+<li>
+<p>The model. If a model is available click on the icon <clr-icon shape="list"></clr-icon> The absense of a model is indicated by <clr-icon shape="no-access"></clr-icon> Whenever a solver terminated unexpectedly we indicate this behaviour by <clr-icon shape="error-standard" class="is-solid"></clr-icon>. Click on the icon to view the solvers output.</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/table.png" alt="Table header">
+</div>
+</div>
+<div class="paragraph">
+<p>The filter icon on the right hand side gives you the following options:</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/filter.png" alt="Filter view">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic" start="3">
+<li>
+<p>Show unique classfied instances, that is if there is only on solver within the current view which classified the instance. The corresponding solver is marked by <clr-icon shape="check-circle" class="is-solid"></clr-icon> resp. <clr-icon shape="times-circle" class="is-solid"></clr-icon>.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/uniquely.png" alt="Uniquely classified instances">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic" start="4">
+<li>
+<p>Show instances with errors, where only wrongly classified instances given the technique are displayed. The column of the wrong solver is marked again with  <clr-icon shape="check-circle" class="is-solid"></clr-icon> resp. <clr-icon shape="times-circle" class="is-solid"></clr-icon>. resp.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/error.png" alt="Errornous classified instances">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic" start="5">
+<li>
+<p>Show undeclared instances lists all instances where no solver found a solution.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/undeclared.png" alt="Undeclared instances">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic" start="6">
+<li>
+<p>Show only instances, where the solver terminated unexpectedly.</p>
+</li>
+<li>
+<p>Only ambiguous answers is showing only instances where an error classification was not possible. This could for instance happen if we do not know the correct answer of an instance and the solvers are not agreeing.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_availability">Availability</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_binary">Binary</h3>
+<div class="paragraph">
+<p>We distribute the source of ZaligVinder <a href="https://git.zs.informatik.uni-kiel.de/dbp/wordbenchmarks">here</a>. The results shown on this website are available as SQLite database file for ZaligVinder. You can download it <a href="https://www.informatik.uni-kiel.de/~mku/zaligvinder/ZaligVinder_AST20_database.tar.gz">here</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+
+<h2 id="_a_comparison_on_the_collection_of_benchmarks">A comparison on the collection of benchmarks</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Within the paper we gather sets of benchmarks from literature. They are a available <a href="https://git.zs.informatik.uni-kiel.de/dbp/wordbenchmarks/tree/comparison_start/models">here</a>.</p>
+</div>
+<div class="paragraph">
+<p>In the following we give a small summary overview, of how four of the major string solvers, <a href="http://cvc4.cs.stanford.edu/web/">CVC4</a>, <a href="https://github.com/Z3Prover/z3">Z3str</a>, <a href="https://github.com/Z3Prover/z3">Z3Seq</a> and
+<a href="https://github.com/guluchen/z3/tree/new_trau">Trau</a>, and our tool <a href="https://www.informatik.uni-kiel.de/~mku/woorpjeLevi/">Woorpje</a> (on it&#8217;s restricted set of features) survived.</p>
+</div>
+<div class="paragraph">
+<p>To obtain the below results we used a server having 64 Intel&#174; Xeon&#174; Gold 6242 CPU @ 2.80GHz and 1.5 TB RAM running Ubuntu Linux. We compiled the master of Z3s <a href="https://github.com/Z3Prover/z3.git">GIT</a> on commit c816d45a7def3f7ca18fa3e94f28f7450c183a05 for Z3str3 and Z3Seq.
+For Trau we used their <a href="https://github.com/guluchen/z3.git">GIT</a> version on commit ce850ac2751f2c3fc30e2e62ed26ffc6b9daa1f5. CVC4 was acquired as <a href="https://github.com/CVC4/CVC4/releases/download/1.7/cvc4-1.7-x86_64-linux-opt">binary</a>.</p>
+</div>
+<div class="paragraph">
+<p>In order to reproduce our results make sure to install the python3 libs <code>matplotlib</code>, <code>tabulate</code> and <code>npyscreen</code> by executing:</p>
+</div>
+<div class="paragraph">
+<p><code>pip3 install matplotlib tabulate npyscreen</code></p>
+</div>
+<div class="paragraph">
+<p>Afterwards setup the <code>toolconfig.json</code> file as described in the paper. To start the actual benchmark run, execute</p>
+</div>
+<div class="paragraph">
+<p><code>pytho3 ast20</code></p>
+</div>
+<div class="paragraph">
+<p>The script will create a SQLite Database file and produces a shell output.</p>
+</div>
+<div class="sect2">
+<h3 id="_woorpje_word_equations">Woorpje Word Equations</h3>
+<div class="paragraph">
+<p>We created a set of benchmarks to test the abilities of our tool Woorpje. It contains 5 tracks with instances containing mostly string constraints, but also linear length constrains. Running this set on their competitors revealed its difficulty. The set is generated using several hard involved examples developed in the theoretical study of word equations.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/woorpje.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">variableTermRatio_3.14_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">611</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">164</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">34</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1333.49</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">variableTermRatio_3.14_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">569</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">162</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">77</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2937.93</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">variableTermRatio_3.14_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">612</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">164</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">33</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1448.25</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">waitingListLimit_15_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">612</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">161</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">36</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1320.17</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">waitingListLimit_15_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">571</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">160</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">77</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2864.23</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">waitingListLimit_15_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">617</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">161</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">31</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1380.54</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationGrowth_1.075_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">613</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">162</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">34</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1350.58</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationGrowth_1.075_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">583</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">161</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2445.48</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationGrowth_1.075_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">603</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">162</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">44</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1722.63</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationLength_20_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">609</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">164</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">36</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1378.36</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationLength_20_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">558</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">163</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">86</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3154.42</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationLength_20_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">616</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">164</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">29</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1382.88</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">none_5_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">602</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">161</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">44</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1660.04</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">none_5_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">605</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">161</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">42</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1603.85</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">none_5_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">606</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">161</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">41</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1596.05</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">535</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">165</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">109</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3640.26</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">446</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">176</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">23</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">13</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">164</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5281.62</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">539</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">163</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">107</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3417.15</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">562</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">208</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">30</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">39</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">809</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1967.58</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_pyex">PyEx</h3>
+<div class="paragraph">
+<p>Reynolds et al. used the tool PyEx - a symbolic executor for Python programs - to generate a set of 25,421 bench-
+marks. They used 19 target functions sampled from four popular Python packages to generate the resulting benchmark set.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://sites.google.com/site/z3strsolver/benchmarks">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/pyex.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6497</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1369</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">548</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8414</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">26246.91</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1129</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1784</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">444</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">414</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5057</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8414</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">163031.49</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1357</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">762</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8414</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">32440.41</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7019</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1384</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">11</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8414</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5307.30</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_pisa">Pisa</h3>
+<div class="paragraph">
+<p>Zheng et al. [23] generated a set of benchmarks using constraints from real-world Java sanitizer methods which where used to evaluate the PISA system. It contains 12 complex instances including multiple different string operations like indexOf, substring as a result of the Sanitizer structure.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://sites.google.com/site/z3strsolver/benchmarks">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/pisa.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.53</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">30.63</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.11</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.60</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_norn_benchmarks">Norn Benchmarks</h3>
+<div class="paragraph">
+<p>Abdulla et al. share a set of 5 tracks consisting of queries generated during verification of string-processing programs. Each formula is rather small compared to those in other sets of
+benchmarks , but makes heavy use of regular expressions containing Kleene stars. This makes it a challenging one for all solvers.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="http://user.it.uu.se/~jarst116/norn/">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/norn.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">544</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">104</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">339</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1027</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12244.94</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">217</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">90</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">66</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">654</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1027</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20145.14</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">656</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">186</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">185</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1027</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5668.98</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">214</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">180</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">633</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">74</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1027</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">218.54</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_trau_light">Trau Light</h3>
+<div class="paragraph">
+<p>Within this set of benchmarks generated by Abdulla et al. each instance holds multiple easy, mostly unsatisfiable formulae consisting only of string constraints. The set aims for testing the ability of declaring inputs as unsatisfiable, which is in general harder than finding a solution.</p>
+</div>
+<div class="paragraph">
+<p>Set taken from <a href="https://github.com/guluchen/z3/tree/master">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/trau.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">100</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">64.34</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">93</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">100</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">33.95</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">100</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">93.22</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">100</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">42.90</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_leetcode_strings">Leetcode Strings</h3>
+<div class="paragraph">
+<p>An interesting set of benchmarks shared by the <a href="https://github.com/guluchen/z3/tree/master">Trau</a> developers.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/leetcode.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">881</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1785</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2666</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">98.53</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">653</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1791</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">157</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">65</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2666</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2186.52</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">881</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1785</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2666</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">328.82</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">881</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1785</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2666</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">309.15</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_ibm_appscan">IBM Appscan</h3>
+<div class="paragraph">
+<p>Zheng et al. generated a second set of benchmarks using the output of security warnings generated by IBM Security AppScan Source Edition. They ran the tool on popular websites to obtain traces of program statements which where translated into SMT formulae. The traces reflect potentially vulnerable information flows and therefore represent common real-world constraints. The set consists of 8 instances containing string functions and disequality constraints over strings.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://sites.google.com/site/z3strsolver/benchmarks">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/ibm.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">31.69</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">124.08</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">43.56</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.73</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_sloth_tests">Sloth Tests</h3>
+<div class="paragraph">
+<p>A nice set of benchmarks shared by the Sloth developers. This set is available in their <a href="https://github.com/uuverifiers/sloth/tree/master/tests">GIT</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/stringfuzz.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">408</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">207</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">450</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14602.83</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">591</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">223</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">246</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8028.16</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">626</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">259</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">180</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5894.73</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">512</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">329</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">223</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7416.98</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_stringfuzz_tests">StringFuzz Tests</h3>
+<div class="paragraph">
+<p>Blotsky et al. introduced a tool called StringFuzz to generate and transform SMT-Lib Instances of string problems  implemented in Python. The authors share a set of benchmarks generated using their tool, which aims to address typical industrial instances, potentially challenging for solvers. The set contains 17 tracks ranging from instances containing pure string constraints to hard to solve regular expression constraints. They aim for generating instances which follow structures hard to handle by some solvers (e.g. tree-like instances).</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://sites.google.com/site/z3strsolver/benchmarks">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/stringfuzz.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">408</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">207</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">450</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14602.83</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">591</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">223</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">246</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8028.16</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">626</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">259</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">180</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5894.73</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">512</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">329</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">223</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1065</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7416.98</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_kaluza">Kaluza</h3>
+<div class="paragraph">
+<p>Saxena et al. used their tool Kudzu, a symbolic execution framework for JavaScript, to generate more than 50,000 string solving problems. The instances were obtained by lowering JavaScript operations from real world AJAX web applications and are available on their <a href="http://webblaze.cs.berkeley.edu/2010/kaluza/">website</a>. The instances are build around string constraints, membership in regular languages (given as regular expressions), and inequalities involving length constraints on string variables. While the size of the formula varies per instance, the variety in the used string operations is rather small. The resulting set of benchmarks was translated by Liang et al. into the SMT-Lib format. It uses string, boolean and linear constraints together with a small amount of string operations.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://sites.google.com/site/z3strsolver/benchmarks">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/kaluza.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">33301</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">11799</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2184</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">47284</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">70747.60</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">32633</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">11832</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">237</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">32</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2582</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">47284</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">84339.60</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">35235</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12014</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">35</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">47284</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">17841.00</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">34856</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12014</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">414</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">47284</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">27307.57</p></td>
+</tr>
+</tbody>
+</table>
+<div class="sect3">
+<h4 id="_kaluza_restricted_to_the_feature_set_of_woorpje">Kaluza restricted to the feature set of woorpje</h4>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/kaluzawoorpje.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">variableTermRatio_3.14_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">353.26</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">variableTermRatio_3.14_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">491.66</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">variableTermRatio_3.14_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">493.93</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">waitingListLimit_15_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">328.10</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">waitingListLimit_15_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">402.88</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">waitingListLimit_15_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">399.78</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationGrowth_1.075_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">328.45</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationGrowth_1.075_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">404.05</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationGrowth_1.075_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">400.11</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationLength_20_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">327.61</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationLength_20_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">403.28</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">equationLength_20_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">397.56</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">none_5_cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">327.66</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">none_5_z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">384.72</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">none_5_z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">363.54</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">511.90</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">512.28</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">260.01</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">14793</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">524.46</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cashew_suite">Cashew Suite</h3>
+<div class="paragraph">
+<p>Brennan et al. used their tool called Cashew to normalise (in terms of their tool) 18,896 by Luu et al. extracted benchmarks from the Kaluza benchmark set. By constructing this subset the authors aimed to eliminate the redundancy in the original set. The set varies between easy and difficult string constraints, with Boolean constraints, without using string operations.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://ieee-dataport.org/documents/benchmark-suite-integrated-approach-effective-injection-vulnerability-analysis-web">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/cashew.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">376</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">394</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">238.68</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">361</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">394</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">650.20</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">366</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">394</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">516.41</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">376</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">12</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">394</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">225.96</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_joaco_suite">JOACO Suite</h3>
+<div class="paragraph">
+<p>In order to evaluate their tool JOACO, a tool to detect injection vulnerabilities, Thomé et al. created a set of 94 instances based on 11 open-source Java Web applications and security benchmarks used in literature. It displays a variety of instances containing string constraints, regular expressions and string operations.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://ieee-dataport.org/documents/benchmark-suite-integrated-approach-effective-injection-vulnerability-analysis-web">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/joaco.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">17</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">57</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">268.17</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">17</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">57</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6.12</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">57</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">483.21</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">57</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">94</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">59.68</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_stranger_benchmarks">Stranger Benchmarks</h3>
+<div class="paragraph">
+<p>Yu et al.  used this set of 4 real-world PHP web applications to evaluate their tool Stranger - a tool detecting and sanitizing vulnerabilities in PHP applications. Thomé et al. manually translated these instances into the SMT-Lib format. The result was a set containing string operations, regular expression membership constrains, and string constraints.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://ieee-dataport.org/documents/benchmark-suite-integrated-approach-effective-injection-vulnerability-analysis-web">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/stranger.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">33.07</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.56</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120.00</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5.37</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_kausler_suite">Kausler Suite</h3>
+<div class="paragraph">
+<p>Kausler and Sherman generated a set of benchmarks to evaluate string constraint solvers in terms of symbolic execution. The set was brought down to 120 instances by Thomé et al. It contains constrains from 8 Java programs via dynamic symbolic execution, aiming for real word application. The set mostly contains Boolean and string constraints without string operations.</p>
+</div>
+<div class="paragraph">
+<p>The benchmarks are available <a href="https://ieee-dataport.org/documents/benchmark-suite-integrated-approach-effective-injection-vulnerability-analysis-web">here</a>.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="img/kausler.png" alt="cactus">
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tool name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared satisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unsatisfiable</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declared unknown</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Timeout</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total instances</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Total time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3seq</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">119</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">75.63</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">z3str3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">115</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">134.76</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cvc4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">41.95</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">trau</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">9.11</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_people_involved">People involved</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://www.zs.informatik.uni-kiel.de/de/mitarbeiter/mitja-kulczynski">Mitja Kulczynski</a></p>
+</li>
+<li>
+<p><a href="http://flmanea.blogspot.com/">Florin Manea</a></p>
+</li>
+<li>
+<p><a href="https://www.zs.informatik.uni-kiel.de/de/mitarbeiter/nowotka">Dirk Nowotka</a></p>
+</li>
+<li>
+<p><a href="https://www.boegstedpoulsen.dk">Danny Bøgsted Poulsem</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2020-01-26 10:42:59 +0100
+</div>
+</div>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  messageStyle: "none",
+  tex2jax: {
+    inlineMath: [["\\(", "\\)"]],
+    displayMath: [["\\[", "\\]"]],
+    ignoreClass: "nostem|nolatexmath"
+  },
+  asciimath2jax: {
+    delimiters: [["\\$", "\\$"]],
+    ignoreClass: "nostem|noasciimath"
+  },
+  TeX: { equationNumbers: { autoNumber: "none" } }
+})
+MathJax.Hub.Register.StartupHook("AsciiMath Jax Ready", function () {
+  MathJax.InputJax.AsciiMath.postfilterHooks.Add(function (data, node) {
+    if ((node = data.script.parentNode) && (node = node.parentNode) && node.classList.contains('stemblock')) {
+      data.math.root.display = "block"
+    }
+    return data
+  })
+})
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+(then (using-params simplify :elim_and true :blast_distinct true :local_ctx true :som true :flat true :hi_div0 true :hoist_mul true :pull_cheap_ite true :push_ite_bv true) solve-eqs qfnia)

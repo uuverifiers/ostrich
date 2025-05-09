@@ -1,0 +1,5 @@
+[debug] Created transactional ClassFileManager with tempDir = /home/hudh/github/ostrich/ecma2020/target/scala-2.11/classes.bak
+[debug] About to delete class files:
+[debug] We backup class files:
+[debug] Created transactional ClassFileManager with tempDir = /home/hudh/github/ostrich/ecma2020/target/scala-2.11/classes.bak
+[debug] Removing the temporary directory used for backing up class files: /home/hudh/github/ostrich/ecma2020/target/scala-2.11/classes.bak

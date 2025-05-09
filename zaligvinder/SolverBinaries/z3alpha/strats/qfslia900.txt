@@ -1,0 +1,1 @@
+(if (> size 1148) (then propagate-values ext_str (using-params smt :random_seed 200)) (or-else (try-for (then ext_strToRegex ext_strSimplify propagate-values solve-eqs ext_strSimplify ext_strSimplify smt) 32000) (then propagate-values (or-else (try-for (then ext_str (using-params smt :random_seed 200)) 1040000) (then solve-eqs arr)))))

@@ -10,3 +10,12 @@
 /project/project
 /project/target
 /project/build.properties
+
+# ignore database
+*.db
+
+# ignore python cache
+__pycache__
+
+tmp/
+*.xlsx

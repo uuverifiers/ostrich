@@ -1,0 +1,1 @@
+(or-else (then (try-for (then propagate-values ext_str (using-params smt :random_seed 0)) 1140000) fail-if-undecided) (or-else (then (try-for (then solve-eqs (using-params smt :random_seed 200)) 30000) fail-if-undecided) (then elim-uncnstr solve-eqs (using-params simplify :elim_and true :blast_distinct true :local_ctx true) ext_strSimplify arr)))

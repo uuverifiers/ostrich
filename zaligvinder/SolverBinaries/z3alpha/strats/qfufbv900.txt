@@ -1,0 +1,1 @@
+(if (> num-exprs 13580) (if (> size 1670) (then propagate-values ctx-simplify (using-params simplify :elim_and true :blast_distinct true :local_ctx true :som true :flat true) simplify qfufbv) (then qfufbv_ackr solve-eqs simplify smt)) (then solve-eqs propagate-values qfufbv))
