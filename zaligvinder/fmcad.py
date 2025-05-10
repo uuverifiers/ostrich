@@ -48,6 +48,6 @@ testrunner(12).runTestSetup(
 # since Z3alpha has a bug that causes it to hang
 z3alpha_cmd = ploc.findProgram("Z3alpha")
 z3alpha_dir = os.path.dirname(os.path.abspath(z3alpha_cmd))
-os.system(f"sudo pkill -f '^{z3alpha_dir}'")
+os.system(f"pkill -f '^{z3alpha_dir}'")
 
 startwebserver.Server(store.getDB()).startServer()
