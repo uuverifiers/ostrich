@@ -2,6 +2,12 @@
 This repository contains the Docker image for the artifact of OSTRICH2, an efficient SMT solver for the string theory.
 The artifact is only test for Linux and WSL2 in Windows now. You need about (77/the number of CPU cores) hours to run the experiments.   
 
+# Structure
+- The `Dockerfile` contains the instructions to build the Docker image.
+- The `zaligvinder` folder contains the source code of the Zaligvinder, a testing tool for string solvers.
+- The `scripts` folder contains the scripts used by the docker image.
+- Other folders and files are the source code and dependencies of OSTRICH2.
+
 # Requirements
 - A Docker [installation](https://docs.docker.com/engine/install/)
 - 8 GB of RAM
@@ -29,7 +35,7 @@ To run the Docker image, use the following command:
 ```bash
 sudo docker run -it --rm --name ostrich2-artifact ostrich2-artifact
 ```
-This will start a new container named `ostrich2-artifact` and open an interactive terminal session inside it. The experiment are run automatically when the container starts.
+This will start a new container named `ostrich2-artifact` and open an interactive terminal session inside it. The experiment run automatically when the container starts.
 
 
 # Web Interface
