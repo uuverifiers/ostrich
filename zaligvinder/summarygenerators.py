@@ -76,7 +76,7 @@ def terminalResult (track,res):
         unk = sum([1 for i in res[n] if None == i.result and i.timeouted != True])   
         to = sum([1 for i in res[n] if None == i.result and i.timeouted == True])
         t = sum([i.time for i in res[n] ])
-        table.append ([n,sat,nsat,unk,to,(sat+nsat),smtcalls])
+        table.append ([n,sat,nsat,unk,to,(sat+nsat)])
     print(tabulate.tabulate(table,["Solver", "Sat", "Unsat", "Unknown", "Timeout", "Solved"]))
 
 def cactusPlot (track,res):
