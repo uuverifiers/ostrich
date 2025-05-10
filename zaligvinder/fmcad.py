@@ -4,6 +4,7 @@ from runners.multi import TheRunner as testrunner
 import utils,storage, summarygenerators
 import voting.majority as voting
 import startwebserver
+import os
 # tools
 import tools.cvc5
 import tools.ostrich1
@@ -42,4 +43,11 @@ verifiers = [""]
 testrunner(12).runTestSetup(
     tracks, solvers, voting.MajorityVoter(), summaries, store, timeout, ploc, verifiers
 )
+
+# We need to kill any running instances of Z3alpha
+# since Z3alpha has a bug that causes it to hang
+z3alpha_cmd = ploc.findProgram("Z3alpha")
+z3alpha_dir = os.path.dirname(os.path.abspath(z3alpha_cmd))
+os.system(f"sudo pkill -f '^{z3alpha_dir}'")
+
 startwebserver.Server(store.getDB()).startServer()

@@ -72,7 +72,7 @@ def addRunner(addto):
     from functools import partial
     params = {
               "ADT":           ["-stringSolver=ap.theories.strings.SeqStringTheory"],
-              "CEA":           ["+cea"],
+              "CE":           ["+cea"],
             }
     for i in params.keys():
         addto['OSTRICH2-'+i] = partial(run, params[i])
