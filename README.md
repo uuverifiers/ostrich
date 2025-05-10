@@ -1,8 +1,12 @@
 # The Artifact of OSTRICH2
-OSTRICH2 is an SMT solver for string constraints. And this repository contains the Docker image for the OSTRICH2 artifact.
+This repository contains the Docker image for the artifact of OSTRICH2, an efficient SMT solver for the string theory.
+The artifact is only test for Linux and WSL2 in Windows now. You need about (77/the number of CPU cores) hours to run the experiments.   
 
 # Requirements
 - A Docker [installation](https://docs.docker.com/engine/install/)
+- 8 GB of RAM
+- 3 GB of disk space for the Docker image
+- 2 CPU cores (or more), the more the less time it takes to run the experiments
 
 
 # Building the Docker image

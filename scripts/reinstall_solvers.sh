@@ -9,7 +9,7 @@ cd $WORKD_DIR && mkdir ostrich2 && cd ostrich2 &&
   git clone https://github.com/uuverifiers/ostrich.git &&
   cd ostrich &&
   git checkout 0a58d0c &&
-  sbt assembly &&
+  sbt 'set test in assembly := {}' clean assembly &&
   mkdir -p $BINARY_DIR/ostrich2/target &&
   cp target/scala-* $BINARY_DIR/ostrich2/target -r &&
   cp ostrich $BINARY_DIR/ostrich2/ &&
