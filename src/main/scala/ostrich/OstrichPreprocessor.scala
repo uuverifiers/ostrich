@@ -368,6 +368,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
       re_charrange(lower, upper)
 
+    case (IAtom(`str_is_digit`, _), Seq(str : ITerm)) =>
+      str_in_re(str, re_charrange(0x0030, 0x0039))
+
 
 /*
 //TODO: how to control the translation from length constraints to regexes, and vice versa?

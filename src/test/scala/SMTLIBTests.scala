@@ -379,6 +379,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("str.at-bug.smt2") =
     checkFile("tests/str.at-bug.smt2", "sat")
 
+  property("is-digit.smt2") =
+    checkFile("tests/is-digit.smt2", "sat")
+  property("is-digit-2.smt2") =
+    checkFile("tests/is-digit-2.smt2", "sat")
+
   property("email-regex.smt2") =
     checkFile("tests/email-regex.smt2", "sat")
   property("name-regex.smt2") =
