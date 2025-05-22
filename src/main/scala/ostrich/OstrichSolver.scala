@@ -53,7 +53,7 @@ import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap,
                                  HashSet => MHashSet, LinkedHashMap}
 
-object OstrichSolver {
+object OstrichSolverXX {
 
   /**
    * Exception thrown by the backward propagation algorithm when it
@@ -77,10 +77,11 @@ object OstrichSolver {
 
 }
 
-class OstrichSolver(theory : OstrichStringTheory,
+// TODO: remove
+class OstrichSolverXX(theory : OstrichStringTheory,
                     flags : OFlags) {
 
-  import OstrichSolver._
+  import OstrichSolverXX._
   import theory.{str_from_char, str_len, str_empty, str_cons, str_++,
                  str_in_re, str_char_count,
                  str_in_re_id, str_to_re, re_from_str,
@@ -324,10 +325,10 @@ class OstrichSolver(theory : OstrichStringTheory,
 
       val exploration =
         if (eagerMode)
-          Exploration.eagerExp(funApps, regexes, strDatabase,
+          ExplorationXX.eagerExp(funApps, regexes, strDatabase,
                                lProver, lengthVars.toMap, useLength, flags)
         else
-          Exploration.lazyExp(funApps, regexes, strDatabase,
+          ExplorationXX.lazyExp(funApps, regexes, strDatabase,
                               lProver, lengthVars.toMap, useLength, flags)
 
       val result = exploration.findModel

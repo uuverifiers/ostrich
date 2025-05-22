@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -163,6 +163,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
         (op, List(a(1)), a(3))
       }
 
+    // Function that is not used anymore, to be removed
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
@@ -180,6 +181,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       Some((op, List(a(0)), a(2)))
     }
 
+    // Function that is not used anymore, to be removed
     case FunPred(`str_at_right`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
@@ -197,6 +199,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       Some((op, List(a(0)), a(2)))
     }
 
+    // Function that is not used anymore, to be removed
     case FunPred(`str_trim`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(trimLeft))  = a(1)

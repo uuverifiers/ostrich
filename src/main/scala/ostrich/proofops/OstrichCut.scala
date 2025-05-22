@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2024 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2024-2025 Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -64,6 +64,7 @@ class OstrichCut(val theory : OstrichStringTheory)
   import theory._
 
   def handleGoal(goal : Goal, cutEverything : Boolean) : Seq[Plugin.Action] = {
+    assert(cutEverything, "selective cuts not finalized yet")
     val stringVariables =
       if (cutEverything) findAllStringVars(goal) else findCutVars(goal)
 
@@ -96,6 +97,8 @@ class OstrichCut(val theory : OstrichStringTheory)
    * applications; or there are other formulas (not belonging to the theory
    * of strings) that refer to <code>x</code>. We return the set of all
    * string variables that such variables <code>x</code> depend on.
+   * 
+   * Currently not used.
    */
   private def findCutVars(goal : Goal) : IndexedSeq[ConstantTerm] = {
     val predConj = goal.facts.predConj

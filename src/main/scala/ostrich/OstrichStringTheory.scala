@@ -81,6 +81,7 @@ object OstrichStringTheory {
 
   }
 
+  case class BlockingActions(actions : Seq[Plugin.Action]) extends Exception
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -357,7 +358,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     }
   }
 
-  private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
+//  private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
   private val ostrichClose       = new OstrichClose(this)
   private val intersectionRule = new OstrichIntersect(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
@@ -400,6 +401,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       }
     }
 
+/*
+  TODO: remove
+
     private def callBackwardProp(goal : Goal) : Seq[Plugin.Action] =
       try {
         modelCache(goal.facts) {
@@ -419,7 +423,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       } catch {
         case OstrichSolver.BlockingActions(actions) => actions
       }
-
+*/
       /*
     override def computeModel(goal : Goal) : Seq[Plugin.Action] = {
       println("computeModel")

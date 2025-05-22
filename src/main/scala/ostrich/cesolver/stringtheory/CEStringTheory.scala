@@ -43,7 +43,7 @@ import ap.proof.goal.Goal
 import ap.util.Seqs
 
 import ostrich.cesolver.preprocess.CEPreprocessor
-import ostrich.{OFlags, OstrichSolver, OstrichStringTheory}
+import ostrich.{OFlags, OstrichStringTheory}
 import ostrich.OstrichEqualityPropagator
 import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.cesolver.preprocess.CEInternalPreprocessor
@@ -224,7 +224,7 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
             List(Plugin.AddFormula(Conjunction.TRUE))
         }
       } catch {
-        case OstrichSolver.BlockingActions(actions) => actions
+        case OstrichStringTheory.BlockingActions(actions) => actions
         case t: ap.util.Timeout                     => throw t
         case t: Throwable                           => throwWithStackTrace(t)
       }

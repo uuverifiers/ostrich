@@ -49,7 +49,7 @@ import ap.util.{Seqs, Timeout}
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, ArrayStack, LinkedHashSet, BitSet => MBitSet, HashMap => MHashMap, HashSet => MHashSet}
 
-object Exploration {
+object ExplorationXX {
   case class TermConstraint(t : Term, aut : Automaton)
 
   type ConflictSet = Seq[TermConstraint]
@@ -112,7 +112,7 @@ object Exploration {
                lengthProver : Option[SimpleAPI],
                lengthVars : Map[Term, Term],
                strictLengths : Boolean,
-               flags : OFlags) : Exploration =
+               flags : OFlags) : ExplorationXX =
     new EagerExploration(funApps, initialConstraints, strDatabase,
       lengthProver, lengthVars, strictLengths, flags)
 
@@ -122,7 +122,7 @@ object Exploration {
               lengthProver : Option[SimpleAPI],
               lengthVars : Map[Term, Term],
               strictLengths : Boolean,
-              flags : OFlags) : Exploration =
+              flags : OFlags) : ExplorationXX =
     new LazyExploration(funApps, initialConstraints, strDatabase,
       lengthProver, lengthVars, strictLengths, flags)
 
@@ -136,7 +136,7 @@ object Exploration {
 /**
  * Depth-first exploration of a conjunction of function applications
  */
-abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
+abstract class ExplorationXX(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            val initialConstraints : Seq[(Term, Automaton)],
                            strDatabase : StrDatabase,
                            lengthProver : Option[SimpleAPI],
@@ -144,7 +144,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
                            strictLengths : Boolean,
                            flags : OFlags) {
 
-  import Exploration._
+  import ExplorationXX._
   import OFlags.debug
 
   def measure[A](op : String)(comp : => A) : A =
@@ -482,7 +482,7 @@ abstract class Exploration(val funApps : Seq[(PreOp, Seq[Term], Term)],
 
           Console.err.println("   ... adding cut over result for " + res)
 
-          throw new OstrichSolver.BlockingActions(List(
+          throw new OstrichSolverXX.BlockingActions(List(
             Plugin.CutSplit(resEq, List(), List())))
         }
 
@@ -718,10 +718,10 @@ class EagerExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                        _lengthVars : Map[Term, Term],
                        _strictLengths : Boolean,
                        _flags : OFlags)
-  extends Exploration(_funApps, _initialConstraints, _strDatabase,
+  extends ExplorationXX(_funApps, _initialConstraints, _strDatabase,
     _lengthProver, _lengthVars, _strictLengths, _flags) {
 
-  import Exploration._
+  import ExplorationXX._
 
   protected val needCompleteContentsForConflicts : Boolean = true
 
@@ -813,10 +813,10 @@ class LazyExploration(_funApps : Seq[(PreOp, Seq[Term], Term)],
                       _lengthVars : Map[Term, Term],
                       _strictLengths : Boolean,
                       _flags : OFlags)
-  extends Exploration(_funApps, _initialConstraints, _strDatabase,
+  extends ExplorationXX(_funApps, _initialConstraints, _strDatabase,
     _lengthProver, _lengthVars, _strictLengths, _flags) {
 
-  import Exploration._
+  import ExplorationXX._
 
   protected val needCompleteContentsForConflicts : Boolean = false
 

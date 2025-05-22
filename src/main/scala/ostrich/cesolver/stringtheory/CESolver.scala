@@ -55,14 +55,13 @@ import ostrich.cesolver.preop.{SubStringCEPreOp, IndexOfCEPreOp}
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.cesolver.core.ParikhExploration
 import ap.parser.Internal2InputAbsy
-import ostrich.{OFlags, OstrichSolver}
+import ostrich.{OFlags, OstrichStringTheory}
 import ostrich.cesolver.preop.ConcatCEPreOp
 import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
-  import OstrichSolver._
   import theory.{
     str_len,
     str_in_re,
@@ -496,7 +495,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
                 c + " != " + d
             )
             val strId = strDatabase.list2Id(cVal)
-            throw new BlockingActions(
+            throw new OstrichStringTheory.BlockingActions(
               List(
                 Plugin.AxiomSplit(
                   List(c =/= d),

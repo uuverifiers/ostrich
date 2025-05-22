@@ -59,7 +59,7 @@ import ap.parser.InputAbsy2Internal
 import ap.terfor.Term
 import ap.terfor.TermOrder
 import ostrich.cesolver.util.{TermGenerator, ParikhUtil}
-import ostrich.OstrichSolver
+import ostrich.OstrichStringTheory
 import ap.proof.theoryPlugins.Plugin
 import ap.parser.IFormula
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
@@ -318,7 +318,7 @@ class ParikhExploration(
 
         Console.err.println("   ... adding cut over result for " + res)
 
-        throw new OstrichSolver.BlockingActions(
+        throw new OstrichStringTheory.BlockingActions(
           List(
             Plugin.CutSplit(conj(InputAbsy2Internal(resEq, o)), List(), List())
           )
