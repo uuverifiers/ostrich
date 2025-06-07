@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -69,17 +69,27 @@ object PortfolioSetup {
   private val ceaStringTheory =
     "ostrich.cesolver.stringtheory.CEStringTheory"
 
-  // Run the BW, ADT, CEA and RCP solvers
+  // Run the RCP, ADT, CEA solvers
   ParallelFileProver.addPortfolio(
     "strings", arguments => {
       import arguments._
       val strategies =
         List(
+          // Configuration 1: RCP: BWD + Nielsen
           ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(baseSettings, ostrichStringTheory),
-            f"-stringSolver=$ostrichStringTheory",
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter"),
+            f"-stringSolver=${ostrichStringTheory}:-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter",
             1000000000,
             2000),
+          // Configuration 2: RCP: BWD + FWD + EAGER + Nielsen
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,+nielsenSplitter"),
+            f"-stringSolver=${ostrichStringTheory}:+eager,+forwardPropagation,+backwardPropagation,+nielsenSplitter",
+            1000000000,
+            2000),
+          // Configuration 3: CEA
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
@@ -87,12 +97,7 @@ object PortfolioSetup {
             "+cea",
             1000000000,
             2000),
-          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(baseSettings,
-              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter"),
-            f"-stringSolver=$ostrichStringTheory:+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter",
-            1000000000,
-            2000),
+          // Configuration 3: ADT
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
