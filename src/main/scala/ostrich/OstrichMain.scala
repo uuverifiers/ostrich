@@ -81,23 +81,30 @@ object PortfolioSetup {
               ostrichStringTheory + ":-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter"),
             f"-stringSolver=${ostrichStringTheory}:-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter",
             1000000000,
-            2000),
-          // Configuration 2: RCP: BWD + FWD + EAGER + Nielsen
-          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(baseSettings,
-              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,+nielsenSplitter"),
-            f"-stringSolver=${ostrichStringTheory}:+eager,+forwardPropagation,+backwardPropagation,+nielsenSplitter",
-            1000000000,
-            2000),
-          // Configuration 3: CEA
+            1000),
+          // Configuration 2: CEA
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
               ceaStringTheory),
             "+cea",
             1000000000,
-            2000),
-          // Configuration 3: ADT
+            1000),
+          // Configuration 3: RCP: BWD + FWD + Nielsen
+/*          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,+nielsenSplitter"),
+            f"-stringSolver=${ostrichStringTheory}:+forwardPropagation,+backwardPropagation,+nielsenSplitter",
+            1000000000,
+            1000), */
+          // Configuration 4: RCP: BWD + FWD + EAGER + Parikh
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh"),
+            f"-stringSolver=${ostrichStringTheory}:+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh",
+            1000000000,
+            1000),
+          // Configuration 5: ADT
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
@@ -105,7 +112,7 @@ object PortfolioSetup {
             "-stringSolver=" +
               Param.STRING_THEORY_DESC.defau,
             1000000000,
-            2000))
+            1000))
       ParallelFileProver(createReader,
         timeout,
         true,
@@ -117,37 +124,5 @@ object PortfolioSetup {
         prelResultPrinter,
         threadNum)
     })
-
-
-  // Run the BW and ADT solvers
-  ParallelFileProver.addPortfolio(
-    "bw-adt", arguments => {
-                 import arguments._
-                 val strategies =
-                   List(ParallelFileProver.Configuration(
-                          baseSettings,
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC(baseSettings),
-                          1000000000,
-                          2000),
-                        ParallelFileProver.Configuration(
-                          Param.STRING_THEORY_DESC.set(
-                                  baseSettings,
-                                  Param.STRING_THEORY_DESC.defau),
-                          "-stringSolver=" +
-                            Param.STRING_THEORY_DESC.defau,
-                          1000000000,
-                          2000))
-                 ParallelFileProver(createReader,
-                                    timeout,
-                                    true,
-                                    userDefStoppingCond(),
-                                    strategies,
-                                    1,
-                                    2,
-                                    runUntilProof,
-                                    prelResultPrinter,
-                                    threadNum)
-               })
 
 }
