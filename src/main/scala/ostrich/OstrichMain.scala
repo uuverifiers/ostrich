@@ -81,7 +81,7 @@ object PortfolioSetup {
               ostrichStringTheory + ":-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter"),
             f"-stringSolver=${ostrichStringTheory}:-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter",
             1000000000,
-            2000),
+            1500),
           // Configuration 1: CEA
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
@@ -105,14 +105,14 @@ object PortfolioSetup {
               ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,+nielsenSplitter"),
             f"-stringSolver=${ostrichStringTheory}:+forwardPropagation,+backwardPropagation,+nielsenSplitter",
             6000, // kill after 6s
-            1000),
+            500),
           // Configuration 4: RCP: BWD + FWD + EAGER + Parikh
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(baseSettings,
               ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh"),
             f"-stringSolver=${ostrichStringTheory}:+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh",
             1000000000,
-            1000)
+            500)
         )
       ParallelFileProver(createReader,
         timeout,
@@ -120,7 +120,7 @@ object PortfolioSetup {
         userDefStoppingCond(),
         strategies,
         1,
-        4,
+        5,
         runUntilProof,
         prelResultPrinter,
         threadNum)
