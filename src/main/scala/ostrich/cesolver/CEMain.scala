@@ -34,6 +34,7 @@ package ostrich.cesolver
 
 import ap.ParallelFileProver
 import ap.parameters.Param
+import ostrich.OstrichMain
 import ostrich.cesolver.util.ParikhUtil
 
 /**
@@ -42,7 +43,7 @@ import ostrich.cesolver.util.ParikhUtil
  */
 object CEMain {
 
-  val version = "unstable build (Princess: " + ap.CmdlMain.version + ")"
+  val version = OstrichMain.version
 
   /**
    * The options forwarded to Princess. They will be overwritten by options
@@ -51,6 +52,7 @@ object CEMain {
    */
   val options = List("-stringSolver=ostrich.cesolver.stringtheory.CEStringTheory", "-logo")
 
+/*
   ParallelFileProver.addPortfolio(
     "strings", arguments => {
                  import arguments._
@@ -80,6 +82,7 @@ object CEMain {
                                     prelResultPrinter,
                                     threadNum)
                })
+ */
 
   def main(args: Array[String]) : Unit = try {
     ap.CmdlMain.stackTraces = ParikhUtil.debugOpt

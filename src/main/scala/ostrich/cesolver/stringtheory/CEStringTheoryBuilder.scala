@@ -45,23 +45,6 @@ import ap.CmdlMain
   */
 class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
 
-  override val name = "OSTRICH"
-  val version = "1.2.1"
-
-  Console.withOut(Console.err) {
-    println
-    println(
-      "Loading " + name + " " + version +
-        ", a solver for string constraints"
-    )
-    println("(c) Denghang Hu, Matthew Hague, Philipp Rümmer, 2018-2023")
-    println(
-      "With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf."
-    )
-    println("For more information, see https://github.com/uuverifiers/ostrich")
-    println
-  }
-
   protected var debug = false
   protected var backend: OFlags.CEABackend.Value = Unary
 

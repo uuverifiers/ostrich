@@ -42,6 +42,7 @@ import scala.collection.mutable.ArrayBuffer
 object OstrichStringTheoryBuilder {
 
   val version = "2.0pre"
+  val name = "OSTRICH"
 
   PortfolioSetup
 
@@ -54,7 +55,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   import OstrichStringTheoryBuilder._
 
-  val name = "OSTRICH"
+  lazy val name = OstrichStringTheoryBuilder.name
 
   Console.withOut(Console.err) {
     println
