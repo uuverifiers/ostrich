@@ -75,14 +75,14 @@ object PortfolioSetup {
       import arguments._
       val strategies =
         List(
-          // Configuration 1: RCP: BWD + Nielsen
+          // Configuration 0: RCP: BWD + Nielsen
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(baseSettings,
               ostrichStringTheory + ":-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter"),
             f"-stringSolver=${ostrichStringTheory}:-eager,-forwardPropagation,+backwardPropagation,+nielsenSplitter",
             1000000000,
-            1000),
-          // Configuration 2: CEA
+            2000),
+          // Configuration 1: CEA
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
@@ -90,21 +90,7 @@ object PortfolioSetup {
             "+cea",
             1000000000,
             1000),
-          // Configuration 3: RCP: BWD + FWD + Nielsen
-/*          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(baseSettings,
-              ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,+nielsenSplitter"),
-            f"-stringSolver=${ostrichStringTheory}:+forwardPropagation,+backwardPropagation,+nielsenSplitter",
-            1000000000,
-            1000), */
-          // Configuration 4: RCP: BWD + FWD + EAGER + Parikh
-          ParallelFileProver.Configuration(
-            Param.STRING_THEORY_DESC.set(baseSettings,
-              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh"),
-            f"-stringSolver=${ostrichStringTheory}:+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh",
-            1000000000,
-            1000),
-          // Configuration 5: ADT
+          // Configuration 2: ADT
           ParallelFileProver.Configuration(
             Param.STRING_THEORY_DESC.set(
               baseSettings,
@@ -112,7 +98,22 @@ object PortfolioSetup {
             "-stringSolver=" +
               Param.STRING_THEORY_DESC.defau,
             1000000000,
-            1000))
+            1000),
+          // Configuration 3: RCP: BWD + FWD + Nielsen
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":+forwardPropagation,+backwardPropagation,+nielsenSplitter"),
+            f"-stringSolver=${ostrichStringTheory}:+forwardPropagation,+backwardPropagation,+nielsenSplitter",
+            6000, // kill after 6s
+            1000),
+          // Configuration 4: RCP: BWD + FWD + EAGER + Parikh
+          ParallelFileProver.Configuration(
+            Param.STRING_THEORY_DESC.set(baseSettings,
+              ostrichStringTheory + ":+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh"),
+            f"-stringSolver=${ostrichStringTheory}:+eager,+forwardPropagation,+backwardPropagation,-nielsenSplitter,+parikh",
+            1000000000,
+            1000)
+        )
       ParallelFileProver(createReader,
         timeout,
         true,
