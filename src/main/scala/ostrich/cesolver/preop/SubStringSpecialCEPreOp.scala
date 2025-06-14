@@ -74,10 +74,7 @@ class SubStr_0_lenMinus1 extends CEPreOp {
       Seq(epsResPre, nonEpsResPre)
     else
       Seq(nonEpsResPre)
-
-    debugPrintln("preImage.regsRelation: " + nonEpsResPre.regsRelation)
-    nonEpsResPre.toDot("preImage_of" + res.hashCode())
-
+      
     (Iterator(Seq(nonEpsResPre)), Seq())
   }
 
