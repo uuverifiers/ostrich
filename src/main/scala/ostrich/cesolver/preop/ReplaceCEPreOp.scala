@@ -350,8 +350,6 @@ object ReplaceCEPreOpShortestRegEx {
     )
     val labels = labelEnumerator.enumDisjointLabelsComplete
 
-    println("labels: " + labels)
-
     val ceTran = new CETransducer
     val nop = OutputOp("", NOP, "")
     val copy = OutputOp("", Plus(0), "")
