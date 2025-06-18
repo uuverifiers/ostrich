@@ -16,6 +16,9 @@ There are some additional options offered by OSTRICH:
 | Option         | Explanation  |
 |----------------|--------------|
 | [+-]eager      | Eagerly intersect regular expression constraints. Default: `-eager` |
+| -length=[on|off|auto]  | Switch length reasoning on or off. Default: `-length=auto` |
+| [+-]parikh  | Introduce letter count equations for all letters that occur in a problem. Default: `-parikh` | 
+| [+-]minimizeAutomata | Eager minimization of automata. Default: `-minimizeAutomata` |
 
 ## Web Interface
 
