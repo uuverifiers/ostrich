@@ -61,7 +61,7 @@ It is also possible to use prioritised finite-state transducers: multiple outgoi
 
 ### Handling of capture groups
 
-OSTRICH can also process regular expressions that include capture groups, lazy quantifiers, and anchors, although this is more experimental. For this functionality, OSTRICH understands a number of additional regular expression operators:
+OSTRICH can also process regular expressions that include capture groups, lazy quantifiers, and anchors. For this functionality, OSTRICH understands a number of additional regular expression operators:
 
 | Name                 | Explanation                                                                 |
 |----------------------|-----------------------------------------------------------------------------|
