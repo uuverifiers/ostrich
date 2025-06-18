@@ -11,7 +11,7 @@ After installing [the Scala Build tool (SBT)](https://www.scala-sbt.org/), you c
 
 In general, OSTRICH supports all options of the [Princess SMT solver](https://github.com/uuverifiers/princess), which can be displayed with `./ostrich -h`.
 
-There are some additional options offered by OSTRICH:
+There are some additional string-specific options offered by OSTRICH:
 
 | Option                    | Explanation                                                                                  |
 |---------------------------|----------------------------------------------------------------------------------------------|
