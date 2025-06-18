@@ -358,9 +358,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     }
   }
 
-//  private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
   private val ostrichClose       = new OstrichClose(this)
-  private val intersectionRule = new OstrichIntersect(this)
+  private val intersectionRule   = new OstrichIntersect(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
   private val strInReTranslator  = new OstrichStrInReTranslator(this)
   private val cutter             = new OstrichCut(this)
@@ -401,67 +400,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       }
     }
 
-/*
-  TODO: remove
-
-    private def callBackwardProp(goal : Goal) : Seq[Plugin.Action] =
-      try {
-        modelCache(goal.facts) {
-          ostrichSolver.findStringModel(goal)
-        } match {
-          case Some(m) =>
-            equalityPropagator.handleSolution(goal, m)
-          case None =>
-            if (Param.PROOF_CONSTRUCTION(goal.settings))
-              // TODO: only list the assumptions that were actually
-              // needed for the proof to close.
-              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
-                                       OstrichStringTheory.this))
-            else
-              List(Plugin.AddFormula(Conjunction.TRUE))
-        }
-      } catch {
-        case OstrichSolver.BlockingActions(actions) => actions
-      }
-*/
-      /*
-    override def computeModel(goal : Goal) : Seq[Plugin.Action] = {
-      println("computeModel")
-      cutter.handleGoal(goal, true)
-    }
-*/
-/*
-    override def computeModel(goal : Goal) : Seq[Plugin.Action] =
-      if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
-        List()
-      } else {
-        val model = (modelCache(goal.facts) {
-                       ostrichSolver.findStringModel(goal)
-                     }).get
-        implicit val order = goal.order
-        import TerForConvenience._
-
-        val stringAssignments =
-          conj(for ((x, Right(w)) <- model)
-               yield (x === strDatabase.list2Id(w)))
-
-        import TerForConvenience._
-        val lenAssignments =
-          eqZ(for ((x, Left(len)) <- model;
-                if x.constants subsetOf order.orderedConstants)
-              yield l(x - len))
-
-        val stringFormulas =
-          conj(goal.facts.iterator filter {
-             f => !Seqs.disjointSeq(f.predicates, predicates)
-           })
-
-        List(Plugin.RemoveFacts(stringFormulas),
-             Plugin.AddAxiom(List(stringFormulas),
-                             stringAssignments & lenAssignments,
-                             OstrichStringTheory.this))
-      }
- */
   })
 
   //////////////////////////////////////////////////////////////////////////////
