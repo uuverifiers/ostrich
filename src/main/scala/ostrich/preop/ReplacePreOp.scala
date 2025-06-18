@@ -167,7 +167,7 @@ object ReplacePreOpWord {
           // next char either part of next match or last char and not
           // buffered
           val rejectedOutput = OutputOp(rejectedOldMatchPart, NOP, "")
-          val rejectedOutputFin = OutputOp(rejectedOldMatchPart, Plus(0), "")
+          val rejectedOutputFin = OutputOp(buffer, Plus(0), "")
 
           builder.addTransition(states(i),
                                 (charNext, charNext),

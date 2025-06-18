@@ -32,21 +32,18 @@
 
 package ostrich.cesolver.stringtheory
 
-import ostrich.automata.{Automaton, BricsAutomaton}
-import ostrich.preop.{PreOp, ConcatPreOp}
+import ostrich.automata.Automaton
+import ostrich.preop.PreOp
 
 import ap.SimpleAPI
 import ap.parser.IFunction
-import ap.terfor.{Term, Formula, TerForConvenience, ConstantTerm, OneTerm}
-import ap.terfor.preds.{PredConj, Atom}
+import ap.terfor.{Term, TerForConvenience, ConstantTerm, OneTerm}
+import ap.terfor.preds.Atom
 import ap.terfor.linearcombination.LinearCombination
-import ap.terfor.conjunctions.Conjunction
-import ap.types.Sort
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.basetypes.IdealInt
-
-import dk.brics.automaton.{RegExp, Automaton => BAutomaton}
+import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
 
 import scala.collection.mutable.{
   ArrayBuffer,
@@ -58,20 +55,15 @@ import ostrich.cesolver.preop.{SubStringCEPreOp, IndexOfCEPreOp}
 import ostrich.cesolver.automata.BricsAutomatonWrapper
 import ostrich.cesolver.core.ParikhExploration
 import ap.parser.Internal2InputAbsy
-import ap.parser.ITerm
-import ostrich.{OFlags, OstrichSolver}
+import ostrich.{OFlags, OstrichStringTheory}
 import ostrich.cesolver.preop.ConcatCEPreOp
 import ostrich.cesolver.util.ParikhUtil
+import ap.parser.ITerm
 
 class CESolver(theory: CEStringTheory, flags: OFlags) {
 
-  import OstrichSolver._
   import theory.{
-    str_from_char,
     str_len,
-    str_empty,
-    str_cons,
-    str_++,
     str_in_re,
     str_char_count,
     str_in_re_id,
@@ -80,10 +72,6 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
     re_from_ecma2020,
     re_from_ecma2020_flags,
     re_case_insensitive,
-    str_replace,
-    str_replacere,
-    str_replaceall,
-    str_replaceallre,
     str_prefixof,
     re_none,
     re_all,
@@ -149,11 +137,14 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
   def findStringModel(
       goal: Goal
   ): Option[Map[Term, Either[IdealInt, Seq[Int]]]] = {
+    ParikhUtil.log("CESolver.findStringModel")
+    ParikhUtil.log("  goal.arithConj is: " + goal.facts.arithConj)
+    ParikhUtil.log("  goal.predConj is: " + goal.facts.predConj)
+
     val atoms = goal.facts.predConj
     val order = goal.order
 
     val containsLength = !(atoms positiveLitsWithPred p(str_len)).isEmpty
-    val eagerMode = flags.eagerAutomataOperations
 
     val useLength = flags.useLength match {
 
@@ -244,12 +235,13 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
 
     ////////////////////////////////////////////////////////////////////////////
     // Collect negative literals
-
+    val negativeRegexes = new ArrayBuffer[(ITerm, ITerm)]
     for (a <- atoms.negativeLits) a.pred match {
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2ComplementedAutomaton(regex)
-        regexes += ((a.head, aut))
+        negativeRegexes += ((Internal2InputAbsy(a.head), regex))
+        // val aut = autDatabase.regex2ComplementedAutomaton(regex)
+        // regexes += ((a.head, aut))
       }
       case `str_in_re_id` =>
         decodeRegexId(a, true)
@@ -303,18 +295,14 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         case Seq((IdealInt.ONE, c: ConstantTerm))
             if (stringConstants contains c) && (strDatabase containsId 0) => {
           val str = strDatabase id2Str 0
-          val negAut =
-            if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
-            else !(BricsAutomaton fromString str)
+          val negAut = !(BricsAutomatonWrapper fromString str)
           regexes += ((l(c), negAut))
         }
         case Seq((IdealInt.ONE, c: ConstantTerm), (IdealInt(coeff), OneTerm))
             if (stringConstants contains c) &&
               (strDatabase containsId -coeff) => {
           val str = strDatabase id2Str -coeff
-          val negAut =
-            if (flags.useCostEnriched) !(BricsAutomatonWrapper fromString str)
-            else !(BricsAutomaton fromString str)
+          val negAut = !(BricsAutomatonWrapper fromString str)
           regexes += ((l(c), negAut))
         }
         case lc if useLength && (lc.constants forall lengthConstants) =>
@@ -340,9 +328,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         for ((t, _) <- regexes)
           regexCoveredTerms += t
 
-        val anyString =
-          if (flags.useCostEnriched) BricsAutomatonWrapper.makeAnyString()
-          else BricsAutomaton.makeAnyString()
+        val anyString = BricsAutomatonWrapper.makeAnyString()
         for ((c, d) <- negEqs) {
           if (regexCoveredTerms add c)
             regexes += ((l(c), anyString))
@@ -352,12 +338,12 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
       }
     }
 
-    val interestingTerms =
-      ((for ((t, _) <- regexes.iterator) yield t) ++
-        (for (
-          (_, args, res) <- funApps.iterator;
-          t <- args.iterator ++ Iterator(res)
-        ) yield t)).toSet
+    // val interestingTerms =
+    //   ((for ((t, _) <- regexes.iterator) yield t) ++
+    //     (for (
+    //       (_, args, res) <- funApps.iterator;
+    //       t <- args.iterator ++ Iterator(res)
+    //     ) yield t)).toSet
 
     ////////////////////////////////////////////////////////////////////////////
     // Start the actual OSTRICH solver
@@ -369,33 +355,126 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
 
         lengthProver addAssertion goal.facts.arithConj
 
-        for (t <- interestingTerms)
-          lengthVars.getOrElseUpdate(
-            t,
-            lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
-          )
+        // for (t <- interestingTerms)
+        //   lengthVars.getOrElseUpdate(
+        //     t,
+        //     lengthProver.createConstantRaw("" + t + "_len", Sort.Nat)
+        //   )
 
-        import TerForConvenience._
         implicit val o = lengthProver.order
         lengthProver
       }
 
-      val result = {
-        val inputFuns = funApps.map { case (op, args, result) =>
-          (op, args.map(Internal2InputAbsy(_)), Internal2InputAbsy(result))
-        }
-        val inputRegexes = regexes.map { case (t, aut) =>
-          (Internal2InputAbsy(t), aut)
-        }
+      val inputFuns = funApps.map { case (op, args, result) =>
+        (op, args.map(Internal2InputAbsy(_)), Internal2InputAbsy(result))
+      }
+      val inputPosRegexes = regexes.map { case (t, aut) =>
+        (Internal2InputAbsy(t), aut)
+      }
 
-        val approxExp = new ParikhExploration(
-          inputFuns.toSeq,
-          inputRegexes.toSeq,
-          strDatabase,
-          flags,
-          lProver
+      val inputPosCEFAs = inputPosRegexes.map { case (id, aut) =>
+        (id, automaton2CostEnriched(aut))
+      }
+      object ApproxType extends Enumeration {
+        val Under, Over, None = Value
+      }
+      def checkSat(approxT: ApproxType.Value) = approxT match {
+        case ApproxType.Under => {
+          ParikhUtil.log("Begin under approximation")
+          lProver.push
+          val inputNegUnderCEFAs = negativeRegexes.map { case (t, regex) =>
+            (
+              t,
+              automaton2CostEnriched(
+                autDatabase.regex2Aut.buildUnderComplementAut(regex, false)
+              )
+            )
+          }
+          val inputUnderCEFAs = inputPosCEFAs ++ inputNegUnderCEFAs
+          val underApproxRes = new ParikhExploration(
+            inputFuns.toSeq,
+            inputUnderCEFAs.toSeq,
+            strDatabase,
+            flags,
+            lProver,
+            Internal2InputAbsy(goal.facts.arithConj)
+          ).findModel
+          lProver.pop
+          ParikhUtil.log("End under approximation")
+          underApproxRes
+        }
+        case ApproxType.Over => {
+          lProver.push
+          ParikhUtil.log("Begin over approximation")
+          val inputNegOverCEFAs = negativeRegexes.map { case (t, regex) =>
+            (
+              t,
+              automaton2CostEnriched(
+                autDatabase.regex2Aut.buildOverComplementAut(regex, false)
+              )
+            )
+          }
+          val inputOverCEFAs = inputPosCEFAs ++ inputNegOverCEFAs
+          val overApproxRes = new ParikhExploration(
+            inputFuns.toSeq,
+            inputOverCEFAs.toSeq,
+            strDatabase,
+            flags,
+            lProver,
+            Internal2InputAbsy(goal.facts.arithConj)
+          ).findModel
+          lProver.pop
+          ParikhUtil.log("End over approximation")
+          overApproxRes
+        }
+        case ApproxType.None => {
+          val inputNegCEFAs = negativeRegexes.map { case (t, regex) =>
+            (
+              t,
+              automaton2CostEnriched(
+                autDatabase.regex2Aut.buildComplementAut(regex, false)
+              )
+            )
+          }
+          val inputCEFAs = inputPosCEFAs ++ inputNegCEFAs
+          val decidableExp = new ParikhExploration(
+            inputFuns.toSeq,
+            inputCEFAs.toSeq,
+            strDatabase,
+            flags,
+            lProver,
+            Internal2InputAbsy(goal.facts.arithConj)
+          )
+          decidableExp.findModel
+        }
+      }
+
+      def noCompApprox(regex: ITerm): Boolean = {
+        ParikhUtil.todo(
+          "Compute the approximate size of automaton for the regex, and give whether the complement of the regex need approximation",
+          0
         )
-        approxExp.findModel
+        val coutingSize = autDatabase.regex2Aut.sizeOfCountingSubRegexes(regex)
+        return coutingSize < ParikhUtil.MIN_COUNTING_SIZE_APPROX
+      }
+
+      val result = {
+        ParikhUtil.todo(
+          "Add function to compute the size of the automaton before complement, and decide if use underapproximation or overapproximation",
+          0
+        )
+        lazy val underRes = checkSat(ApproxType.Under)
+        lazy val overRes = checkSat(ApproxType.Over)
+        lazy val decidableRes = checkSat(ApproxType.None)
+        // if (
+        //   negativeRegexes.isEmpty ||
+        //   !flags.compApprox ||
+        //   negativeRegexes.map(_._2).forall(noCompApprox)
+        // ) decidableRes
+        // else if (underRes.isDefined) underRes
+        // else if (!overRes.isDefined) overRes
+        // else decidableRes
+        decidableRes
       }
 
       ////////////////////////////////////////////////////////////////////////////
@@ -416,7 +495,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
                 c + " != " + d
             )
             val strId = strDatabase.list2Id(cVal)
-            throw new BlockingActions(
+            throw new OstrichStringTheory.BlockingActions(
               List(
                 Plugin.AxiomSplit(
                   List(c =/= d),
@@ -432,10 +511,10 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         }
       }
 
-      if (result.isDefined)
-        Console.err.println("   ... sat")
-      else
-        Console.err.println("   ... unsat")
+      // if (result.isDefined)
+      //   Console.err.println("   ... sat")
+      // else
+      //   Console.err.println("   ... unsat")
 
       result
     }

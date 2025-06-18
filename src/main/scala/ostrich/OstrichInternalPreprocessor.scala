@@ -46,7 +46,8 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton}
 class OstrichInternalPreprocessor(theory : OstrichStringTheory,
                                   flags : OFlags) {
   import theory.{FunPred, StringSort, str_len, _str_len, _str_char_count,
-                 str_++, _str_++, str_in_re_id, strDatabase, autDatabase}
+                 str_++, _str_++, str_in_re_id, str_indexof,
+                 strDatabase, autDatabase}
   import LinearCombination.Constant
 
   private val p = theory.functionPredicateMap
@@ -78,15 +79,15 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
     val funTranslator =
       new OstrichStringFunctionTranslator(theory, Conjunction.TRUE)
 
-    val res = 
+    val res =
     Theory.rewritePreds(f, order) { (a, negated) =>
       funTranslator(a) match {
         case Some((preop, args, result)) if negated => {
           val coeff =
             characters.size + 1
-          def lenVar(argNum : Int) =
+          def lenVar(argNum: Int) =
             l(v(argNum * coeff))
-          def charCountVar(argNum : Int, char : Int) =
+          def charCountVar(argNum: Int, char: Int) =
             l(v(argNum * coeff + char + 1))
 
           val shifter =
@@ -95,35 +96,36 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
             shifter(a)
           val lenAtoms =
             for ((t, n) <- (args ++ List(result)).zipWithIndex)
-            yield _str_len(List(shifter(l(t)), lenVar(n)))
+              yield _str_len(List(shifter(l(t)), lenVar(n)))
           val charCountAtoms =
             for ((t, n) <- (args ++ List(result)).zipWithIndex;
                  (c, m) <- characters.zipWithIndex)
             yield _str_char_count(List(l(c), shifter(l(t)),
-                                         charCountVar(n, m)))
+              charCountVar(n, m)))
           val charCountNonNeg =
             for (n <- 0 until (args.size + 1); m <- 0 until characters.size)
-            yield (charCountVar(n, m) >= 0)
+              yield (charCountVar(n, m) >= 0)
           val lenCountRelations =
             for (n <- 0 to args.size)
-            yield (lenVar(n) >= sum(for (m <- 0 until characters.size)
-                                    yield (IdealInt.ONE, charCountVar(n, m))))
+              yield (lenVar(n) >= sum(for (m <- 0 until characters.size)
+                yield (IdealInt.ONE, charCountVar(n, m))))
           val lenRelation =
             preop().lengthApproximation(for (n <- 0 until args.size)
-                                        yield lenVar(n),
-                                        lenVar(args.size),
-                                        order)
+              yield lenVar(n),
+              lenVar(args.size),
+              order)
           val countRelations =
             for ((c, m) <- characters.zipWithIndex)
-            yield preop().charCountApproximation(c,
-                                                 for (n <- 0 until args.size)
-                                                 yield charCountVar(n, m),
-                                                 charCountVar(args.size, m),
-                                                 order)
+              yield preop().charCountApproximation(c,
+                for (n <- 0 until args.size)
+                  yield charCountVar(n, m),
+                charCountVar(args.size, m),
+                order, characters, args, theory)
+
           exists((args.size + 1) * coeff,
-                 conj(List(shiftedA, lenRelation) ++
-                        lenAtoms ++ charCountAtoms ++ charCountNonNeg ++
-                        lenCountRelations ++ countRelations))
+            conj(List(shiftedA, lenRelation) ++
+              lenAtoms ++ charCountAtoms ++ charCountNonNeg ++
+              lenCountRelations ++ countRelations))
         }
 
         case _ => a.pred match {
@@ -131,8 +133,7 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
           case `str_in_re_id` if negated => {
             val aut = autDatabase.id2Automaton(a.last.constant.intValueSafe).get
             val charCountConstraints =
-              for (c <- characters; if !automatonAcceptsChar(c, aut))
-              yield _str_char_count(List(l(c), a(0), l(0)))
+              for (c <- characters; if !automatonAcceptsChar(c, aut)) yield _str_char_count(List(l(c), a(0), l(0)))
             if (charCountConstraints.isEmpty)
               a
             else
@@ -144,12 +145,23 @@ class OstrichInternalPreprocessor(theory : OstrichStringTheory,
               autDatabase.id2ComplementedAutomaton(
                 a.last.constant.intValueSafe).get
             val charCountConstraints =
-              for (c <- characters; if !automatonAcceptsChar(c, aut))
-              yield _str_char_count(List(l(c), a(0), l(0)))
+              for (c <- characters; if !automatonAcceptsChar(c, aut)) yield _str_char_count(List(l(c), a(0), l(0)))
             if (charCountConstraints.isEmpty)
               a
             else
               !conj(charCountConstraints) | a
+          }
+
+          // add constraints about the range of str.indexof
+          case FunPred(`str_indexof`) if negated => {
+            val shifter = VariableShiftSubst(0, 2, order)
+            val shiftedA = shifter(a)
+
+            exists(2, conj(List(shiftedA,
+              _str_len(List(shiftedA(0), l(v(0)))),
+              _str_len(List(shiftedA(1), l(v(1)))),
+              shiftedA(3) >= -1,
+              v(0) >= shiftedA(3) + v(1))))
           }
 
           case _ =>

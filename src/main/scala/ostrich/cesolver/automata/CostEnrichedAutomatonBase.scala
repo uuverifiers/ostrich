@@ -1,34 +1,32 @@
-/**
- * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2023 Denghang Hu. All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * 
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- * 
- * * Neither the name of the authors nor the names of their
- *   contributors may be used to endorse or promote products derived from
- *   this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+/** This file is part of Ostrich, an SMT solver for strings. Copyright (c) 2023
+  * Denghang Hu. All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+  *
+  * * Redistributions of source code must retain the above copyright notice,
+  * this list of conditions and the following disclaimer.
+  *
+  * * Redistributions in binary form must reproduce the above copyright notice,
+  * this list of conditions and the following disclaimer in the documentation
+  * and/or other materials provided with the distribution.
+  *
+  * * Neither the name of the authors nor the names of their contributors may be
+  * used to endorse or promote products derived from this software without
+  * specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
 
 package ostrich.cesolver.automata
 
@@ -37,8 +35,7 @@ import ostrich.automata._
 import scala.collection.mutable.{
   HashMap => MHashMap,
   Stack => MStack,
-  HashSet => MHashSet,
-  ArrayBuffer
+  HashSet => MHashSet
 }
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayStack
@@ -48,10 +45,8 @@ import dk.brics.automaton.{State => BState}
 import dk.brics.automaton.BasicOperations
 import CEBasicOperations.toBricsAutomaton
 import java.io.File
-import ap.parser.ITerm
-import ap.parser.IFormula
-import ap.parser.IExpression._
-import ap.parser.IExpression
+import ap.parser.{ITerm, IFormula, IExpression}
+import ostrich.cesolver.util.{ParikhUtil, TermGenerator, ConstSubstVisitor}
 
 /** This is the implementation of cost-enriched finite automaton(CEFA). Each
   * transition of CEFA contains a vector of integers, which is used to record
@@ -62,9 +57,11 @@ import ap.parser.IExpression
   * automation accepting words of length less than 10.
   */
 class CostEnrichedAutomatonBase extends Automaton {
+
   type State = BState
   type TLabel = (Char, Char)
   type Update = Seq[Int]
+  type Transition = (State, TLabel, State, Update)
 
   private var stateidx = 0
 
@@ -138,7 +135,25 @@ class CostEnrichedAutomatonBase extends Automaton {
       None
   }
 
-  def newState(): State = {
+  override def clone(): CostEnrichedAutomatonBase = {
+    val newAut = new CostEnrichedAutomatonBase
+    val old2new = states.map(s => s -> newAut.newState()).toMap
+    newAut.initialState = old2new(initialState)
+    val regSubst = registers.map { case t =>
+      t -> TermGenerator().registerTerm
+    }.toMap
+    newAut.registers = regSubst.values.toSeq
+    newAut.regsRelation = new ConstSubstVisitor().apply(regsRelation, regSubst)
+    for ((from, lbl, to, vec) <- transitionsWithVec) {
+      newAut.addTransition(old2new(from), lbl, old2new(to), vec)
+    }
+    for (s <- acceptingStates) {
+      newAut.setAccept(old2new(s), true)
+    }
+    newAut
+  }
+
+  def newState(): State = synchronized {
     stateidx += 1
     new State() {
       val idx = stateidx
@@ -173,6 +188,8 @@ class CostEnrichedAutomatonBase extends Automaton {
     seenlist.toSeq
   }
 
+  def size(): Int = _state2transtions.values.flatten.size
+
   /** Ask if state is accepting
     */
   def isAccept(q: State): Boolean = q.isAccept
@@ -183,8 +200,8 @@ class CostEnrichedAutomatonBase extends Automaton {
       s: State
   ): Iterable[(State, (Char, Char), Seq[Int])] =
     _state2transtions.get(s) match {
-      case None      => Iterable.empty
-      case Some(set) => set
+      case None           => Iterable.empty
+      case Some(transSet) => transSet
     }
 
   def incomingTransitionsWithVec(
@@ -193,7 +210,8 @@ class CostEnrichedAutomatonBase extends Automaton {
     _state2incomingTranstions.get(t) match {
       case None => Iterable.empty
       // incoming states may not be reachable from initial state, filter them out
-      case Some(set) => set.filter(trans => states.toSet.contains(trans._1))
+      case Some(transSet) =>
+        transSet.filter(trans => states.toSet.contains(trans._1))
     }
 
   def transitionsWithVec: Iterable[(State, TLabel, State, Seq[Int])] = {
@@ -256,38 +274,41 @@ class CostEnrichedAutomatonBase extends Automaton {
   }
 
   def getAcceptedWord: Option[Seq[Int]] = {
-    if (!regsRelation.isTrue | registers.nonEmpty) {
+    if (registers.nonEmpty) {
       throw new UnsupportedOperationException
     }
     val seenlist = new MHashSet[State]
-    val worklist = new MStack[State]
-    var acceptedword = Seq[Int]()
-    worklist.push(initialState)
+    val worklist = new MStack[(State, Seq[Int])]
+    worklist.push((initialState, Seq()))
     seenlist.add(initialState)
     while (!worklist.isEmpty) {
-      val s = worklist.pop
+      val (s, word) = worklist.pop
       if (isAccept(s)) {
-        return Some(acceptedword)
+        return Some(word)
       }
       for (
         (to, (lbl, _), _) <- outgoingTransitionsWithVec(s)
         if !seenlist.contains(to)
       ) {
-        acceptedword = acceptedword :+ lbl.toInt
-        worklist.push(to)
+        val newWord = word :+ lbl.toInt
+        worklist.push((to, newWord))
         seenlist.add(to)
       }
     }
     None
   }
 
-  // not implement methods
   def unary_! = {
     if (registers.nonEmpty) throw new UnsupportedOperationException
-    BricsAutomatonWrapper(BasicOperations.complement(toBricsAutomaton(this)))
+    CEBasicOperations.complement(this)
   }
-  def apply(word: Seq[Int]): Boolean = throw new UnsupportedOperationException
-  // def isEmpty: Boolean = throw new UnsupportedOperationException
+  def apply(word: Seq[Int]): Boolean = {
+    ParikhUtil.log(
+      "Naively run word on CEFA without registers. Indeed, the CEFA with registers can be easily supported in the future."
+    )
+    // if (registers.nonEmpty) throw new UnsupportedOperationException
+    BasicOperations.run(toBricsAutomaton(this), word.map(_.toChar).mkString)
+  }
 
   def product(that: CostEnrichedAutomatonBase): CostEnrichedAutomatonBase = {
     CEBasicOperations.intersection(this, that)
@@ -308,85 +329,28 @@ class CostEnrichedAutomatonBase extends Automaton {
   def regsRelation_=(f: IFormula) = _regsRelation = f
   /////////////////////////////
 
-  // optimization and minimization ////
-  def removeDuplicatedReg(): Unit = {
-    def removeValuesInIdxs[A](s: Seq[A], idxs: Set[Int]): Seq[A] = {
-      val res = ArrayBuffer[A]()
-      for (i <- 0 until s.size) {
-        if (!idxs.contains(i)) {
-          res += s(i)
-        }
-      }
-      res.toSeq
-    }
-    // transpose the vectors, so that each vector is a column containing all updates of a register
-    val vectorsT =
-      transitionsWithVec
-        .map { case (_, _, _, v) => v }
-        .toSeq
-        .transpose
-        .zipWithIndex
-    val vectors2Idxs = new MHashMap[Seq[Int], Set[Int]]()
-    // map the transposed vectors to their updated register
-    for ((v, i) <- vectorsT) {
-      if (!vectors2Idxs.contains(v)) {
-        vectors2Idxs += (v -> Set[Int]())
-      }
-      vectors2Idxs(v) += i
-    }
-    // if a transposed vector map to more than one register, then these registers are duplicated
-    val duplicatedRegs =
-      vectors2Idxs.map { case (_, idxs) => idxs }.filter(_.size > 1)
-    if (duplicatedRegs.nonEmpty) {
-      // remove the duplicated registers and add lia constraints to ensure they are equal
-      val removeIdxs = new MHashSet[Int]()
-      duplicatedRegs.foreach { regidxs =>
-        val baseidx = regidxs.head
-        regidxs.tail.foreach { idx =>
-          _regsRelation =
-            and(Seq(_regsRelation, (_registers(baseidx) === _registers(idx))))
-        }
-        removeIdxs ++= regidxs.tail
-
-      }
-      _registers = removeValuesInIdxs(_registers, removeIdxs.toSet)
-      val newTransitionWithVec = transitionsWithVec.map {
-        case (from, lbl, to, vec) =>
-          (from, lbl, to, removeValuesInIdxs(vec, removeIdxs.toSet))
-      }.toSeq
-      _state2transtions.clear()
-      _state2incomingTranstions.clear()
-      for ((from, lbl, to, vec) <- newTransitionWithVec) {
-        addTransition(from, lbl, to, vec)
-      }
-    }
-  }
-  /////////////////////////////////////
-
   override def toString: String = {
-    val s2str = states.zipWithIndex.map { case (state, int) =>
-      (state, s"s${int}")
-    }.toMap
     def transition2Str(transition: (State, TLabel, State, Seq[Int])): String = {
       val (s, (left, right), t, vec) = transition
-      s"${s2str(s)} -> ${s2str(t)} [${left.toInt}, ${right.toInt}] $vec"
+      s"${s} -> ${t} [${left.toInt}, ${right.toInt}] $vec"
     }
 
-    val random = new scala.util.Random
-
     s"""
-    automaton A${random.nextInt(10000)} {
-      init ${s2str(initialState)};
+    automaton A${hashCode()} {
+      init ${initialState};
       ${transitionsWithVec.toSeq
         .sortBy(_._1)
         .map(transition2Str)
-        .mkString("\n  ")}
-      accepting ${acceptingStates.map(s => s"${s2str(s)}").mkString(", ")};
+        .mkString("\n    ")}
+      accepting ${acceptingStates.map(s => s"${s}").mkString(", ")};
+      Registers ${registers.mkString(", ")};
+      RegsRelation ${regsRelation};
     };
     """
   }
 
-  def toDot(suffix: String) = {
+  def toDot(suffix: String): Unit = {
+    if (!ParikhUtil.debugOpt) return
     states.zipWithIndex.toMap
     val outdir = "dot" + File.separator + LocalDate.now().toString
     new File(outdir).mkdirs()
@@ -408,7 +372,11 @@ class CostEnrichedAutomatonBase extends Automaton {
           ","
         )})\"]""")
     }
-    strbuilder.append("}")
+    strbuilder.append("\n")
+    strbuilder.append(
+      s"""        \"${registers.mkString(", ")}\" [shape=plaintext]"""
+    )
+    strbuilder.append("\n      }")
     writer.closeAfterWrite(strbuilder.toString())
   }
 }

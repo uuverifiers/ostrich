@@ -33,7 +33,7 @@
 package ostrich
 
 import fastparse.Parsed
-import ostrich.automata.{AtomicStateAutomaton, AtomicStateAutomatonAdapter, Automaton, BricsAutomaton, BricsAutomatonBuilder}
+import ostrich.automata.{Automaton, BricsAutomaton, BricsAutomatonBuilder}
 
 import scala.collection.mutable
 import fastparse._

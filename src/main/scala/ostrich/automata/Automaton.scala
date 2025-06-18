@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -107,6 +107,11 @@ trait TLabelOps[TLabel] {
    * Label representing a single char a
    */
   def singleton(a : Char) : TLabel
+
+  /**
+   * If is a singleton label
+   */
+  def isSingleton(label : TLabel) : Boolean
 
   /**
    * Intersection of two labels, None if not overlapping
@@ -390,6 +395,7 @@ trait AtomicStateAutomaton extends Automaton {
 
     ////////////////////////////////////////////////////////////////////////////
 
+    val rawConstraint =
     disjFor(for (finalState <- acceptingStates)
             yield (uniqueLengthStates get finalState) match {
 
@@ -468,20 +474,18 @@ trait AtomicStateAutomaton extends Automaton {
 
       val matrix =
         conj(allEqs :: prodNonNeg :: prodImps ::: zImps)
-      val rawConstraint =
-        exists(prodVars.size + zVars.size, matrix)
-
-      val constraint =
-        ap.util.Timeout.withTimeoutMillis(1000) {
-          // best-effort attempt to get a quantifier-free version of the
-          // length abstraction
-          PresburgerTools.elimQuantifiersWithPreds(rawConstraint)
-        } {
-          ReduceWithConjunction(Conjunction.TRUE, order)(rawConstraint)
-        }
-
-      constraint
+      exists(prodVars.size + zVars.size, matrix)
     }})
+
+    val prenexConstraint = PresburgerTools.toPrenex(rawConstraint)
+
+    ap.util.Timeout.withTimeoutMillis(1000) {
+      // best-effort attempt to get a quantifier-free version of the
+      // length abstraction
+      PresburgerTools.elimQuantifiersWithPreds(prenexConstraint)
+    } {
+      ReduceWithConjunction(Conjunction.TRUE, order)(prenexConstraint)
+    }
   }
 }
 

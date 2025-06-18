@@ -32,10 +32,10 @@
 
 package ostrich.preop
 
-import ostrich.automata.{Automaton, AtomicStateAutomaton, InitFinalAutomaton,
-                         ProductAutomaton, ConcatAutomaton}
-
-import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
+import ostrich.automata.{AtomicStateAutomaton, Automaton, ConcatAutomaton, InitFinalAutomaton, ProductAutomaton}
+import ap.terfor.{Formula, TerForConvenience, Term, TermOrder}
+import ap.theories.Theory
+import ostrich.OstrichStringTheory
 
 import scala.collection.JavaConverters.asScala
 
@@ -121,7 +121,7 @@ object ConcatPreOp extends PreOp {
 
   override def charCountApproximation(char : Int,
                                       arguments : Seq[Term], result : Term,
-                                      order : TermOrder) : Formula =
+                                      order : TermOrder,characters : Seq[Int], args : Seq[Term], theory : OstrichStringTheory) : Formula =
     lengthApproximation(arguments, result, order)
 
   override def forwardApprox(argumentConstraints : Seq[Seq[Automaton]]) : Automaton = {

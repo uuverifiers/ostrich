@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ * Copyright (c) 2022-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -98,11 +98,21 @@ class OstrichNielsenSplitter(goal : Goal,
                   : Option[(LinearCombination, LinearCombination)] =
     for (lits <- concatPerRes get t) yield (lits.head(0), lits.head(1))
 
-  def lengthFor(t : LinearCombination) : LinearCombination =
-    if (strDatabase isConcrete t)
-      LinearCombination((strDatabase term2ListGet t).size)
-    else
-      lengthMap(t)
+  def lengthFor(t: LinearCombination): LinearCombination = {
+    if (strDatabase.isConcrete(t)) {
+      // Handle concrete terms
+      LinearCombination((strDatabase.term2ListGet(t)).size)
+    } else {
+      // Handle the case where the lengthMap does not contain the term
+      lengthMap.getOrElse(t, {
+        if (debug) {
+          Console.err.println(s"No length found for term: $t, returning zero length")
+        }
+        LinearCombination.ZERO
+      })
+    }
+  }
+
 
   def eval(t           : LinearCombination,
            lengthModel : ReduceWithConjunction) : Int = {
@@ -350,12 +360,14 @@ class OstrichNielsenSplitter(goal : Goal,
             val otherDecomp = splitPoints(leftLen)
             stop = true
 
-            Console.err.println("Decomposing equation:")
-            Console.err.println("  " +
+            if (debug) {
+              Console.err.println("Decomposing equation:")
+              Console.err.println("  " +
                                   term2String(otherDecomp.atom(0)) + " . " +
                                   term2String(otherDecomp.atom(1)) + " == " +
                                   term2String(decomp.atom(0)) + " . " +
                                   term2String(decomp.atom(1)))
+            }
 
             actions += Plugin.RemoveFacts(conj(lit))
 
@@ -456,9 +468,6 @@ class OstrichNielsenSplitter(goal : Goal,
    * Apply the Nielsen transformation to some selected equation.
    */
   def splitEquation : Seq[Plugin.Action] = {
-    if (!flags.nielsenSplitter){
-      return List()
-    }
     val multiGroups =
       concatPerRes filter {
         case (res, lits) => lits.size >= 2 && !(strDatabase isConcrete res)
@@ -477,11 +486,14 @@ class OstrichNielsenSplitter(goal : Goal,
     val splitLit2   = (literals filterNot (_ == splitLit1))(
                         rand nextInt (literals.size - 1))
 
-    if (lengthLits.isEmpty)
-      throw new Exception("Nielsen transformation is currently only enabled" +
-                            " in combination with option -length=on.")
-
-    splitEquationWithLen(splitLit1, splitLit2, multiGroups.size)
+    if (lengthLits.isEmpty) {
+      Console.err.println(
+        "Warning: Nielsen transformation is currently only enabled" +
+          " in combination with option -length=on.")
+      List()
+    } else {
+      splitEquationWithLen(splitLit1, splitLit2, multiGroups.size)
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -503,14 +515,16 @@ class OstrichNielsenSplitter(goal : Goal,
                   null,
                   splitLit1(1), List())
 
-    Console.err.println(
-      "Applying Nielsen transformation (# word equations: " + multiGroupNum +
-        ")")
-    Console.err.println("  " +
+    if (debug) {
+      Console.err.println(
+        "Applying Nielsen transformation (# word equations: " + multiGroupNum +
+          ")")
+      Console.err.println("  " +
                           term2String(splitLit1(0)) + " . " +
                           term2String(splitLit1(1)) + " == " +
                           term2String(splitLit2(0)) + " . " +
                           term2String(splitLit2(1)))
+    }
 
     val nil = strDatabase.str2Id("")
 
@@ -549,7 +563,7 @@ class OstrichNielsenSplitter(goal : Goal,
       ReduceWithConjunction(lengthModel, extOrder)
 
 /*
-    for (t <- 
+    for (t <-
     (for (lit <- concatLits.iterator;
           t <- lit.iterator;
           if !t.isConstant)
@@ -563,7 +577,8 @@ class OstrichNielsenSplitter(goal : Goal,
 
     if (zeroSyms.hasNext) {
       val zeroSym = zeroSyms.next
-      Console.err.println("Assuming " + zeroSym + " = \"\"")
+      if (debug)
+        Console.err.println("Assuming " + zeroSym + " = \"\"")
 
       import TerForConvenience._
       implicit val o = order
@@ -577,14 +592,16 @@ class OstrichNielsenSplitter(goal : Goal,
       val split    = chooseSplit(splitLit1, splitLit2, lengthRed)
       val splitSym = split._3
 
-      Console.err.println(
-        "Applying Nielsen transformation (# word equations: " + multiGroupNum +
-          "), splitting " + term2String(splitSym))
-      Console.err.println("  " +
+      if (debug) {
+        Console.err.println(
+          "Applying Nielsen transformation (# word equations: " + multiGroupNum +
+            "), splitting " + term2String(splitSym))
+        Console.err.println("  " +
                             term2String(splitLit1(0)) + " . " +
                             term2String(splitLit1(1)) + " == " +
                             term2String(splitLit2(0)) + " . " +
                             term2String(splitLit2(1)))
+      }
 
       val f1 = splittingFormula(split, splitLit2)
       val f2 = diffLengthFormula(split, splitLit2)

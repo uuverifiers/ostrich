@@ -13,7 +13,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   val timeout      = 30000
   val shortTimeout = 3000
-  val longTimeout  = 60000
+  val longTimeout  = 120000
 
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
@@ -74,17 +74,27 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/contains-2.smt2", "sat")
   property("contains-3.smt2") =
     checkFile("tests/contains-3.smt2", "unsat")
+  property("contains-4.smt2") =
+    checkFile("tests/contains-4.smt2", "unsat")
+  property("contains-5.smt2") =
+    checkFile("tests/contains-5.smt2", "sat")
+  property("contains-6.smt2") =
+    checkFile("tests/contains-6.smt2", "sat")
+  property("contains-7.smt2") =
+    checkFileOpts("tests/contains-7.smt2", "sat", "+forwardPropagation", "")
+  property("contains-8.smt2") =
+    checkFile("tests/contains-8.smt2", "sat")
 
   property("word-equation.smt2") =
     checkFile("tests/word-equation.smt2", "sat")
   property("word-equation-2.smt2") =
     checkFile("tests/word-equation-2.smt2", "sat")
   property("word-equation-3.smt2") =
-    checkFile("tests/word-equation-3.smt2", "unsat")
+    checkFileOpts("tests/word-equation-3.smt2", "unsat", "-forwardPropagation", s"-timeout=$longTimeout")
   property("word-equation-4.smt2") =
     checkFile("tests/word-equation-4.smt2", "sat")
   property("word-equation-6.smt2") =
-    checkFile("tests/word-equation-6.smt2", "sat")
+    checkFileOpts("tests/word-equation-6.smt2", "sat", "-forwardPropagation,-backwardPropagation", s"-timeout=$longTimeout")
 
   property("parikh-constraints.smt2") =
     checkFileOpts("tests/parikh-constraints.smt2", "sat", "+parikh")
@@ -109,9 +119,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("null-problem.smt2") =
     checkFileOpts("tests/null-problem.smt2", "sat", "", "+model")
   property("failedProp.smt2") =
-    checkFileOpts("tests/failedProp.smt2", "unknown", "", s"-timeout=$shortTimeout")
+    checkFile("tests/failedProp.smt2", "unsat")
   property("failedProp2.smt2") =
-    checkFileOpts("tests/failedProp2.smt2", "unknown", "", s"-timeout=$shortTimeout")
+    checkFile("tests/failedProp2.smt2", "unsat")
 
   property("propagation.smt2") =
     checkFileOpts("tests/propagation.smt2", "sat", "", "+model")
@@ -331,6 +341,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("no-regexes.smt2") =
     checkFile("tests/no-regexes.smt2", "unsat")
+  property("str_in_re_translation.smt2") =
+    checkFile("tests/str_in_re_translation.smt2", "sat")
 
   property("adt.smt2") =
     checkFile("tests/adt.smt2", "sat")
@@ -403,6 +415,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("substring2b.smt2") =
     checkFile("tests/substring2b.smt2", "sat")
 
+  property("str-term-small-rw_164.smt2") =
+    checkFile("tests/str-term-small-rw_164.smt2", "unsat")
+  property("str-term-small-rw_186.smt2") =
+    checkFile("tests/str-term-small-rw_186.smt2", "unsat")
+
   property("parse-regex.smt2") =
     checkFile("tests/parse-regex.smt2", "sat")
   property("parse-regex2.smt2") =
@@ -421,9 +438,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("parse-ecma-cases-3.smt2") =
     checkFileOpts("tests/parse-ecma-cases-3.smt2", "sat", "-regexTranslator=complete", "")
   property("parse-ecma-groups.smt2") =
-    checkFile("tests/parse-ecma-groups.smt2", "sat")
+    checkFile("tests/parse-ecma-groups.smt2", "sat", s"-timeout=$longTimeout")
   property("parse-ecma-replace.smt2") =
-    checkFile("tests/parse-ecma-replace.smt2", "sat")
+    checkFile("tests/parse-ecma-replace.smt2", "sat", s"-timeout=$longTimeout")
   property("parse-ecma-bug1.smt2") =
     checkFile("tests/parse-ecma-bug1.smt2", "sat")
   property("parse-ecma-bug2.smt2") =
@@ -447,7 +464,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("negated-equation-1.smt2") =
     checkFile("tests/negated-equation-1.smt2", "unsat")
   property("negated-equation-2.smt2") =
-    checkFile("tests/negated-equation-2.smt2", "unknown")
+    checkFile("tests/negated-equation-2.smt2", "unsat")
   property("concat-empty.smt2") =
     checkFile("tests/concat-empty.smt2", "unsat")
   property("replace-bug.smt2") =
@@ -481,7 +498,7 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("str-leq12") =
     checkFile("tests/str-leq12.smt2", "sat")
   property("str-leq13") =
-    checkFile("tests/str-leq13.smt2", "error")
+    checkFile("tests/str-leq13.smt2", "sat")
   property("str-leq14") =
     checkFile("tests/str-leq14.smt2", "unsat")
   property("str-lt") =

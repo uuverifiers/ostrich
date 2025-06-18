@@ -29,30 +29,40 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package ostrich.cesolver.core.finalConstraints
 
-package ostrich.cesolver.core
-
-import scala.collection.mutable.{HashMap => MHashMap}
-import ostrich.cesolver.util.ParikhUtil
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
+import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IBinJunctor
+import ostrich.OFlags
+import ap.basetypes.IdealInt
+import ap.api.PartialModel
 
 class BaselineFinalConstraints(
-    override val strId: ITerm,
-    override val auts: Seq[CostEnrichedAutomatonBase]
+    override val strDataBaseId: ITerm,
+    override val auts: Seq[CostEnrichedAutomatonBase],
+    flags: OFlags
 ) extends FinalConstraints {
+  val regsTerms: Seq[ITerm] = auts.flatMap(_.registers)
 
-  val interestTerms: Seq[ITerm] = auts.flatMap(_.registers)
-
-  def getRegsRelation: IFormula = and(auts.map(_.regsRelation))
-
-  def getModel: Option[Seq[Int]] = {
-    val transtionModel = MHashMap() ++ interestTermsModel
-    ParikhUtil.findAcceptedWordByRegisters(
-      auts,
-      transtionModel
+  lazy val getCompleteLIA: IFormula = {
+    connectSimplify(
+      Seq(ParikhUtil.parikhImage(auts.reduce(_ product _)), getRegsRelation),
+      IBinJunctor.And
     )
   }
+
+  private def getRegsRelation: IFormula =
+    connectSimplify(auts.map(_.regsRelation), IBinJunctor.And)
+
+  def getModel(partialModel: PartialModel): Option[Seq[Int]] = {
+    var registersModel = Map[ITerm, IdealInt]()
+    for (term <- auts.flatMap(_.registers))
+      registersModel += (term -> FinalConstraints.evalTerm(term, partialModel))
+    ParikhUtil.findAcceptedWord(auts, registersModel, flags)
+  }
+
 }

@@ -32,19 +32,16 @@
 
 package ostrich.preop
 
-import ostrich.automata.{AtomicStateAutomaton, Transducer, Automaton,
-                         CaleyGraph, ReplaceCharAutomaton, InitFinalAutomaton,
-                         ProductAutomaton, NestedAutomaton, BricsTransducer,
-                         PreImageAutomaton, PostImageAutomaton}
-
-import ap.terfor.{Term, Formula, TermOrder, TerForConvenience}
+import ap.terfor.TerForConvenience.{l, v}
+import ap.terfor.linearcombination.LinearCombination
+import ostrich.automata.{AtomicStateAutomaton, Automaton, BricsTransducer, CaleyGraph, InitFinalAutomaton, NestedAutomaton, PostImageAutomaton, PreImageAutomaton, ProductAutomaton, ReplaceCharAutomaton, Transducer}
+import ap.terfor.{Formula, TerForConvenience, Term, TermOrder}
 import ap.terfor.preds.PredConj
-
+import ap.theories.Theory
 import dk.brics.automaton.RegExp
+import ostrich.OstrichStringTheory
 
-import scala.collection.mutable.{HashMap => MHashMap,
-                                 Stack => MStack,
-                                 HashSet => MHashSet}
+import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, Stack => MStack}
 
 abstract class ReplaceAllPreOpBase {
   def apply(a : Char) : PreOp = new ReplaceAllPreOpChar(a)
@@ -107,6 +104,81 @@ class ReplaceAllPreOpChar(a : Char) extends PreOp {
     (arguments(1) === 1 & result === arguments(0)) |
     (arguments(1) < 1 & result <= arguments(0)) |
     (arguments(1) > 1 & result >= arguments(0))
+  }
+  /**
+   * Generate a formula that approximates the character count (Parikh) relationship
+   * between the arguments and the result for the `replace_all` string operation.
+   *
+   * This implementation specifically handles cases where:
+   * - `search` is a single character.
+   * - `replace` is a constant string (may consist of multiple characters).
+   *
+   * The relationship is defined as follows:
+   * - Each occurrence of `search` in `input` is replaced by the entire `replace` string in `result`.
+   * - Characters in `input` other than `search` are propagated unchanged to `result`.
+   *
+   * For example:
+   *   `replace_all(input, "0", "12", result)` implies:
+   *   - `charCount(result, "1") = charCount(input, "0") + charCount(input, "1")`
+   *   - `charCount(result, "2") = charCount(input, "0") + charCount(input, "2")`
+   *   - `charCount(result, "a") = charCount(input, "a")` (for characters not equal to "0")
+   *
+   * @param char The character of interest (not used in this specific implementation
+   *             for `replace_all`, as constraints depend on all relevant characters).
+   * @param arguments A sequence of terms representing:
+   *                  - `input`: The input string.
+   *                  - `search`: The singleton character to search for in `input`.
+   *                  - `replace`: The constant string to replace each occurrence of `search`.
+   * @param result A term representing the result of the `replace_all` operation.
+   * @param characters A sequence of all relevant characters involved in the operation.
+   *                   This includes:
+   *                   - Characters in `input`.
+   *                   - Characters in `replace`.
+   *                   - The `search` character.
+   *                   This parameter is necessary to recompute variables for character counts.
+   * @return A formula that captures the relationship between the character counts of
+   *         `input`, `search`, `replace`, and `result`.
+   *
+   * The formula enforces:
+   * - For each character in `replace`, its count in `result` is equal to the count of `search`
+   *   in `input`, plus any unaffected counts of that character in `input`.
+   * - For characters not in `replace` or `search`, their counts remain unchanged in `result`.
+   * - The total character count in `result` corresponds to the combined effects of the replacement.
+   */
+
+  override def charCountApproximation(char: Int, arguments: Seq[Term], result: Term, order: TermOrder,characters : Seq[Int], args : Seq[Term], theory : OstrichStringTheory): Formula = {
+    import TerForConvenience._
+    implicit val o = order
+    def charCountVar(argNum : Int, char : Int) =
+      l(v(argNum * (characters.size +1) + char + 1))
+
+    // Attempt to retrieve the string representation from the database
+    val strRepresentationOpt = theory.strDatabase.term2Str(args(1))
+
+    val resultFormula: Formula = strRepresentationOpt match {
+      case None =>
+        // If no string representation is found, fallback to superclass implementation
+        super.charCountApproximation(char, arguments, result, order, characters, args, theory)
+
+      case Some(strRepresentation) =>
+        if (strRepresentation.contains(char.toChar)) {
+          // Case 1: `char` is is contained inside the replacement string
+          val charCount = theory.strDatabase.term2Str(args(1)).get.count(_ == char.toChar)
+          //println(s"Returning: ${result === charCount * charCountVar(0,characters.indexOf(this.a.toInt)) + charCountVar(0,characters.indexOf(char))}")
+          result === charCount * charCountVar(0,characters.indexOf(this.a.toInt)) + charCountVar(0,characters.indexOf(char))
+        }
+        else if (char.toChar == this.a) {
+          // Case 2: `char` is equal to search char a
+          //println(s"Character ${this.a} is found in the replace: ${this.a} return ${result === 0}")
+          result === 0
+        }
+        else {
+          // Case 3: Neither condition is true
+         // println(s"Character ${char.toChar} is neither equal to ${this.a} nor found in the string representation. Returning ${result === charCountVar(0,characters.indexOf(char))}")
+          result === charCountVar(0,characters.indexOf(char))
+        }
+    }
+    resultFormula
   }
 
   def apply(argumentConstraints : Seq[Seq[Automaton]],

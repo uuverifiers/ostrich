@@ -33,9 +33,10 @@
 package ostrich.preop
 
 import ostrich.automata.{Automaton, BricsAutomaton}
-
-import ap.terfor.{Term, Formula, TermOrder}
+import ap.terfor.{Formula, Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
+import ap.theories.Theory
+import ostrich.OstrichStringTheory
 
 /**
  * Interface for back-propagating regex constraints over n-ary functions f.
@@ -92,7 +93,7 @@ trait PreOp {
    */
   def charCountApproximation(char : Int,
                              arguments : Seq[Term], result : Term,
-                             order : TermOrder) : Formula =
+                             order : TermOrder, characters : Seq[Int], args : Seq[Term], theory : OstrichStringTheory) : Formula =
     Conjunction.TRUE
 
   /**

@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2023 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -55,10 +55,17 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
                  str_replaceallre_longest, str_replacere_longest,
                  str_replaceallcg, str_replacecg, str_extract}
 
-  private val regexExtractor = theory.RegexExtractor(facts.predConj)
-  private val builder = new JavascriptPrioAutomatonBuilder(theory)
-  private val cgTranslator   = builder.regex2pfa
+  def addFacts(newFacts : Conjunction,
+               order    : TermOrder) : OstrichStringFunctionTranslator =
+    if (newFacts.isTrue)
+      this
+    else
+      new OstrichStringFunctionTranslator(
+        theory, Conjunction.conj(List(facts, newFacts), order))
 
+  private val regexExtractor = theory.RegexExtractor(facts.predConj)
+  private val builder        = new JavascriptPrioAutomatonBuilder(theory)
+  private val cgTranslator   = builder.regex2pfa
 
   private def regexAsTerm(t : Term) : Option[ITerm] =
     try {
@@ -71,7 +78,8 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
     (for (f <- List(str_++, str_replace, str_replaceall,
                     str_replacere, str_replaceallre,
                     str_replacere_longest, str_replaceallre_longest,
-                    str_at, str_at_right, str_trim) ++
+                    str_at, str_at_right, str_trim,
+                    str_extract, str_replaceallcg, str_replacecg) ++
                theory.extraFunctionPreOps.keys)
      yield FunPred(f)) ++ theory.transducerPreOps.keys
 
@@ -155,6 +163,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
         (op, List(a(1)), a(3))
       }
 
+    // Function that is not used anymore, to be removed
     case FunPred(`str_at`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
@@ -172,6 +181,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       Some((op, List(a(0)), a(2)))
     }
 
+    // Function that is not used anymore, to be removed
     case FunPred(`str_at_right`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(ind)) = a(1)
@@ -189,6 +199,7 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       Some((op, List(a(0)), a(2)))
     }
 
+    // Function that is not used anymore, to be removed
     case FunPred(`str_trim`) => {
       val op = () => {
         val LinearCombination.Constant(IdealInt(trimLeft))  = a(1)

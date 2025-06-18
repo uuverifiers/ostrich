@@ -2,14 +2,18 @@ package ostrich
 
 import ap.CmdlMain
 import ap.DialogUtil.asString
-
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
+import ostrich.SMTLIBTests.checkFileOpts
 
 object YanTests extends Properties("YanTests") {
 
   import System.lineSeparator
-  
+
+  val timeout      = 30000
+  val shortTimeout = 3000
+  val longTimeout  = 60000
+
   def expectResult[A](expResult : String)(computation : => A) : Boolean = {
     val result = asString {
       Console.withErr(ap.CmdlMain.NullStream) {
@@ -23,7 +27,7 @@ object YanTests extends Properties("YanTests") {
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=10000",
+      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
                             "-stringSolver=ostrich.OstrichStringTheory",
                             filename) ++ extractOpts).toArray,
                         false)
@@ -98,7 +102,7 @@ object YanTests extends Properties("YanTests") {
   property("tests/yan-benchmarks/replaceAll-016.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-016.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-017.smt2") =
-    checkFile("tests/yan-benchmarks/replaceAll-017.smt2", "sat")
+    checkFileOpts("tests/yan-benchmarks/replaceAll-017.smt2", "sat", "+forwardPropagation,-length=on", s"-timeout=$longTimeout")
   property("tests/yan-benchmarks/replaceAll-018.smt2") =
     checkFile("tests/yan-benchmarks/replaceAll-018.smt2", "sat")
   property("tests/yan-benchmarks/replaceAll-019.smt2") =

@@ -29,107 +29,95 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI
 import ap.api.SimpleAPI.ProverStatus
 import ap.parser.SymbolCollector
-import ostrich.cesolver.convenience.CostEnrichedConvenience._
-import FinalConstraints._
 import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.util.UnknownException
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
+import ostrich.cesolver.core.finalConstraints.{
+  FinalConstraints,
+  UnaryFinalConstraints
+}
 import ostrich.OFlags
-import ostrich.cesolver.util.ParikhUtil
 import ap.parser.ITerm
 import ap.parser.IFormula
 import ap.parser.IExpression._
+import ostrich.cesolver.util.ParikhUtil
+import ap.parser.IConstant
+import ap.util.Timeout
+import ap.parser.IBinJunctor
 
 class UnaryBasedSolver(
     flags: OFlags,
-    freshIntTerm2orgin: Map[ITerm, ITerm],
-    lProver: SimpleAPI
+    lProver: SimpleAPI,
+    additionalLia: IFormula
 ) extends FinalConstraintsSolver[UnaryFinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit = {
-    ParikhUtil.debugPrintln("add atom constraints begin")
-    addConstraint(unaryHeuristicACs(t, auts, flags))
+    addConstraint(FinalConstraints.unaryHeuristicACs(t, auts, flags))
   }
 
-  def solve: Result = {
-    if (flags.underApprox) {
-      val res = solveUnderApprox
-      if (res.isSat) return res
-    }
-    solveCompleteLIA
-  }
-
-  def solveUnderApprox: Result = {
-    // add bound iterately
-    ParikhUtil.debugPrintln("under begin")
-    val maxBound = flags.underApproxBound
-    val step = 5
-    var nowBound = 5
-    var result = new Result
-    while (nowBound <= maxBound && !result.isSat) {
-      ap.util.Timeout.check
-      result = solveFormula(
-        and(constraints.map(_.getUnderApprox(nowBound)))
-      )
-      nowBound += step
-    }
-    result
-  }
+  def solve: Result = solveCompleteLIA
 
   def solveCompleteLIA: Result = solveFormula(
-    and(constraints.map(_.getCompleteLIA))
+    connectSimplify(constraints.map(_.getCompleteLIA), IBinJunctor.And)
   )
 
   def solveFormula(f: IFormula, generateModel: Boolean = true): Result = {
-    ParikhUtil.debugPrintln("begin solveFormula")
-    import FinalConstraints.evalTerm
-    val res = new Result
 
-    val finalArith = f
+    val res = new Result
+    val finalArith = f & additionalLia
 
     lProver.push
-    val newConsts =
-      SymbolCollector.constants(finalArith) &~ lProver.order.orderedConstants
+    val integerInConstraints =
+      (for (t <- integerTerms) yield SymbolCollector constants t).flatten
+    val allConsts =
+      (SymbolCollector.constants(
+        finalArith
+      ) ++ integerInConstraints)
+
+    val newConsts = allConsts &~ lProver.order.orderedConstants
+
     lProver.addConstantsRaw(newConsts)
-    lProver.addConstants(integerTerms)
     lProver !! finalArith
+
+    ParikhUtil.debugPrintln("finalArith is " + finalArith)
+
+    lProver.checkSat(false)
     val status = measure(
       s"${this.getClass.getSimpleName}::solveFixedFormula::findIntegerModel"
     ) {
+      while (lProver.getStatus(100) == ProverStatus.Running) {
+        Timeout.check
+      }
       lProver.???
     }
     status match {
       case ProverStatus.Sat if generateModel =>
+        // generate model
         val partialModel = lProver.partialModel
         // update string model
         for (singleString <- constraints) {
-          singleString.setInterestTermModel(partialModel)
           val value = measure(
             s"${this.getClass.getSimpleName}::findStringModel"
-          )(singleString.getModel)
+          )(singleString.getModel(partialModel))
           value match {
-            case Some(v) => res.updateModel(singleString.strId, v)
+            case Some(v) => res.updateModel(singleString.strDataBaseId, v)
             case None    => throw UnknownException("Cannot find string model")
           }
 
         }
         // update integer model
-        for (term <- integerTerms) {
-          val value = evalTerm(freshIntTerm2orgin(term), partialModel)
+        for (term <- allConsts) {
+          val value = FinalConstraints.evalTerm(IConstant(term), partialModel)
           res.updateModel(term, value)
         }
-
-        res.setStatus(ProverStatus.Sat)
-      case _ => res.setStatus(_)
+      case _ => //do nothing
     }
-
+    res.setStatus(status)
     lProver.pop
-    ParikhUtil.debugPrintln("end solveFormula")
     res
   }
 

@@ -29,8 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package ostrich.cesolver.core
+package ostrich.cesolver.core.finalConstraintsSolver
 
 import ap.api.SimpleAPI.ProverStatus
 import ap.basetypes.IdealInt
@@ -38,6 +37,28 @@ import ostrich.cesolver.util.ParikhUtil.measure
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.ITerm
 import ostrich.cesolver.util.ParikhUtil
+import ostrich.cesolver.core.OstrichModel
+import ostrich.cesolver.core.finalConstraints.FinalConstraints
+
+object Result {
+  def ceaSatResult = {
+    val res = new Result
+    res.setStatus(ProverStatus.Sat)
+    res
+  }
+
+  def ceaUnsatResult = {
+    val res = new Result
+    res.setStatus(ProverStatus.Unsat)
+    res
+  }
+
+  def ceaUnknownResult = {
+    val res = new Result
+    res.setStatus(ProverStatus.Unknown)
+    res
+  }
+}
 
 class Result {
   protected var status = ProverStatus.Unknown
@@ -57,6 +78,10 @@ class Result {
   def updateModel(t: ITerm, v: Seq[Int]): Unit = model.update(t, v)
 
   def getModel = model.getModel
+
+  override def toString : String =
+    "" + status + ", " + model
+
 }
 
 
@@ -66,9 +91,9 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
 
   def measureTimeSolve: Result =
     measure(s"${this.getClass.getSimpleName}::solve") {
-      ParikhUtil.debugPrintln("begin solve")
+      ParikhUtil.log("Begin to solve the final constraints")
       val res = solve
-      ParikhUtil.debugPrintln("end solve")
+      ParikhUtil.log("End to solve the final constraints")
       res
     }
 
@@ -81,5 +106,7 @@ trait FinalConstraintsSolver[A <: FinalConstraints] {
   def addConstraint(t: ITerm, auts: Seq[CostEnrichedAutomatonBase]): Unit
 
   def addConstraint(c: A) = constraints = constraints :+ c
+
+  def cleanConstaints: Unit = constraints = Seq()
 
 }

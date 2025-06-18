@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2022 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2024 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -264,6 +264,19 @@ class StrDatabase(theory : OstrichStringTheory) {
           Some(id2Str(value))
         case StringTheory.ConcreteString(str) =>
           Some(str)
+        case _ =>
+          None
+      }
+  }
+
+  /**
+   * Extractor to recognise strings in different representations.
+   */
+  object IntEncodedString {
+    def unapply(t : Term) : Option[String] =
+      t match {
+        case LinearCombination.Constant(IdealInt(value)) =>
+          Some(id2Str(value))
         case _ =>
           None
       }

@@ -40,12 +40,13 @@ import scala.collection.mutable.{
 }
 
 import ostrich.cesolver.util.TermGenerator
+import ostrich.cesolver.util.ParikhUtil
 
 abstract class CostEnrichedAutomatonAdapter[A <: CostEnrichedAutomatonBase](
     val underlying: A
 ) extends CostEnrichedAutomatonBase {
 
-  val termGen = TermGenerator(hashCode())
+  val termGen = TermGenerator()
 
   // initialize registers
   this.registers = Seq.fill(underlying.registers.size)(termGen.registerTerm)
@@ -114,35 +115,50 @@ object CostEnrichedInitFinalAutomaton {
       aut: A,
       initialState: A#State,
       acceptingStates: Set[A#State]
-  ): CostEnrichedAutomatonBase =
+  ): CostEnrichedAutomatonBase = {
+    ParikhUtil.log(
+      "CostEnrichedInitFinalAutomaton.apply ... aut: " + aut.hashCode() +
+      ", initialState: " + initialState + ", acceptingStates: " + acceptingStates
+    )
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, _, _) =>
         _CostEnrichedInitFinalAutomaton(a, initialState, acceptingStates)
       case _ =>
         _CostEnrichedInitFinalAutomaton(aut, initialState, acceptingStates)
     }
+  }
 
   def setInitial[A <: CostEnrichedAutomatonBase](
       aut: A,
       initialState: A#State
-  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonBase] =
+  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonBase] = {
+    ParikhUtil.log(
+      "CostEnrichedInitFinalAutomaton.setInitial ... aut: " + aut.hashCode() +
+      ", initialState: " + initialState
+    )
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, _, oldFinal) =>
         _CostEnrichedInitFinalAutomaton(a, initialState, oldFinal)
       case _ =>
         _CostEnrichedInitFinalAutomaton(aut, initialState, aut.acceptingStates)
     }
+  }
 
   def setFinal[A <: CostEnrichedAutomatonBase](
       aut: A,
       acceptingStates: Set[CostEnrichedAutomatonBase#State]
-  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonBase] =
+  ): _CostEnrichedInitFinalAutomaton[_ >: A <: CostEnrichedAutomatonBase] = {
+    ParikhUtil.log(
+      "CostEnrichedInitFinalAutomaton.setFinal ... aut: " + aut.hashCode() +
+      ", acceptingStates: " + acceptingStates
+    )
     aut match {
       case _CostEnrichedInitFinalAutomaton(a, oldInit, _) =>
         _CostEnrichedInitFinalAutomaton(a, oldInit, acceptingStates)
       case _ =>
         _CostEnrichedInitFinalAutomaton(aut, aut.initialState, acceptingStates)
     }
+  }
 }
 
 case class _CostEnrichedInitFinalAutomaton[A <: CostEnrichedAutomatonBase](

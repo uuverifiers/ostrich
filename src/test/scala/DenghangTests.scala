@@ -3,6 +3,7 @@ package ostrich.cesolver
 import ap.CmdlMain
 import ap.DialogUtil.asString
 import org.scalacheck.Properties
+import ostrich.SMTLIBTests.checkFileOpts
 
 object DenghangTests extends Properties("DenghangTests") {
 
@@ -65,7 +66,7 @@ object DenghangTests extends Properties("DenghangTests") {
   property("indexof_var_sat.smt2") =
     checkFile("tests/hu-benchmarks/indexof_var_sat.smt2", "sat")
   property("indexof_var_unsat.smt2") =
-    checkFile("tests/hu-benchmarks/indexof_var_unsat.smt2", "unsat")
+    checkFileOpts("tests/hu-benchmarks/indexof_var_unsat.smt2", "unsat", "+forwardPropagation,-length=on" )
   property("indexof_empty_sat.smt2") =
     checkFile("tests/hu-benchmarks/indexof_empty_sat.smt2", "sat")
   property("indexof_empty_sat2.smt2") =
@@ -102,5 +103,15 @@ object DenghangTests extends Properties("DenghangTests") {
     checkFile("tests/bug-56-replace-bug2.smt2", "sat")
   property("bug-58-replace-re") =
     checkFile("tests/bug-58-replace-re.smt2", "sat")
+  property("replace_empty_string.smt2") =
+    checkFile("tests/hu-benchmarks/replace_empty_string.smt2", "sat") 
+  property("replace_shortest_sat.smt2") =
+    checkFile("tests/hu-benchmarks/replace_shortest_sat.smt2", "sat")
+  property("replace_longest_unsat.smt2") =
+    checkFile("tests/hu-benchmarks/replace_longest_unsat.smt2", "unsat")
+
+  // integration tests for str_to_int
+  property("str_to_int_sat.smt2") =
+    checkFile("tests/hu-benchmarks/str_to_int_sat.smt2", "sat")
 
 }

@@ -36,13 +36,11 @@ import scala.collection.mutable.{HashSet => MHashSet, HashMap => MHashMap, Stack
 
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.cesolver.automata.CETransducer
-import ostrich.automata.BricsTLabelOps
-import ostrich.cesolver.util.ParikhUtil.{State, partition, getImage}
+import ostrich.cesolver.util.ParikhUtil.{partition, getImage}
 import ostrich.automata.Automaton
 import ostrich.automata.Transducer._
 import ostrich.cesolver.util.ParikhUtil
-import ostrich.automata.BricsTLabelEnumerator
-import ostrich.cesolver.convenience.CostEnrichedConvenience.automaton2CostEnriched
+import ostrich.cesolver.automata.CETLabelEnumerator
 
 object ReplaceAllCEPreOp {
   // pre-images of x = replaceall(y, e, u)
@@ -58,7 +56,7 @@ object ReplaceAllCEPreOp {
   }
 
   private def buildTransducer(aut: CostEnrichedAutomatonBase) : CETransducer = {
-    ParikhUtil.todo("ReplaceAllCEPreOp: not handle empty match in pattern")
+    ParikhUtil.todo("ReplaceAllCEPreOp: not handle empty match in pattern", 3)
     abstract class Mode
     // not matching
     case object NotMatching extends Mode
@@ -67,8 +65,8 @@ object ReplaceAllCEPreOp {
     // last transition finished a match and reached frontier
     case class EndMatch(val frontier : Set[aut.State]) extends Mode
 
-     val labelEnumerator = new BricsTLabelEnumerator(
-      aut.transitionsWithVec.map(_._2).toIterator
+     val labelEnumerator = new CETLabelEnumerator(
+      aut.transitionsWithVec.map(_._2)
     )
     val labels = labelEnumerator.enumDisjointLabelsComplete
     val ceTran = new CETransducer
@@ -259,7 +257,7 @@ class ReplaceAllCEPreOp(tran: CETransducer, replacement: Seq[Char]) extends CEPr
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
     // x = replace(y, pattern, replacement)
-    val rc = automaton2CostEnriched(resultConstraint)
+    val rc = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val internals = partition(rc, replacement)
     val newYCon = tran.preImage(rc, internals)
     (Iterator(Seq(newYCon)), argumentConstraints)

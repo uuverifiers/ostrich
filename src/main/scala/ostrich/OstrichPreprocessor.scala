@@ -36,6 +36,8 @@ import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * Pre-processor for reducing some operators to more basic ones.
  */
@@ -72,14 +74,6 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val asRE = reCat(re_all(), str_to_re(subStr), re_all())
       str_in_re(bigStr, asRE)
     }
-/*
-    case (IAtom(`str_contains`, _),
-          Seq(bigStr, subStr)) => {
-      println(subStr)
-      println(bigStr)
-      t update subres
-    }
- */
 
     case (IAtom(`str_prefixof`, _), Seq(x,y)) if (x == y) => {
         IBoolLit(true)
@@ -170,6 +164,9 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           reUnion(List(containingStr) ++ forbiddenSuffixREs : _*)
 
       eps(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(StringSort.ex(
+        // it helps to keep the function application around, since it enforces
+        // functional consistency of the results
+        (str_indexof(shiftedBigStr, subStr, shiftedStartIndex) === resultVar) &
         suffixDef1 &
          ((resultVar === -1 &
             suffixDef3 &
@@ -183,72 +180,6 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
              !str_in_re(unmatchedPrefixVar, containingOrSuffix)))
       ))))))
     }
-
-    case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm,
-              Const(begin),
-              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(end))))
-        if bigStr == bigStr2 && begin.signum >= 0 && end >= begin =>
-      str_trim(bigStr, begin, end - begin)
-
-      // TODO: need proper condition for length
-/*
-    case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm,
-              begin : ITerm,
-              Difference(IFunApp(`str_len`, Seq(bigStr2)), end : ITerm)))
-        if bigStr == bigStr2 =>
-      ite(begin >= 0,
-          str_trim(bigStr, begin, end - begin),
-          "")
- */
-
-/*
-    Some attempts to rewrite substr to replace; needs more thinking
-
-    case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm,
-              Const(IdealInt.ZERO),
-              IFunApp(`str_indexof`,
-                      Seq(bigStr2,
-                          ConcreteString(searchStr),
-                          Const(IdealInt.ZERO)))))
-        if bigStr == bigStr2 =>
-      ite(str_in_re(bigStr, reCat(re_all(), str_to_re(searchStr), re_all())),
-          str_replacere(bigStr, reCat(str_to_re(searchStr), re_all()), ""),
-          "")
-
-    case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm,
-              Const(IdealInt.ZERO),
-              Difference(IFunApp(`str_indexof`,
-                                 Seq(bigStr2,
-                                     ConcreteString(searchStr),
-                                     Const(IdealInt.ZERO))),
-                         Const(IdealInt(offset)))))
-        if bigStr == bigStr2 && (-offset) >= 1 && (-offset) <= searchStr.size =>
-      // TODO
-      ite(str_in_re(bigStr, reCat(re_all(), str_to_re(searchStr), re_all())),
-          str_replacere(bigStr,
-                        reCat(str_to_re(searchStr), re_all()),
-                        searchStr take (-offset)),
-          "")
-
-    case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm,
-              start@Difference(IFunApp(`str_indexof`,
-                                       Seq(bigStr2,
-                                           ConcreteString(searchStr),
-                                           Const(IdealInt.ZERO))),
-                               Const(IdealInt.MINUS_ONE)),
-              Difference(IFunApp(`str_len`, Seq(bigStr3)), start2)))
-        if bigStr == bigStr2 && bigStr == bigStr3 && searchStr.size == 1 &&
-           start == start2 =>
-      str_replacere(bigStr,
-                    reCat(re_*(re_comp(str_to_re(searchStr))),
-                          str_to_re(searchStr)),
-                    "")
-*/
 
     case (IFunApp(`str_substr`, _),
           Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
@@ -268,42 +199,20 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
         bigStrVar === shiftedBigStr &
         beginVar  === shiftedBegin &
         lenVar    === shiftedLen &
-	ite(
-	  lenVar >= 0 & beginVar >= 0 & beginVar + lenVar <= str_len(bigStrVar),
+        (str_len(resultVar) <= lenVar | str_len(resultVar) <= 0) &
+	      ite(
+	        lenVar >= 0 & beginVar >= 0 & beginVar + lenVar <= str_len(bigStrVar),
           strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
-          str_len(v(1, StringSort)) === beginVar & str_len(resultVar) === lenVar,
-	  ite(
-	    lenVar >= 0 & beginVar >= 0,
-	    strCat(v(1, StringSort), resultVar) === bigStrVar &
-            str_len(v(1, StringSort)) === beginVar,
-	    resultVar === ""
-	  )
-	)
-/*
-        ite(
-          lenVar < 0 | beginVar < 0 | beginVar >= str_len(bigStrVar),
-          resultVar === "",
-          strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
-          str_len(v(1, StringSort)) === beginVar &
-          (str_len(resultVar) === lenVar |
-           (str_len(resultVar) < lenVar & v(0, StringSort) === ""))
-        )
-*/
+            str_len(v(1, StringSort)) === beginVar & str_len(resultVar) === lenVar,
+	        ite(
+	          lenVar >= 0 & beginVar >= 0,
+	          strCat(v(1, StringSort), resultVar) === bigStrVar &
+              str_len(v(1, StringSort)) === beginVar,
+	          resultVar === ""
+	        )
+	      )
       ))))))
     }
-
-    // keep str.at with concrete index, we will later translate it
-    // to a transducer
-    case (IFunApp(`str_at`, _), Seq(bigStr : ITerm, Const(_))) =>
-      t update subres
-
-    // keep str.at_last with concrete index, we will later translate it
-    // to a transducer
-    case (IFunApp(`str_at`, _),
-          Seq(bigStr : ITerm,
-              Difference(IFunApp(`str_len`, Seq(bigStr2)), Const(offset))))
-        if bigStr == bigStr2 && offset >= 1 =>
-      str_at_right(bigStr, offset - 1)
 
     case (IFunApp(`str_at`, _),
           Seq(bigStr : ITerm, index : ITerm)) => {
@@ -311,12 +220,14 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       val shIndex3  = VariableShiftVisitor(index, 0, 3)
 
       StringSort.eps(StringSort.ex(StringSort.ex(
+        str_len(v(2, StringSort)) <= 1 &
         ite(
           shIndex3 < 0 | shIndex3 >= str_len(shBigStr3),
           v(2, StringSort) === "",
           strCat(v(1, StringSort), v(2, StringSort), v(0, StringSort)) === shBigStr3 &
           str_len(v(1, StringSort)) === shIndex3 &
-          str_in_re(v(2, StringSort), re_allchar())
+          str_in_re(v(2, StringSort), re_allchar()) &
+          str_len(v(2, StringSort)) === 1
         )
       )))
     }
@@ -451,3 +362,44 @@ class OstrichStringEncoder(theory : OstrichStringTheory)
     }
 }
 
+/**
+ * Factor out certain common sub-expressions, whose translation
+ * to more basic string functions is complicated.
+ */
+class OstrichFactorizer(theory : OstrichStringTheory) {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula = {
+    val parts =
+    for (INamedPart(name, f) <- PartExtractor(f)) yield {
+      val skeleton = SubExprAbbreviator(f, factor _).asInstanceOf[IFormula]
+      val newF = quanConsts(Quantifier.ALL, newConsts.toSeq,
+                           factoredExpressions ==> skeleton)
+      clear()
+      INamedPart(name, newF)
+    }
+    or(parts)
+  }
+
+  def clear() = {
+    newConsts.clear()
+    factoredExpressions = i(true)
+  }
+
+  private val newConsts = new ArrayBuffer[ConstantTerm]
+  private var factoredExpressions : IFormula = i(true)
+
+  private def factor(e : IExpression) : IExpression = e match {
+    case e@IFunApp(`str_indexof` | `str_at` | `str_substr`, _)
+              if ContainsSymbol.isClosed(e) => {
+      val sort = Sort.sortOf(e)
+      val c = sort.newConstant("X")
+      newConsts += c
+      factoredExpressions = factoredExpressions &&& (e === c)
+      c
+    }
+    case e => e
+  }
+
+}

@@ -33,15 +33,15 @@
 package ostrich.cesolver.preop
 
 import ostrich.automata.Automaton
-import ostrich.cesolver.convenience.CostEnrichedConvenience._
 import ostrich.cesolver.automata.CostEnrichedInitFinalAutomaton
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ap.parser.IExpression._
+import ap.parser.IBinJunctor
 
 object ConcatCEPreOp extends CEPreOp {
   override def toString(): String = "concatCEPreOp"
 
-  def addConcatPreRegsFormula(
+  private def addConcatPreRegsFormula(
       concatLeft: CostEnrichedAutomatonBase,
       concatRight: CostEnrichedAutomatonBase,
       result: CostEnrichedAutomatonBase
@@ -49,24 +49,27 @@ object ConcatCEPreOp extends CEPreOp {
     val leftRegs = concatLeft.registers
     val rightRegs = concatRight.registers
     val resultRegs = result.registers
-    val derivedRegsRelation = and(leftRegs.zipWithIndex.map { case (reg, i) =>
+    val derivedRegsRelation = connectSimplify(leftRegs.zipWithIndex.map { case (reg, i) =>
       (reg + rightRegs(i)) === resultRegs(i)
-    })
+    }, IBinJunctor.And)
     val letfRegsRelation = concatLeft.regsRelation
     val resRegsRelation = result.regsRelation
-    concatLeft.regsRelation = and(Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation))
+    concatLeft.regsRelation = connectSimplify(
+      Seq(letfRegsRelation, derivedRegsRelation, resRegsRelation),
+      IBinJunctor.And
+    )
   }
 
   def apply(
       argumentConstraints: Seq[Seq[Automaton]],
       resultConstraint: Automaton
   ): (Iterator[Seq[Automaton]], Seq[Seq[Automaton]]) = {
-    val resultAut = automaton2CostEnriched(resultConstraint)
+    val resultAut = resultConstraint.asInstanceOf[CostEnrichedAutomatonBase]
     val argLengths = (
       for (argAuts <- argumentConstraints) yield {
         (for (
           aut <- argAuts;
-          lengths <- aut.uniqueAcceptedWordLengths
+          lengths <- aut.asInstanceOf[CostEnrichedAutomatonBase].uniqueAcceptedWordLengths
         )
           yield (aut, lengths)).toSeq.headOption
       }

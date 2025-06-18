@@ -33,19 +33,18 @@
 package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
-import ostrich.preop.{PreOp, TransducerPreOp, ReversePreOp}
-import ostrich.proofops.{OstrichNielsenSplitter, OstrichPredtoEqConverter}
-
+import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
+import ostrich.proofops.{BackwardsSaturation, CutSaturation, ForwardsSaturation, LengthAbstraction, OstrichClose, OstrichCut, OstrichIntersect, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
 import ap.Signature
 import ap.basetypes.IdealInt
-import ap.parser.{ITerm, IFormula, IExpression, IFunction, IFunApp}
+import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
 import IExpression.Predicate
 import ap.theories.strings._
-import ap.theories.{Theory, ModuloArithmetic, TheoryRegistry, Incompleteness}
-import ap.types.{Sort, MonoSortedIFunction, MonoSortedPredicate, ProxySort}
-import ap.terfor.{Term, ConstantTerm, TermOrder, TerForConvenience}
+import ap.theories.{Incompleteness, ModuloArithmetic, Theory, TheoryRegistry}
+import ap.types.{MonoSortedIFunction, MonoSortedPredicate, ProxySort, Sort}
+import ap.terfor.{ConstantTerm, TerForConvenience, Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
-import ap.terfor.preds.Atom
+import ap.terfor.preds.{Atom, Predicate}
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
 import ap.parameters.Param
@@ -82,6 +81,7 @@ object OstrichStringTheory {
 
   }
 
+  case class BlockingActions(actions : Seq[Plugin.Action]) extends Exception
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -251,6 +251,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val str_in_re_id =
     MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
 
+  val agePred = MonoSortedPredicate("age", List(StringSort, Sort.Integer, Sort.Integer))
+
   val strDatabase = new StrDatabase(this)
 
   //////////////////////////////////////////////////////////////////////////////
@@ -265,7 +267,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
-                     extraPredicates = List(str_in_re_id))
+                     extraPredicates = List(str_in_re_id, agePred))
   val predicates =
     predefPredicates ++ funPredicates ++ (transducersWithPreds map (_._2))
 
@@ -273,21 +275,37 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     for (f <- functions) yield (f, functionPredicateMap(f))
   val functionalPredicates =
     (for (f <- functions) yield functionPredicateMap(f)).toSet
-  val predicateMatchConfig : Signature.PredicateMatchConfig = Map()
-  val axioms = Conjunction.TRUE
+
+  val predicateMatchConfig : Signature.PredicateMatchConfig =
+    // we match negatively on str_contains in our axioms!
+    Map(str_contains -> Signature.PredicateMatchStatus.Negative)
+
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
-  val IntEnumerator = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
+  val IntEnumerator       = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
+  private val forwardSaturation   = new ForwardsSaturation(this)
+  private val backwardsSaturation = new BackwardsSaturation(this)
+  private val lengthAbstraction   = new LengthAbstraction(this)
+  private val cutSaturation = new CutSaturation(this)
 
   override val dependencies : Iterable[Theory] =
-    List(ModuloArithmetic, IntEnumerator)
+    List(ModuloArithmetic, IntEnumerator) ++
+    List(forwardSaturation).filter(_ => theoryFlags.forwardPropagation) ++
+    List(backwardsSaturation).filter(_ => theoryFlags.backwardPropagation) ++
+    List(lengthAbstraction)  ++ List(cutSaturation)
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)
   val _str_++         = functionPredicateMap(str_++)
   val _str_len        = functionPredicateMap(str_len)
   val _str_char_count = functionPredicateMap(str_char_count)
+  val _str_replace = functionPredicateMap(str_replace)
+  val _str_replaceall = functionPredicateMap(str_replaceall)
+
+  val _str_substr = functionPredicateMap(str_substr)
+
+  val axioms          = new OstrichAxioms(this).axioms
 
   private val predFunMap =
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
@@ -299,14 +317,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, str_prefixof, str_suffixof, str_<=) ++
+    Set(str_in_re, str_in_re_id, agePred, str_prefixof, str_suffixof, str_<=, str_contains) ++
     (for (f <- Set(str_empty, str_cons, str_at,
-                   str_++, str_replace, str_replaceall,
+      str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre,
                    str_replacere_longest, str_replaceallre_longest,
                    str_replaceallcg, str_replacecg, str_to_re,
                    str_extract,
                    str_to_int, int_to_str, str_to_code,
+                   str_indexof,
                    re_none, re_eps, re_all, re_allchar, re_charrange,
                    re_++, re_union, re_inter, re_diff, re_*, re_*?, re_+, re_+?,
                    re_opt, re_opt_?,
@@ -339,8 +358,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     }
   }
 
-  private val ostrichSolver      = new OstrichSolver (this, theoryFlags)
+  private val ostrichClose       = new OstrichClose(this)
+  private val intersectionRule   = new OstrichIntersect(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
+  private val strInReTranslator  = new OstrichStrInReTranslator(this)
+  private val cutter             = new OstrichCut(this)
 
   def plugin = Some(new Plugin {
 
@@ -348,93 +370,35 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       new ap.util.LRUCache[Conjunction,
                            Option[Map[Term, Either[IdealInt, Seq[Int]]]]](3)
 
-    override def handleGoal(goal : Goal)
-                       : Seq[Plugin.Action] = {
+    override def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, theoryFlags)
-
       lazy val predToEq =
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, theoryFlags)
 
       goalState(goal) match {
 
         case Plugin.GoalState.Eager =>
-          List()
-
-        case Plugin.GoalState.Intermediate => try {
+          strInReTranslator.handleGoal(goal)           elseDo
+          ostrichClose.handleGoal(goal)                elseDo
+          intersectionRule.handleGoal(goal)            elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
           predToEq.reducePredicatesToEquations
 
-        } catch {
-          case t : ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
-        }
+        case Plugin.GoalState.Intermediate =>
+          if (theoryFlags.nielsenSplitter)
+            nielsenSplitter.splitEquation
+          else
+            List()
 
-        case Plugin.GoalState.Final => try { //  Console.withOut(Console.err)
-          nielsenSplitter.splitEquation                elseDo
+        case Plugin.GoalState.Final =>
           predToEq.lazyEnumeration                     elseDo
-          callBackwardProp(goal)
-
-        } catch {
-          case t : ap.util.Timeout => throw t
-//          case t : Throwable =>  { t.printStackTrace; throw t }
-        }
+          cutter.handleGoal(goal, true)
 
       }
     }
-
-    private def callBackwardProp(goal : Goal) : Seq[Plugin.Action] =
-      try {
-        modelCache(goal.facts) {
-          ostrichSolver.findStringModel(goal)
-        } match {
-          case Some(m) =>
-            equalityPropagator.handleSolution(goal, m)
-          case None =>
-            if (Param.PROOF_CONSTRUCTION(goal.settings))
-              // TODO: only list the assumptions that were actually
-              // needed for the proof to close.
-              List(Plugin.CloseByAxiom(goal.facts.iterator.toList,
-                                       OstrichStringTheory.this))
-            else
-              List(Plugin.AddFormula(Conjunction.TRUE))
-        }
-      } catch {
-        case OstrichSolver.BlockingActions(actions) => actions
-      }
-
-    override def computeModel(goal : Goal) : Seq[Plugin.Action] =
-      if (Seqs.disjointSeq(goal.facts.predicates, predicates)) {
-        List()
-      } else {
-        val model = (modelCache(goal.facts) {
-                       ostrichSolver.findStringModel(goal)
-                     }).get
-        implicit val order = goal.order
-        import TerForConvenience._
-
-        val stringAssignments =
-          conj(for ((x, Right(w)) <- model)
-               yield (x === strDatabase.list2Id(w)))
-
-        import TerForConvenience._
-        val lenAssignments =
-          eqZ(for ((x, Left(len)) <- model;
-                if x.constants subsetOf order.orderedConstants)
-              yield l(x - len))
-
-        val stringFormulas =
-          conj(goal.facts.iterator filter {
-             f => !Seqs.disjointSeq(f.predicates, predicates)
-           })
-
-        List(Plugin.RemoveFacts(stringFormulas),
-             Plugin.AddAxiom(List(stringFormulas),
-                             stringAssignments & lenAssignments,
-                             OstrichStringTheory.this))
-      }
 
   })
 
@@ -480,12 +444,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
+    val visitor0 = new OstrichFactorizer   (this)
     val visitor1 = new OstrichPreprocessor (this)
     val visitor2 = new OstrichRegexEncoder (this)
-    // Added by Riccardo
     val visitor3 = new OstrichStringEncoder(this)
 
-    (visitor3(visitor2(visitor1(f))), signature)
+    (visitor3(visitor2(visitor1(visitor0(f)))), signature)
   }
 
   override val reducerPlugin = new OstrichReducerFactory(this)
