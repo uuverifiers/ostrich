@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2022-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -486,11 +486,14 @@ class OstrichNielsenSplitter(goal : Goal,
     val splitLit2   = (literals filterNot (_ == splitLit1))(
                         rand nextInt (literals.size - 1))
 
-    if (lengthLits.isEmpty)
-      throw new Exception("Nielsen transformation is currently only enabled" +
-                            " in combination with option -length=on.")
-
-    splitEquationWithLen(splitLit1, splitLit2, multiGroups.size)
+    if (lengthLits.isEmpty) {
+      Console.err.println(
+        "Warning: Nielsen transformation is currently only enabled" +
+          " in combination with option -length=on.")
+      List()
+    } else {
+      splitEquationWithLen(splitLit1, splitLit2, multiGroups.size)
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
