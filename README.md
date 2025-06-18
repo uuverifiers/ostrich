@@ -16,14 +16,14 @@ There are some additional string-specific options offered by OSTRICH:
 | Option                    | Explanation                                                                                  |
 |---------------------------|----------------------------------------------------------------------------------------------|
 | `[+-]cea`                 | Use the cost-enriched automata back-end instead of the standard back-end. Default: `-cea`    |
-| `-portfolio=strings`      | Use a portfolio of different string solving configuration. Disabled by default.              |
+| `-portfolio=strings`      | Use a portfolio of different string solving configurations. Disabled by default.             |
 | `[+-]forwardPropagation`  | Forward propagation of regular expression constraints. Default: `-forwardPropagation`        |
 | `[+-]backwardPropagation` | Backward propagation of regular expression constraints. Default: `+backwardPropagation`      |
 | `[+-]nielsenSplitter`     | Splitting of equations using Nielsen transformation. Default: `+nielsenSplitter`             |
 | `-length=[on,off,auto]`   | Switch length reasoning on or off. Default: `-length=auto`                                   |
 | `[+-]parikh`              | Introduce letter count equations for all letters that occur in a problem. Default: `-parikh` | 
 | `[+-]minimizeAutomata`    | Eager minimization of automata. Default: `-minimizeAutomata`                                 |
-| `[+-]eager`               | Eagerly intersect regular expression constraints. Default: `-eager`                          |
+| `[+-]eager`               | Eager intersection of regular expression constraints. Default: `-eager`                      |
 
 ## Web Interface
 
