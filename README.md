@@ -15,7 +15,7 @@ There are some additional options offered by OSTRICH:
 
 | Option         | Explanation  |
 |----------------|--------------|
-| [+-]eager      | Eagerly intersection regular expression constraints. |
+| [+-]eager      | Eagerly intersect regular expression constraints. Default: `-eager` |
 
 ## Web Interface
 
