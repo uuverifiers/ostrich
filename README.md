@@ -1,15 +1,21 @@
 # OSTRICH
 ## An SMT Solver for String Constraints
 
-OSTRICH is an SMT solver for string constraints.
+OSTRICH is an automata-based SMT solver for string constraints.
+
+The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](https://eldarica.org/ostrich-popl24/)
 
 ## Using Ostrich
 
 After installing [the Scala Build tool (SBT)](https://www.scala-sbt.org/), you can assemble a JAR file using `sbt assembly`. To run it, use either the `ostrich` script in the root folder, or `ostrich-client`. The latter transparently spins up a server that continuously serves requests from the client script; useful to avoid cold-starting the JVM if you are running many instances.
 
-See `./ostrich -help` for more options.
+In general, OSTRICH supports all options of the (Princess SMT solver)[https://github.com/uuverifiers/princess], which can be displayed with `./ostrich -h`.
 
-The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](https://eldarica.org/ostrich-popl24/)
+There are some additional options offered by OSTRICH:
+
+| Option         | Explanation  |
+|----------------|--------------|
+| [+-]eager      | Eagerly intersection regular expression constraints. |
 
 ## Web Interface
 
