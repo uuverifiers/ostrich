@@ -9,7 +9,7 @@ The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](
 
 After installing [the Scala Build tool (SBT)](https://www.scala-sbt.org/), you can assemble a JAR file using `sbt assembly`. To run it, use either the `ostrich` script in the root folder, or `ostrich-client`. The latter transparently spins up a server that continuously serves requests from the client script; useful to avoid cold-starting the JVM if you are running many instances.
 
-In general, OSTRICH supports all options of the (Princess SMT solver)[https://github.com/uuverifiers/princess], which can be displayed with `./ostrich -h`.
+In general, OSTRICH supports all options of the [Princess SMT solver](https://github.com/uuverifiers/princess), which can be displayed with `./ostrich -h`.
 
 There are some additional options offered by OSTRICH:
 
@@ -17,7 +17,6 @@ There are some additional options offered by OSTRICH:
 |---------------------------|----------------------------------------------------------------------------------------------|
 | `[+-]cea`                 | Use the cost-enriched automata back-end instead of the standard back-end. Default: `-cea`    |
 | `-portfolio=strings`      | Use a portfolio of different string solving configuration. Disabled by default.              |
-|---------------------------|----------------------------------------------------------------------------------------------|
 | `[+-]forwardPropagation`  | Forward propagation of regular expression constraints. Default: `-forwardPropagation`        |
 | `[+-]backwardPropagation` | Backward propagation of regular expression constraints. Default: `+backwardPropagation`      |
 | `[+-]nielsenSplitter`     | Splitting of equations using Nielsen transformation. Default: `+nielsenSplitter`             |
