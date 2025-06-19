@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2024 Oliver Markgraf. All rights reserved.
+ * Copyright (c) 2024, 2025 Oliver Markgraf. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -42,6 +42,25 @@ import MultiLineWhitespace._
 case class Transition(from: String, to: String, range: (Int, Int))
 case class AutomatonFragment(name: String, initStates: String, transitions: Seq[Transition], acceptingStates: Seq[String])
 
+
+object AutomatonParser {
+
+  def toString(aut : AtomicStateAutomaton) : String = {
+    val stateNames = new mutable.HashMap[aut.State, String]
+    for (s <- aut.states)
+      stateNames.put(s, "s" + stateNames.size)
+
+    def transitionString(t : (aut.State, aut.TLabel, aut.State)) : String = {
+      val (s0, (lower : Char, upper : Char), s1) = t
+      f"${stateNames(s0)} -> ${stateNames(s1)} [${lower.toInt}, ${upper.toInt}]; "
+    }
+
+    f"automaton aut { init: ${stateNames(aut.initialState)}; " +
+    aut.transitions.map(transitionString).mkString +
+    f"accepting: ${aut.acceptingStates.map(stateNames).mkString(", ")}; };"
+  }
+
+}
 
 class AutomatonParser {
   def identifier[$: P]: P[String] = P(CharsWhileIn("a-zA-Z_0-9").!)
