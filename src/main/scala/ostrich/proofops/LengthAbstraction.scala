@@ -49,7 +49,7 @@ import ostrich.automata.{Automaton, AtomicStateAutomaton, AutomataUtils}
  */
 class LengthAbstraction (
   val theory : OstrichStringTheory
-) extends SaturationProcedure("ForwardsPropagation")
+) extends SaturationProcedure("LengthAbstraction")
      with PropagationSaturationUtils {
   import theory.{_str_len, str_in_re_id, autDatabase}
   import autDatabase.id2Automaton
