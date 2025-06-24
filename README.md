@@ -1,15 +1,29 @@
 # OSTRICH
 ## An SMT Solver for String Constraints
 
-OSTRICH is an SMT solver for string constraints.
+OSTRICH is an automata-based SMT solver for string constraints.
+
+The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](https://eldarica.org/ostrich-popl24/)
 
 ## Using Ostrich
 
 After installing [the Scala Build tool (SBT)](https://www.scala-sbt.org/), you can assemble a JAR file using `sbt assembly`. To run it, use either the `ostrich` script in the root folder, or `ostrich-client`. The latter transparently spins up a server that continuously serves requests from the client script; useful to avoid cold-starting the JVM if you are running many instances.
 
-See `./ostrich -help` for more options.
+In general, OSTRICH supports all options of the [Princess SMT solver](https://github.com/uuverifiers/princess), which can be displayed with `./ostrich -h`.
 
-The theory behind OSTRICH is explained in the slides of our [POPL'24 tutorial.](https://eldarica.org/ostrich-popl24/)
+There are some additional string-specific options offered by OSTRICH:
+
+| Option                    | Explanation                                                                                  |
+|---------------------------|----------------------------------------------------------------------------------------------|
+| `[+-]cea`                 | Use the cost-enriched automata back-end instead of the standard back-end. Default: `-cea`    |
+| `-portfolio=strings`      | Use a portfolio of different string solving configurations. Disabled by default.             |
+| `[+-]forwardPropagation`  | Forward propagation of regular expression constraints. Default: `-forwardPropagation`        |
+| `[+-]backwardPropagation` | Backward propagation of regular expression constraints. Default: `+backwardPropagation`      |
+| `[+-]nielsenSplitter`     | Splitting of equations using Nielsen transformation. Default: `+nielsenSplitter`             |
+| `-length=[on,off,auto]`   | Switch length reasoning on or off. Default: `-length=auto`                                   |
+| `[+-]parikh`              | Introduce letter count equations for all letters that occur in a problem. Default: `-parikh` | 
+| `[+-]minimizeAutomata`    | Eager minimization of automata. Default: `-minimizeAutomata`                                 |
+| `[+-]eager`               | Eager intersection of regular expression constraints. Default: `-eager`                      |
 
 ## Web Interface
 
@@ -47,7 +61,7 @@ It is also possible to use prioritised finite-state transducers: multiple outgoi
 
 ### Handling of capture groups
 
-OSTRICH can also process regular expressions that include capture groups, lazy quantifiers, and anchors, although this is more experimental. For this functionality, OSTRICH understands a number of additional regular expression operators:
+OSTRICH can also process regular expressions that include capture groups, lazy quantifiers, and anchors. For this functionality, OSTRICH understands a number of additional regular expression operators:
 
 | Name                 | Explanation                                                                 |
 |----------------------|-----------------------------------------------------------------------------|

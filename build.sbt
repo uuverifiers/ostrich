@@ -52,8 +52,8 @@ lazy val commonSettings = Seq(
   scalaVersion          := "2.13.15",
   scalacOptions         += "-deprecation",
   scalacOptions         += "-Wunused",
-  fork in run           := true,
-  cancelable in Global  := true,
+  run / fork            := true,
+  Global / cancelable   := true,
 //
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )
 )
@@ -70,7 +70,7 @@ lazy val ecma2020parser = (project in file("ecma2020")).
   settings(parserSettings: _*).
   settings(
     name := "OSTRICH-ECMA2020-parser",
-    packageBin in Compile := baseDirectory.value / "ecma2020-regex-parser.jar"
+    Compile / packageBin := baseDirectory.value / "ecma2020-regex-parser.jar"
   ).
   disablePlugins(AssemblyPlugin)
 
@@ -79,8 +79,8 @@ lazy val root = (project in file(".")).
   dependsOn(ecma2020parser).
   settings(commonSettings: _*).
   settings(
-    mainClass in Compile := Some("ostrich.OstrichMain"),
-    unmanagedSourceDirectories in Test += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
+    Compile / mainClass := Some("ostrich.OstrichMain"),
+    Test / unmanagedSourceDirectories += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 //
     resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
 //

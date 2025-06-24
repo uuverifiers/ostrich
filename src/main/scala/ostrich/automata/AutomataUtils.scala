@@ -283,9 +283,10 @@ object AutomataUtils {
         val byChar = headAut.LabelOps.enumLetters(lbl).next
         val reached = (reachedPos, reachedNeg)
         if (visitedStates.add(reached)) {
-          val nextWitness = witness :+ byChar
-          if (isAccepting(autsList, negAutsList, reached))
-            return Some(nextWitness)
+          val nextWitness = byChar +: witness
+          if (isAccepting(autsList, negAutsList, reached)) {
+            return Some(nextWitness.reverse)
+          }
           todo push ((reached, nextWitness))
         }
       }
