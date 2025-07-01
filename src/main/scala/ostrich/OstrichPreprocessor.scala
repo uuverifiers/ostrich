@@ -181,8 +181,13 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
       ))))))
     }
 
+    // Encoding of (str.substr s i n):
+    // Evaluates to the longest contiguous substring of s of length ≤ n starting at index i.
+    // - If i or n is negative, or if i is out of bounds (i ≥ |s|), result is "".
+    // - If i and n are valid and i + n ≤ |s|, result is substring of length n.
+    // - If i and n are valid but i + n > |s|, result is suffix of s starting at i.
     case (IFunApp(`str_substr`, _),
-          Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
+    Seq(bigStr : ITerm, begin : ITerm, len : ITerm)) => {
       // we need one epsilon and 5 quantifiers, so shift by 6
       val shift = 6
 
@@ -197,20 +202,24 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
       StringSort.eps(ex(ex(StringSort.ex(StringSort.ex(StringSort.ex(
         bigStrVar === shiftedBigStr &
-        beginVar  === shiftedBegin &
-        lenVar    === shiftedLen &
-        (str_len(resultVar) <= lenVar | str_len(resultVar) <= 0) &
-	      ite(
-	        lenVar >= 0 & beginVar >= 0 & beginVar + lenVar <= str_len(bigStrVar),
-          strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
-            str_len(v(1, StringSort)) === beginVar & str_len(resultVar) === lenVar,
-	        ite(
-	          lenVar >= 0 & beginVar >= 0,
-	          strCat(v(1, StringSort), resultVar) === bigStrVar &
-              str_len(v(1, StringSort)) === beginVar,
-	          resultVar === ""
-	        )
-	      )
+          beginVar  === shiftedBegin &
+          lenVar    === shiftedLen &
+          (str_len(resultVar) <= lenVar | str_len(resultVar) <= 0) &
+          ite(
+            lenVar >= 0 & beginVar >= 0 & beginVar < str_len(bigStrVar),
+            ite(
+              beginVar + lenVar <= str_len(bigStrVar),
+              /* full match */
+              strCat(v(1, StringSort), resultVar, v(0, StringSort)) === bigStrVar &
+                str_len(v(1, StringSort)) === beginVar &
+                str_len(resultVar) === lenVar,
+              /* truncated match */
+              strCat(v(1, StringSort), resultVar) === bigStrVar &
+                str_len(v(1, StringSort)) === beginVar
+            ),
+            /* default to "" if out of bounds or negative */
+            resultVar === ""
+          )
       ))))))
     }
 
