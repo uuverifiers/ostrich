@@ -359,8 +359,13 @@ class AutDatabase(theory : OstrichStringTheory,
   private var fileCnt : Int = 0
 
   private def printSMTLIB(ids : Set[Int], expectedSat : Boolean) : Unit = {
-    val smtlibFile =
-      new java.io.FileOutputStream(f"automaton-intersection-${fileCnt}.smt2")
+    var file = new java.io.File(f"automaton-intersection-${fileCnt}.smt2")
+    fileCnt = fileCnt + 1
+    while (file.exists) {
+      file = new java.io.File(f"automaton-intersection-${fileCnt}.smt2")
+      fileCnt = fileCnt + 1
+    }
+    val smtlibFile = new java.io.FileOutputStream(file)
     fileCnt = fileCnt + 1
     Console.withOut(smtlibFile) {
       println("(set-logic QF_S)")
