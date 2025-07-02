@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2024 Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2025 Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -345,12 +345,36 @@ class AutDatabase(theory : OstrichStringTheory,
         val auts = ids.toSeq.sorted.map(id => id2Automaton(id).get)
         if (AutomataUtils.areConsistentAutomata(auts)) {
           nonEmptyIntersections += ids
+//          printSMTLIB(ids, true)
           false
         } else {
           emptyIntersections += ids
+//          printSMTLIB(ids, false)
           true
         }
       }
     }
+
+/*
+  private var fileCnt : Int = 0
+
+  private def printSMTLIB(ids : Set[Int], expectedSat : Boolean) : Unit = {
+    val smtlibFile =
+      new java.io.FileOutputStream(f"automaton-intersection-${fileCnt}.smt2")
+    fileCnt = fileCnt + 1
+    Console.withOut(smtlibFile) {
+      println("(set-logic QF_S)")
+      println(s"(set-info :status ${if (expectedSat) "sat" else "unsat"})")
+      println("(declare-const w String)")
+      for (id <- ids.toList.sorted)
+        println("(assert (str.in_re w (re.from_automaton \"" +
+                  ostrich.AutomatonParser.toString(
+                    id2Automaton(id).get.asInstanceOf[AtomicStateAutomaton]) +
+                  "\")))")
+      println("(check-sat)")
+    }
+    smtlibFile.close
+  }
+*/
 
 }
