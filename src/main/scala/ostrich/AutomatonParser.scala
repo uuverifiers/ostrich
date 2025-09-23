@@ -56,9 +56,9 @@ object AutomatonParser {
       f"${stateNames(s0)} -> ${stateNames(s1)} [${lower.toInt}, ${upper.toInt}]; "
     }
 
-    f"automaton aut { init: ${stateNames(aut.initialState)}; " +
+    f"automaton aut { init ${stateNames(aut.initialState)}; " +
     aut.transitions.map(transitionString).mkString +
-    f"accepting: ${aut.acceptingStates.map(stateNames).mkString(", ")}; };"
+    f"accepting ${aut.acceptingStates.map(stateNames).mkString(", ")}; };"
   }
 
 }
