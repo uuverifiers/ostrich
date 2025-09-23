@@ -300,10 +300,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val _str_++         = functionPredicateMap(str_++)
   val _str_len        = functionPredicateMap(str_len)
   val _str_char_count = functionPredicateMap(str_char_count)
-  val _str_replace = functionPredicateMap(str_replace)
+  val _str_replace    = functionPredicateMap(str_replace)
   val _str_replaceall = functionPredicateMap(str_replaceall)
-
-  val _str_substr = functionPredicateMap(str_substr)
+  val _str_substr     = functionPredicateMap(str_substr)
 
   val axioms          = new OstrichAxioms(this).axioms
 
@@ -313,6 +312,22 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   object FunPred {
     def apply(f : IFunction) : Predicate = functionPredicateMap(f)
     def unapply(p : Predicate) : Option[IFunction] = predFunMap get p
+  }
+
+  // Some evaluation rules, currently only covering a small subset of the
+  // string functions.
+  override def evalFun(f : IFunApp) : Option[ITerm] = {
+    import StringTheory.ConcreteString
+    f match {
+      case IFunApp(`str_empty` | `str_cons`, _) =>
+        Some(f)
+      case IFunApp(`str_len`, Seq(ConcreteString(str))) =>
+        Some(str.size)
+      case IFunApp(`str_++`, Seq(ConcreteString(l), ConcreteString(r))) =>
+        Some(l + r)
+      case _ =>
+        None
+    }
   }
 
   // Set of the predicates that are fully supported at this point
