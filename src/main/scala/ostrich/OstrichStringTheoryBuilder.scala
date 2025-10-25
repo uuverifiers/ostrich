@@ -41,7 +41,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object OstrichStringTheoryBuilder {
 
-  val version = "2.0"
+  val version = "2.0.1"
   val name = "OSTRICH"
 
   PortfolioSetup

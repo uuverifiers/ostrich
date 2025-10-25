@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "2.0",
+  version               := "2.0.1",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
