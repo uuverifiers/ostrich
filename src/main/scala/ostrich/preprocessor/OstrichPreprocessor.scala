@@ -30,11 +30,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.preprocessor
 
 import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
+
+import ostrich._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -314,37 +316,6 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
 }
 
-
-/**
- * Pre-processor for replacing regular expressions with just numeric ids,
- * which streamlines the translation to automata.
- */
-class OstrichRegexEncoder(theory : OstrichStringTheory)
-      extends ContextAwareVisitor[Unit, IExpression] {
-  import IExpression._
-  import theory._
-
-  def apply(f : IFormula) : IFormula =
-    this.visit(f, Context(())).asInstanceOf[IFormula]
-
-  def postVisit(t : IExpression,
-                ctxt : Context[Unit],
-                subres : Seq[IExpression]) : IExpression = (t, subres) match {
-    case (IAtom(`str_in_re`, _),
-          Seq(s : ITerm, ConcreteRegex(regex))) =>
-      str_in_re_id(s, theory.autDatabase.regex2Id(regex))
-    case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
-      Console.err.println(
-        "Warning: could not encode regular expression right away," +
-          " post-poning: " + regex)
-      t update subres
-    }
-    case _ =>
-      t update subres
-  }
-
-}
-
 /**
  * Stores constant string to strDatabase for easy access.
  */
@@ -369,46 +340,4 @@ class OstrichStringEncoder(theory : OstrichStringTheory)
 
       case t => t
     }
-}
-
-/**
- * Factor out certain common sub-expressions, whose translation
- * to more basic string functions is complicated.
- */
-class OstrichFactorizer(theory : OstrichStringTheory) {
-  import IExpression._
-  import theory._
-
-  def apply(f : IFormula) : IFormula = {
-    val parts =
-    for (INamedPart(name, f) <- PartExtractor(f)) yield {
-      val skeleton = SubExprAbbreviator(f, factor _).asInstanceOf[IFormula]
-      val newF = quanConsts(Quantifier.ALL, newConsts.toSeq,
-                           factoredExpressions ==> skeleton)
-      clear()
-      INamedPart(name, newF)
-    }
-    or(parts)
-  }
-
-  def clear() = {
-    newConsts.clear()
-    factoredExpressions = i(true)
-  }
-
-  private val newConsts = new ArrayBuffer[ConstantTerm]
-  private var factoredExpressions : IFormula = i(true)
-
-  private def factor(e : IExpression) : IExpression = e match {
-    case e@IFunApp(`str_indexof` | `str_at` | `str_substr`, _)
-              if ContainsSymbol.isClosed(e) => {
-      val sort = Sort.sortOf(e)
-      val c = sort.newConstant("X")
-      newConsts += c
-      factoredExpressions = factoredExpressions &&& (e === c)
-      c
-    }
-    case e => e
-  }
-
 }

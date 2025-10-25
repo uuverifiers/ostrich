@@ -34,13 +34,15 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{BackwardsSaturation, CutSaturation, ForwardsSaturation, LengthAbstraction, OstrichClose, OstrichCut, OstrichIntersect, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
+import ostrich.proofops._
+import ostrich.preprocessor._
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
 import IExpression.Predicate
 import ap.theories.strings._
-import ap.theories.{Incompleteness, ModuloArithmetic, Theory, TheoryRegistry}
+import ap.theories.{Incompleteness, ModuloArithmetic, Theory, TheoryRegistry,
+                    IntValueEnumTheory}
 import ap.types.{MonoSortedIFunction, MonoSortedPredicate, ProxySort, Sort}
 import ap.terfor.{ConstantTerm, TerForConvenience, Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction

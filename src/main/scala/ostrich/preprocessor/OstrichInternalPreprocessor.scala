@@ -30,7 +30,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package ostrich
+package ostrich.preprocessor
 
 import ap.basetypes.IdealInt
 import ap.theories.Theory
@@ -41,6 +41,7 @@ import ap.terfor.substitutions.VariableShiftSubst
 import ap.types.SortedPredicate
 import ap.parameters.{Param, ReducerSettings}
 
+import ostrich._
 import ostrich.automata.{Automaton, AtomicStateAutomaton}
 
 class OstrichInternalPreprocessor(theory : OstrichStringTheory,
