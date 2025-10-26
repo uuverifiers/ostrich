@@ -48,6 +48,9 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
   import IExpression._
   import theory._
 
+  private val backrefs = new Backreferences(theory)
+  import backrefs.{stubBackRefs, containsReference}
+
   def apply(f : IFormula) : IFormula =
     this.visit(f, Context(())).asInstanceOf[IFormula]
 
@@ -56,7 +59,14 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
                 subres : Seq[IExpression]) : IExpression = (t, subres) match {
     case (IAtom(`str_in_re`, _),
           Seq(s : ITerm, ConcreteRegex(regex))) =>
-      str_in_re_id(s, theory.autDatabase.regex2Id(regex))
+      if (containsReference(regex)) {
+//        println(regex)
+        val (stubbedRegex, _) = stubBackRefs(regex, Map())
+//        println(stubbedRegex)
+        str_in_re_id(s, theory.autDatabase.regex2Id(stubbedRegex))
+      } else {
+        str_in_re_id(s, theory.autDatabase.regex2Id(regex))
+      }
     case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
       Console.err.println(
         "Warning: could not encode regular expression right away," +
