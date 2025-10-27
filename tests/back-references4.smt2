@@ -1,0 +1,6 @@
+(declare-const w String)
+(assert (str.contains w "AA"))
+(assert (str.contains w "BB"))
+(assert (str.in_re w (re.* (re.++ ((_ re.capture 1) (re.range "A" "B"))
+                                  (_ re.reference 1)))))
+(check-sat)

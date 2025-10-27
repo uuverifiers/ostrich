@@ -518,4 +518,6 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/back-references2.smt2", "unsat")
   property("back-references3") =
     checkFile("tests/back-references3.smt2", "sat")
+  property("back-references4") =
+    checkFile("tests/back-references4.smt2", "sat")
 }
