@@ -63,7 +63,8 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
 //        println(regex)
         val (stubbedRegex, _) = stubBackRefs(regex, Map())
 //        println(stubbedRegex)
-        str_in_re_id(s, theory.autDatabase.regex2Id(stubbedRegex))
+        str_in_re_id(s, theory.autDatabase.regex2Id(stubbedRegex)) &
+        str_in_re_delayed(s, regex)
       } else {
         str_in_re_id(s, theory.autDatabase.regex2Id(regex))
       }

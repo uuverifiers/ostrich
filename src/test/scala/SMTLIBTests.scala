@@ -511,4 +511,11 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str-leq-reflexive.smt2", "sat")
   property("str-leq-reflexive-2") =
     checkFile("tests/str-leq-reflexive-2.smt2", "sat")
+
+  property("back-references1") =
+    checkFile("tests/back-references1.smt2", "sat")
+  property("back-references2") =
+    checkFile("tests/back-references2.smt2", "unsat")
+  property("back-references3") =
+    checkFile("tests/back-references3.smt2", "sat")
 }

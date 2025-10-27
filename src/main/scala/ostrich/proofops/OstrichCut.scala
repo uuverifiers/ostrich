@@ -212,15 +212,15 @@ class OstrichCut(val theory : OstrichStringTheory)
       .get(stringVar)
       .map(reducer.lowerBound)
       .flatten
-      .map(_.intValue)
+      .map(_.intValueSafe)
     val upperLenBound = strLenMap
       .get(stringVar)
       .map(reducer.upperBound)
       .flatten
-      .map(_.intValue)
+      .map(_.intValueSafe)
 
     val acceptedWord =
-      AutomataUtils.findAcceptedWord(auts, lowerLenBound, upperLenBound)
+      AutomataUtils.findMinLengthAcceptedWord(auts, lowerLenBound, upperLenBound)
 
     if (acceptedWord.isDefined) {
       val acceptedWordId =

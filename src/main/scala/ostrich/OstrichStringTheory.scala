@@ -251,7 +251,13 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val autDatabase = new AutDatabase(this, theoryFlags.minimizeAutomata)
 
   val str_in_re_id =
-    MonoSortedPredicate("str.in.re.id", List(StringSort, Sort.Integer))
+    MonoSortedPredicate("str.in_re_id", List(StringSort, Sort.Integer))
+
+  // A predicate to check whether a string is in the language described by a
+  // regex, however, only checking the condition when the string has become a
+  // concrete value
+  val str_in_re_delayed =
+    MonoSortedPredicate("str.in_re_delayed", List(StringSort, RSo))
 
   val agePred = MonoSortedPredicate("age", List(StringSort, Sort.Integer, Sort.Integer))
 
@@ -269,7 +275,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
-                     extraPredicates = List(str_in_re_id, agePred))
+                     extraPredicates = List(str_in_re_id, str_in_re_delayed,
+                                            agePred))
   val predicates =
     predefPredicates ++ funPredicates ++ (transducersWithPreds map (_._2))
 
@@ -334,7 +341,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, agePred, str_prefixof, str_suffixof, str_<=, str_contains) ++
+    Set(str_in_re, str_in_re_id, str_in_re_delayed,
+        agePred, str_prefixof, str_suffixof, str_<=, str_contains) ++
     (for (f <- Set(str_empty, str_cons, str_at,
       str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre,
@@ -380,6 +388,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val equalityPropagator = new OstrichEqualityPropagator(this)
   private val strInReTranslator  = new OstrichStrInReTranslator(this)
   private val cutter             = new OstrichCut(this)
+  private val regexMatcher       = new OstrichRegexMatcher(this)
 
   def plugin = Some(new Plugin {
 
@@ -400,6 +409,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           ostrichClose.handleGoal(goal)                elseDo
           intersectionRule.handleGoal(goal)            elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
+          regexMatcher.handleGoal(goal)                elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
           predToEq.reducePredicatesToEquations

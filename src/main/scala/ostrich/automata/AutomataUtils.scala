@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2021 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -337,6 +337,27 @@ object AutomataUtils {
         }
       }
     }
+
+  /**
+   * Find some word of minimal length accepted by all of the given automata.
+   * None means no lower/upper bound.
+   * Requires all automata to be AtomicStateAutomaton
+   */
+  def findMinLengthAcceptedWord(auts : Seq[Automaton],
+                                lowerBound : Option[Int],
+                                upperBound : Option[Int]) : Option[Seq[Int]] =
+    findAcceptedWord(auts, lowerBound, upperBound) match {
+      case Some(w) => {
+        val l = w.size
+        if (lowerBound == Some(l))
+          Some(w)
+        else
+          findMinLengthAcceptedWord(auts, lowerBound, Some(l - 1)).orElse(Some(w))
+      }
+      case None =>
+        None
+    }
+
 
   /**
    * Find a word accepted by all automata and rejected by negs
