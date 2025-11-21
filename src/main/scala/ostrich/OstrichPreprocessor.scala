@@ -36,6 +36,8 @@ import ap.basetypes.IdealInt
 import ap.parser._
 import ap.theories.strings.StringTheory
 
+import ostrich.automata.Regex2Aut
+
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -47,6 +49,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
   import IExpression._
   import theory._
   import StringTheory.ConcreteString
+  import Regex2Aut.SmartConst
 
   private def reCat(ts : ITerm*) : ITerm = ts match {
     case Seq() => re_eps()
@@ -259,7 +262,7 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
           (v(0) >= -1) & (v(0) < theory.alphabetSize))
     }
 
-    case (IFunApp(`str_from_code`, _), Seq(Const(code))) =>
+    case (IFunApp(`str_from_code`, _), Seq(SmartConst(code))) =>
       if (code >= 0 & code < theory.alphabetSize)
         str_cons(code, str_empty())
       else
