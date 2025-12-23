@@ -85,9 +85,6 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("contains-8.smt2") =
     checkFile("tests/contains-8.smt2", "sat")
 
-//  property("quantifiers.smt2") =
-//    checkFileOpts("tests/quantifiers.smt2", "unknown", s"-timeout=$shortTimeout")
-
   property("word-equation.smt2") =
     checkFile("tests/word-equation.smt2", "sat")
   property("word-equation-2.smt2") =
