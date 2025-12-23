@@ -68,7 +68,7 @@ object OstrichStringTheory {
     protected[ostrich] def setTheory(_theory : OstrichStringTheory) : Unit =
       theory = _theory
 
-    override lazy val individuals : Stream[ITerm] =
+    override lazy val individuals : LazyList[ITerm] =
       IFunApp(theory.str_empty, List()) #::
       (for (t <- individuals;
             n <- theory.CharSort.individuals)
