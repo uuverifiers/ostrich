@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2024-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -84,6 +84,7 @@ class OstrichAxioms(theory : OstrichStringTheory) {
         ==>
         (conj(l(v(3)) === l(v(0))))))))
 
-  val axioms : Conjunction = conj(not_contains_concat, not_contains_replace, not_contains_replace_all)
+  val axioms : Conjunction =
+    conj(not_contains_concat, not_contains_replace, not_contains_replace_all)
 
 }
