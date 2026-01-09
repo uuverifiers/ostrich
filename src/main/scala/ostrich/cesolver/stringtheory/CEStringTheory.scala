@@ -279,12 +279,12 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
     (visitor1(f), signature)
   }
 
-  override def preprocess(f: Conjunction, order: TermOrder): Conjunction = {
+  override def preprocess(f : Conjunction, signature : Signature) : Conjunction = {
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
 
     val preprocessor = new CEInternalPreprocessor(this, flags)
-    preprocessor.preprocess(f, order)
+    preprocessor.preprocess(f, signature.order)
   }
 
   // TODO: ADD Reducer Plugin

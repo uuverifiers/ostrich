@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2026 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -449,12 +449,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       case _                                     => false
     }
 
-  override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
+  override def preprocess(f : Conjunction, signature : Signature) : Conjunction = {
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
 
     val preprocessor = new OstrichInternalPreprocessor(this, theoryFlags)
-    preprocessor.preprocess(f, order)
+    preprocessor.preprocess(f, signature.order)
   }
 
   override def iPreprocess(f : IFormula, signature : Signature)
