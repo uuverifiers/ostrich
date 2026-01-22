@@ -81,3 +81,55 @@ Such augmented regular expressions can be used in combination with several new s
 | (_ str.extract n)  | Extract the contents of the n'th capture group ([example](../master/tests/extract-cg.smt2))          |
 | str.replace_cg     | Replace the first match of a regular expression ([example](../master/tests/parse-ecma-replace.smt2)) |
 | str.replace_cg_all | Replace all matches of a regular expression ([example](../master/tests/regex_cg_ref.smt2))           |
+
+
+## GraalVM Native Image
+
+OSTRICH can optionally be built as a native executable using [GraalVM Native Image](https://github.com/graalvm).  
+This can significantly reduce JVM startup overhead.
+
+
+### Prerequisites
+- GraalVM (JDK 24 or newer) **with `native-image` installed**
+- `sbt`
+
+If GraalVM was installed via [SDKMAN!](https://sdkman.io/):
+```bash
+export GRAALVM_HOME="$HOME/.sdkman/candidates/java/current"
+export PATH="$GRAALVM_HOME/bin:$PATH"
+native-image --version
+```
+
+If native-image is missing:
+
+```bash
+gu install native-image
+```
+
+### Building the native executable
+
+Generate reachability metadata by running OSTRICH with the tracing agent:
+
+```bash
+sbt 'set Compile / run / javaOptions += "-agentlib:native-image-agent=config-merge-dir=src/main/resources/META-INF/native-image/uuverifiers/ostrich"' \
+    'run tests/adt.smt2'
+```
+
+
+This generates or updates:
+
+```bash
+src/main/resources/META-INF/native-image/uuverifiers/ostrich/reachability-metadata.json
+```
+
+Build the native executable:
+
+```bash
+sbt nativeImage
+```
+
+Locate and run the resulting binary:
+
+```bash
+./target/.../ostrich tests/adt.smt2
+```
