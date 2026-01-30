@@ -72,6 +72,15 @@
       "type": "ap.terfor.preds.Predicate[]"
     },
     {
+      "type": "ap.theories.sequences.ArraySeqTheoryBuilder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "ap.theories.strings.SeqStringTheoryBuilder",
       "methods": [
         {
@@ -109,6 +118,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "scala.Function1[]"
     },
     {
       "type": "scala.Option[]"
