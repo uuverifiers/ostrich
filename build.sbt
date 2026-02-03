@@ -74,23 +74,34 @@ lazy val ecma2020parser = (project in file("ecma2020")).
   ).
   disablePlugins(AssemblyPlugin)
 
-lazy val root = (project in file(".")).
-  aggregate(ecma2020parser).
-  dependsOn(ecma2020parser).
-  settings(commonSettings: _*).
-  settings(
+lazy val root = (project in file("."))
+  .enablePlugins(NativeImagePlugin)
+  .aggregate(ecma2020parser)
+  .dependsOn(ecma2020parser)
+  .settings(commonSettings: _*)
+  .settings(
     Compile / mainClass := Some("ostrich.OstrichMain"),
     Test / unmanagedSourceDirectories += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
-//
-    resolvers             += "uuverifiers" at "https://eldarica.org/maven/",
-//
-    libraryDependencies   += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
-//    libraryDependencies   += "io.github.uuverifiers" %% "princess" % "2025-11-17",
-  //  libraryDependencies   += "uuverifiers" % "ecma2020-regex-parser" % "0.5",
-    libraryDependencies   += "org.sat4j" % "org.sat4j.core" % "2.3.1",
-    libraryDependencies   += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-    libraryDependencies   += "dk.brics.automaton" % "automaton" % "1.11-8",
-    libraryDependencies   += "com.lihaoyi" %% "fastparse" % "3.0.2",
+
+    resolvers += "uuverifiers" at "https://eldarica.org/maven/",
+
+    libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
+    libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
+    libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
+    libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.0.2",
+
+    nativeImageInstalled := true,
+    // point to your GraalVM (recommended via env var)
+    //nativeImageGraalHome := file(sys.env("GRAALVM_HOME")).toPath,
+
+    nativeImageOptions ++= Seq(
+      "--no-fallback",
+      "-H:+ReportExceptionStackTraces"
+    ),
+
+    nativeImageAgentMerge := true
   )
+
 
 

@@ -1,0 +1,146 @@
+{
+  "reflection": [
+    {
+      "type": "ap.api.SimpleAPI$ProverStatus$",
+      "methods": [
+        {
+          "name": "Error",
+          "parameterTypes": []
+        },
+        {
+          "name": "Inconclusive",
+          "parameterTypes": []
+        },
+        {
+          "name": "Invalid",
+          "parameterTypes": []
+        },
+        {
+          "name": "OutOfMemory",
+          "parameterTypes": []
+        },
+        {
+          "name": "Running",
+          "parameterTypes": []
+        },
+        {
+          "name": "Sat",
+          "parameterTypes": []
+        },
+        {
+          "name": "Unknown",
+          "parameterTypes": []
+        },
+        {
+          "name": "Unsat",
+          "parameterTypes": []
+        },
+        {
+          "name": "Valid",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "ap.basetypes.IdealInt[]"
+    },
+    {
+      "type": "ap.parser.IFormula[]"
+    },
+    {
+      "type": "ap.parser.ITerm[]"
+    },
+    {
+      "type": "ap.terfor.ConstantTerm[]"
+    },
+    {
+      "type": "ap.terfor.conjunctions.Conjunction[]"
+    },
+    {
+      "type": "ap.terfor.conjunctions.Quantifier$ALL$[]"
+    },
+    {
+      "type": "ap.terfor.conjunctions.Quantifier$EX$[]"
+    },
+    {
+      "type": "ap.terfor.linearcombination.LinearCombination[]"
+    },
+    {
+      "type": "ap.terfor.preds.Atom[]"
+    },
+    {
+      "type": "ap.terfor.preds.Predicate[]"
+    },
+    {
+      "type": "ap.theories.sequences.ArraySeqTheoryBuilder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "ap.theories.strings.SeqStringTheoryBuilder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.String[]"
+    },
+    {
+      "type": "ostrich.OstrichStringTheoryBuilder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "ostrich.cesolver.stringtheory.CEStringTheoryBuilder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "scala.Enumeration$Val",
+      "methods": [
+        {
+          "name": "id",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "scala.Function1[]"
+    },
+    {
+      "type": "scala.Option[]"
+    },
+    {
+      "type": "scala.Tuple2[]"
+    },
+    {
+      "type": "scala.Tuple3[]"
+    },
+    {
+      "type": "scala.collection.mutable.BitSet[]"
+    }
+  ],
+  "resources": [
+    {
+      "glob": "library.properties"
+    },
+    {
+      "glob": "ostrich/UnicodeData.txt"
+    }
+  ]
+}
