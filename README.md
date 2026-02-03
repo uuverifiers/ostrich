@@ -122,6 +122,8 @@ This generates or updates:
 src/main/resources/META-INF/native-image/uuverifiers/ostrich/reachability-metadata.json
 ```
 
+You may be required to run this tracing agent on multiple files and with different flags to ensure that the entire code base is covered (The current metadata should contain all relevant classes).
+
 Build the native executable:
 
 ```bash
