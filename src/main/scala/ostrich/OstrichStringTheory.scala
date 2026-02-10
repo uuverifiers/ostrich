@@ -276,10 +276,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val functionalPredicates =
     (for (f <- functions) yield functionPredicateMap(f)).toSet
 
-  val predicateMatchConfig : Signature.PredicateMatchConfig =
-    // we match negatively on str_contains in our axioms!
-    Map(str_contains -> Signature.PredicateMatchStatus.Negative)
-
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
@@ -303,6 +299,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val _str_replace    = functionPredicateMap(str_replace)
   val _str_replaceall = functionPredicateMap(str_replaceall)
   val _str_substr     = functionPredicateMap(str_substr)
+
+  val predicateMatchConfig : Signature.PredicateMatchConfig =
+    (for (p <- predicates)
+     yield (p -> Signature.PredicateMatchStatus.None)).toMap ++
+    // Only keep predicates that we actually need in the axioms.
+    // In particular, we match negatively on str_contains.
+    Map(str_contains    -> Signature.PredicateMatchStatus.Negative,
+        _str_++         -> Signature.PredicateMatchStatus.Positive,
+        _str_replace    -> Signature.PredicateMatchStatus.Positive,
+        _str_replaceall -> Signature.PredicateMatchStatus.Positive)
 
   val axioms          = new OstrichAxioms(this).axioms
 
