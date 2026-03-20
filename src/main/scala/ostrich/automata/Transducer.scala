@@ -63,10 +63,28 @@ object Transducer {
   case class OutputOp(val preW : Seq[Char],
                       val op : InputOp,
                       val postW : Seq[Char])
+
+  case class FunctionalityMetadata(
+                    debugName : Option[String] = None,
+                    declaredMayBeNonFunctional : Boolean = false,
+                    sanityCheckResult : Option[TransducerFunctionality.Result]
+                      = None) {
+    def displayName : String =
+      debugName getOrElse "transducer"
+
+    def blocksFunctionalAssumptions : Boolean =
+      declaredMayBeNonFunctional &&
+      (sanityCheckResult contains TransducerFunctionality.NonFunctional)
+  }
+
+  class NonFunctionalTransducerUsageException(message : String)
+      extends IllegalStateException(message)
 }
 
 
 trait Transducer {
+  import Transducer._
+
   /**
    * Calculates regular language that is pre-image of the given regular
    * language.  I.e. Pre_T(aut) for transducer T
@@ -104,9 +122,35 @@ trait Transducer {
    * characters with the given string.
    *
    * Assumes transducer is functional, so returns the first found output
-   * or None
+   * or None.  Transducers that are explicitly declared non-functional
+   * may reject this operation once the sanity check finds a conflicting
+   * run.
    */
   def apply(input : String, internal : String = "") : Option[String]
+
+  def functionalityMetadata : FunctionalityMetadata =
+    FunctionalityMetadata()
+
+  def withFunctionalityMetadata(metadata : FunctionalityMetadata)
+                              : Transducer = this
+
+  final def declaredMayBeNonFunctional : Boolean =
+    functionalityMetadata.declaredMayBeNonFunctional
+
+  final def functionalityCheckResult
+      : Option[TransducerFunctionality.Result] =
+    functionalityMetadata.sanityCheckResult
+
+  final def blocksFunctionalAssumptions : Boolean =
+    functionalityMetadata.blocksFunctionalAssumptions
+
+  protected final def ensureFunctionalUse(context : String) : Unit =
+    if (blocksFunctionalAssumptions)
+      throw new NonFunctionalTransducerUsageException(
+        functionalityMetadata.displayName +
+        " was declared potentially non-functional and the current " +
+        "sanity check found a conflicting run; " + context +
+        " would rely on unsound first-output semantics.")
 
   /**
    * Generate a formula that approximates the length relationship
@@ -175,4 +219,3 @@ trait TransducerBuilder[State, TLabel] {
    */
   def getTransducer : Transducer
 }
-

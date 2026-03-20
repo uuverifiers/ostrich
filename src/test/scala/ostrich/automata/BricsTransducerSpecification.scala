@@ -1,6 +1,6 @@
 package ostrich.automata
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable.{HashMap, HashSet, Stack}
 
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
@@ -123,6 +123,91 @@ object BricsTransducerSpecification
     builder.setInitialState(q0)
 
     builder.getTransducer
+  }
+
+  val duplicateChoiceTran = {
+    val builder = BricsTransducer.getBuilder
+
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
+
+    builder.setAccept(qf, true)
+    builder.addTransition(q0, ('a', 'a'), OutputOp("", Plus(0), ""), qf)
+    builder.addTransition(q0, ('a', 'a'), OutputOp("a", Plus(0), ""), qf)
+    builder.setInitialState(q0)
+
+    builder.getTransducer.asInstanceOf[BricsTransducer]
+  }
+
+  val loseChoiceTran = {
+    val builder = BricsTransducer.getBuilder
+
+    val q0 = builder.getNewState
+    val qf = builder.getNewState
+
+    builder.setAccept(qf, true)
+    builder.addTransition(q0, ('a', 'a'), OutputOp("", NOP, ""), qf)
+    builder.addTransition(q0, ('a', 'a'), OutputOp("", Plus(0), ""), qf)
+    builder.setInitialState(q0)
+
+    builder.getTransducer.asInstanceOf[BricsTransducer]
+  }
+
+  def declaredNonFunctional(tran : BricsTransducer,
+                            name : String) : BricsTransducer =
+    tran.withFunctionalityMetadata(
+      FunctionalityMetadata(debugName = Some(name),
+                            declaredMayBeNonFunctional = true)
+    ).asInstanceOf[BricsTransducer]
+
+  def enumerateOutputs(tran : BricsTransducer,
+                       input : String,
+                       internal : String = "") : Set[String] = {
+    val todo = Stack[(BricsAutomaton#State, Int, String)]()
+    val seen = HashSet[(BricsAutomaton#State, Int, String)]()
+    val results = HashSet[String]()
+
+    todo.push((tran.initialState, 0, ""))
+
+    while (!todo.isEmpty) {
+      val (state, pos, out) = todo.pop()
+
+      if (seen.add((state, pos, out))) {
+        if (pos == input.length && tran.isAccept(state))
+          results += out
+
+        if (pos < input.length) {
+          val ch = input(pos)
+          for (trans <- tran.lblTrans.get(state).iterator;
+               (label, op, nextState) <- trans.iterator) {
+            if (tran.LabelOps.labelContains(ch, label)) {
+              val opOut = op.op match {
+                case NOP => ""
+                case Internal => internal
+                case Plus(n) => (ch + n).toChar.toString
+              }
+              todo.push((nextState,
+                         pos + 1,
+                         out + op.preW.mkString + opOut + op.postW.mkString))
+            }
+          }
+        }
+
+        for (trans <- tran.eTrans.get(state).iterator;
+             (op, nextState) <- trans.iterator) {
+          val opOut = op.op match {
+            case NOP => ""
+            case Internal => internal
+            case Plus(_) => ""
+          }
+          todo.push((nextState,
+                     pos,
+                     out + op.preW.mkString + opOut + op.postW.mkString))
+        }
+      }
+    }
+
+    results.toSet
   }
 
   property("Simple Pre +3") = {
@@ -281,6 +366,32 @@ property("Simple Pre With Only Epsilon") = {
 
   pre(List()) && !pre(List('b'))
 }
+
+  property("Declared non-functional pre-image accepts duplicated output") = {
+    val tran = declaredNonFunctional(duplicateChoiceTran, "duplicateChoice")
+    val outputs = enumerateOutputs(tran, "a")
+    val preA = tran.preImage(BricsAutomaton.fromString("a"))
+    val preAA = tran.preImage(BricsAutomaton.fromString("aa"))
+    val preAAA = tran.preImage(BricsAutomaton.fromString("aaa"))
+
+    outputs == Set("a", "aa") &&
+    preA(List('a')) &&
+    preAA(List('a')) &&
+    !preAAA(List('a'))
+  }
+
+  property("Declared non-functional pre-image accepts dropped output") = {
+    val tran = declaredNonFunctional(loseChoiceTran, "loseChoice")
+    val outputs = enumerateOutputs(tran, "a")
+    val preEmpty = tran.preImage(BricsAutomaton.fromString(""))
+    val preA = tran.preImage(BricsAutomaton.fromString("a"))
+    val preAA = tran.preImage(BricsAutomaton.fromString("aa"))
+
+    outputs == Set("", "a") &&
+    preEmpty(List('a')) &&
+    preA(List('a')) &&
+    !preAA(List('a'))
+  }
 
   property("Simple Post +3") = {
     // Transducer q0 -- [a-c], +3 --> qf

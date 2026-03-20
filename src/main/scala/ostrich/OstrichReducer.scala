@@ -32,7 +32,7 @@
 
 package ostrich
 
-import ostrich.automata.{AutDatabase, BricsAutomaton}
+import ostrich.automata.{AutDatabase, BricsAutomaton, Transducer}
 import ap.basetypes.IdealInt
 import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
 import ap.terfor.{ComputationLogger, Formula, TerForConvenience, Term, TermOrder}
@@ -521,13 +521,18 @@ class OstrichReducer protected[ostrich]
           extendedFunTranslator(a) match {
             case Some((op, args, res)) if (args forall isConcrete) => {
               val argStrs = args map term2ListGet
-              op().eval(argStrs) match {
-                case Some(resStr) =>
-                  res === list2Id(resStr)
-                case None =>
-                  // If the function is not defined for the given concrete
-                  // arguments, the atom cannot be satisfied.
-                  Conjunction.FALSE
+              try {
+                op().eval(argStrs) match {
+                  case Some(resStr) =>
+                    res === list2Id(resStr)
+                  case None =>
+                    // If the function is not defined for the given concrete
+                    // arguments, the atom cannot be satisfied.
+                    Conjunction.FALSE
+                }
+              } catch {
+                case _: Transducer.NonFunctionalTransducerUsageException =>
+                  a
               }
             }
             case _ =>

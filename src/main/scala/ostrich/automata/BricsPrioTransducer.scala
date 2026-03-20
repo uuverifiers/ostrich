@@ -67,7 +67,10 @@ class BricsPrioTransducer(val initialState : BricsAutomaton#State,
                                         Set[BricsPrioTransducer#TTransition]],
                           val eTrans: Map[BricsAutomaton#State,
                                         Set[BricsPrioTransducer#TETransition]],
-                          val acceptingStates : Set[BricsAutomaton#State])
+                          val acceptingStates : Set[BricsAutomaton#State],
+                          override val functionalityMetadata :
+                            Transducer.FunctionalityMetadata =
+                              Transducer.FunctionalityMetadata())
     extends Transducer {
   import Transducer._
 
@@ -84,6 +87,12 @@ class BricsPrioTransducer(val initialState : BricsAutomaton#State,
 
   def apply(input: String, internal: String): Option[String] =
     bricsTransducer(input, internal)
+
+  override def withFunctionalityMetadata(
+                       metadata : Transducer.FunctionalityMetadata)
+                     : Transducer =
+    new BricsPrioTransducer(initialState, lblTrans, eTrans, acceptingStates,
+                            metadata)
 
   def postImage[A <: AtomicStateAutomaton]
                (aut: A,
@@ -161,7 +170,8 @@ class BricsPrioTransducer(val initialState : BricsAutomaton#State,
       }
     }
 
-    builder.getTransducer
+    builder.getTransducer.withFunctionalityMetadata(functionalityMetadata)
+           .asInstanceOf[BricsTransducer]
   }
 
   private def postStates(states : Iterable[State],

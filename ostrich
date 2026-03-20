@@ -22,7 +22,7 @@ ostrichParams=""
 
 for p; do
     case "$p" in
-        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh  | -regexTranslator=* | [+-]forwardPropagation | [+-]backwardPropagation | [+-]nielsenSplitter)
+        [+-]eager | [+-]forward | -length=* | [+-]minimizeAutomata | [+-]parikh  | -regexTranslator=* | [+-]forwardPropagation | [+-]backwardPropagation | [+-]nielsenSplitter | -nonFunctionalTransducer=* | -mayBeNonFunctional=*)
             if [ x"$ostrichParams" = x"" ]; then
                 ostrichParams=$p
             else
@@ -41,7 +41,7 @@ for p; do
     esac
 done
 
-if [ -f $NATIVE ]; then
+if [ -f "$NATIVE" ] && { [ ! -f $TARGET ] || [ "$NATIVE" -nt $TARGET ]; }; then
     exec $NATIVE -stringSolver=$ostrichSolver:$ostrichParams "${princessParams[@]}"
 else
     exec $JAVA $JAVA_OPTS -cp $TARGET \

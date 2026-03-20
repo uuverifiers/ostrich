@@ -32,12 +32,13 @@
 
 package ostrich
 
-import ostrich.automata.TransducerTranslator
+import ostrich.automata.{Transducer, TransducerFunctionality,
+                         TransducerTranslator}
 
 import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, LinkedHashSet => MLinkedHashSet}
 
 object OstrichStringTheoryBuilder {
 
@@ -74,6 +75,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
+  protected val declaredNonFunctionalTransducers =
+    new MLinkedHashSet[String]
 
   override def parseParameter(str : String) : Unit = str match {
     case CmdlParser.Opt("eager", value) =>
@@ -100,6 +103,10 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       regexTrans = OFlags.RegexTranslator.Complete
     case CmdlParser.ValueOpt("regexTranslator", "hybrid") =>
       regexTrans = OFlags.RegexTranslator.Hybrid
+    case CmdlParser.ValueOpt("nonFunctionalTransducer", name) =>
+      declaredNonFunctionalTransducers += name
+    case CmdlParser.ValueOpt("mayBeNonFunctional", name) =>
+      declaredNonFunctionalTransducers += name
     case str =>
       super.parseParameter(str)
   }
@@ -111,23 +118,79 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   lazy val getTransducerTheory : Option[StringTheory] =
     Some(SeqStringTheory(OstrichStringTheory.alphabetSize))
 
-  private val transducers = new ArrayBuffer[(String, SymTransducer)]
+  private case class NamedTransducer(name : String,
+                                     transducer : SymTransducer,
+                                     declaredMayBeNonFunctional : Boolean)
+
+  private val transducers = new ArrayBuffer[NamedTransducer]
 
   def addTransducer(name : String, transducer : SymTransducer) : Unit = {
+    addTransducer(name, transducer, false)
+  }
+
+  def addTransducer(name : String,
+                    transducer : SymTransducer,
+                    declaredMayBeNonFunctional : Boolean) : Unit = {
     assert(!createdTheory)
-    transducers += ((name, transducer))
+    transducers += NamedTransducer(name, transducer,
+                                   declaredMayBeNonFunctional)
   }
 
   private var createdTheory = false
 
-  lazy val symTransducers =
-    for ((name, transducer) <- transducers) yield {
+  lazy val symTransducers = {
+    val seenDeclared = new MLinkedHashSet[String]
+
+    val translated =
+      for (NamedTransducer(name, transducer, apiDeclaration) <- transducers)
+      yield {
       Console.err.println("Translating transducer " + name + " ...")
       val aut = TransducerTranslator.toBricsTransducer(
                   transducer, OstrichStringTheory.alphabetSize,
                   getTransducerTheory.get)
-      (name, aut)
-    }
+        val declaredMayBeNonFunctional =
+          apiDeclaration || declaredNonFunctionalTransducers(name)
+
+        if (declaredMayBeNonFunctional)
+          seenDeclared += name
+
+        val sanityCheckResult =
+          if (declaredMayBeNonFunctional)
+            Some(TransducerFunctionality.sanityCheck(aut))
+          else
+            None
+
+        val decoratedAut =
+          aut.withFunctionalityMetadata(
+            Transducer.FunctionalityMetadata(
+              debugName = Some(name),
+              declaredMayBeNonFunctional = declaredMayBeNonFunctional,
+              sanityCheckResult = sanityCheckResult))
+
+        if (declaredMayBeNonFunctional) {
+          sanityCheckResult match {
+            case Some(TransducerFunctionality.NonFunctional) =>
+              Console.err.println(
+                "  -> sanity check found conflicting outputs; " +
+                "functional shortcuts will be disabled for " + name)
+            case _ =>
+              Console.err.println(
+                "  -> declared potentially non-functional, but the current " +
+                "sanity check found no issue")
+          }
+        }
+
+        (name, decoratedAut)
+      }
+
+    for (name <- declaredNonFunctionalTransducers.iterator;
+         if !(seenDeclared contains name))
+      Console.err.println(
+        "Warning: ignoring non-functional declaration for unknown " +
+        "transducer " + name)
+
+    translated
+  }
 
   lazy val theory = {
     createdTheory = true

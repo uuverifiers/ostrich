@@ -219,7 +219,10 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
                                         Set[BricsTransducer#TTransition]],
                       val eTrans: Map[BricsAutomaton#State,
                                       Set[BricsTransducer#TETransition]],
-                      val acceptingStates : Set[BricsAutomaton#State])
+                      val acceptingStates : Set[BricsAutomaton#State],
+                      override val functionalityMetadata :
+                        Transducer.FunctionalityMetadata =
+                          Transducer.FunctionalityMetadata())
     extends Transducer {
   import BricsTransducer.TransducerState
   import Transducer._
@@ -242,10 +245,37 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
 
   def isAccept(s : BricsAutomaton#State) = acceptingStates.contains(s)
 
+  override def withFunctionalityMetadata(
+                       metadata : Transducer.FunctionalityMetadata)
+                     : Transducer =
+    new BricsTransducer(initialState, lblTrans, eTrans, acceptingStates,
+                        metadata)
+
   def preImage[A <: AtomicStateAutomaton]
               (aut : A,
                internal : Iterable[(A#State, A#State)]
                  = Iterable[(A#State, A#State)]()) : AtomicStateAutomaton =
+    preImageExistentialProduct(aut, internal)
+
+  /**
+   * Existential product construction for regular-language pre-images.
+   *
+   * A product state pairs a transducer state with a target automaton state,
+   * and acceptance means that there exists a transducer continuation whose
+   * emitted output can move the target automaton to the paired state. This
+   * construction already explores all output branches, so it remains sound for
+   * declared non-functional transducers.
+   *
+   * The concrete `apply` method below is still functionality-sensitive because
+   * it returns the first discovered output. If a faster functionality-specific
+   * shortcut is added later, declared non-functional BRICS transducers still
+   * have to use this existential construction.
+   */
+  private def preImageExistentialProduct[A <: AtomicStateAutomaton]
+                                        (aut : A,
+                                         internal : Iterable[(A#State,
+                                                              A#State)])
+                                         : AtomicStateAutomaton =
   /* Exploration.measure("transducer pre-op") */ {
 
     val preBuilder = aut.getBuilder
@@ -631,6 +661,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
    * Assumes transducer is functional, so returns the first found output
    */
   def apply(input : String, internal : String = "") : Option[String] = {
+    ensureFunctionalUse("applying it to a concrete string")
+
     if (input.size == 0 && isAccept(initialState))
       return Some("")
 
@@ -905,4 +937,3 @@ class BricsTransducerBuilder
     eTrans.foreach({ case (k, v) => v.retain(t => bwdReach.contains(edest(t))) })
   }
 }
-
