@@ -328,32 +328,44 @@ class AutDatabase(theory : OstrichStringTheory,
                         aut2 : NamedAutomaton) : Boolean =
     emptyIntersection(Set(namedAutToId(aut1), namedAutToId(aut2)))
 
+  private def cachedEmptyIntersection(ids : Set[Int]) : Option[Boolean] =
+    if (nonEmptyIntersections.containsSuperset(ids))
+      Some(false)
+    else if (emptyIntersections.containsSubset(ids))
+      Some(true)
+    else
+      None
+
   /**
    * Check whether the automata with the given ids have empty intersection.
    * If no automata with the given ids exist in the database, the method
    * will fail with an exception.
-   * 
-   * TODO: move the expensive step out of the synchronized block?
    */
-  def emptyIntersection(ids : Set[Int]) : Boolean =
+  def emptyIntersection(ids : Set[Int]) : Boolean = {
+    val auts =
+      synchronized {
+        cachedEmptyIntersection(ids) match {
+          case Some(result) => return result
+          case None => ids.toSeq.sorted.map(id => id2Aut.get(id).get)
+        }
+      }
+
+    val consistent = AutomataUtils.areConsistentAutomata(auts)
+
     synchronized {
-      if (nonEmptyIntersections.containsSuperset(ids)) {
-        false
-      } else if (emptyIntersections.containsSubset(ids)) {
-        true
-      } else {
-        val auts = ids.toSeq.sorted.map(id => id2Automaton(id).get)
-        if (AutomataUtils.areConsistentAutomata(auts)) {
+      cachedEmptyIntersection(ids).getOrElse {
+        if (consistent) {
           nonEmptyIntersections += ids
-//          printSMTLIB(ids, true)
+//        printSMTLIB(ids, true)
           false
         } else {
           emptyIntersections += ids
-//          printSMTLIB(ids, false)
+//        printSMTLIB(ids, false)
           true
         }
       }
     }
+  }
 
 /*
   private var fileCnt : Int = 0

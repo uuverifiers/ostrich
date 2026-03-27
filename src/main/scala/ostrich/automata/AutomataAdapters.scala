@@ -74,7 +74,7 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
     internalise.apply(word)     // TODO: optimise
 
   def getAcceptedWord : Option[Seq[Int]] =
-    internalise.getAcceptedWord // TODO: optimise
+    internalise.getAcceptedWord
 
   def toDetailedString : String = underlying.toDetailedString
 
@@ -115,7 +115,7 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
     bwdReachable
   }
 
-  def internalise : AtomicStateAutomaton = {
+  private lazy val internalised : AtomicStateAutomaton = {
     val builder = underlying.getBuilder
     val smap = new MHashMap[underlying.State, underlying.State]
 
@@ -133,6 +133,8 @@ abstract class AtomicStateAutomatonAdapter[A <: AtomicStateAutomaton]
 
     builder.getAutomaton
   }
+
+  def internalise : AtomicStateAutomaton = internalised
 
   def getTransducerBuilder : TransducerBuilder[State, TLabel] =
     underlying.getTransducerBuilder
@@ -397,4 +399,3 @@ case class LengthBoundedAutomaton(
     states.toSet
   }
 }
-

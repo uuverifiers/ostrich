@@ -150,13 +150,13 @@ object CaleyGraph {
         for ((bsNext, blbl) <- boundAut.outgoingTransitions(bs);
              if as.exists(a => boundAut.LabelOps.labelsOverlap(
                                  blbl, a.asInstanceOf[boundAut.TLabel]))) {
-          if (!seenlist.contains((wa, bsNext))) {
+          val nextState = (wa, bsNext)
+          if (seenlist.add(nextState)) {
             val sa = graphBuilder.getNewState
             graphBuilder.setAccept(sa, boundAut.isAccept(bsNext))
             boxMap += (sa -> wa)
             stateMap += (wa -> sa)
             worklist.push((sa, wa, bsNext))
-            seenlist += ((wa, bsNext))
           }
 
           val sa = stateMap(wa)
@@ -181,7 +181,9 @@ object CaleyGraph {
       boxes(i2).addEdge(q1, q2)
 
     // reverse map
-    boxes.groupBy(_._2).mapValues(_.keys)
+    boxes.groupBy(_._2).iterator.map { case (box, labels) =>
+      box -> labels.keys
+    }.toMap
   }
 
   /**

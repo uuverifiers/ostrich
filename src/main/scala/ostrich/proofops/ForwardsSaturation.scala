@@ -37,9 +37,9 @@ import ap.terfor.{TerForConvenience, TermOrder}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.theories.{SaturationProcedure, Theory}
-import ap.util.Combinatorics.cartesianProduct
-import ostrich.OstrichStringFunctionTranslator
 import ostrich.OstrichStringTheory
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * A SaturationProcedure for forwards propagation.
@@ -62,6 +62,15 @@ class ForwardsSaturation(
   with PropagationSaturationUtils {
   import theory.{ str_len, str_in_re_id, FunPred, strDatabase, str_++}
 
+  private case class CachedApplicationPoints(
+    points : IndexedSeq[ApplicationPoint],
+    pointSet : Set[ApplicationPoint]
+  )
+
+  private val applicationPointCache =
+    new LruCache[PropagationCacheKey, CachedApplicationPoints](CacheSize)
+  private val applicationPointCacheLock = new Object
+
   /**
    * (funApp, argConstraints)
    * funApp -- x = f(y1, ..., yn)
@@ -70,40 +79,95 @@ class ForwardsSaturation(
    * to yi.
    */
   type ApplicationPoint = (Atom, Seq[Seq[Atom]])
+
+  private def shouldSkipApplicationPoint(
+    formula : Atom,
+    args : Seq[Option[ap.terfor.Term]],
+    argCons : Seq[Seq[Atom]]
+  ) : Boolean = {
+    formula.pred match {
+      case FunPred(`str_++`) if argCons.forall(_.isEmpty) =>
+        !args.exists(_.forall(strDatabase.isConcrete))
+      case _ =>
+        false
+    }
+  }
+
+  private def appendApplicationPoints(
+    formula : Atom,
+    args : Seq[Option[ap.terfor.Term]],
+    argConSeqs : Seq[Seq[Atom]],
+    builder : ArrayBuffer[ApplicationPoint]
+  ) : Unit = {
+    val current = Array.fill[Seq[Atom]](argConSeqs.size)(Seq.empty)
+
+    def build(index : Int) : Unit = {
+      if (index >= argConSeqs.size) {
+        val argCons = current.clone.toIndexedSeq
+        if (!shouldSkipApplicationPoint(formula, args, argCons))
+          builder += ((formula, argCons))
+      } else {
+        val cons = argConSeqs(index)
+        if (cons.isEmpty) {
+          current(index) = Seq.empty
+          build(index + 1)
+        } else {
+          for (constraint <- cons) {
+            current(index) = Seq(constraint)
+            build(index + 1)
+          }
+        }
+      }
+    }
+
+    build(0)
+
+    if (argConSeqs.exists(_.size > 1) &&
+        !shouldSkipApplicationPoint(formula, args, argConSeqs))
+      builder += ((formula, argConSeqs))
+  }
+
+  private def computeApplicationPoints(
+    goal : Goal
+  ) : IndexedSeq[ApplicationPoint] = {
+    val funApps = getFunApps(goal)
+    val termConstraintMap = getInitialConstraints(goal)
+    val applicationPoints = new ArrayBuffer[ApplicationPoint]
+
+    for ((_, args, res, formula) <- funApps) {
+      // functions with only concrete args will be handled forwards by
+      // OstrichReducer
+      if (!args.forall(_.forall(strDatabase.isConcrete)) ||
+            strDatabase.isConcrete(res)) {
+        val argConSeqs = args.map({
+          case None => Seq()
+          case Some(a) =>
+            termConstraintMap.get(a)
+              .map(_.filter(isNotNonZeroLenConstraint).toSeq)
+              .getOrElse(Seq())
+        })
+        appendApplicationPoints(formula, args, argConSeqs, applicationPoints)
+      }
+    }
+
+    applicationPoints.toIndexedSeq
+  }
+
+  private def cachedApplicationPoints(goal : Goal) : CachedApplicationPoints = {
+    cachedValue(
+      applicationPointCache,
+      applicationPointCacheLock,
+      propagationCacheKey(goal)
+    ) {
+      val computedPoints = computeApplicationPoints(goal)
+      CachedApplicationPoints(computedPoints, computedPoints.toSet)
+    }
+  }
+
   override def extractApplicationPoints(
     goal : Goal
   ) : Iterator[ApplicationPoint] = {
-    val funApps = getFunApps(goal)
-    val termConstraintMap = getInitialConstraints(goal)
-
-    val applicationPoints = for {
-      (op, args, res, formula) <- funApps;
-      // functions with only concrete args will be handled forwards by
-      // OstrichReducer
-      if (!args.forall(_.forall(strDatabase.isConcrete)) | strDatabase.isConcrete(res));
-      argConSeqs = args.map({
-        case None => Seq()
-        case Some(a) => {
-          termConstraintMap.get(a)
-            .map(_.filter(isNotNonZeroLenConstraint).toSeq)
-            .getOrElse(Seq())
-        }
-      });
-      argCons <- cartesianProduct(argConSeqs.map(cons =>
-        if (cons.isEmpty)
-          Seq(Seq())
-        else
-          cons.map(Seq(_))
-      ).toList).toSeq ++ (
-        if (argConSeqs.exists(_.size > 1)) Seq(argConSeqs) else Seq()
-        )
-      if !(formula.pred match {
-        case FunPred(`str_++`) if argCons.flatten.isEmpty =>
-          !args.exists(_.forall(strDatabase.isConcrete)) // Skip when formula.pred is str.++ and argCons is empty but not constant
-        case _ => false // Include other cases
-      })
-    } yield (formula, argCons)
-    applicationPoints.toIterator
+    cachedApplicationPoints(goal).points.iterator
   }
 
   def computePenalty(predicate: Predicate): Int = predicate match {
@@ -147,14 +211,12 @@ class ForwardsSaturation(
     goal : Goal, appPoint : ApplicationPoint
   ) : Seq[Plugin.Action] = {
     // return empty if appPoint no longer relevant
-    if (!extractApplicationPoints(goal).contains(appPoint))
+    if (!cachedApplicationPoints(goal).pointSet.contains(appPoint))
       return List()
-    val stringFunctionTranslator =
-        new OstrichStringFunctionTranslator(theory, goal.facts)
 
     val (funApp, argCons) = appPoint
     val (op, args, res, formula)
-      = getFunApp(stringFunctionTranslator, funApp) match {
+      = getGoalFunApp(goal, funApp) match {
           case Some(app) => app
           case None =>
             throw new Exception(

@@ -484,16 +484,15 @@ object AutomataUtils {
         ss match {
           case Seq() =>  {
             val nextState = ssp.reverse
-            if (!seenlist.contains(nextState)) {
-                val nextPState = builder.getNewState
-                val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
-                  case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
-                }
-                builder.setAccept(nextPState, isAccept)
-                sMap += nextPState -> mapsImage(nextState)
-                sMapRev += nextState -> nextPState
-                worklist.push((nextPState, nextState))
-                seenlist += nextState
+            if (seenlist.add(nextState)) {
+              val nextPState = builder.getNewState
+              val isAccept = (autsSeq.iterator zip nextState.iterator) forall {
+                case (aut, s) => aut.isAccept(s.asInstanceOf[aut.State])
+              }
+              builder.setAccept(nextPState, isAccept)
+              sMap += nextPState -> mapsImage(nextState)
+              sMapRev += nextState -> nextPState
+              worklist.push((nextPState, nextState))
             }
             val nextPState = sMapRev(nextState)
             builder.addTransition(ps, lbl, nextPState)
