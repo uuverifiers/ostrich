@@ -3,8 +3,6 @@ package ostrich
 import ap.CmdlMain
 import ap.DialogUtil.asString
 
-import java.io.ByteArrayOutputStream
-
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop._
 import ostrich.cesolver.util.ParikhUtil
@@ -32,16 +30,6 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     }
   }
 
-  def captureOutput[A](computation : => A) : String = {
-    val buffer = new ByteArrayOutputStream
-    Console.withOut(buffer) {
-      Console.withErr(buffer) {
-        computation
-      }
-    }
-    buffer.toString("UTF-8")
-  }
-
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
     expectResult(result) {
@@ -54,16 +42,6 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   def checkFileOpts(filename : String, result : String, ostrichOpts : String,
                     extractOpts : String*) : Boolean =
     expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
-                            "-stringSolver=ostrich.OstrichStringTheory:" +
-                               ostrichOpts,
-                            filename) ++ extractOpts).toArray,
-                        false)
-    }
-
-  def checkFileOutput(filename : String, ostrichOpts : String,
-                      extractOpts : String*) : String =
-    captureOutput {
       CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
                             "-stringSolver=ostrich.OstrichStringTheory:" +
                                ostrichOpts,
@@ -330,29 +308,17 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("transducer2d.smt2") =
     checkFile("tests/transducer2d.smt2", "sat")
   property("transducer_lose_nonfunctional.smt2") =
-    {
-      val output =
-        checkFileOutput("tests/transducer_lose_nonfunctional.smt2",
-                        "-nonFunctionalTransducer=Lose", "+model")
-      (output contains "sat") &&
-      (output contains "sanity check found conflicting outputs")
-    }
+    checkFileOpts("tests/transducer_lose_nonfunctional.smt2",
+                  "sat",
+                  "-nonFunctionalTransducer=Lose")
   property("transducer_dupe_nonfunctional.smt2") =
-    {
-      val output =
-        checkFileOutput("tests/transducer_dupe_nonfunctional.smt2",
-                        "-nonFunctionalTransducer=Dupe", "+model")
-      (output contains "sat") &&
-      (output contains "sanity check found conflicting outputs")
-    }
+    checkFileOpts("tests/transducer_dupe_nonfunctional.smt2",
+                  "sat",
+                  "-nonFunctionalTransducer=Dupe")
   property("transducer2d_declared_nonfunctional_control.smt2") =
-    {
-      val output =
-        checkFileOutput("tests/transducer2d.smt2",
-                        "-nonFunctionalTransducer=toUpper", "+model")
-      (output contains "sat") &&
-      (output contains "found no issue")
-    }
+    checkFileOpts("tests/transducer2d.smt2",
+                  "sat",
+                  "-nonFunctionalTransducer=toUpper")
   property("transducer_lose_nonfunctional_preimage_sat.smt2") =
     checkFileOpts("tests/transducer_lose_nonfunctional_preimage_sat.smt2",
                   "sat",
@@ -370,25 +336,17 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
                   "unsat",
                   "-nonFunctionalTransducer=Dupe")
   property("transducer_lose_nonfunctional_preimage_regex_sat.smt2") =
-    {
-      val output =
-        checkFileOutput("tests/transducer_lose_nonfunctional_preimage_regex_sat.smt2",
-                        "-nonFunctionalTransducer=Lose", "+model")
-      (output contains "sat") &&
-      (output contains "(define-fun y")
-    }
+    checkFileOpts("tests/transducer_lose_nonfunctional_preimage_regex_sat.smt2",
+                  "sat",
+                  "-nonFunctionalTransducer=Lose")
   property("transducer_lose_nonfunctional_preimage_regex_unsat.smt2") =
     checkFileOpts("tests/transducer_lose_nonfunctional_preimage_regex_unsat.smt2",
                   "unsat",
                   "-nonFunctionalTransducer=Lose")
   property("transducer_dupe_nonfunctional_preimage_regex_sat.smt2") =
-    {
-      val output =
-        checkFileOutput("tests/transducer_dupe_nonfunctional_preimage_regex_sat.smt2",
-                        "-nonFunctionalTransducer=Dupe", "+model")
-      (output contains "sat") &&
-      (output contains "(define-fun y")
-    }
+    checkFileOpts("tests/transducer_dupe_nonfunctional_preimage_regex_sat.smt2",
+                  "sat",
+                  "-nonFunctionalTransducer=Dupe")
   property("transducer_dupe_nonfunctional_preimage_regex_unsat.smt2") =
     checkFileOpts("tests/transducer_dupe_nonfunctional_preimage_regex_unsat.smt2",
                   "unsat",

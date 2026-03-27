@@ -135,3 +135,18 @@ Locate and run the resulting binary:
 ```bash
 ./target/.../ostrich tests/adt.smt2
 ```
+
+## Non-Functional Transducers
+
+OSTRICH now supports explicitly declaring transducers as potentially non-functional. This is useful for relations like `Lose`, where one input can produce multiple outputs. When a transducer is declared this way, OSTRICH runs a lightweight sanity check and disables functionality-dependent shortcuts if conflicting outputs are found.
+
+For a concrete example, see the [`Lose` benchmark](../master/tests/transducer_lose_nonfunctional.smt2).
+
+Use the flag once per transducer name:
+
+```bash
+./ostrich \
+  -nonFunctionalTransducer=Lose \
+  -nonFunctionalTransducer=Dupe \
+  your_file.smt2
+```
