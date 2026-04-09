@@ -641,9 +641,8 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
       for ((to, _) <- outgoingTransitions(s)) {
-        if (!seenstates.contains(to)) {
+        if (seenstates.add(to)) {
           worklist.push(to)
-          seenstates += to
         }
       }
     }
@@ -797,5 +796,4 @@ class BricsAutomatonBuilder
     new BricsAutomaton(baut)
   }
 }
-
 

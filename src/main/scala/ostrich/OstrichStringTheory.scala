@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2018-2026 Matthew Hague, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -285,10 +285,6 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val functionalPredicates =
     (for (f <- functions) yield functionPredicateMap(f)).toSet
 
-  val predicateMatchConfig : Signature.PredicateMatchConfig =
-    // we match negatively on str_contains in our axioms!
-    Map(str_contains -> Signature.PredicateMatchStatus.Negative)
-
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
@@ -312,6 +308,16 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val _str_replace    = functionPredicateMap(str_replace)
   val _str_replaceall = functionPredicateMap(str_replaceall)
   val _str_substr     = functionPredicateMap(str_substr)
+
+  val predicateMatchConfig : Signature.PredicateMatchConfig =
+    (for (p <- predicates)
+     yield (p -> Signature.PredicateMatchStatus.None)).toMap ++
+    // Only keep predicates that we actually need in the axioms.
+    // In particular, we match negatively on str_contains.
+    Map(str_contains    -> Signature.PredicateMatchStatus.Negative,
+        _str_++         -> Signature.PredicateMatchStatus.Positive,
+        _str_replace    -> Signature.PredicateMatchStatus.Positive,
+        _str_replaceall -> Signature.PredicateMatchStatus.Positive)
 
   val axioms          = new OstrichAxioms(this).axioms
 
@@ -399,6 +405,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, theoryFlags)
+      lazy val periodicRewriter =
+        new OstrichPeriodicRewriter(goal, OstrichStringTheory.this)
       lazy val predToEq =
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, theoryFlags)
 
@@ -415,10 +423,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           predToEq.reducePredicatesToEquations
 
         case Plugin.GoalState.Intermediate =>
-          if (theoryFlags.nielsenSplitter)
-            nielsenSplitter.splitEquation
-          else
-            List()
+          (if (theoryFlags.nielsenSplitter)
+             nielsenSplitter.splitEquation
+           else
+             List())                                   elseDo
+          periodicRewriter.handleGoal
 
         case Plugin.GoalState.Final =>
           predToEq.lazyEnumeration                     elseDo
@@ -461,12 +470,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
       case _                                     => false
     }
 
-  override def preprocess(f : Conjunction, order : TermOrder) : Conjunction = {
+  override def preprocess(f : Conjunction, signature : Signature) : Conjunction = {
     if (!Seqs.disjoint(f.predicates, unsupportedPreds))
       Incompleteness.set
 
     val preprocessor = new OstrichInternalPreprocessor(this, theoryFlags)
-    preprocessor.preprocess(f, order)
+    preprocessor.preprocess(f, signature.order)
   }
 
   override def iPreprocess(f : IFormula, signature : Signature)

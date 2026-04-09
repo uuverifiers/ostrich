@@ -13,6 +13,7 @@ TARGET=`echo $BASEDIR/target/scala-*/ostrich-assembly*.jar`
 LIBDIR=$BASEDIR/lib
 SCALA=scala
 JAVA=java
+NATIVE=$BASEDIR/target/native-image/ostrich
 export JAVA_OPTS="-Xss20000k -Xmx2000m"
 
 princessParams=()
@@ -40,6 +41,10 @@ for p; do
     esac
 done
 
-exec $JAVA $JAVA_OPTS -cp $TARGET \
-     ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
-     "${princessParams[@]}"
+if [ -f $NATIVE ]; then
+    exec $NATIVE -stringSolver=$ostrichSolver:$ostrichParams "${princessParams[@]}"
+else
+    exec $JAVA $JAVA_OPTS -cp $TARGET \
+         ostrich.OstrichMain -stringSolver=$ostrichSolver:$ostrichParams \
+         "${princessParams[@]}"
+fi

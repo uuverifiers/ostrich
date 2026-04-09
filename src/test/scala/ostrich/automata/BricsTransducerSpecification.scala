@@ -203,6 +203,44 @@ object BricsTransducerSpecification
     pre(List('b')) && !pre(List('a')) && !pre(List('d'))
   }
 
+  property("Simple Pre With Pre and Post branching endpoints") = {
+    val q0 = new IDState(0)
+    val q1a = new IDState(1)
+    val q1b = new IDState(2)
+    val q2a = new IDState(3)
+    val q2b = new IDState(4)
+    val q3a = new IDState(5)
+    val q3b = new IDState(6)
+    val q4a = new IDState(7)
+    val q4b = new IDState(8)
+    val q5a = new IDState(9)
+    val q5b = new IDState(10)
+    val qf = new IDState(11)
+
+    qf.setAccept(true)
+
+    q0.addTransition(new Transition('z', 'z', q1a))
+    q0.addTransition(new Transition('z', 'z', q1b))
+    q1a.addTransition(new Transition('z', 'z', q2a))
+    q1b.addTransition(new Transition('z', 'z', q2b))
+    q2a.addTransition(new Transition('a', 'a', q3a))
+    q2b.addTransition(new Transition('b', 'b', q3b))
+    q3a.addTransition(new Transition('a', 'a', q4a))
+    q3b.addTransition(new Transition('a', 'a', q4b))
+    q4a.addTransition(new Transition('d', 'd', q5a))
+    q4b.addTransition(new Transition('d', 'd', q5b))
+    q5a.addTransition(new Transition('b', 'b', qf))
+    q5b.addTransition(new Transition('b', 'b', qf))
+
+    val aut = new BAutomaton
+    aut.setInitialState(q0)
+    val baut = new BricsAutomaton(aut)
+
+    val pre = simplePrePostTran.preImage(baut)
+
+    pre(List('a')) && pre(List('b')) && !pre(List('c'))
+  }
+
   property("Simple Pre With Pre and Post Should fail") = {
     // Transducer q0 -- [a-c], ("zz", +0, "adb") --> qf
     val builder = BricsTransducer.getBuilder

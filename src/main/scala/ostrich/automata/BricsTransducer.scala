@@ -322,9 +322,41 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
                 t : Either[TTransition, TETransition],
                 as : aut.State,
                 m : Mode) {
-      if (!seenlist.contains((ps, ts, t, as, m))) {
-        seenlist += ((ps, ts, t, as, m))
+      val workItem = (ps, ts, t, as, m)
+      if (seenlist.add(workItem)) {
         worklist.push((ps, ts, t, as, m))
+      }
+    }
+
+    // Cache exact runs of fixed output words through the target automaton.
+    // Pre/Post/EPost only need the reachable endpoints, not the intermediate
+    // states, so we can reuse these results safely.
+    val wordReachCache = new MHashMap[(aut.State, Vector[Char]), Vector[aut.State]]
+
+    def advanceWord(as : aut.State, word : Seq[Char]) : Vector[aut.State] = {
+      if (word.isEmpty) {
+        Vector(as)
+      } else {
+        val cachedWord = word.toVector
+        wordReachCache.getOrElseUpdate((as, cachedWord), {
+          var current = Vector(as)
+          var i = 0
+
+          while (i < cachedWord.size && !current.isEmpty) {
+            val next = new MLinkedHashSet[aut.State]
+            val a = cachedWord(i)
+
+            for (state <- current;
+                 (asNext, albl) <- aut.outgoingTransitions(state))
+              if (aut.LabelOps.labelContains(a, albl))
+                next += asNext
+
+            current = next.toVector
+            i = i + 1
+          }
+
+          current
+        })
       }
     }
 
@@ -361,17 +393,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
           // should never happen
         }
         case Pre(u) if !u.isEmpty => {
-          val a = u.head
-          val rest = u.tail
-          for ((asNext, albl) <- aut.outgoingTransitions(as)) {
-            if (aut.LabelOps.labelContains(a, albl)) {
-              if (!rest.isEmpty) {
-                addWork(ps, ts, t, asNext, Pre(rest))
-              } else {
-                addWork(ps, ts, t, asNext, Op)
-              }
-            }
-          }
+          for (asNext <- advanceWord(as, u))
+            addWork(ps, ts, t, asNext, Op)
         }
         case Op => {
           t match {
@@ -420,11 +443,12 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
           }
         }
         case Post(v, lbl) if !v.isEmpty => {
-          val a = v.head
-          val rest = v.tail
-          for ((asNext, albl) <- aut.outgoingTransitions(as)) {
-            if (aut.LabelOps.labelContains(a, albl))
-              addWork(ps, ts, t, asNext, Post(rest, lbl))
+          val tsNext = dest(t)
+
+          for (asNext <- advanceWord(as, v)) {
+            val psNext = getState(tsNext, asNext)
+            preBuilder.addTransition(ps, lbl, psNext)
+            reachStates(tsNext, asNext)
           }
         }
         case Post(v, lbl) if v.isEmpty => {
@@ -436,11 +460,12 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
           reachStates(tsNext, as)
         }
         case EPost(v) if !v.isEmpty => {
-          val a = v.head
-          val rest = v.tail
-          for ((asNext, albl) <- aut.outgoingTransitions(as)) {
-            if (aut.LabelOps.labelContains(a, albl))
-              addWork(ps, ts, t, asNext, EPost(rest))
+          val tsNext = dest(t)
+
+          for (asNext <- advanceWord(as, v)) {
+            val psNext = getState(tsNext, asNext)
+            silentTransitions.addBinding(ps, psNext)
+            reachStates(tsNext, asNext)
           }
         }
         case EPost(v) if v.isEmpty => {
@@ -648,7 +673,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
           val pnext = pos + 1
           val snext = dest(t)
           val lbl = label(t)
-          if (LabelOps.labelContains(a, lbl) && !seenlist.contains((snext, pnext))) {
+          val nextState = (snext, pnext)
+          if (LabelOps.labelContains(a, lbl) && seenlist.add(nextState)) {
             val tOp = operation(t)
             val opOut = tOp.op match {
               case NOP => ""
@@ -662,11 +688,11 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
           }
         }
       }
-
       for (ts <- eTrans.get(s); t <- ts) {
         val pnext = pos
         val snext = dest(t)
-        if (!seenlist.contains((snext, pnext))) {
+        val nextState = (snext, pnext)
+        if (seenlist.add(nextState)) {
           val tOp = operation(t)
           val opOut = tOp.op match {
             case NOP => ""
@@ -847,8 +873,8 @@ class BricsTransducerBuilder
     minimize()
     // TODO: restrict to live reachable states
     new BricsTransducer(initialState,
-                        lblTrans.toMap.mapValues(_.toSet),
-                        eTrans.toMap.mapValues(_.toSet),
+                        lblTrans.iterator.map { case (s, ts) => s -> ts.toSet }.toMap,
+                        eTrans.iterator.map { case (s, ts) => s -> ts.toSet }.toMap,
                         acceptingStates.toSet)
   }
 
@@ -905,4 +931,3 @@ class BricsTransducerBuilder
     eTrans.foreach({ case (k, v) => v.retain(t => bwdReach.contains(edest(t))) })
   }
 }
-

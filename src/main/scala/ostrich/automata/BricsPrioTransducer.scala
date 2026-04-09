@@ -272,8 +272,8 @@ class BricsPrioTransducerBuilder
 //    minimize()
     // TODO: restrict to live reachable states
     new BricsPrioTransducer(initialState,
-                            lblTrans.toMap.mapValues(_.toSet),
-                            eTrans.toMap.mapValues(_.toSet),
+                            lblTrans.iterator.map { case (s, ts) => s -> ts.toSet }.toMap,
+                            eTrans.iterator.map { case (s, ts) => s -> ts.toSet }.toMap,
                             acceptingStates.toSet)
   }
 

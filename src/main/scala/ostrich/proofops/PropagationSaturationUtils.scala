@@ -41,6 +41,8 @@ import ostrich.automata.{AtomicStateAutomaton, AutomataUtils, Automaton, BricsAu
 import ostrich.cesolver.automata.CostEnrichedAutomatonBase
 import ostrich.preop.{ConcatPreOp, PreOp}
 
+import java.util.{LinkedHashMap, Map => JMap}
+
 import scala.collection.breakOut
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap, MultiMap => MMultiMap, Set => MSet}
 import ap.basetypes.IdealInt
@@ -71,14 +73,81 @@ trait PropagationSaturationUtils {
 
   val autDatabase = theory.autDatabase
 
-  def getAge(variable : Term, regex : Term, goal : Goal) : Int = {
-    for (a <- goal.facts.predConj.positiveLitsWithPred(agePred)){
-      if (variable == a(0) && regex == a(1)){
-        //return innerhalb von for ist langsam
-        return a(2).head._1.intValueSafe
+  protected final case class PropagationCacheKey(
+    funAppAtoms : Vector[Atom],
+    initialConstraintAtoms : Vector[Atom]
+  )
+
+  protected final val CacheSize = 128
+
+  protected final class LruCache[K, V](maxEntries : Int)
+      extends LinkedHashMap[K, V](maxEntries + 1, 0.75f, true) {
+    override def removeEldestEntry(eldest : JMap.Entry[K, V]) : Boolean =
+      size > maxEntries
+  }
+
+  protected final def cachedValue[K, V](
+    cache : LruCache[K, V],
+    lock : AnyRef,
+    key : K
+  )(compute : => V) : V = {
+    val cached =
+      lock.synchronized {
+        Option(cache.get(key))
+      }
+
+    cached getOrElse {
+      val computed = compute
+      lock.synchronized {
+        Option(cache.get(key)) getOrElse {
+          cache.put(key, computed)
+          computed
+        }
       }
     }
-    0
+  }
+
+  private def isInitialConstraint(a : Atom) : Boolean = a.pred match {
+    case `str_in_re_id` => true
+    case FunPred(`str_len`) if a(1).isZero => true
+    case _ => false
+  }
+
+  protected final def propagationCacheKey(goal : Goal) : PropagationCacheKey = {
+    val stringFunctionTranslator =
+      new OstrichStringFunctionTranslator(theory, goal.facts)
+    val funAppAtoms = new ArrayBuffer[Atom]
+    val initialConstraintAtoms = new ArrayBuffer[Atom]
+
+    for (a <- goal.facts.predConj.positiveLits) {
+      if (getFunApp(stringFunctionTranslator, a).isDefined)
+        funAppAtoms += a
+      if (isInitialConstraint(a))
+        initialConstraintAtoms += a
+    }
+
+    PropagationCacheKey(funAppAtoms.toVector, initialConstraintAtoms.toVector)
+  }
+
+  private def ageCacheKey(goal : Goal) : Vector[Atom] =
+    goal.facts.predConj.positiveLitsWithPred(agePred).toVector
+
+  private case class PropagationInfo(
+    funApps : Seq[FunAppTuple],
+    funAppsByFormula : Map[Atom, FunAppTuple],
+    initialConstraints : Map[Term, Seq[Atom]]
+  )
+
+  private val propagationInfoCache =
+    new LruCache[PropagationCacheKey, PropagationInfo](CacheSize)
+  private val propagationInfoCacheLock = new Object
+
+  private val ageCache =
+    new LruCache[Vector[Atom], Map[(Term, Term), Int]](CacheSize)
+  private val ageCacheLock = new Object
+
+  def getAge(variable : Term, regex : Term, goal : Goal) : Int = {
+    getAges(goal).getOrElse((variable, regex), 0)
   }
 
   def buildAge(variable : Term, autId : Int, age : Int, goal : Goal) : Atom = {
@@ -144,6 +213,64 @@ trait PropagationSaturationUtils {
 
   type FunAppTuple = (PreOp, Seq[Option[Term]], Term, Atom)
 
+  private def computePropagationInfo(
+    goal : Goal,
+    key : PropagationCacheKey
+  ) : PropagationInfo = {
+    val stringFunctionTranslator =
+      new OstrichStringFunctionTranslator(theory, goal.facts)
+
+    val funApps = new ArrayBuffer[FunAppTuple]
+    val termConstraints = new MHashMap[Term, MSet[Atom]]
+      with MMultiMap[Term, Atom]
+
+    for (a <- key.funAppAtoms)
+      getFunApp(stringFunctionTranslator, a).foreach(funApps += _)
+
+    for (a <- key.initialConstraintAtoms) {
+      a.pred match {
+        case `str_in_re_id` =>
+          termConstraints.addBinding(a(0), a)
+        case FunPred(`str_len`) if a(1).isZero =>
+          termConstraints.addBinding(a(0), a)
+        case _ =>
+      }
+    }
+
+    val initialConstraints =
+      termConstraints.map({ case (t, as) =>
+        (t, as.toSeq.sorted(goal.order.atomOrdering))
+      }).toMap
+
+    val funAppsSeq = funApps.toSeq
+
+    PropagationInfo(funAppsSeq,
+                    funAppsSeq.iterator.map(app => app._4 -> app).toMap,
+                    initialConstraints)
+  }
+
+  private def getPropagationInfo(goal : Goal) : PropagationInfo = {
+    val key = propagationCacheKey(goal)
+
+    cachedValue(
+      propagationInfoCache,
+      propagationInfoCacheLock,
+      key
+    ) {
+      computePropagationInfo(goal, key)
+    }
+  }
+
+  private def getAges(goal : Goal) : Map[(Term, Term), Int] =
+    cachedValue(ageCache, ageCacheLock, ageCacheKey(goal)) {
+      val ages = new MHashMap[(Term, Term), Int]
+
+      for (a <- goal.facts.predConj.positiveLitsWithPred(agePred))
+        ages.getOrElseUpdate((a(0), a(1)), a(2).head._1.intValueSafe)
+
+      ages.toMap
+    }
+
   /**
    * The function applications that appear in the goal
    *
@@ -160,21 +287,7 @@ trait PropagationSaturationUtils {
   def getFunApps(
     goal : Goal
   ) : Seq[FunAppTuple] = {
-    val atoms = goal.facts.predConj
-    val stringFunctionTranslator =
-        new OstrichStringFunctionTranslator(theory, goal.facts)
-
-    // Collect a bunch of data. Always keep original formula for axiom
-    // construction when returning propagation results.
-    //
-    // funApps -- each function application:
-    //  (operation, arguments, result term, original formula containing app)
-    val funApps = new ArrayBuffer[(PreOp, Seq[Option[Term]], Term, Atom)]
-
-    for (a <- atoms.positiveLits)
-      getFunApp(stringFunctionTranslator, a).foreach(funApps += _)
-
-    funApps.toSeq
+    getPropagationInfo(goal).funApps
   }
 
   /**
@@ -229,23 +342,11 @@ trait PropagationSaturationUtils {
    * 0 len. Atoms will be sorted by goal order.
    */
   def getInitialConstraints(goal: Goal) : Map[Term, Seq[Atom]] = {
-    val atoms = goal.facts.predConj
-    val stringFunctionTranslator =
-        new OstrichStringFunctionTranslator(theory, goal.facts)
+    getPropagationInfo(goal).initialConstraints
+  }
 
-    val termConstraints = new MHashMap[Term, MSet[Atom]]
-      with MMultiMap[Term, Atom]
-
-    for (a <- atoms.positiveLits) a.pred match {
-      case `str_in_re_id` => termConstraints.addBinding(a(0), a)
-      case FunPred(`str_len`) if a(1).isZero
-        => termConstraints.addBinding(a(0), a)
-      case _ => // nothing
-    }
-
-    termConstraints.map({ case (t, as) =>
-      (t, as.toSeq.sorted(goal.order.atomOrdering))
-    }).toMap
+  def getGoalFunApp(goal : Goal, formula : Atom) : Option[FunAppTuple] = {
+    getPropagationInfo(goal).funAppsByFormula.get(formula)
   }
 
   /**
