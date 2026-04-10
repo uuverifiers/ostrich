@@ -70,7 +70,7 @@ class AutDatabase(theory : OstrichStringTheory,
 
   import AutDatabase._
   import IExpression.toFunApplier // for e.g. re_* to become applicable
-  import theory.{re_*, re_allchar}
+  import theory.{re_*, re_allchar, str_to_re}
 
   protected val regex2Aut  = new Regex2Aut(theory)
 
@@ -121,11 +121,18 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   private val emptyIntersections    = new SetTrie[Int]
 
+  /**
+   * Cache for primitive periodic roots of automata languages.
+   */
+  private val periodicRoots         = new MHashMap[Int, Option[Seq[Int]]]
+
   lazy val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
   lazy val emptyLangId : Int        = automaton2Id(emptyLangAut)
 
   lazy val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
   lazy val anyStringId : Int        = automaton2Id(anyStringAut)
+  private lazy val nonEmptyStringAut : Automaton =
+    BricsAutomaton.boundedLengthAutomata(1, None)
 
   synchronized {
     id2CompAut.put(anyStringId, emptyLangId)
@@ -252,6 +259,17 @@ class AutDatabase(theory : OstrichStringTheory,
     }
 
   /**
+   * Return the primitive word <code>p</code> if the language of the
+   * automaton with the given id is provably a subset of <code>p*</code>.
+   * The result is conservative: <code>None</code> means that no such proof
+   * was found.
+   */
+  def periodicRoot(id : Int) : Option[Seq[Int]] =
+    synchronized {
+      periodicRoots.getOrElseUpdate(id, computePeriodicRoot(id))
+    }
+
+  /**
    * Convert a named automaton to an id. If necessary, this will
    * add the complemented automaton to the database. The method will fail
    * with an exception if the name of an automaton is given that does not
@@ -328,32 +346,63 @@ class AutDatabase(theory : OstrichStringTheory,
                         aut2 : NamedAutomaton) : Boolean =
     emptyIntersection(Set(namedAutToId(aut1), namedAutToId(aut2)))
 
+  private def cachedEmptyIntersection(ids : Set[Int]) : Option[Boolean] =
+    if (nonEmptyIntersections.containsSuperset(ids))
+      Some(false)
+    else if (emptyIntersections.containsSubset(ids))
+      Some(true)
+    else
+      None
+
   /**
    * Check whether the automata with the given ids have empty intersection.
    * If no automata with the given ids exist in the database, the method
    * will fail with an exception.
-   * 
-   * TODO: move the expensive step out of the synchronized block?
    */
-  def emptyIntersection(ids : Set[Int]) : Boolean =
+  def emptyIntersection(ids : Set[Int]) : Boolean = {
+    val auts =
+      synchronized {
+        cachedEmptyIntersection(ids) match {
+          case Some(result) => return result
+          case None => ids.toSeq.sorted.map(id => id2Aut.get(id).get)
+        }
+      }
+
+    val consistent = AutomataUtils.areConsistentAutomata(auts)
+
     synchronized {
-      if (nonEmptyIntersections.containsSuperset(ids)) {
-        false
-      } else if (emptyIntersections.containsSubset(ids)) {
-        true
-      } else {
-        val auts = ids.toSeq.sorted.map(id => id2Automaton(id).get)
-        if (AutomataUtils.areConsistentAutomata(auts)) {
+      cachedEmptyIntersection(ids).getOrElse {
+        if (consistent) {
           nonEmptyIntersections += ids
-//          printSMTLIB(ids, true)
+//        printSMTLIB(ids, true)
           false
         } else {
           emptyIntersections += ids
-//          printSMTLIB(ids, false)
+//        printSMTLIB(ids, false)
           true
         }
       }
     }
+  }
+
+  private def computePeriodicRoot(id : Int) : Option[Seq[Int]] =
+    for (aut <- id2Automaton(id);
+         witness <- nonEmptyAcceptedWord(aut);
+         candidate = AutomataUtils.primitiveRoot(witness);
+         if candidate.nonEmpty;
+         if isSubsetOf(PositiveAut(id), PositiveAut(periodicAutId(candidate))))
+    yield candidate
+
+  private def nonEmptyAcceptedWord(aut : Automaton) : Option[Seq[Int]] =
+    (aut & nonEmptyStringAut).getAcceptedWord
+
+  private def periodicAutId(word : Seq[Int]) : Int = {
+    val regex = re_*(str_to_re(theory.string2Term(word2String(word))))
+    regex2Id(regex)
+  }
+
+  private def word2String(word : Seq[Int]) : String =
+    (for (c <- word.iterator) yield c.toChar).mkString
 
 /*
   private var fileCnt : Int = 0

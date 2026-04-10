@@ -469,6 +469,22 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/negated-equation-1.smt2", "unsat")
   property("negated-equation-2.smt2") =
     checkFile("tests/negated-equation-2.smt2", "unsat")
+  property("periodic-neg-eq-a-star.smt2") =
+    checkFile("tests/periodic-neg-eq-a-star.smt2", "unsat")
+  property("periodic-neg-eq-ab-star.smt2") =
+    checkFile("tests/periodic-neg-eq-ab-star.smt2", "unsat")
+  property("periodic-neg-contains-a-star.smt2") =
+    checkFile("tests/periodic-neg-contains-a-star.smt2", "unsat")
+  property("periodic-neg-contains-ab-star.smt2") =
+    checkFile("tests/periodic-neg-contains-ab-star.smt2", "unsat")
+  property("periodic-neg-prefix-a-star.smt2") =
+    checkFile("tests/periodic-neg-prefix-a-star.smt2", "unsat")
+  property("periodic-neg-prefix-ab-star.smt2") =
+    checkFile("tests/periodic-neg-prefix-ab-star.smt2", "unsat")
+  property("periodic-neg-suffix-a-star.smt2") =
+    checkFile("tests/periodic-neg-suffix-a-star.smt2", "unsat")
+  property("periodic-neg-suffix-ab-star.smt2") =
+    checkFile("tests/periodic-neg-suffix-ab-star.smt2", "unsat")
   property("concat-empty.smt2") =
     checkFile("tests/concat-empty.smt2", "unsat")
   property("replace-bug.smt2") =

@@ -271,10 +271,12 @@ class BricsPrioTransducerBuilder
   def getTransducer = {
 //    minimize()
     // TODO: restrict to live reachable states
-    new BricsPrioTransducer(initialState,
-                            lblTrans.toMap.mapValues(_.toSet).toMap,
-                            eTrans.toMap.mapValues(_.toSet).toMap,
-                            acceptingStates.toSet)
+    new BricsPrioTransducer(
+      initialState,
+      lblTrans.iterator.map { case (s, ts) => s -> ts.toSet }.toMap,
+      eTrans.iterator.map { case (s, ts) => s -> ts.toSet }.toMap,
+      acceptingStates.toSet
+    )
   }
 
 }

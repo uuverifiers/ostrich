@@ -34,7 +34,19 @@ package ostrich
 
 import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
-import ostrich.proofops.{BackwardsSaturation, CutSaturation, ForwardsSaturation, LengthAbstraction, OstrichClose, OstrichCut, OstrichIntersect, OstrichNielsenSplitter, OstrichPredtoEqConverter, OstrichStrInReTranslator}
+import ostrich.proofops.{
+  BackwardsSaturation,
+  CutSaturation,
+  ForwardsSaturation,
+  LengthAbstraction,
+  OstrichClose,
+  OstrichCut,
+  OstrichIntersect,
+  OstrichNielsenSplitter,
+  OstrichPeriodicRewriter,
+  OstrichPredtoEqConverter,
+  OstrichStrInReTranslator
+}
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -394,6 +406,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     override def handleGoal(goal : Goal) : Seq[Plugin.Action] = {
       lazy val nielsenSplitter =
         new OstrichNielsenSplitter(goal, OstrichStringTheory.this, theoryFlags)
+      lazy val periodicRewriter =
+        new OstrichPeriodicRewriter(goal, OstrichStringTheory.this)
       lazy val predToEq =
         new OstrichPredtoEqConverter(goal, OstrichStringTheory.this, theoryFlags)
 
@@ -409,10 +423,11 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           predToEq.reducePredicatesToEquations
 
         case Plugin.GoalState.Intermediate =>
-          if (theoryFlags.nielsenSplitter)
-            nielsenSplitter.splitEquation
-          else
-            List()
+          (if (theoryFlags.nielsenSplitter)
+             nielsenSplitter.splitEquation
+           else
+             List())                                   elseDo
+          periodicRewriter.handleGoal
 
         case Plugin.GoalState.Final =>
           predToEq.lazyEnumeration                     elseDo
