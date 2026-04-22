@@ -83,12 +83,15 @@ lazy val root = (project in file("."))
     Compile / mainClass := Some("ostrich.OstrichMain"),
     Test / unmanagedSourceDirectories += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 
-    resolvers += "uuverifiers" at "https://eldarica.org/maven/",
+    resolvers ++= Seq(
+      "OliverMa1 BRICS Releases" at "https://oliverma1.github.io/dk.brics.automaton/releases",
+      "uuverifiers" at "https://eldarica.org/maven/"
+    ),
 
     libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
     libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-    libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
+    libraryDependencies += "dk.brics" % "automaton" % "1.12-4-ostrich-1",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.0.2",
 
     nativeImageInstalled := true,
