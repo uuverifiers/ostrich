@@ -38,6 +38,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringTheory
+import ostrich.automata.BricsTimeout
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -227,15 +228,26 @@ class ForwardsSaturation(
             )
         }
 
-    val argAuts = (args zip argCons).map({
-      case (None, _) => Seq(autDatabase.anyStringAut)
-      case (Some(arg), cons)
-        => if (cons.isEmpty)
-          Seq(atomConstraintToAut(arg, None))
-        else
-          cons.map(c => atomConstraintToAut(arg, Some(c)))
-    })
-    val resultConstraint = op.forwardApprox(argAuts);
+    val propagationResult =
+      BricsTimeout.withRecoverableTimeout(theory.theoryFlags.bricsTimeout) {
+        val argAuts = (args zip argCons).map({
+          case (None, _) => Seq(autDatabase.anyStringAut)
+          case (Some(arg), cons)
+            => if (cons.isEmpty)
+              Seq(atomConstraintToAut(arg, None))
+            else
+              cons.map(c => atomConstraintToAut(arg, Some(c)))
+        })
+        val resultConstraint = op.forwardApprox(argAuts)
+        (argAuts, resultConstraint)
+      }
+
+    val (_, resultConstraint) = propagationResult match {
+      case Some(result) =>
+        result
+      case None =>
+        return List()
+    }
 
     val resFmla = formulaTermInAut(res, resultConstraint, goal)
 

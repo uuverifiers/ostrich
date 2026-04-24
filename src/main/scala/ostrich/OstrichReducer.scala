@@ -326,18 +326,28 @@ class OstrichReducer protected[ostrich]
                   import IExpression._
                   val re =
                     re_comp(re_+(re_charrange(int2Char(48), int2Char(57))))
-                  autDatabase.regex2Id(re)
+                  autDatabase.regex2IdWithinBudget(re)
                 }
-                rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
+                autId match {
+                  case Some(id) =>
+                    rewriteLogging(a, str_in_re_id(List(a(0), l(id))))
+                  case None =>
+                    a
+                }
               }
               case const if const.signum >= 0 => {
                 val autId = {
                   import IExpression._
                   val num = const.toString
                   val re  = re_++(re_*(str_to_re("0")), str_to_re(num))
-                  autDatabase.regex2Id(re)
+                  autDatabase.regex2IdWithinBudget(re)
                 }
-                rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
+                autId match {
+                  case Some(id) =>
+                    rewriteLogging(a, str_in_re_id(List(a(0), l(id))))
+                  case None =>
+                    a
+                }
               }
               case _ =>
                 rewriteLogging(a, Conjunction.FALSE)
@@ -360,9 +370,14 @@ class OstrichReducer protected[ostrich]
                 // string must have length different from one
                 val autId = {
                   import IExpression._
-                  autDatabase.regex2Id(re_comp(re_allchar()))
+                  autDatabase.regex2IdWithinBudget(re_comp(re_allchar()))
                 }
-                rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
+                autId match {
+                  case Some(id) =>
+                    rewriteLogging(a, str_in_re_id(List(a(0), l(id))))
+                  case None =>
+                    a
+                }
               }
               case const if const.signum >= 0 && const < theory.alphabetSize =>
                 rewriteLogging(
@@ -388,12 +403,17 @@ class OstrichReducer protected[ostrich]
               import IExpression._
               re_++(re_all(), str_to_re(a(0).constant))
             }
-            val autId = autDatabase.regex2Id(asRE)
-            rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
+            autDatabase.regex2IdWithinBudget(asRE) match {
+              case Some(autId) =>
+                rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
+              case None =>
+                a
+            }
           } else if (isConcrete(a(1))) {
             val str   = term2Str(a(1)).get
             val autId = autDatabase.automaton2Id(
-              BricsAutomaton.suffixAutomaton(str))
+              BricsAutomaton.suffixAutomaton(str,
+                                             theory.theoryFlags.bricsTimeout))
             rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
           } else {
             a
@@ -406,12 +426,17 @@ class OstrichReducer protected[ostrich]
               import IExpression._
               re_++(re_all(), re_++(str_to_re(a(1).constant), re_all()))
             }
-            val autId = autDatabase.regex2Id(asRE)
-            rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
+            autDatabase.regex2IdWithinBudget(asRE) match {
+              case Some(autId) =>
+                rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
+              case None =>
+                a
+            }
           } else if (isConcrete(a(0))) {
             val str   = term2Str(a(0)).get
             val autId = autDatabase.automaton2Id(
-              BricsAutomaton.containsAutomaton(str))
+              BricsAutomaton.containsAutomaton(str,
+                                               theory.theoryFlags.bricsTimeout))
             rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
           } else {
             a
@@ -424,12 +449,17 @@ class OstrichReducer protected[ostrich]
               import IExpression._
               re_++(str_to_re(a(0).constant), re_all())
             }
-            val autId = autDatabase.regex2Id(asRE)
-            rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
+            autDatabase.regex2IdWithinBudget(asRE) match {
+              case Some(autId) =>
+                rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
+              case None =>
+                a
+            }
           } else if (isConcrete(a(1))) {
             val str   = term2Str(a(1)).get
             val autId = autDatabase.automaton2Id(
-                          BricsAutomaton.prefixAutomaton(str))
+                          BricsAutomaton.prefixAutomaton(str,
+                                                         theory.theoryFlags.bricsTimeout))
             rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
           } else {
             a
@@ -499,14 +529,16 @@ class OstrichReducer protected[ostrich]
         case `str_<=` if (isConcrete(a(1))) => {
           val autId =
             autDatabase.automaton2Id(
-              BricsAutomaton.smallerEqAutomaton(term2Str(a(1)).get))
+              BricsAutomaton.smallerEqAutomaton(term2Str(a(1)).get,
+                                                theory.theoryFlags.bricsTimeout))
           str_in_re_id(List(a(0), l(autId)))
         }
 
         case `str_<=` if (isConcrete(a(0))) => {
           val autId =
             autDatabase.automaton2Id(
-              BricsAutomaton.greaterEqAutomaton(term2Str(a(0)).get))
+              BricsAutomaton.greaterEqAutomaton(term2Str(a(0)).get,
+                                                theory.theoryFlags.bricsTimeout))
           str_in_re_id(List(a(1), l(autId)))
         }
 

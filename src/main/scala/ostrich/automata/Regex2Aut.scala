@@ -49,6 +49,8 @@ import collection.JavaConverters._
 
 object Regex2Aut {
 
+  BricsTimeout.install()
+
   val debug = false
 
   private val RegexClassSpecialChar = """\[[^\[\]]*(\\[wsd])""".r
@@ -565,7 +567,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
       // only be done correctly within a proper regex parser.
   
       val bricsPattern = jsRegex2BricsRegex(str)
-      new RegExp(bricsPattern).toAutomaton(minimize)
+        maybeMin(new RegExp(bricsPattern).toAutomaton(false), minimize)
     }
 
     case IFunApp(`re_from_ecma2020`, Seq(EncodedString(str))) => {
@@ -582,7 +584,7 @@ class Regex2Aut(theory : OstrichStringTheory) {
     case IFunApp(`re_case_insensitive`, Seq(a)) => {
       val aut = toBAutomaton(a, minimize)
       maybeMin(AutomataUtils.makeCaseInsensitive(
-                 new BricsAutomaton(aut))
+                 new BricsAutomaton(aut, theory.theoryFlags.bricsTimeout))
                  .asInstanceOf[BricsAutomaton].underlying,
                minimize)
     }
@@ -665,8 +667,9 @@ class Regex2Aut(theory : OstrichStringTheory) {
 
   private def maybeMin(aut : BAutomaton, minimize : Boolean) : BAutomaton = {
     if (minimize && !BricsAutomaton.neverMinimize(aut))
-      aut.minimize
-    aut
+      BricsTimeout.safeMinimize(aut, theory.theoryFlags.bricsTimeout)
+    else
+      aut
   }
 
   private def translateLeaves(t        : ITerm,
@@ -872,7 +875,8 @@ class Regex2Aut(theory : OstrichStringTheory) {
       }
     }
     case _ => {
-      new BricsAutomaton(toBAutomaton(t, minimize))
+      new BricsAutomaton(toBAutomaton(t, minimize),
+                         theory.theoryFlags.bricsTimeout)
     }
   }
   private def numToUnicode(num : Int) : String =

@@ -335,7 +335,15 @@ class OstrichRegexEncoder(theory : OstrichStringTheory)
                 subres : Seq[IExpression]) : IExpression = (t, subres) match {
     case (IAtom(`str_in_re`, _),
           Seq(s : ITerm, ConcreteRegex(regex))) =>
-      str_in_re_id(s, theory.autDatabase.regex2Id(regex))
+      theory.autDatabase.regex2IdWithinBudget(regex) match {
+        case Some(id) =>
+          str_in_re_id(s, id)
+        case None =>
+          Console.err.println(
+            "Warning: could not encode regular expression right away," +
+              " post-poning: " + regex)
+          t update subres
+      }
     case (IAtom(`str_in_re`, _), Seq(_, regex)) => {
       Console.err.println(
         "Warning: could not encode regular expression right away," +

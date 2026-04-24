@@ -52,6 +52,7 @@ object OFlags {
   protected[ostrich] val debug = false
 
   val timeout = 60000
+  val bricsTimeout = 1000
 }
 
 case class OFlags(
@@ -74,5 +75,6 @@ case class OFlags(
   debug                   : Boolean = false,
   underApprox             : Boolean = true,
   underApproxBound        : Int = 15,
-  simplifyAut             : Boolean = true
+  simplifyAut             : Boolean = true,
+  bricsTimeout            : Int = OFlags.bricsTimeout
 )

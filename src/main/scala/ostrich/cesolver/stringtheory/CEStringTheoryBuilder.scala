@@ -83,7 +83,8 @@ class CEStringTheoryBuilder extends OstrichStringTheoryBuilder {
         useLength = OFlags.LengthOptions.On,
         minimizeAutomata = minimizeAuts,
         ceaBackend = backend,
-        debug = debug
+        debug = debug,
+        bricsTimeout = bricsTimeoutMillis
       )
     )
   }

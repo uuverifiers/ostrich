@@ -40,6 +40,8 @@ import scala.collection.JavaConversions.{asScalaIterator, iterableAsScalaIterabl
 import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, LinkedHashSet => MLinkedHashSet, MultiMap => MMultiMap, Set => MSet, Stack => MStack, TreeSet => MTreeSet}
 
 object BricsAutomaton {
+  BricsTimeout.install()
+
   private def toBAutomaton(aut : Automaton) : BAutomaton = aut match {
     case that : BricsAutomaton =>
       that.underlying
@@ -54,21 +56,28 @@ object BricsAutomaton {
   /**
    * Build brics automaton from a regular expression in brics format
    */
-  def apply(pattern: String): BricsAutomaton =
-    new BricsAutomaton(new RegExp(pattern).toAutomaton(true))
+  def apply(pattern: String,
+            timeoutMillis: Int = OFlags.bricsTimeout): BricsAutomaton =
+    new BricsAutomaton(
+      BricsTimeout.safeMinimize(new RegExp(pattern).toAutomaton(false),
+                                timeoutMillis),
+      timeoutMillis)
 
   /**
    * Build brics automaton that accepts exactly the given word
    */
-  def fromString(str : String) : BricsAutomaton =
-    new BricsAutomaton(BasicAutomata makeString str)
+  def fromString(str : String,
+                 timeoutMillis: Int = OFlags.bricsTimeout) : BricsAutomaton =
+    new BricsAutomaton(BasicAutomata makeString str, timeoutMillis)
 
   /**
    * Build brics automaton that accepts exactly the prefixes of the given
    * string.
    */
-  def prefixAutomaton(str : String) : BricsAutomaton = {
-    val builder = new BricsAutomatonBuilder
+  def prefixAutomaton(str : String,
+                      timeoutMillis: Int = OFlags.bricsTimeout)
+                    : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
 
     val states =
       (for (n <- 0 to str.size) yield builder.getNewState).toIndexedSeq
@@ -90,8 +99,10 @@ object BricsAutomaton {
    * Build brics automaton that accepts exactly the suffix of the given
    * string.
    */
-  def suffixAutomaton(str : String) : BricsAutomaton = {
-    val builder = new BricsAutomatonBuilder
+  def suffixAutomaton(str : String,
+                      timeoutMillis: Int = OFlags.bricsTimeout)
+                    : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
 
     val states =
       (for (n <- 0 to str.length) yield builder.getNewState).toIndexedSeq
@@ -119,8 +130,10 @@ object BricsAutomaton {
    * Build brics automaton that accepts exactly the suffix of the given
    * string.
    */
-  def containsAutomaton(str : String) : BricsAutomaton = {
-    val builder = new BricsAutomatonBuilder
+  def containsAutomaton(str : String,
+                        timeoutMillis: Int = OFlags.bricsTimeout)
+                      : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
 
     val states =
       (for (n <- 0 to str.length) yield builder.getNewState).toIndexedSeq
@@ -150,17 +163,25 @@ object BricsAutomaton {
   /**
    * An automaton that accepts any string.
    */
-  def makeAnyString() : BricsAutomaton =
-      new BricsAutomaton(BAutomaton.makeAnyString)
+      def makeAnyString() : BricsAutomaton =
+        makeAnyString(OFlags.bricsTimeout)
+
+      def makeAnyString(timeoutMillis: Int) : BricsAutomaton =
+      new BricsAutomaton(BAutomaton.makeAnyString, timeoutMillis)
 
   /**
    * An automaton that accepts no strings and represents the empty language.
    */
-  def makeEmptyLang() : BricsAutomaton =
-      new BricsAutomaton(BAutomaton.makeEmpty)
+    def makeEmptyLang() : BricsAutomaton =
+      makeEmptyLang(OFlags.bricsTimeout)
 
-  def eqLengthAutomata(length : Int) : BricsAutomaton = {
-    val builder = new BricsAutomatonBuilder
+    def makeEmptyLang(timeoutMillis: Int) : BricsAutomaton =
+      new BricsAutomaton(BAutomaton.makeEmpty, timeoutMillis)
+
+  def eqLengthAutomata(length : Int,
+                      timeoutMillis: Int = OFlags.bricsTimeout)
+                    : BricsAutomaton = {
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
 
     val states =
       (for (n <- 0 to length) yield builder.getNewState).toIndexedSeq
@@ -175,11 +196,13 @@ object BricsAutomaton {
   }
 
   def boundedLengthAutomata(lowerBound : Int,
-                            upperBound : Option[Int]) : BricsAutomaton = {
+                            upperBound : Option[Int],
+                            timeoutMillis: Int = OFlags.bricsTimeout)
+                          : BricsAutomaton = {
     val upperBoundValue = upperBound.getOrElse(-1)
     val numberOfStates = math.max(lowerBound,upperBoundValue)
 
-    val builder = new BricsAutomatonBuilder
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
     // lb k -> have k+1 states and last state with sigma and accept
     // ub k -> return k+1 states, every state up to k accept, no loop on last
     val states =
@@ -205,7 +228,9 @@ object BricsAutomaton {
    * A new automaton that accepts all strings x <= str (lexicographical ordering)
    */
 
-  def smallerEqAutomaton(str : String) : BricsAutomaton = {
+  def smallerEqAutomaton(str : String,
+                         timeoutMillis: Int = OFlags.bricsTimeout)
+                       : BricsAutomaton = {
     /*
     Initial state is accepting.
     Have one accepting sink state where every letter can be read because we are already smaller.
@@ -214,7 +239,7 @@ object BricsAutomaton {
       Each of those additional states have one transition to the next state reading ['c', 'c']
     The last state has no outgoing transitions.
      */
-    val builder = new BricsAutomatonBuilder
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
     val initital_state = builder.getNewState
 
     builder.setInitialState(initital_state)
@@ -253,7 +278,9 @@ object BricsAutomaton {
   /**
    * A new automaton that accepts all strings str <= x (lexicographical ordering)
    */
-  def greaterEqAutomaton(str : String) : BricsAutomaton = {
+  def greaterEqAutomaton(str : String,
+                         timeoutMillis: Int = OFlags.bricsTimeout)
+                       : BricsAutomaton = {
     /*
     Initial state is NOT accepting.
     Have one accepting sink state where every letter can be read because we are already smaller.
@@ -262,7 +289,7 @@ object BricsAutomaton {
       Each of those additional states have one transition to the next state reading ['c', 'c']
     The last state has no outgoing transitions.
      */
-    val builder = new BricsAutomatonBuilder
+    val builder = new BricsAutomatonBuilder(timeoutMillis)
     val initital_state = builder.getNewState
 
     builder.setInitialState(initital_state)
@@ -573,7 +600,9 @@ class BricsTLabelEnumerator(labels: Iterator[(Char, Char)])
 /**
  * Wrapper for the BRICS automaton class
  */
-class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
+class BricsAutomaton(val underlying : BAutomaton,
+         val timeoutMillis : Int = OFlags.bricsTimeout)
+  extends AtomicStateAutomaton {
 
   import BricsAutomaton.toBAutomaton
   import OFlags.debug
@@ -595,20 +624,23 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
    */
   def |(that : Automaton) : Automaton =
     new BricsAutomaton(BasicOperations.union(this.underlying,
-                                             toBAutomaton(that)))
+                                             toBAutomaton(that)),
+                       timeoutMillis)
 
   /**
    * Intersection
    */
   def &(that : Automaton) : Automaton =
     new BricsAutomaton(BasicOperations.intersection(this.underlying,
-                                                    toBAutomaton(that)))
+                                                    toBAutomaton(that)),
+                       timeoutMillis)
 
   /**
    * Complementation
    */
   def unary_! : Automaton =
-    new BricsAutomaton(BasicOperations.complement(this.underlying))
+    new BricsAutomaton(BasicOperations.complement(this.underlying),
+                       timeoutMillis)
 
   /**
    * Check whether this automaton describes the empty language.
@@ -636,11 +668,13 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
     seenstates.add(initialState)
 
     while(!worklist.isEmpty) {
+      ap.util.Timeout.check
       val s = worklist.pop
 
       val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
       for ((to, _) <- outgoingTransitions(s)) {
+        ap.util.Timeout.check
         if (seenstates.add(to)) {
           worklist.push(to)
         }
@@ -662,18 +696,23 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
   def outgoingTransitions(from : State) : Iterator[(State, TLabel)] = {
     val dests = new MHashMap[TLabel, MSet[State]] with MMultiMap[TLabel, State]
 
-    for (t <- from.getTransitions)
+    for (t <- from.getTransitions) {
+      ap.util.Timeout.check
       dests.addBinding((t.getMin, t.getMax), t.getDest)
+    }
 
     val outgoing = new MLinkedHashSet[(State, TLabel)]
 
     for (lbl <- dests.keys.toList.sorted) {
+      ap.util.Timeout.check
 
       def sortingFn(s1 : State, s2 : State) : Boolean = {
+        ap.util.Timeout.check
         // sort by lowest outgoing transition
         for ((t1, t2) <- s1.getSortedTransitions(false)
                          zip
                          s2.getSortedTransitions(false)) {
+          ap.util.Timeout.check
           import scala.math.Ordering.Implicits._
           val lbl1 = (t1.getMin, t1.getMax)
           val lbl2 = (t2.getMin, t2.getMax)
@@ -689,6 +728,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
       val sortedDests = dests(lbl).toList.sortWith(sortingFn)
 
       for (s <- sortedDests) {
+        ap.util.Timeout.check
         outgoing += ((s, lbl))
       }
     }
@@ -719,7 +759,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 
   def toDetailedString : String = underlying.toString
 
-  def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder
+  def getBuilder : BricsAutomatonBuilder = new BricsAutomatonBuilder(timeoutMillis)
 
   def getTransducerBuilder : BricsTransducerBuilder = BricsTransducer.getBuilder
 }
@@ -728,7 +768,7 @@ class BricsAutomaton(val underlying : BAutomaton) extends AtomicStateAutomaton {
 /**
  * For constructing manually (immutable) BricsAutomaton objects
  */
-class BricsAutomatonBuilder
+class BricsAutomatonBuilder(val timeoutMillis : Int = OFlags.bricsTimeout)
     extends AtomicStateAutomatonBuilder[BricsAutomaton#State,
                                         BricsAutomaton#TLabel] {
   val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
@@ -791,9 +831,12 @@ class BricsAutomatonBuilder
    */
   def getAutomaton : BricsAutomaton = {
     baut.restoreInvariant
-    if (minimize && !BricsAutomaton.neverMinimize(baut))
-      baut.minimize
-    new BricsAutomaton(baut)
+    val finalAut =
+      if (minimize && !BricsAutomaton.neverMinimize(baut))
+        BricsTimeout.safeMinimize(baut, timeoutMillis)
+      else
+        baut
+    new BricsAutomaton(finalAut, timeoutMillis)
   }
 }
 

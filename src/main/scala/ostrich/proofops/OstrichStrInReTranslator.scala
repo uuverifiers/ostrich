@@ -92,11 +92,10 @@ class OstrichStrInReTranslator(theory : OstrichStringTheory) {
       def autIdFor(t : Term, negate : Boolean) : Option[Int] = 
         try {
           val regex = regexExtractor regexAsTerm t
-          val aut   = if (negate)
-                        autDatabase.regex2ComplementedAutomaton(regex)
-                      else
-                        autDatabase.regex2Automaton(regex)
-          Some(autDatabase.automaton2Id(aut))
+          if (negate)
+            autDatabase.regex2ComplementedIdWithinBudget(regex)
+          else
+            autDatabase.regex2IdWithinBudget(regex)
         } catch {
           case _ : IllegalRegexException => None
         }

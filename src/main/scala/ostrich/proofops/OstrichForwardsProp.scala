@@ -126,15 +126,15 @@ class OstrichForwardsProp(goal : Goal,
     for (a <- atoms.positiveLits) a.pred match {
       case `str_in_re` => {
         val regex = regexExtractor regexAsTerm a(1)
-        val aut = autDatabase.regex2Automaton(regex)
-        regexes += ((a.head, aut, a))
+        for (aut <- autDatabase.regex2AutomatonWithinBudget(regex))
+          regexes += ((a.head, aut, a))
       }
       case `str_in_re_id` =>
         decodeRegexId(a, false)
       case FunPred(`str_len`) => {
         lengthVars.put(a(0), a(1))
         if (a(1).isZero)
-          regexes += ((a(0), BricsAutomaton fromString "", a))
+          regexes += ((a(0), BricsAutomaton.fromString("", flags.bricsTimeout), a))
       }
       case FunPred(`str_char_count`) => {
         // ignore
@@ -355,13 +355,14 @@ class OstrichForwardsProp(goal : Goal,
       for (w <- strDatabase.term2List(t)) {
         val str : String = w.map(i => i.toChar).mkString
         termConstraints.addBinding(
-          t, (BricsAutomaton fromString str, Conjunction.TRUE)
+          t, (BricsAutomaton.fromString(str, flags.bricsTimeout), Conjunction.TRUE)
         )
         for (ind <- term2Index get t)
           coveredTerms += ind
       }
       if (!termConstraints.contains(t)){
-        termConstraints.addBinding(t, (BricsAutomaton.makeAnyString(), Conjunction.TRUE))
+        termConstraints.addBinding(
+          t, (BricsAutomaton.makeAnyString(flags.bricsTimeout), Conjunction.TRUE))
       }
     }
 

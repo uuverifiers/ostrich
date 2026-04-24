@@ -38,6 +38,7 @@ import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.{TerForConvenience, Term, TermOrder}
 import ap.theories.{SaturationProcedure, Theory}
 import ostrich.OstrichStringTheory
+import ostrich.automata.BricsTimeout
 
 /**
  * A SaturationProcedure for backwards propagation.
@@ -175,21 +176,33 @@ class BackwardsSaturation(
             )
         }
 
-    val argAuts = for (aopt <- args)
-      yield aopt match {
-        case None => {
-          Seq(autDatabase.anyStringAut)
-        }
-        case Some(a) => {
-          termConstraintMap.get(a)
-            .map(_.map(atom => atomConstraintToAut(a, Some(atom))).toSeq)
-            .getOrElse(Seq(atomConstraintToAut(a, None)))
-        }
+    val propagationResult =
+      BricsTimeout.withRecoverableTimeout(theory.theoryFlags.bricsTimeout) {
+        val argAuts = for (aopt <- args)
+          yield aopt match {
+            case None => {
+              Seq(autDatabase.anyStringAut)
+            }
+            case Some(a) => {
+              termConstraintMap.get(a)
+                .map(_.map(atom => atomConstraintToAut(a, Some(atom))).toSeq)
+                .getOrElse(Seq(atomConstraintToAut(a, None)))
+            }
+          }
+        val resAut = atomConstraintToAut(res, argCon)
+        val opResult = op(argAuts, resAut)
+        (argAuts, resAut, opResult)
       }
+
+    val (argAuts, resAut, (newConstraints, _)) = propagationResult match {
+      case Some(result) =>
+        result
+      case None =>
+        return List()
+    }
+
     import TerForConvenience._
-    val resAut = atomConstraintToAut(res, argCon)
     val age = getAge(res, l(autDatabase.automaton2Id(resAut)), goal)
-    val (newConstraints, _) = op(argAuts, resAut)
     implicit val o: TermOrder = goal.order
     // remove cases where one argument has no solutions
     val argCases = newConstraints.filter(_.forall(!_.isEmpty))

@@ -95,7 +95,8 @@ class AutDatabase(theory : OstrichStringTheory,
    * Map from ids to the corresponding automaton. The key set of this map
    * is guaranteed to be a superset of the key set of the
    * <code>regexes</code> map. Distinct ids are guaranteed to be mapped to
-   * automata describing distinct languages. 
+    * automata describing distinct languages, except if equivalence checking
+    * times out and we conservatively fall back to storing a duplicate.
    */
   private val id2Aut       = new MHashMap[Int, Automaton]
 
@@ -105,6 +106,18 @@ class AutDatabase(theory : OstrichStringTheory,
    * <code>id2Aut</code> map.
    */
   private val id2CompAut   = new MHashMap[Int, Int]
+
+  /**
+   * Regular expressions whose automata could not be interned within the local
+   * BRICS budget. We remember them to avoid retrying the same expensive work.
+   */
+  private val timedOutRegexes = new MHashSet[ITerm]
+
+  /**
+   * Automata whose complemented form could not be interned within the local
+   * BRICS budget.
+   */
+  private val timedOutComplementIds = new MHashSet[Int]
 
   /**
    * Tree data-structure to map automata to IDs.
@@ -126,13 +139,16 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   private val periodicRoots         = new MHashMap[Int, Option[Seq[Int]]]
 
-  lazy val emptyLangAut : Automaton = BricsAutomaton.makeEmptyLang()
+  lazy val emptyLangAut : Automaton =
+    BricsAutomaton.makeEmptyLang(theory.theoryFlags.bricsTimeout)
   lazy val emptyLangId : Int        = automaton2Id(emptyLangAut)
 
-  lazy val anyStringAut : Automaton = BricsAutomaton.makeAnyString()
+  lazy val anyStringAut : Automaton =
+    BricsAutomaton.makeAnyString(theory.theoryFlags.bricsTimeout)
   lazy val anyStringId : Int        = automaton2Id(anyStringAut)
   private lazy val nonEmptyStringAut : Automaton =
-    BricsAutomaton.boundedLengthAutomata(1, None)
+    BricsAutomaton.boundedLengthAutomata(1, None,
+                                         theory.theoryFlags.bricsTimeout)
 
   synchronized {
     id2CompAut.put(anyStringId, emptyLangId)
@@ -153,6 +169,19 @@ class AutDatabase(theory : OstrichStringTheory,
     }
 
   /**
+   * Query the id of a regular expression, but only if automaton interning can
+   * be completed within the configured BRICS budget.
+   */
+  def regex2IdWithinBudget(regexTerm : ITerm) : Option[Int] =
+    synchronized {
+      regexes.get(regexTerm) match {
+        case some @ Some(_) => some
+        case None if timedOutRegexes contains regexTerm => None
+        case None => addRegexWithinBudget(regexTerm)
+      }
+    }
+
+  /**
    * Add a regex that is not yet in the <code>regex2Id</code> map.
    * This will check whether we already know the language represented by
    * the regex, and in this case assign the same id.
@@ -161,28 +190,71 @@ class AutDatabase(theory : OstrichStringTheory,
     synchronized {
       require(!regexes.contains(regexTerm))
       val aut = regex2Aut.buildAut(regexTerm, minimizeAutomata)
-      val id = automaton2Id(aut)
-      regexes.put(regexTerm, id)
-      id2Regex.getOrElseUpdate(id, regexTerm)
-      id
+      storeRegex(regexTerm, automaton2Id(aut))
+    }
+
+  /**
+   * Add a regex that is not yet in the <code>regex2Id</code> map, but abort if
+   * automaton interning exceeds the configured BRICS budget.
+   */
+  private def addRegexWithinBudget(regexTerm : ITerm) : Option[Int] =
+    synchronized {
+      require(!regexes.contains(regexTerm))
+      val aut = regex2Aut.buildAut(regexTerm, minimizeAutomata)
+      internAutomatonWithinBudget(aut) match {
+        case Some(id) =>
+          Some(storeRegex(regexTerm, id))
+        case None =>
+          if (OFlags.debug)
+            Console.err.println(
+              "BRICS timeout while encoding regex, postponing: " + regexTerm)
+          timedOutRegexes += regexTerm
+          None
+      }
     }
 
   /**
    * Add an automaton to the database. If the database already contains
    * an equivalent automaton, the old id will be returned, ensuring
-   * that distinct ids always map to automata representing distinct languages.
+   * that distinct ids always map to automata representing distinct languages
+   * unless equivalence checking times out.
    */
   def automaton2Id(aut : Automaton) : Int =
     synchronized {
-      val id = autTree.insert(aut, nextId)
-      if (id == nextId) {
-        if (OFlags.debug)
-          Console.err.println(f"Adding new automaton with id $id to database")
-        nextId = nextId + 1
-        id2Aut.put(id, aut)
+      internAutomatonWithinBudget(aut) match {
+        case Some(id) =>
+          id
+        case None =>
+          if (OFlags.debug)
+            Console.err.println(
+              "BRICS timeout while interning automaton, skipping equivalence check")
+          addFreshAutomaton(aut)
       }
-      id
     }
+
+  private def internAutomatonWithinBudget(aut : Automaton) : Option[Int] =
+    BricsTimeout.withRecoverableTimeout(theory.theoryFlags.bricsTimeout) {
+      autTree.insert(aut, nextId)
+    } map {
+      case id if id == nextId => addFreshAutomaton(aut)
+      case id => id
+    }
+
+  private def storeRegex(regexTerm : ITerm, id : Int) : Int = {
+    timedOutRegexes -= regexTerm
+    regexes.put(regexTerm, id)
+    id2Regex.getOrElseUpdate(id, regexTerm)
+    id
+  }
+
+  private def addFreshAutomaton(aut : Automaton) : Int = {
+    val id = nextId
+    if (OFlags.debug)
+      Console.err.println(f"Adding new automaton with id $id to database")
+    nextId = nextId + 1
+    id2Aut.put(id, aut)
+    id
+  }
 
   /**
    * Convert a regular expression to an automaton, adding both
@@ -192,12 +264,34 @@ class AutDatabase(theory : OstrichStringTheory,
     id2Automaton(regex2Id(regexTerm)).get
 
   /**
+   * Convert a regular expression to an automaton if the automaton can be
+   * encoded and interned within the configured BRICS budget.
+   */
+  def regex2AutomatonWithinBudget(regexTerm : ITerm) : Option[Automaton] =
+    regex2IdWithinBudget(regexTerm).flatMap(id2Automaton)
+
+  /**
    * Convert the complement of a regular expression to an automaton, adding
    * the (non-complemented) expression, the automaton, and the complemented
    * automaton to the database as a side effect.
    */
   def regex2ComplementedAutomaton(regexTerm : ITerm) : Automaton =
     id2ComplementedAutomaton(regex2Id(regexTerm)).get
+
+  /**
+   * Convert the complement of a regular expression to an automaton if it can
+   * be encoded and interned within the configured BRICS budget.
+   */
+  def regex2ComplementedAutomatonWithinBudget(regexTerm : ITerm)
+                                             : Option[Automaton] =
+    regex2ComplementedIdWithinBudget(regexTerm).flatMap(id2Automaton)
+
+  /**
+   * Query the id of the complemented automaton for a regex if the underlying
+   * interning work stays within the configured BRICS budget.
+   */
+  def regex2ComplementedIdWithinBudget(regexTerm : ITerm) : Option[Int] =
+    regex2IdWithinBudget(regexTerm).flatMap(id2ComplementedIdWithinBudget)
 
   /**
    * Retrieve the regular expression for a given id.
@@ -243,6 +337,38 @@ class AutDatabase(theory : OstrichStringTheory,
               id2CompAut.put(compId, id)
               Some(compId)
             }
+            case None =>
+              None
+          }
+      }
+    }
+
+  /**
+   * Query the id of the complemented automaton for the automaton with given
+   * id, but only if complement construction and interning stay within the
+   * configured BRICS budget.
+   */
+  def id2ComplementedIdWithinBudget(id : Int) : Option[Int] =
+    synchronized {
+      (id2CompAut get id) match {
+        case r@Some(_) => r
+        case None if timedOutComplementIds contains id => None
+        case None =>
+          id2Automaton(id) match {
+            case Some(aut) =>
+              internAutomatonWithinBudget(!aut) match {
+                case Some(compId) =>
+                  timedOutComplementIds -= id
+                  id2CompAut.put(id, compId)
+                  id2CompAut.put(compId, id)
+                  Some(compId)
+                case None =>
+                  if (OFlags.debug)
+                    Console.err.println(
+                      "BRICS timeout while interning complemented automaton")
+                  timedOutComplementIds += id
+                  None
+              }
             case None =>
               None
           }

@@ -336,7 +336,9 @@ class CEReducer(
 
             val str = term2Str(a(1)).get
             val autId =
-              ceAutDatabase.automaton2Id(automaton2CostEnriched(BricsAutomaton.suffixAutomaton(str)))
+              ceAutDatabase.automaton2Id(automaton2CostEnriched(
+                BricsAutomaton.suffixAutomaton(str,
+                                               theory.theoryFlags.bricsTimeout)))
             str_in_re_id(List(a(0), l(autId)))
           } else {
             a
@@ -360,7 +362,9 @@ class CEReducer(
 
             val str = term2Str(a(0)).get
             val autId =
-              ceAutDatabase.automaton2Id(automaton2CostEnriched(BricsAutomaton.containsAutomaton(str)))
+              ceAutDatabase.automaton2Id(automaton2CostEnriched(
+                BricsAutomaton.containsAutomaton(str,
+                                                 theory.theoryFlags.bricsTimeout)))
             str_in_re_id(List(a(1), l(autId)))
           } else {
             a
@@ -381,7 +385,9 @@ class CEReducer(
           } else if (isConcrete(a(1))) {
             val str = term2Str(a(1)).get
             val autId =
-              ceAutDatabase.automaton2Id(automaton2CostEnriched(BricsAutomaton.prefixAutomaton(str)))
+              ceAutDatabase.automaton2Id(automaton2CostEnriched(
+                BricsAutomaton.prefixAutomaton(str,
+                                               theory.theoryFlags.bricsTimeout)))
             str_in_re_id(List(a(0), l(autId)))
           } else {
             a

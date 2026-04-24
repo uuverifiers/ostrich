@@ -91,16 +91,16 @@ class CutSaturation(
       case FunPred(`str_replacere`) | FunPred(`str_replaceallre`) =>
         // TODO: Check if this is useful or just slows down
         val extract = theory.RegexExtractor(goal.facts.predConj)
-        val autId = autDatabase.regex2Id(extract.regexAsTerm(appPoint(1)))
-
-        autDatabase.id2ComplementedId(autId) match {
-          case Some(autId2) =>
-            val cut1: (Conjunction, Seq[Nothing]) = (str_in_re_id(List(l(appPoint(0)), l(autId))), Seq())
-            val cut2: (Conjunction, Seq[Nothing]) = (str_in_re_id(List(l(appPoint(0)), l(autId2))), Seq())
-            Seq(AxiomSplit(Seq(conj(appPoint)), Seq(cut1, cut2), theory))
-          case None =>
-            Seq() // If no complemented ID is found, return an empty sequence TODO: Can this ever happen?
-        }
+        (for {
+          autId  <- autDatabase.regex2IdWithinBudget(extract.regexAsTerm(appPoint(1)))
+          autId2 <- autDatabase.id2ComplementedIdWithinBudget(autId)
+        } yield {
+          val cut1: (Conjunction, Seq[Nothing]) =
+            (str_in_re_id(List(l(appPoint(0)), l(autId))), Seq())
+          val cut2: (Conjunction, Seq[Nothing]) =
+            (str_in_re_id(List(l(appPoint(0)), l(autId2))), Seq())
+          Seq(AxiomSplit(Seq(conj(appPoint)), Seq(cut1, cut2), theory))
+        }).getOrElse(Seq())
 
       case _ => List()
     }

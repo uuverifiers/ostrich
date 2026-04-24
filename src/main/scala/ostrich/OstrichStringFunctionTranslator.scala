@@ -67,6 +67,10 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
   private val builder        = new JavascriptPrioAutomatonBuilder(theory)
   private val cgTranslator   = builder.regex2pfa
 
+  private def regexAutomaton(regex : ITerm) : Option[AtomicStateAutomaton] =
+    autDatabase.regex2AutomatonWithinBudget(regex).map(
+      _.asInstanceOf[AtomicStateAutomaton])
+
   private def regexAsTerm(t : Term) : Option[ITerm] =
     try {
       Some(regexExtractor regexAsTerm t)
@@ -101,33 +105,33 @@ class OstrichStringFunctionTranslator(theory : OstrichStringTheory,
       Some((op, List(a(0), a(2)), a(3)))
     }
     case FunPred(`str_replaceallre`) =>
-      for (regex <- regexAsTerm(a(1))) yield {
+      for (regex <- regexAsTerm(a(1));
+           aut   <- regexAutomaton(regex)) yield {
         val op = () => {
-          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
           ReplaceAllShortestPreOp(aut)
         }
         (op, List(a(0), a(2)), a(3))
       }
     case FunPred(`str_replacere`) =>
-      for (regex <- regexAsTerm(a(1))) yield {
+      for (regex <- regexAsTerm(a(1));
+           aut   <- regexAutomaton(regex)) yield {
         val op = () => {
-          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
           ReplaceShortestPreOp(aut)
         }
         (op, List(a(0), a(2)), a(3))
       }
     case FunPred(`str_replaceallre_longest`) =>
-      for (regex <- regexAsTerm(a(1))) yield {
+      for (regex <- regexAsTerm(a(1));
+           aut   <- regexAutomaton(regex)) yield {
         val op = () => {
-          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
           ReplaceAllLongestPreOp(aut)
         }
         (op, List(a(0), a(2)), a(3))
       }
     case FunPred(`str_replacere_longest`) =>
-      for (regex <- regexAsTerm(a(1))) yield {
+      for (regex <- regexAsTerm(a(1));
+           aut   <- regexAutomaton(regex)) yield {
         val op = () => {
-          val aut = autDatabase.regex2Automaton(regex).asInstanceOf[AtomicStateAutomaton]
           ReplaceLongestPreOp(aut)
         }
         (op, List(a(0), a(2)), a(3))

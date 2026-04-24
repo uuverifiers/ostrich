@@ -41,7 +41,8 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
 
 import ostrich.{OstrichStringTheory, OFlags}
-import ostrich.automata.{Automaton, AtomicStateAutomaton, AutomataUtils}
+import ostrich.automata.{Automaton, AtomicStateAutomaton, AutomataUtils,
+                         BricsTimeout}
 
 /**
  * Saturation procedure to add the length abstraction of regular
@@ -141,10 +142,15 @@ class LengthAbstraction (
                                  theory))
         }
         case _ => {
-          val lenAbstraction = aut.getLengthAbstraction
-          val lenFor = VariableSubst(0, List(len), order)(lenAbstraction)
-
-          List(Plugin.AddAxiom(List(reAtom, lenAtom), conj(lenFor), theory))
+          BricsTimeout.withRecoverableTimeout(theory.theoryFlags.bricsTimeout) {
+            aut.getLengthAbstraction
+          } match {
+            case Some(lenAbstraction) =>
+              val lenFor = VariableSubst(0, List(len), order)(lenAbstraction)
+              List(Plugin.AddAxiom(List(reAtom, lenAtom), conj(lenFor), theory))
+            case None =>
+              List()
+          }
         }
       }
 

@@ -91,7 +91,7 @@ lazy val root = (project in file("."))
     libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
     libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-    libraryDependencies += "dk.brics" % "automaton" % "1.12-4-ostrich-1",
+    libraryDependencies += "dk.brics" % "automaton" % "1.12-4-ostrich-2",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.0.2",
 
     nativeImageInstalled := true,

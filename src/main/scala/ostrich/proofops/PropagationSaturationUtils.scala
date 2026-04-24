@@ -188,7 +188,7 @@ trait PropagationSaturationUtils {
         // but might have a concrete def
         strDatabase.term2List(term).map({ w =>
           val str : String = w.map(i => i.toChar).mkString
-          BricsAutomaton.fromString(str)
+          BricsAutomaton.fromString(str, theory.theoryFlags.bricsTimeout)
         }).getOrElse(autDatabase.anyStringAut)
       }
       case Some(a) => {
@@ -197,7 +197,7 @@ trait PropagationSaturationUtils {
             decodeRegexId(a, false)
           // will be a str_len == 0 as we only return those
           case FunPred(`str_len`) if a(1).isZero =>
-            BricsAutomaton.fromString("")
+            BricsAutomaton.fromString("", theory.theoryFlags.bricsTimeout)
           // will not happen
           case _ => {
             throw new Exception ("Cannot handle literal " + a)

@@ -375,13 +375,16 @@ trait AtomicStateAutomaton extends Automaton {
 
         for (i <- 0 until transPreStates.size) {
           ap.util.Timeout.check
+          BricsTimeout.check("transPreStates.outer")
 
           val set = transPreStates(i)
 
           val oldSize = set.size
-          for (j <- 0 until transPreStates.size)
+          for (j <- 0 until transPreStates.size) {
+            BricsTimeout.check("transPreStates.inner")
             if (set contains j)
               set |= transPreStates(j)
+          }
 
           if (set.size > oldSize)
             changed = true

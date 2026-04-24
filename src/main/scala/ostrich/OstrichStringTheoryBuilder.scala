@@ -32,7 +32,7 @@
 
 package ostrich
 
-import ostrich.automata.TransducerTranslator
+import ostrich.automata.{BricsTimeout, TransducerTranslator}
 
 import ap.theories.strings.{StringTheory, StringTheoryBuilder, SeqStringTheory}
 import ap.util.CmdlParser
@@ -45,6 +45,7 @@ object OstrichStringTheoryBuilder {
   val name = "OSTRICH"
 
   PortfolioSetup
+  BricsTimeout.install()
 
 }
 
@@ -71,6 +72,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   protected var eager, forwardPropagation, minimizeAuts, useParikh = false
   protected var backwardPropagation, nielsenSplitter = true
+  protected var bricsTimeoutMillis = OFlags.bricsTimeout
 
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
@@ -94,6 +96,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       nielsenSplitter = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+    case CmdlParser.ValueOpt("bricsTimeout", value) =>
+      bricsTimeoutMillis = math.max(0, value.toInt)
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
       regexTrans = OFlags.RegexTranslator.Approx
     case CmdlParser.ValueOpt("regexTranslator", "complete") =>
@@ -140,7 +144,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     backwardPropagation     = backwardPropagation,
                                     nielsenSplitter         = nielsenSplitter,
                                     minimizeAutomata        = minimizeAuts,
-                                    regexTranslator         = regexTrans))
+                               regexTranslator         = regexTrans,
+                               bricsTimeout            = bricsTimeoutMillis))
   }
 
 }

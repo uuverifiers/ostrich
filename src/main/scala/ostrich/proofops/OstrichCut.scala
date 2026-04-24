@@ -227,7 +227,8 @@ class OstrichCut(val theory : OstrichStringTheory)
         strDatabase.list2Id(acceptedWord.get)
 
       val negAutomaton =
-        !BricsAutomaton.fromString(strDatabase.id2Str(acceptedWordId))
+        !BricsAutomaton.fromString(strDatabase.id2Str(acceptedWordId),
+                                   theory.theoryFlags.bricsTimeout)
       val negAutomatonId =
         autDatabase.automaton2Id(negAutomaton)
 
