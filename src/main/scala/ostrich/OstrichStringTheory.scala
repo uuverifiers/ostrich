@@ -47,6 +47,8 @@ import ostrich.proofops.{
   OstrichPredtoEqConverter,
   OstrichStrInReTranslator
 }
+import ostrich.certificates.OstrichAletheTheoryPrinter
+
 import ap.Signature
 import ap.basetypes.IdealInt
 import ap.parser.{IExpression, IFormula, IFunApp, IFunction, ITerm}
@@ -59,6 +61,7 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.proof.theoryPlugins.Plugin
 import ap.proof.goal.Goal
+import ap.proof.certificates.AletheTheoryRegistry
 import ap.parameters.Param
 import ap.util.Seqs
 
@@ -266,6 +269,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val agePred = MonoSortedPredicate("age", List(StringSort, Sort.Integer, Sort.Integer))
 
   val strDatabase = new StrDatabase(this)
+
+  // TODO: only instantiate when actually needed?
+  AletheTheoryRegistry.register(this, new OstrichAletheTheoryPrinter(this))
 
   //////////////////////////////////////////////////////////////////////////////
 

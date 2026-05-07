@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2024-2026 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,8 @@ import ap.terfor.TerForConvenience.{l, term2RichLC}
 import ap.terfor.{Formula, RichPredicate, TerForConvenience, Term}
 import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.Atom
+import ap.parameters.Param
+
 import ostrich._
 import ostrich.automata.{
   AtomicStateAutomaton,
@@ -383,7 +385,12 @@ trait PropagationSaturationUtils {
   }
 
   def formulaTermInAut(t : Term, aut : Automaton, goal : Goal) : Formula = {
-    val word = AutomataUtils.isSingletonIfAtomic(aut)
+    val word =
+      if (Param.PROOF_CONSTRUCTION(goal.settings))  // TODO
+        None
+      else        
+        AutomataUtils.isSingletonIfAtomic(aut)
+
     val lt = LinearCombination(t, goal.order);
     if (word.isDefined) {
       val w = word.head

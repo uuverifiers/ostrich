@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2024 Oliver Markgraf, Matthew Hague, Philipp Ruemmer.
+ * Copyright (c) 2024-2026 Oliver Markgraf, Matthew Hague, Philipp Ruemmer.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -142,7 +142,7 @@ object BackwardsSaturationSpecification
 */
   property("Test Simple Replace Applied") = {
     appliedSimpleReplace.exists(_ match {
-      case Seq(AxiomSplit(assumptions, cases, _))
+      case Seq(AxiomSplit(assumptions, cases, _, _))
         if {
           val correctAssumptions = assumptions.toSet == Set(iYinAorB, iYreplaceX)
           val correctCases = isSplitCases(cases.map(_._1).toSeq, Seq(Seq(
@@ -173,7 +173,7 @@ object BackwardsSaturationSpecification
 
   property("Test Two Y Constraints Applied") = {
     appliedReplaceTwoYCons.size == 2 && appliedReplaceTwoYCons.forall(_ match {
-      case Seq(AxiomSplit(assumptions, cases, _))
+      case Seq(AxiomSplit(assumptions, cases, _, _))
         if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
@@ -185,7 +185,7 @@ object BackwardsSaturationSpecification
             ))
           ) => true
       case Seq(AxiomSplit(
-        assumptions, cases, _
+        assumptions, cases, _, _
       ))
         if assumptions.toSet == Set(iYinABCstar, iYreplaceX)
           && isSplitCases(
@@ -217,7 +217,7 @@ object BackwardsSaturationSpecification
 
   property("Test Two Fun Apps") = {
     appliedTwoFuns.size == 3 && appliedTwoFuns.forall(_ match {
-      case Seq(AxiomSplit(assumptions, cases, _))
+      case Seq(AxiomSplit(assumptions, cases, _, _))
         if assumptions.toSet == Set(iYinABThenCstar, iYreplaceX)
           && isSplitCases(
             cases.map(_._1).toSeq,
@@ -229,7 +229,7 @@ object BackwardsSaturationSpecification
             ))
           ) => true
       case Seq(AxiomSplit(
-        assumptions, cases, _
+        assumptions, cases, _, _
       ))
         if assumptions.toSet == Set(iYinABCstar, iYreplaceX)
           && isSplitCases(
@@ -242,7 +242,7 @@ object BackwardsSaturationSpecification
             ))
           ) => true
       case Seq(AxiomSplit(
-        assumptions, cases, _
+        assumptions, cases, _, _
       ))
         if assumptions.toSet == Set(iZinABstar, iZreplaceX)
           && isSplitCases(
@@ -270,7 +270,7 @@ object BackwardsSaturationSpecification
 
   property("Test Split Apps") = {
     appliedSplit.size == 1 && appliedSplit.forall(_ match {
-      case Seq(AxiomSplit(assumptions, cases, _))
+      case Seq(AxiomSplit(assumptions, cases, _, _))
         if assumptions.toSet == Set(iZinAorB, iZreplaceXY)
           && isSplitCases(
             cases.map(_._1).toSeq,

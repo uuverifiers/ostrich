@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2024 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2024-2026 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -37,7 +37,10 @@ import ap.terfor.conjunctions.Conjunction
 import ap.terfor.preds.{Atom, Predicate}
 import ap.terfor.{TerForConvenience, Term, TermOrder}
 import ap.theories.{SaturationProcedure, Theory}
+import ap.parameters.Param
+
 import ostrich.OstrichStringTheory
+import ostrich.certificates.BwdPropRule
 
 /**
  * A SaturationProcedure for backwards propagation.
@@ -165,6 +168,8 @@ class BackwardsSaturation(
     if (!cachedApplicationPoints(goal).pointSet.contains(appPoint))
       return List()
 
+    val proofs = Param.PROOF_CONSTRUCTION(goal.settings)
+
     val (funApp, argCon) = appPoint
     val (op, args, res, formula)
       = getGoalFunApp(goal, funApp) match {
@@ -177,15 +182,16 @@ class BackwardsSaturation(
 
     val argAuts = for (aopt <- args)
       yield aopt match {
-        case None => {
-          Seq(autDatabase.anyStringAut)
-        }
-        case Some(a) => {
+        case Some(a) if !proofs => {
           termConstraintMap.get(a)
             .map(_.map(atom => atomConstraintToAut(a, Some(atom))).toSeq)
             .getOrElse(Seq(atomConstraintToAut(a, None)))
         }
+        case _ => {
+          Seq(autDatabase.anyStringAut)
+        }
       }
+
     import TerForConvenience._
     val resAut = atomConstraintToAut(res, argCon)
     val age = getAge(res, l(autDatabase.automaton2Id(resAut)), goal)
@@ -208,17 +214,21 @@ class BackwardsSaturation(
       }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
       .toSeq
 
-    val assumptions = (
-      Seq(funApp)
-      ++ argCon.map(Seq(_)).getOrElse(Seq())
-      ++ args.collect({
+    val argAssumptions =
+      if (proofs)
+        List()
+      else
+        args.collect({
           case Some(a) =>
             termConstraintMap.get(a).getOrElse(Seq())
         }).toSeq.flatten
-    )
+
+    val assumptions =
+      Seq(funApp) ++ argCon.map(Seq(_)).getOrElse(Seq()) ++ argAssumptions
 
     logSaturation("backward propagation") {
-      Seq(AxiomSplit(assumptions, argCases, theory))
+      val rule = BwdPropRule(op, funApp, argCon, argCases.map(_._1))
+      List(AxiomSplit(assumptions, argCases.toList, theory, rule))
     }
   }
 
