@@ -30,16 +30,52 @@
 
 package ostrich.certificates
 
+import ap.basetypes.IdealInt
 import ap.proof.certificates._
 import ap.terfor.preds.{Atom, PredConj}
 import ap.terfor.{Formula, TermOrder, TerForConvenience}
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.linearcombination.LinearCombination
 
 import ostrich._
 import ostrich.preop.{PreOp, ConcatPreOp}
+import ostrich.automata.AtomicStateAutomaton
 
 class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
       extends AletheTheoryPrinter {
+  import theory.{FunPred, strDatabase, autDatabase,
+                 str_++, str_in_re_id}
+
+  def printTheoryAtom(a    : Atom,
+                      vs   : List[String],
+                      ctxt : AlethePrinterContext) : Boolean = {
+    import ctxt.printTerm
+    a.pred match {
+      case FunPred(`str_++`) => {
+        print("(= ")
+        printTerm(a(2), vs)
+        print(" (str.++ ")
+        printTerm(a(0), vs)
+        print(" ")
+        printTerm(a(1), vs)
+        print("))")
+        true
+      }
+      case `str_in_re_id` => {
+        print("(str.in_re ")
+        printTerm(a(0), vs)
+        print(" (re.from_automaton \"")
+        val LinearCombination.Constant(IdealInt(id)) = a(1)
+        val aut =
+          autDatabase.id2Automaton(id).get.asInstanceOf[AtomicStateAutomaton]
+        print(ostrich.AutomatonParser.toString(aut))
+        print("\"))")
+        true
+      }
+      case _ =>
+        false
+    }
+  }
 
   def printTheoryAxiomInference(inference       : TheoryAxiomInference,
                                 nextInferences  : List[BranchInference],
@@ -93,7 +129,10 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
       }
 
       case r => {
-        Console.err.println(s"Cannot print Alethe proof for $r")
+        // A proof rule we do not understand, let's invoke magic!
+
+        ctxt.introduceFormulaThroughStep("magic", List(), Some(inference.axiom))
+        ctxt.continuePrinting(nextInferences, nextAssumptions, childCert)
       }
     }
   }
