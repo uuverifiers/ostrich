@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021-2025 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2026 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -33,6 +33,8 @@
 package ostrich
 
 import ostrich.automata.{AutDatabase, BricsAutomaton}
+import ostrich.certificates.InconsistentRegexRule
+
 import ap.basetypes.IdealInt
 import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
 import ap.terfor.{ComputationLogger, Formula, TerForConvenience, Term, TermOrder}
@@ -638,8 +640,10 @@ class OstrichReducer protected[ostrich]
                       }
                     val ass2 =
                       if (negated2) Conjunction.negate(a2, order) else a2
+                    val rule = InconsistentRegexRule(List(ass1, ass2), theory)
                     logger.otherComputation(List(ass1, ass2),
-                                            Conjunction.FALSE, order, theory)
+                                            Conjunction.FALSE, order, theory,
+                                            rule)
                   }
                   true
                 }

@@ -40,7 +40,7 @@ import ap.theories.{SaturationProcedure, Theory}
 import ap.parameters.Param
 
 import ostrich.OstrichStringTheory
-import ostrich.certificates.BwdPropRule
+import ostrich.certificates.BwdPropagationRule
 
 /**
  * A SaturationProcedure for backwards propagation.
@@ -227,7 +227,8 @@ class BackwardsSaturation(
       Seq(funApp) ++ argCon.map(Seq(_)).getOrElse(Seq()) ++ argAssumptions
 
     logSaturation("backward propagation") {
-      val rule = BwdPropRule(op, funApp, argCon, argCases.map(_._1))
+      val rule =
+        BwdPropagationRule(op, funApp, argCon, argCases.map(_._1), theory)
       List(AxiomSplit(assumptions, argCases.toList, theory, rule))
     }
   }

@@ -32,82 +32,21 @@ package ostrich.certificates
 
 import ap.proof.certificates._
 import ap.terfor.preds.Atom
-import ap.terfor.{TermOrder, TerForConvenience}
+import ap.terfor.Formula
 import ap.terfor.conjunctions.Conjunction
 
 import ostrich._
-import ostrich.preop.{PreOp, ConcatPreOp}
+import ostrich.preop.PreOp
 
-trait OstrichProofRule extends TheoryRule {
+trait OstrichProofRule extends AugmentedTheoryRule
 
-}
+case class BwdPropagationRule   (op       : PreOp,
+                                 funApp   : Atom,
+                                 image    : Option[Atom],
+                                 preImage : Seq[Conjunction],
+                                 theory   : OstrichStringTheory)
+  extends OstrichProofRule
 
-case class BwdPropRule(op       : PreOp,
-                       funApp   : Atom,
-                       image    : Option[Atom],
-                       preImage : Seq[Conjunction]) extends OstrichProofRule {
-
-}
-
-class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
-      extends AletheTheoryPrinter {
-
-  def printTheoryAxiomInference(inference       : TheoryAxiomInference,
-                                nextInferences  : List[BranchInference],
-                                nextAssumptions : List[Set[CertFormula]],
-                                childCert       : Certificate,
-                                order           : TermOrder,
-                                ctxt            : AlethePrinterContext):Unit = {
-    println("printTheoryAxiomInference")
-    println(nextInferences)
-    println(nextAssumptions)
-    println(childCert)
-
-    import TerForConvenience._
-    implicit val o = order
-
-    inference.theoryRule match {
-      case r@BwdPropRule(ConcatPreOp, funApp, image, preImage) => {
-        println(r)
-
-        val l = ctxt.introduceClauseThroughStep(
-                  "concat_aut_bwd_propagation",
-                  List(CertFormula(conj(funApp)), CertFormula(conj(image))),
-                  preImage.map(f => (CertFormula(f), false)))
-
-        for ((c, n) <- preImage.zipWithIndex) {
-          println(s"Branch $n:")
-          val caseFor = CertFormula(c)
-          val cert = findSubCert(caseFor, nextInferences, childCert)
-          println(cert)
-          ctxt.printSubproof(cert, List(caseFor))
-        }
-      }
-      case r => {
-        Console.err.println(s"Cannot print Alethe proof for $r")
-      }
-    }
-  }
-
-  private def findSubCert(formula        : CertFormula,
-                          nextInferences : List[BranchInference],
-                          childCert      : Certificate) : Certificate = {
-    (nextInferences, childCert) match {
-      case (inf :: remInfs, childCert)
-          if inf.assumedFormulas.contains(formula) =>
-        BranchInferenceCertificate.prepend(nextInferences, childCert,
-                                           childCert.order) // TODO: use right order
-      case (_ :: remInfs, childCert) =>
-        findSubCert(formula, remInfs, childCert)
-      case (List(), childCert)
-          if childCert.localAssumedFormulas.contains(formula) =>
-        childCert
-      case (List(), BetaCertificate(_, _, _, leftChild, rightChild, _)) =>
-        if (leftChild.assumedFormulas.contains(formula))
-          findSubCert(formula, List(), leftChild)
-        else
-          findSubCert(formula, List(), rightChild)
-    }
-  }
-
-}
+case class InconsistentRegexRule(regexes  : Seq[Formula],
+                                 theory   : OstrichStringTheory)
+  extends OstrichProofRule
