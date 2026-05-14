@@ -85,7 +85,12 @@ lazy val root = (project in file("."))
 
     resolvers += "uuverifiers" at "https://eldarica.org/maven/",
 
-    libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies +=
+      "com.github.vbmacher" % "java-cup-runtime" % "11b-20160615-2",
+    libraryDependencies +=
+      "org.scala-lang.modules" %% "scala-parser-combinators" % "2.2.0",
+
+    libraryDependencies += "uuverifiers" %% "princess-smt-parser" % "nightly-SNAPSHOT",
     libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",

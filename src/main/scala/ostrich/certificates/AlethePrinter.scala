@@ -44,11 +44,11 @@ import ostrich.automata.AtomicStateAutomaton
 class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
       extends AletheTheoryPrinter {
   import theory.{FunPred, strDatabase, autDatabase,
-                 str_++, str_in_re_id}
+                 str_++, str_in_re_id, agePred}
 
   def printTheoryAtom(a    : Atom,
                       vs   : List[String],
-                      ctxt : AlethePrinterContext) : Boolean = {
+                      ctxt : AletheFormulaPrinterContext) : Boolean = {
     import ctxt.printTerm
     a.pred match {
       case FunPred(`str_++`) => {
@@ -76,6 +76,8 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
         false
     }
   }
+
+  def hideTheoryAtom(a : Atom) = a.pred == agePred
 
   def printTheoryAxiomInference(inference       : TheoryAxiomInference,
                                 nextInferences  : List[BranchInference],
@@ -132,7 +134,7 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
         // A proof rule we do not understand, let's invoke magic!
 
         ctxt.introduceFormulaThroughStep("magic", List(), Some(inference.axiom))
-        ctxt.continuePrinting(nextInferences, nextAssumptions, childCert)
+        ctxt.continuePrinting(nextInferences, childCert)
       }
     }
   }
