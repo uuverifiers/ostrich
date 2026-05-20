@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   name                  := "ostrich",
   organization          := "uuverifiers",
-  version               := "2.0.1",
+  version               := "2.1",
 //
   homepage              := Some(url("https://github.com/uuverifiers/ostrich")),
   licenses              := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
@@ -58,6 +58,14 @@ lazy val commonSettings = Seq(
   publishTo := Some(Resolver.file("file",  new File( "/home/wv/public_html/maven/" )) )
 )
 
+def staticNativeImageBuildEnabled: Boolean =
+  sys.env
+    .get("OSTRICH_STATIC_NATIVE_IMAGE")
+    .exists(_.equalsIgnoreCase("true")) ||
+    sys.props
+      .get("ostrich.staticNativeImage")
+      .exists(_.equalsIgnoreCase("true"))
+
 lazy val parserSettings = Seq(
 //    publishArtifact in packageDoc := false,
 //    publishArtifact in packageSrc := false,
@@ -83,9 +91,10 @@ lazy val root = (project in file("."))
     Compile / mainClass := Some("ostrich.OstrichMain"),
     Test / unmanagedSourceDirectories += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 
-    resolvers += "uuverifiers" at "https://eldarica.org/maven/",
+//    resolvers += "uuverifiers" at "https://eldarica.org/maven/",
 
-    libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+//    libraryDependencies += "uuverifiers" %% "princess" % "nightly-SNAPSHOT",
+    libraryDependencies += "io.github.uuverifiers" %% "princess" % "2026-05-20",
     libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
     libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8",
@@ -97,8 +106,13 @@ lazy val root = (project in file("."))
 
     nativeImageOptions ++= Seq(
       "--no-fallback",
-      "-H:+ReportExceptionStackTraces"
-    ),
+      "-H:+ReportExceptionStackTraces",
+      "-R:StackSize=20m"
+    ) ++
+      (if (staticNativeImageBuildEnabled)
+         Seq("--static", "--libc=musl")
+       else
+         Seq.empty),
 
     nativeImageAgentMerge := true
   )

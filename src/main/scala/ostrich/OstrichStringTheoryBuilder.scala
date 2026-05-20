@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2026 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -41,7 +41,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object OstrichStringTheoryBuilder {
 
-  val version = "2.0.1"
+  val version = "2.1"
   val name = "OSTRICH"
 
   PortfolioSetup
@@ -61,7 +61,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2025")
+    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2026")
     println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println

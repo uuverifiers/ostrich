@@ -130,8 +130,32 @@ Build the native executable:
 sbt nativeImage
 ```
 
-Locate and run the resulting binary:
+Build a fully static Linux executable:
+
+- Supported platform: Linux x86_64
+- Required in addition to the prerequisites above: a 64-bit `musl` toolchain
+    with `zlib` on `PATH`
+
+The release workflow in this repository installs that toolchain automatically. For a local build, follow the [GraalVM static linking guide](https://www.graalvm.org/latest/reference-manual/native-image/guides/build-static-executables/) and install a musl toolchain first, for example:
 
 ```bash
-./target/.../ostrich tests/adt.smt2
+curl -SLO https://gds.oracle.com/download/bfs/archive/musl-toolchain-1.2.5-oracle-00001-linux-amd64.tar.gz
+tar xzf musl-toolchain-1.2.5-oracle-00001-linux-amd64.tar.gz
+export PATH="$(pwd)/musl-toolchain/bin:$PATH"
 ```
+
+Then build the binary with:
+
+```bash
+OSTRICH_STATIC_NATIVE_IMAGE=true sbt nativeImage
+```
+
+This toggle only enables GraalVM's `--static --libc=musl` options. It does not install GraalVM, `native-image`, or the musl toolchain for you. The same flag can be enabled via `sbt -Dostrich.staticNativeImage=true nativeImage`.
+
+To verify that the result is fully static, run:
+
+```bash
+ldd target/native-image/ostrich
+```
+
+For a fully static binary, `ldd` should report `not a dynamic executable`. Static linking is only supported for Linux builds; on macOS and Windows use the regular `sbt nativeImage` build instead.
