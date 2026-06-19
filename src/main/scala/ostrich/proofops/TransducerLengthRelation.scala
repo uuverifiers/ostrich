@@ -35,8 +35,11 @@ package ostrich.proofops
 import ap.proof.goal.Goal
 import ap.proof.theoryPlugins.Plugin
 import ap.theories.{SaturationProcedure, Theory}
-import ap.terfor.{TerForConvenience, Term, TermOrder}
+import ap.api.SimpleAPI
+import ap.basetypes.IdealInt
+import ap.terfor.{Formula, OneTerm, TerForConvenience, Term, TermOrder}
 import ap.terfor.conjunctions.Conjunction
+import ap.terfor.linearcombination.LinearCombination
 import ap.terfor.preds.{Atom, Predicate}
 
 import ostrich.OstrichStringTheory
@@ -50,6 +53,7 @@ import ostrich.automata.{
 
 import scala.collection.mutable.{
   ArrayBuffer,
+  BitSet => MBitSet,
   HashMap => MHashMap,
   HashSet => MHashSet,
   Queue => MQueue
@@ -60,6 +64,7 @@ import scala.collection.mutable.{
  * the same input:
  *
  *   T1(x, y1) & T2(x, y2) & x in A  ==>  c1 <= |y1|-|y2| <= c2
+ *                                             and/or |y1|-|y2| != 0
  *
  * Bounds are obtained from a weighted product of A and the two Brics
  * transducers. The procedure is intentionally conservative: unsupported
@@ -72,6 +77,9 @@ class TransducerLengthRelations(
   with PropagationSaturationUtils {
 
   private val MaxProductStates = 20000
+  private val MaxZeroCheckStates = 500
+  private val MaxZeroCheckEdges = 5000
+  private val ZeroCheckTimeoutMillis = 200
 
   private val transducersByPred : Map[Predicate, BricsTransducer] =
     (for ((_, pred, transducer : BricsTransducer) <-
@@ -95,7 +103,9 @@ class TransducerLengthRelations(
 
   private sealed trait RelationResult
   private case object EmptyRelation extends RelationResult
-  private case class BoundedRelation(min : Option[Int], max : Option[Int])
+  private case class BoundedRelation(min          : Option[Int],
+                                     max          : Option[Int],
+                                     zeroExcluded : Boolean)
       extends RelationResult
 
   override def extractApplicationPoints(goal : Goal)
@@ -150,8 +160,8 @@ class TransducerLengthRelations(
       case Some(EmptyRelation) =>
         Seq(Plugin.AddAxiom(assumptions, Conjunction.FALSE, theory))
 
-      case Some(BoundedRelation(min, max))
-          if min.isDefined || max.isDefined =>
+      case Some(BoundedRelation(min, max, zeroExcluded))
+          if min.isDefined || max.isDefined || zeroExcluded =>
         implicit val order : TermOrder = goal.order
         import TerForConvenience._
 
@@ -164,6 +174,8 @@ class TransducerLengthRelations(
           builder.addConjunct(diff >= bound)
         for (bound <- max)
           builder.addConjunct(diff <= bound)
+        if (zeroExcluded)
+          builder.addConjunct(diff =/= 0)
 
         Seq(Plugin.AddAxiom(assumptions, builder.result, theory))
 
@@ -257,7 +269,11 @@ class TransducerLengthRelations(
     val min = finiteExtreme(start, nodes, outgoing, canReachFinal,
                             finalNodes, -1)
 
-    Some(BoundedRelation(min, max))
+    val zeroExcluded =
+      intervalExcludesZero(min, max) ||
+        zeroWeightExcluded(start, nodes, outgoing, finalNodes)
+
+    Some(BoundedRelation(min, max, zeroExcluded))
   }
 
   private def successorEdges(
@@ -455,4 +471,190 @@ class TransducerLengthRelations(
       Some(value.toInt)
     else
       None
+
+  private def intervalExcludesZero(min : Option[Int],
+                                   max : Option[Int]) : Boolean =
+    min.exists(_ > 0) || max.exists(_ < 0)
+
+  private case class IndexedEdge(from : Int, to : Int, weight : Int)
+  private case class Production(source : Int,
+                                target : Option[Int],
+                                weight : Int)
+
+  private def zeroWeightExcluded(
+    start      : ProductNode,
+    nodes      : Vector[ProductNode],
+    outgoing   : MHashMap[ProductNode, Vector[ProductEdge]],
+    finalNodes : Seq[ProductNode]
+  ) : Boolean = {
+    val edgeCount = outgoing.valuesIterator.map(_.size).sum
+
+    if (nodes.size > MaxZeroCheckStates || edgeCount > MaxZeroCheckEdges)
+      return false
+
+    !ap.util.Timeout.withTimeoutMillis(ZeroCheckTimeoutMillis) {
+      zeroWeightReachable(start, nodes, outgoing, finalNodes)
+    } {
+      true
+    }
+  }
+
+  private def zeroWeightReachable(
+    start      : ProductNode,
+    nodes      : Vector[ProductNode],
+    outgoing   : MHashMap[ProductNode, Vector[ProductEdge]],
+    finalNodes : Seq[ProductNode]
+  ) : Boolean = {
+    implicit val order : TermOrder = TermOrder.EMPTY
+    import TerForConvenience._
+
+    val weightFormula =
+      pathWeightAbstraction(start, nodes, outgoing, finalNodes)
+    val zeroFormula =
+      Conjunction.conj(exists(1, conj(weightFormula, v(0) === 0)), order)
+
+    SimpleAPI.withProver(enableAssert = false) { prover =>
+      prover.addAssertion(zeroFormula)
+      prover.checkSat(false)
+
+      while (prover.getStatus(100) == SimpleAPI.ProverStatus.Running)
+        ap.util.Timeout.check
+
+      prover.??? match {
+        case SimpleAPI.ProverStatus.Unsat => false
+        case _                            => true
+      }
+    }
+  }
+
+  /**
+   * Parikh-style abstraction of weighted paths through the product graph.
+   * The only free variable is v(0), denoting the total path weight.
+   */
+  private def pathWeightAbstraction(
+    start      : ProductNode,
+    nodes      : Vector[ProductNode],
+    outgoing   : MHashMap[ProductNode, Vector[ProductEdge]],
+    finalNodes : Seq[ProductNode]
+  )(implicit order : TermOrder) : Formula = {
+    import TerForConvenience._
+
+    val state2Index = nodes.iterator.zipWithIndex.toMap
+    val initialStateInd = state2Index(start)
+    val finalStateInds = finalNodes.map(state2Index).distinct
+
+    val incoming = Array.fill(nodes.size)(new ArrayBuffer[IndexedEdge])
+
+    for {
+      fromNode <- nodes.iterator
+      from = state2Index(fromNode)
+      edge <- outgoing.getOrElse(fromNode, Vector.empty).iterator
+      to = state2Index(edge.to)
+    } {
+      incoming(to) += IndexedEdge(from, to, edge.weight)
+    }
+
+    disjFor(for (finalStateInd <- finalStateInds.iterator) yield {
+      val refStates = reverseReachable(finalStateInd, incoming)
+
+      val productions =
+        (if (refStates contains initialStateInd)
+           List(Production(initialStateInd, None, 0))
+         else
+           List()) :::
+        (for {
+          state <- refStates.iterator.toList
+          edge <- incoming(state).iterator
+        } yield Production(state, Some(edge.from), edge.weight)).toList
+
+      val (prodVars, zVars, weightVar) = {
+        val prodVars =
+          for ((_, num) <- productions.zipWithIndex) yield v(num)
+        var nextVar = prodVars.size
+        val zVars =
+          (for (state <- refStates.iterator) yield {
+            val ind = nextVar
+            nextVar = nextVar + 1
+            state -> v(ind)
+          }).toMap
+        (prodVars, zVars, v(nextVar))
+      }
+
+      val prodEqs =
+        (for (state <- refStates.iterator) yield {
+          LinearCombination(
+            (if (state == finalStateInd)
+               Iterator((IdealInt.ONE, OneTerm))
+             else
+               Iterator.empty) ++
+            (for ((prod, prodVar) <-
+                    productions.iterator zip prodVars.iterator;
+                  mult = (if (prod.target contains state) 1 else 0) -
+                         (if (prod.source == state) 1 else 0);
+                  if mult != 0)
+             yield (IdealInt(mult), prodVar)),
+            order)
+        }).toList
+
+      val weightEq =
+        LinearCombination(
+          (for ((prod, prodVar) <-
+                  productions.iterator zip prodVars.iterator;
+                if prod.weight != 0)
+           yield (IdealInt(prod.weight), prodVar)) ++
+          Iterator((IdealInt.MINUS_ONE, weightVar)),
+          order)
+
+      val entryZEq = zVars(finalStateInd) - 1
+
+      val prodNonNeg = prodVars >= 0
+
+      val prodImps =
+        (for (((source, _), prodVar) <-
+                productions.map(p => (p.source, p.target)).iterator zip
+                  prodVars.iterator;
+              if source != finalStateInd)
+         yield ((prodVar === 0) | (zVars(source) > 0))).toList
+
+      val zImps =
+        (for (state <- refStates.iterator; if state != finalStateInd) yield {
+           disjFor(Iterator(zVars(state) === 0) ++
+                   (for ((prod, prodVar) <-
+                           productions.iterator zip prodVars.iterator;
+                         if prod.target contains state)
+                    yield conj(zVars(state) === zVars(prod.source) + 1,
+                               prodVar - 1 >= 0,
+                               zVars(prod.source) - 1 >= 0)))
+         }).toList
+
+      val matrix =
+        conj(eqZ(entryZEq :: weightEq :: prodEqs) ::
+             prodNonNeg ::
+             prodImps ::: zImps)
+
+      exists(prodVars.size + zVars.size, matrix)
+    })
+  }
+
+  private def reverseReachable(
+    finalStateInd : Int,
+    incoming      : Array[ArrayBuffer[IndexedEdge]]
+  ) : MBitSet = {
+    val res = new MBitSet
+    val todo = MQueue[Int]()
+
+    res += finalStateInd
+    todo.enqueue(finalStateInd)
+
+    while (todo.nonEmpty) {
+      val state = todo.dequeue()
+      for (edge <- incoming(state))
+        if (!(res contains edge.from)) {
+          res += edge.from
+          todo.enqueue(edge.from)
+        }
+    }
+
+    res
+  }
 }
