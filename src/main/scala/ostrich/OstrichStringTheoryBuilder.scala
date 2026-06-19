@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2019-2026 Matthew Hague, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2019-2025 Matthew Hague, Philipp Ruemmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -41,7 +41,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object OstrichStringTheoryBuilder {
 
-  val version = "2.1"
+  val version = "2.0.1"
   val name = "OSTRICH"
 
   PortfolioSetup
@@ -61,7 +61,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
     println
     println("Loading " + name + " " + version +
               ", a solver for string constraints")
-    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2026")
+    println("(c) Matthew Hague, Denghang Hu, Philipp Rümmer, 2018-2025")
     println("With contributions by Riccardo De Masellis, Zhilei Han, Oliver Markgraf.")
     println("For more information, see https://github.com/uuverifiers/ostrich")
     println
@@ -70,6 +70,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
   def setAlphabetSize(w : Int) : Unit = ()
 
   protected var eager, forwardPropagation, minimizeAuts, useParikh = false
+  protected var transducerLengthRelations = false
   protected var backwardPropagation, nielsenSplitter = true
 
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
@@ -94,6 +95,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       nielsenSplitter = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
+    case CmdlParser.Opt("transducerLengthRelations", value) =>
+      transducerLengthRelations = value
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
       regexTrans = OFlags.RegexTranslator.Approx
     case CmdlParser.ValueOpt("regexTranslator", "complete") =>
@@ -136,6 +139,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                              OFlags(eagerAutomataOperations = eager,
                                     useLength               = useLen,
                                     useParikhConstraints    = useParikh,
+                                    transducerLengthRelations =
+                                      transducerLengthRelations,
                                     forwardPropagation      = forwardPropagation,
                                     backwardPropagation     = backwardPropagation,
                                     nielsenSplitter         = nielsenSplitter,

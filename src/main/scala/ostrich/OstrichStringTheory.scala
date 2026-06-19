@@ -45,7 +45,8 @@ import ostrich.proofops.{
   OstrichNielsenSplitter,
   OstrichPeriodicRewriter,
   OstrichPredtoEqConverter,
-  OstrichStrInReTranslator
+  OstrichStrInReTranslator,
+  TransducerLengthRelations
 }
 import ap.Signature
 import ap.basetypes.IdealInt
@@ -295,12 +296,15 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   private val forwardSaturation   = new ForwardsSaturation(this)
   private val backwardsSaturation = new BackwardsSaturation(this)
   private val lengthAbstraction   = new LengthAbstraction(this)
+  private val transducerLengthRelations = new TransducerLengthRelations(this)
   private val cutSaturation = new CutSaturation(this)
 
   override val dependencies : Iterable[Theory] =
     List(ModuloArithmetic, IntEnumerator) ++
     List(forwardSaturation).filter(_ => theoryFlags.forwardPropagation) ++
     List(backwardsSaturation).filter(_ => theoryFlags.backwardPropagation) ++
+    List(transducerLengthRelations)
+      .filter(_ => theoryFlags.transducerLengthRelations) ++
     List(lengthAbstraction)  ++ List(cutSaturation)
 
   val _str_empty      = functionPredicateMap(str_empty)
