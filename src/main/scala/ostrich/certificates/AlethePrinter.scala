@@ -95,18 +95,20 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
 
     inference.theoryRule match {
       case BwdPropagationRule(ConcatPreOp, funApp, image, preImage, _) => {
-        val l = ctxt.introduceClauseThroughStep(
+        val l = ctxt.introduceMultiClauseThroughStep(
                   "concat_aut_bwd_propagation",
                   List(CertFormula(conj(funApp)), CertFormula(conj(image))),
-                  preImage.map(f => (CertFormula(f), false)))
+                  preImage.map(fors =>
+                    fors.map(f => (CertFormula(conj(f)), false))))
 
         val subLabels = for ((c, n) <- preImage.zipWithIndex) yield {
-          val caseFor = CertFormula(c)
+          val caseFor = CertFormula(conj(c))
           val cert = findSubCert(caseFor, nextInferences, childCert)
           ctxt.printlnComment(s"Case $n of backward propagation:")
           ctxt.printSubproof(cert, List(caseFor))
         }
 
+        // TODO: need to make sure that conjunctions are in the right order
         ctxt.hyperResolutionStr(l, subLabels, "")
       }
 

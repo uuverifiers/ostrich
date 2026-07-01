@@ -91,7 +91,7 @@ lazy val root = (project in file("."))
     Compile / mainClass := Some("ostrich.OstrichMain"),
     Test / unmanagedSourceDirectories += baseDirectory.value / "replaceall-benchmarks" / "src" / "test" / "scala",
 
-//    resolvers += "uuverifiers" at "https://eldarica.org/maven/",
+    resolvers += "uuverifiers" at "https://eldarica.org/maven/",
 
     libraryDependencies +=
       "com.github.vbmacher" % "java-cup-runtime" % "11b-20160615-2",

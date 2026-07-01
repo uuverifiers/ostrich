@@ -195,10 +195,11 @@ class BackwardsSaturation(
     import TerForConvenience._
     val resAut = atomConstraintToAut(res, argCon)
     val age = getAge(res, l(autDatabase.automaton2Id(resAut)), goal)
-    val (newConstraints, _) = op(argAuts, resAut)
+    val (newConstraints1, _) = op(argAuts, resAut)
+    val newConstraints2 = newConstraints1.toVector
     implicit val o: TermOrder = goal.order
     // remove cases where one argument has no solutions
-    val argCases = newConstraints.filter(_.forall(!_.isEmpty))
+    val newConstraints3 = newConstraints2.filter(_.forall(!_.isEmpty))
       .map(argCS => {
         (args zip argCS).collect({
           case (Some(a), aut) => {
@@ -211,8 +212,10 @@ class BackwardsSaturation(
             }
           }
         })
-      }).map(cs => (Conjunction.conj(cs, goal.order), Seq()))
-      .toSeq
+      })
+
+    val argCases =
+      newConstraints3.map(cs => (Conjunction.conj(cs, goal.order), Seq()))
 
     val argAssumptions =
       if (proofs)
@@ -228,7 +231,7 @@ class BackwardsSaturation(
 
     logSaturation("backward propagation") {
       val rule =
-        BwdPropagationRule(op, funApp, argCon, argCases.map(_._1), theory)
+        BwdPropagationRule(op, funApp, argCon, newConstraints3, theory)
       List(AxiomSplit(assumptions, argCases.toList, theory, rule))
     }
   }

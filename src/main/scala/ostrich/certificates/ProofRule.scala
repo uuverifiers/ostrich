@@ -43,7 +43,7 @@ trait OstrichProofRule extends AugmentedTheoryRule
 case class BwdPropagationRule   (op       : PreOp,
                                  funApp   : Atom,
                                  image    : Option[Atom],
-                                 preImage : Seq[Conjunction],
+                                 preImage : Seq[Seq[Formula]],
                                  theory   : OstrichStringTheory)
   extends OstrichProofRule
 
