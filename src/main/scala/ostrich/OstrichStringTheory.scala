@@ -75,13 +75,16 @@ object OstrichStringTheory {
   // use Unicode-16 encoding?
   val alphabetSize = 0x10000
 
-  class OstrichStringSort extends ProxySort(Sort.Integer) {
+  class OstrichStringSort extends ProxySort(Sort.Integer)
+                          with Theory.TheorySort {
     override val name = "String"
 
-    private var theory : OstrichStringTheory = null
+    private var theoryVar : OstrichStringTheory = null
 
     protected[ostrich] def setTheory(_theory : OstrichStringTheory) : Unit =
-      theory = _theory
+      theoryVar = _theory
+
+    def theory : OstrichStringTheory = theoryVar
 
     override lazy val individuals : Stream[ITerm] =
       IFunApp(theory.str_empty, List()) #::

@@ -31,11 +31,13 @@
 package ostrich.certificates
 
 import ap.basetypes.IdealInt
+import ap.parser.SMTLineariser
 import ap.proof.certificates._
 import ap.terfor.preds.{Atom, PredConj}
-import ap.terfor.{Formula, TermOrder, TerForConvenience}
+import ap.terfor.{Formula, Term, TermOrder, TerForConvenience, ConstantTerm}
 import ap.terfor.conjunctions.Conjunction
 import ap.terfor.linearcombination.LinearCombination
+import ap.types.Sort
 
 import ostrich._
 import ostrich.preop.{PreOp, ConcatPreOp}
@@ -53,17 +55,17 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
     a.pred match {
       case FunPred(`str_++`) => {
         print("(= ")
-        printTerm(a(2), vs)
+        printStringTerm(a(2), vs, ctxt)
         print(" (str.++ ")
-        printTerm(a(0), vs)
+        printStringTerm(a(0), vs, ctxt)
         print(" ")
-        printTerm(a(1), vs)
+        printStringTerm(a(1), vs, ctxt)
         print("))")
         true
       }
       case `str_in_re_id` => {
         print("(str.in_re ")
-        printTerm(a(0), vs)
+        printStringTerm(a(0), vs, ctxt)
         print(" (re.from_automaton \"")
         val LinearCombination.Constant(IdealInt(id)) = a(1)
         val aut =
@@ -75,6 +77,39 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
       case _ =>
         false
     }
+  }
+
+  def printTheoryEquation(lc        : LinearCombination,
+                          variables : List[String],
+                          ctxt      : AletheFormulaPrinterContext) : Boolean =
+    lc match {
+      case LinearCombination.CoeffTermWithOffset(
+             IdealInt.ONE, c : ConstantTerm, IdealInt(offset))
+          if Sort.sortOf(c) == theory.StringSort => {
+        print(s"(= ${SMTLineariser.quoteIdentifier(c.name)} ")
+        printEncodedString(-offset)
+        print(")")
+        true
+      }
+      case _ =>
+        false
+    }
+
+  private def printStringTerm(t         : Term,
+                              variables : List[String],
+                              ctxt      : AletheFormulaPrinterContext) : Unit =
+    t match {
+      case LinearCombination.Constant(IdealInt(id)) =>
+        printEncodedString(id)
+      case t =>
+        ctxt.printTerm(t, variables)
+    }
+
+  private def printEncodedString(id : Int) : Unit = {
+    val str = theory.strDatabase.id2Str(id)
+    print("\"")
+    print(SMTLineariser.escapeString(str))
+    print("\"")
   }
 
   def hideTheoryAtom(a : Atom) = a.pred == agePred
