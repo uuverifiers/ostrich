@@ -46,30 +46,6 @@ import scala.collection.mutable.{ArrayBuffer, ArrayStack}
 private[ostrich] object OstrichTopLevelAliases {
   import IExpression._
 
-  private def conjuncts(f : IFormula) : Seq[IFormula] = f match {
-    case IBinFormula(IBinJunctor.And, left, right) =>
-      conjuncts(left) ++ conjuncts(right)
-    case _ =>
-      Seq(f)
-  }
-
-  private def disjuncts(f : IFormula) : Seq[IFormula] = f match {
-    case IBinFormula(IBinJunctor.Or, left, right) =>
-      disjuncts(left) ++ disjuncts(right)
-    case _ =>
-      Seq(f)
-  }
-
-  private def assertedConjuncts(part : IFormula) : Seq[IFormula] =
-    for {
-      disjunct <- disjuncts(part)
-      assertion = disjunct match {
-        case INot(f) => f
-        case f       => !f
-      }
-      conjunct <- conjuncts(assertion)
-    } yield conjunct
-
   /** Return the formula parts unless aliases would cross a named partition. */
   def unnamedParts(f : IFormula) : Option[Seq[INamedPart]] = {
     val parts = PartExtractor(f)
@@ -94,7 +70,8 @@ private[ostrich] object OstrichTopLevelAliases {
 
     for {
       INamedPart(_, part) <- parts
-      conjunct            <- assertedConjuncts(part)
+      conjunct            <- LineariseVisitor(Transform2NNF(~part),
+                                              IBinJunctor.And)
       (constant, value)   <- extract(conjunct)
     } definitions.getOrElseUpdate(constant, new ArrayBuffer[A]) += value
 
