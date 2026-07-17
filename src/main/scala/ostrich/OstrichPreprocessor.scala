@@ -319,6 +319,165 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
 
 
 /**
+ * Inline top-level aliases that bind a RegLan constant to one concrete regular
+ * expression. 
+ */
+class OstrichRegexAliasExpander(theory    : OstrichStringTheory,
+                                signature : ap.Signature) {
+  import IExpression._
+  import theory._
+
+  private def conjuncts(f : IFormula) : Seq[IFormula] = f match {
+    case IBinFormula(IBinJunctor.And, left, right) =>
+      conjuncts(left) ++ conjuncts(right)
+    case _ =>
+      Seq(f)
+  }
+
+  private def disjuncts(f : IFormula) : Seq[IFormula] = f match {
+    case IBinFormula(IBinJunctor.Or, left, right) =>
+      disjuncts(left) ++ disjuncts(right)
+    case _ =>
+      Seq(f)
+  }
+
+  private def assertedConjuncts(part : IFormula) : Seq[IFormula] =
+    for {
+      disjunct <- disjuncts(part)
+      assertion = disjunct match {
+        case INot(f) => f
+        case f       => !f
+      }
+      conjunct <- conjuncts(assertion)
+    } yield conjunct
+
+  private def aliases(parts : Seq[INamedPart])
+      : Map[ap.terfor.ConstantTerm, ITerm] = {
+    val definitions =
+      new scala.collection.mutable.HashMap[
+        ap.terfor.ConstantTerm, ArrayBuffer[ITerm]]
+
+    def add(c : ap.terfor.ConstantTerm, regex : ITerm) : Unit =
+      definitions.getOrElseUpdate(c, new ArrayBuffer[ITerm]) += regex
+
+    for {
+      INamedPart(_, part) <- parts
+      conjunct            <- assertedConjuncts(part)
+    } conjunct match {
+      case IEquation(constant@IConstant(c), ConcreteRegex(regex))
+          if Sort.sortOf(constant) == RegexSort &&
+             !(signature.existentialConstants contains c) =>
+        add(c, regex)
+      case IEquation(ConcreteRegex(regex), constant@IConstant(c))
+          if Sort.sortOf(constant) == RegexSort &&
+             !(signature.existentialConstants contains c) =>
+        add(c, regex)
+      case _ =>
+    }
+
+    (for ((c, Seq(regex)) <- definitions.iterator) yield c -> regex).toMap
+  }
+
+  def apply(f : IFormula) : IFormula = {
+    var parts = PartExtractor(f)
+
+    // Substitution across named partitions would only preserve the complete
+    // formula, not the individual partitions required for interpolation and
+    // unsat cores.
+    if (parts exists {
+          case INamedPart(name, _) => name != PartName.NO_NAME
+        })
+      return f
+
+    var subst = aliases(parts)
+
+    // Substitution can expose another alias (R = S, S = concrete).
+    while (!subst.isEmpty) {
+      parts = for (INamedPart(name, part) <- parts) yield {
+        val expanded = SimplifyingConstantSubstVisitor(part, subst)
+        INamedPart(name, expanded)
+      }
+      subst = aliases(parts)
+    }
+
+    or(parts)
+  }
+}
+
+
+/**
+ * Pre-processor for deciding extensional equality of concrete regular
+ * expressions. RegLan equalities that still contain symbolic terms are
+ * replaced by an unsupported predicate.
+ */
+class OstrichRegexEqualityEncoder(theory : OstrichStringTheory)
+      extends ContextAwareVisitor[Unit, IExpression] {
+  import IExpression._
+  import theory._
+
+  def apply(f : IFormula) : IFormula =
+    this.visit(f, Context(())).asInstanceOf[IFormula]
+
+  private def intersectionLeafIds(t : ITerm) : Set[Int] = {
+    val todo = new scala.collection.mutable.ArrayStack[ITerm]
+    val ids = new scala.collection.mutable.HashSet[Int]
+    todo push t
+
+    while (!todo.isEmpty)
+      todo.pop match {
+        case IFunApp(`re_inter`, args) =>
+          for (arg <- args.reverseIterator)
+            todo push arg
+        case regex =>
+          ids += autDatabase.regex2Id(regex)
+      }
+
+    ids.toSet
+  }
+
+  /**
+   * Check an equality with re.none without first materialising the complete
+   * intersection automaton. Optimization for regex matching benchmarks.
+   */
+  private def emptyIntersection(t : ITerm) : Boolean = {
+    autDatabase.emptyIntersection(intersectionLeafIds(t))
+  }
+
+  private def concreteEquality(left : ITerm, right : ITerm) : Boolean =
+    (left, right) match {
+      case (IFunApp(`re_none`, Seq()),
+            IFunApp(`re_inter`, _)) =>
+        emptyIntersection(right)
+      case (IFunApp(`re_inter`, _),
+            IFunApp(`re_none`, Seq())) =>
+        emptyIntersection(left)
+      case _ =>
+        autDatabase.regex2Id(left) == autDatabase.regex2Id(right)
+    }
+
+  def postVisit(t : IExpression,
+                ctxt : Context[Unit],
+                subres : Seq[IExpression]) : IExpression = (t, subres) match {
+    case (IEquation(_, _), Seq(left : ITerm, right : ITerm))
+        if Sort.sortOf(left) == RegexSort =>
+      if (left == right) {
+        IBoolLit(true)
+      } else {
+        (left, right) match {
+          case (ConcreteRegex(concreteLeft),
+                ConcreteRegex(concreteRight)) =>
+            IBoolLit(concreteEquality(concreteLeft, concreteRight))
+          case _ =>
+            reglan_eq_unsupported(left, right)
+        }
+      }
+    case _ =>
+      t update subres
+  }
+}
+
+
+/**
  * Pre-processor for replacing regular expressions with just numeric ids,
  * which streamlines the translation to automata.
  */

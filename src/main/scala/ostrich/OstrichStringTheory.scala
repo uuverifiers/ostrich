@@ -265,6 +265,9 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val agePred = MonoSortedPredicate("age", List(StringSort, Sort.Integer, Sort.Integer))
 
+  val reglan_eq_unsupported =
+    MonoSortedPredicate("reglan.eq.unsupported", List(RegexSort, RegexSort))
+
   val strDatabase = new StrDatabase(this)
 
   //////////////////////////////////////////////////////////////////////////////
@@ -279,7 +282,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
-                     extraPredicates = List(str_in_re_id, agePred))
+                     extraPredicates =
+                       List(str_in_re_id, agePred, reglan_eq_unsupported))
   val predicates =
     predefPredicates ++ funPredicates ++ (transducersWithPreds map (_._2))
 
@@ -482,10 +486,12 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
                           : (IFormula, Signature) = {
     val visitor0 = new OstrichFactorizer   (this)
     val visitor1 = new OstrichPreprocessor (this)
-    val visitor2 = new OstrichRegexEncoder (this)
-    val visitor3 = new OstrichStringEncoder(this)
+    val visitor2 = new OstrichRegexAliasExpander(this, signature)
+    val visitor3 = new OstrichRegexEqualityEncoder(this)
+    val visitor4 = new OstrichRegexEncoder (this)
+    val visitor5 = new OstrichStringEncoder(this)
 
-    (visitor3(visitor2(visitor1(visitor0(f)))), signature)
+    (visitor5(visitor4(visitor3(visitor2(visitor1(visitor0(f)))))), signature)
   }
 
   override val reducerPlugin = new OstrichReducerFactory(this)

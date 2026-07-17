@@ -95,6 +95,7 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
     re_reference,
     re_begin_anchor,
     re_end_anchor,
+    reglan_eq_unsupported,
     FunPred,
     strDatabase
   }
@@ -222,6 +223,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
       }
       case FunPred(f) if rexOps contains f =>
       // nothing
+      case `reglan_eq_unsupported` =>
+      // ignore
       case p if (theory.predicates contains p) =>
         stringFunctionTranslator(a) match {
           case Some((op, args, res)) =>
@@ -247,6 +250,8 @@ class CESolver(theory: CEStringTheory, flags: OFlags) {
         decodeRegexId(a, true)
       case pred if theory.transducerPreOps contains pred =>
         throw new Exception("Cannot handle negated transducer constraint " + a)
+      case `reglan_eq_unsupported` =>
+      // See the corresponding positive-literal case above.
       case p if (theory.predicates contains p) =>
         // Console.err.println("Warning: ignoring !" + a)
         throw new Exception("Cannot handle negative literal " + a)
