@@ -43,8 +43,9 @@ import ap.proof.goal.Goal
 import ap.util.Seqs
 
 import ostrich.cesolver.preprocess.CEPreprocessor
-import ostrich.{OFlags, OstrichRegexAliasExpander,
-                OstrichRegexEqualityEncoder, OstrichStringTheory}
+import ostrich.{OFlags, OstrichGroundContainsEvaluator,
+                OstrichRegexAliasExpander, OstrichRegexEqualityEncoder,
+                OstrichStringTheory}
 import ostrich.OstrichEqualityPropagator
 import ostrich.cesolver.automata.CEAutDatabase
 import ostrich.cesolver.preprocess.CEInternalPreprocessor
@@ -276,10 +277,11 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
       f: IFormula,
       signature: Signature
   ): (IFormula, Signature) = {
+    val visitor0 = new OstrichGroundContainsEvaluator(this, signature)
     val visitor1 = new CEPreprocessor(this)
     val visitor2 = new OstrichRegexAliasExpander(this, signature)
     val visitor3 = new OstrichRegexEqualityEncoder(this)
-    (visitor3(visitor2(visitor1(f))), signature)
+    (visitor3(visitor2(visitor1(visitor0(f)))), signature)
   }
 
   override def preprocess(f : Conjunction, signature : Signature) : Conjunction = {

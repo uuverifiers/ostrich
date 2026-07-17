@@ -38,7 +38,183 @@ import ap.theories.strings.StringTheory
 
 import ostrich.automata.Regex2Aut
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ArrayStack}
+
+/**
+ * Shared extraction of unique aliases from unnamed, top-level assertions.
+ */
+private[ostrich] object OstrichTopLevelAliases {
+  import IExpression._
+
+  private def conjuncts(f : IFormula) : Seq[IFormula] = f match {
+    case IBinFormula(IBinJunctor.And, left, right) =>
+      conjuncts(left) ++ conjuncts(right)
+    case _ =>
+      Seq(f)
+  }
+
+  private def disjuncts(f : IFormula) : Seq[IFormula] = f match {
+    case IBinFormula(IBinJunctor.Or, left, right) =>
+      disjuncts(left) ++ disjuncts(right)
+    case _ =>
+      Seq(f)
+  }
+
+  private def assertedConjuncts(part : IFormula) : Seq[IFormula] =
+    for {
+      disjunct <- disjuncts(part)
+      assertion = disjunct match {
+        case INot(f) => f
+        case f       => !f
+      }
+      conjunct <- conjuncts(assertion)
+    } yield conjunct
+
+  /** Return the formula parts unless aliases would cross a named partition. */
+  def unnamedParts(f : IFormula) : Option[Seq[INamedPart]] = {
+    val parts = PartExtractor(f)
+    if (parts exists {
+          case INamedPart(name, _) => name != PartName.NO_NAME
+        })
+      None
+    else
+      Some(parts)
+  }
+
+  /**
+   * Collect definitions accepted by `extract`, retaining only constants with
+   * exactly one definition.
+   */
+  def uniqueDefinitions[A](parts : Seq[INamedPart])(
+      extract : IFormula => Option[(ap.terfor.ConstantTerm, A)])
+      : Map[ap.terfor.ConstantTerm, A] = {
+    val definitions =
+      new scala.collection.mutable.HashMap[
+        ap.terfor.ConstantTerm, ArrayBuffer[A]]
+
+    for {
+      INamedPart(_, part) <- parts
+      conjunct            <- assertedConjuncts(part)
+      (constant, value)   <- extract(conjunct)
+    } definitions.getOrElseUpdate(constant, new ArrayBuffer[A]) += value
+
+    (for {
+      (constant, values) <- definitions.iterator
+      if values.size == 1
+    } yield constant -> values.head).toMap
+  }
+}
+
+/**
+ * Evaluate ground substring checks before concrete concatenations are expanded
+ * into large trees of str.cons terms. Concrete top-level aliases are read
+ * without substituting them into the formula.
+ */
+class OstrichGroundContainsEvaluator(theory    : OstrichStringTheory,
+                                     signature : ap.Signature) {
+  import IExpression._
+  import Regex2Aut.SmartConst
+  import theory._
+
+  private def concreteString(
+      root    : ITerm,
+      aliases : Map[ap.terfor.ConstantTerm, String]) : Option[String] = {
+    val pending = new ArrayStack[ITerm]
+    val result = new java.lang.StringBuilder
+    var steps = 0
+    pending push root
+
+    while (!pending.isEmpty) {
+      if ((steps & 0x3fff) == 0)
+        ap.util.Timeout.check
+      steps += 1
+
+      pending.pop match {
+        case IFunApp(`str_++`, Seq(left, right)) =>
+          pending push right
+          pending push left
+        case IConstant(c) =>
+          aliases.get(c) match {
+            case Some(str) =>
+              ap.util.Timeout.check
+              result append str
+              ap.util.Timeout.check
+            case None      => return None
+          }
+        case IFunApp(`str_empty`, Seq()) =>
+        case IFunApp(`str_cons`, Seq(SmartConst(head), tail : ITerm)) =>
+          if (head < 0 || head > 0xffff)
+            return None
+          result append head.intValueSafe.toChar
+          pending push tail
+        case _ =>
+          return None
+      }
+    }
+
+    ap.util.Timeout.check
+    val str = result.toString
+    ap.util.Timeout.check
+    Some(str)
+  }
+
+  private def contains(bigStr  : ITerm,
+                       subStr  : ITerm,
+                       aliases : Map[ap.terfor.ConstantTerm, String])
+                     : Option[Boolean] =
+    for {
+      sub <- concreteString(subStr, aliases)
+      big <- concreteString(bigStr, aliases)
+    } yield {
+      ap.util.Timeout.check
+      val result = big.indexOf(sub) >= 0
+      ap.util.Timeout.check
+      result
+    }
+
+  private def aliases(parts : Seq[INamedPart])
+      : Map[ap.terfor.ConstantTerm, String] =
+    OstrichTopLevelAliases.uniqueDefinitions(parts) {
+      case IEquation(constant@IConstant(c), value : ITerm)
+          if Sort.sortOf(constant) == StringSort &&
+             (signature.nullaryFunctions contains c) =>
+        concreteString(value, Map.empty) map (c -> _)
+      case IEquation(value : ITerm, constant@IConstant(c))
+          if Sort.sortOf(constant) == StringSort &&
+             (signature.nullaryFunctions contains c) =>
+        concreteString(value, Map.empty) map (c -> _)
+      case _ =>
+        None
+    }
+
+  private class Evaluator(aliases : Map[ap.terfor.ConstantTerm, String])
+        extends ContextAwareVisitor[Unit, IExpression] {
+    override def preVisit(t : IExpression,
+                          ctxt : Context[Unit]) : PreVisitResult = t match {
+      case IAtom(`str_contains`, Seq(bigStr : ITerm, subStr : ITerm)) =>
+        contains(bigStr, subStr, aliases) match {
+          case Some(result) => ShortCutResult(IBoolLit(result))
+          case None         => super.preVisit(t, ctxt)
+        }
+      case _ =>
+        super.preVisit(t, ctxt)
+    }
+
+    def postVisit(t : IExpression,
+                  ctxt : Context[Unit],
+                  subres : Seq[IExpression]) : IExpression =
+      t update subres
+  }
+
+  def apply(f : IFormula) : IFormula =
+    OstrichTopLevelAliases.unnamedParts(f) match {
+      case None =>
+        f
+      case Some(parts) =>
+        val definitions = aliases(parts)
+        new Evaluator(definitions).visit(f, Context(())).asInstanceOf[IFormula]
+    }
+}
 
 /**
  * Pre-processor for reducing some operators to more basic ones.
@@ -327,81 +503,40 @@ class OstrichRegexAliasExpander(theory    : OstrichStringTheory,
   import IExpression._
   import theory._
 
-  private def conjuncts(f : IFormula) : Seq[IFormula] = f match {
-    case IBinFormula(IBinJunctor.And, left, right) =>
-      conjuncts(left) ++ conjuncts(right)
-    case _ =>
-      Seq(f)
-  }
-
-  private def disjuncts(f : IFormula) : Seq[IFormula] = f match {
-    case IBinFormula(IBinJunctor.Or, left, right) =>
-      disjuncts(left) ++ disjuncts(right)
-    case _ =>
-      Seq(f)
-  }
-
-  private def assertedConjuncts(part : IFormula) : Seq[IFormula] =
-    for {
-      disjunct <- disjuncts(part)
-      assertion = disjunct match {
-        case INot(f) => f
-        case f       => !f
-      }
-      conjunct <- conjuncts(assertion)
-    } yield conjunct
-
   private def aliases(parts : Seq[INamedPart])
-      : Map[ap.terfor.ConstantTerm, ITerm] = {
-    val definitions =
-      new scala.collection.mutable.HashMap[
-        ap.terfor.ConstantTerm, ArrayBuffer[ITerm]]
-
-    def add(c : ap.terfor.ConstantTerm, regex : ITerm) : Unit =
-      definitions.getOrElseUpdate(c, new ArrayBuffer[ITerm]) += regex
-
-    for {
-      INamedPart(_, part) <- parts
-      conjunct            <- assertedConjuncts(part)
-    } conjunct match {
+      : Map[ap.terfor.ConstantTerm, ITerm] =
+    OstrichTopLevelAliases.uniqueDefinitions(parts) {
       case IEquation(constant@IConstant(c), ConcreteRegex(regex))
           if Sort.sortOf(constant) == RegexSort &&
              !(signature.existentialConstants contains c) =>
-        add(c, regex)
+        Some(c -> regex)
       case IEquation(ConcreteRegex(regex), constant@IConstant(c))
           if Sort.sortOf(constant) == RegexSort &&
              !(signature.existentialConstants contains c) =>
-        add(c, regex)
+        Some(c -> regex)
       case _ =>
+        None
     }
 
-    (for ((c, Seq(regex)) <- definitions.iterator) yield c -> regex).toMap
-  }
+  def apply(f : IFormula) : IFormula =
+    OstrichTopLevelAliases.unnamedParts(f) match {
+      case None =>
+        f
+      case Some(initialParts) =>
+        var parts = initialParts
+        var subst = aliases(parts)
 
-  def apply(f : IFormula) : IFormula = {
-    var parts = PartExtractor(f)
+        // Substitution can expose another alias (R = S, S = concrete).
+        while (!subst.isEmpty) {
+          parts = for (INamedPart(name, part) <- parts) yield {
+            val expanded = SimplifyingConstantSubstVisitor(part, subst)
+            INamedPart(name, expanded)
+          }
+          subst = aliases(parts)
+        }
 
-    // Substitution across named partitions would only preserve the complete
-    // formula, not the individual partitions required for interpolation and
-    // unsat cores.
-    if (parts exists {
-          case INamedPart(name, _) => name != PartName.NO_NAME
-        })
-      return f
-
-    var subst = aliases(parts)
-
-    // Substitution can expose another alias (R = S, S = concrete).
-    while (!subst.isEmpty) {
-      parts = for (INamedPart(name, part) <- parts) yield {
-        val expanded = SimplifyingConstantSubstVisitor(part, subst)
-        INamedPart(name, expanded)
+        or(parts)
       }
-      subst = aliases(parts)
-    }
-
-    or(parts)
-  }
 }
 
 

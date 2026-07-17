@@ -84,6 +84,8 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFileOpts("tests/contains-7.smt2", "sat", "+forwardPropagation", "")
   property("contains-8.smt2") =
     checkFile("tests/contains-8.smt2", "sat")
+  property("ground-contains-alias.smt2") =
+    checkFile("tests/ground-contains-alias.smt2", "sat")
 
   property("word-equation.smt2") =
     checkFile("tests/word-equation.smt2", "sat")
