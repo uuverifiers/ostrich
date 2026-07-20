@@ -38,7 +38,9 @@ import ap.theories.strings.StringTheory
 
 import ostrich.automata.Regex2Aut
 
-import scala.collection.mutable.{ArrayBuffer, ArrayStack}
+import java.util.ArrayDeque
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Shared extraction of unique aliases from unnamed, top-level assertions.
@@ -119,20 +121,20 @@ class OstrichGroundContainsEvaluator(theory    : OstrichStringTheory,
   private def concreteString(
       root    : ITerm,
       aliases : Map[ap.terfor.ConstantTerm, String]) : Option[String] = {
-    val pending = new ArrayStack[ITerm]
+    val pending = new ArrayDeque[ITerm]
     val result = new java.lang.StringBuilder
     var steps = 0
-    pending push root
+    pending.push(root)
 
     while (!pending.isEmpty) {
       if ((steps & 0x3fff) == 0)
         ap.util.Timeout.check
       steps += 1
 
-      pending.pop match {
+      pending.pop() match {
         case IFunApp(`str_++`, Seq(left, right)) =>
-          pending push right
-          pending push left
+          pending.push(right)
+          pending.push(left)
         case IConstant(c) =>
           aliases.get(c) match {
             case Some(str) =>
@@ -146,7 +148,7 @@ class OstrichGroundContainsEvaluator(theory    : OstrichStringTheory,
           if (head < 0 || head > 0xffff)
             return None
           result append head.intValueSafe.toChar
-          pending push tail
+          pending.push(tail)
         case _ =>
           return None
       }
@@ -554,15 +556,15 @@ class OstrichRegexEqualityEncoder(theory : OstrichStringTheory)
     this.visit(f, Context(())).asInstanceOf[IFormula]
 
   private def intersectionLeafIds(t : ITerm) : Set[Int] = {
-    val todo = new scala.collection.mutable.ArrayStack[ITerm]
+    val todo = new ArrayDeque[ITerm]
     val ids = new scala.collection.mutable.HashSet[Int]
-    todo push t
+    todo.push(t)
 
     while (!todo.isEmpty)
-      todo.pop match {
+      todo.pop() match {
         case IFunApp(`re_inter`, args) =>
           for (arg <- args.reverseIterator)
-            todo push arg
+            todo.push(arg)
         case regex =>
           ids += autDatabase.regex2Id(regex)
       }
