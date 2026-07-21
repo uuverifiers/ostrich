@@ -24,6 +24,9 @@ There are some additional string-specific options offered by OSTRICH:
 | `[+-]parikh`              | Introduce letter count equations for all letters that occur in a problem. Default: `-parikh` | 
 | `[+-]minimizeAutomata`    | Eager minimization of automata. Default: `-minimizeAutomata`                                 |
 | `[+-]eager`               | Eager intersection of regular expression constraints. Default: `-eager`                      |
+| `[+-]automaticIslands`    | Experimental exact automatic-relation island rule. Default: `-automaticIslands`               |
+
+The automatic-island experiment is intentionally narrow.
 
 ## Web Interface
 

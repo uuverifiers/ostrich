@@ -36,6 +36,7 @@ import ostrich.automata.{AutDatabase, Transducer}
 import ostrich.preop.{PreOp, ReversePreOp, TransducerPreOp}
 import ostrich.proofops.{
   BackwardsSaturation,
+  AutomaticIslandRule,
   CutSaturation,
   ForwardsSaturation,
   LengthAbstraction,
@@ -393,6 +394,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   private val ostrichClose       = new OstrichClose(this)
   private val intersectionRule   = new OstrichIntersect(this)
+  private val automaticIslandRule = new AutomaticIslandRule(this)
   private val equalityPropagator = new OstrichEqualityPropagator(this)
   private val strInReTranslator  = new OstrichStrInReTranslator(this)
   private val cutter             = new OstrichCut(this)
@@ -417,6 +419,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           strInReTranslator.handleGoal(goal)           elseDo
           ostrichClose.handleGoal(goal)                elseDo
           intersectionRule.handleGoal(goal)            elseDo
+          automaticIslandRule.handleGoal(goal)         elseDo
           breakCyclicEquations(goal).getOrElse(List()) elseDo
           nielsenSplitter.decompSimpleEquations        elseDo
           nielsenSplitter.decompEquations              elseDo
@@ -430,6 +433,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
           periodicRewriter.handleGoal
 
         case Plugin.GoalState.Final =>
+          automaticIslandRule.handleFinalGoal(goal)    elseDo
           predToEq.lazyEnumeration                     elseDo
           cutter.handleGoal(goal, true)
 

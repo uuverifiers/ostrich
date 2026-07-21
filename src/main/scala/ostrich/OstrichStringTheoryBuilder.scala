@@ -71,6 +71,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
 
   protected var eager, forwardPropagation, minimizeAuts, useParikh = false
   protected var backwardPropagation, nielsenSplitter = true
+  protected var automaticIslands = false
 
   protected var useLen : OFlags.LengthOptions.Value = OFlags.LengthOptions.Auto
   protected var regexTrans : OFlags.RegexTranslator.Value = OFlags.RegexTranslator.Hybrid
@@ -92,6 +93,8 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
       backwardPropagation = value
     case CmdlParser.Opt("nielsenSplitter", value) =>
       nielsenSplitter = value
+    case CmdlParser.Opt("automaticIslands", value) =>
+      automaticIslands = value
     case CmdlParser.Opt("parikh", value) =>
       useParikh = value
     case CmdlParser.ValueOpt("regexTranslator", "approx") =>
@@ -139,6 +142,7 @@ class OstrichStringTheoryBuilder extends StringTheoryBuilder {
                                     forwardPropagation      = forwardPropagation,
                                     backwardPropagation     = backwardPropagation,
                                     nielsenSplitter         = nielsenSplitter,
+                                    automaticIslands        = automaticIslands,
                                     minimizeAutomata        = minimizeAuts,
                                     regexTranslator         = regexTrans))
   }

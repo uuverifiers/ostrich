@@ -65,6 +65,7 @@ case class OFlags(
   forwardPropagation      : Boolean = false,
   backwardPropagation     : Boolean = true,
   nielsenSplitter         : Boolean = true,
+  automaticIslands        : Boolean = false,
   regexTranslator         : OFlags.RegexTranslator.Value =
                               OFlags.RegexTranslator.Hybrid,
 

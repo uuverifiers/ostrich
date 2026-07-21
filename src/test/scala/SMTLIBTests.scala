@@ -11,6 +11,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   import System.lineSeparator
 
+  // CmdlMain and the SMT parser keep process-global state. Running two input
+  // files concurrently can therefore mix their registered string symbols.
+  private val commandLineLock = new Object
+
   val timeout      = 30000
   val shortTimeout = 3000
   val longTimeout  = 120000
@@ -32,21 +36,25 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   def checkFile(filename : String, result : String,
                 extractOpts : String*) : Boolean =
-    expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
-                            "-stringSolver=ostrich.OstrichStringTheory",
-                            filename) ++ extractOpts).toArray,
-                        false)
+    commandLineLock.synchronized {
+      expectResult(result) {
+        CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
+                              "-stringSolver=ostrich.OstrichStringTheory",
+                              filename) ++ extractOpts).toArray,
+                          false)
+      }
     }
 
   def checkFileOpts(filename : String, result : String, ostrichOpts : String,
                     extractOpts : String*) : Boolean =
-    expectResult(result) {
-      CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
-                            "-stringSolver=ostrich.OstrichStringTheory:" +
-                               ostrichOpts,
-                            filename) ++ extractOpts).toArray,
-                        false)
+    commandLineLock.synchronized {
+      expectResult(result) {
+        CmdlMain.doMain((List("+assert", "-timeout=" + timeout,
+                              "-stringSolver=ostrich.OstrichStringTheory:" +
+                                 ostrichOpts,
+                              filename) ++ extractOpts).toArray,
+                          false)
+      }
     }
 
   property("prefix-1.smt2") =
@@ -244,6 +252,60 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/priorityTransducer3.smt2", "sat")
   property("priorityTransducer4.smt2") =
     checkFile("tests/priorityTransducer4.smt2", "unsat")
+
+  property("automatic-island-fail5.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-fail5.smt2",
+      "unsat",
+      "+automaticIslands")
+
+  property("automatic-island-graph.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-graph.smt2",
+      "unsat",
+      "+automaticIslands")
+
+  property("automatic-island-equality.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-equality.smt2",
+      "unsat",
+      "+automaticIslands")
+
+  property("automatic-island-sat-control.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-sat-control.smt2",
+      "sat",
+      "+automaticIslands")
+
+  property("automatic-island-homomorphic-d2.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-homomorphic-d2.smt2",
+      "unsat",
+      "+automaticIslands")
+
+  property("automatic-island-homomorphic-sat-control.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-homomorphic-sat-control.smt2",
+      "sat",
+      "+automaticIslands")
+
+  property("automatic-island-nonsynchronised-sat.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-nonsynchronised-sat.smt2",
+      "sat",
+      "+automaticIslands")
+
+  property("automatic-island-unary-before-witness.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-unary-before-witness.smt2",
+      "unsat",
+      "+automaticIslands")
+
+  property("automatic-island-unary-before-witness-sat-control.smt2") =
+    checkFileOpts(
+      "tests/automatic-island-unary-before-witness-sat-control.smt2",
+      "sat",
+      "+automaticIslands")
 
   property("loop.smt2") =
     checkFileOpts("tests/loop.smt2", "sat", "", "+stringEscapes")
