@@ -484,7 +484,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
-    val visitor0 = new OstrichGroundContainsEvaluator(this, signature)
+//    val visitor0 = new OstrichGroundContainsEvaluator(this, signature)
     val visitor1 = new OstrichFactorizer   (this)
     val visitor2 = new OstrichPreprocessor (this)
     val visitor3 = new OstrichRegexAliasExpander(this, signature)
@@ -492,7 +492,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     val visitor5 = new OstrichRegexEncoder (this)
     val visitor6 = new OstrichStringEncoder(this)
 
-    (visitor6(visitor5(visitor4(visitor3(visitor2(visitor1(visitor0(f))))))),
+    (visitor6(visitor5(visitor4(visitor3(visitor2(visitor1(f)))))),
      signature)
   }
 
