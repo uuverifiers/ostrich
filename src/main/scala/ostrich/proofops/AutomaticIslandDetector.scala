@@ -497,21 +497,21 @@ class AutomaticIslandDetector(theory : OstrichStringTheory) {
       return reject("multiple certified clusters share one source term")
 
     val languages = new MHashMap[LinearCombination, TermLanguage]
-    for (term <- terms) {
+    for (term <- sourceTerms.distinct) {
       val atoms = regexGroups.get(term).toVector.flatMap(_.toVector)
       termLanguage(term, atoms) match {
         case Left(reason)    => return reject(reason)
         case Right(language) => languages.put(term, language)
       }
     }
-
-    val languageKey = terms.sortBy(_.toString).map { term =>
-      val id = autDatabase.automaton2Id(languages(term).automaton)
-      term.toString + "=" + id
+    for (term <- outputTerms; if !languages.contains(term)) {
+      val atoms = regexGroups.get(term).toVector.flatMap(_.toVector)
+      if (atoms.nonEmpty || strDatabase.term2List(term).nonEmpty)
+        termLanguage(term, atoms) match {
+          case Left(reason)    => return reject(reason)
+          case Right(language) => languages.put(term, language)
+        }
     }
-    val semanticKey =
-      structuralAssumptions.map(_.toString).sorted.mkString("\n") +
-      "\n-- unary languages --\n" + languageKey.mkString("\n")
 
     val connectorLetters = candidate.connectors.flatMap(_.letters)
     if (connectorLetters.exists(character =>
@@ -521,12 +521,6 @@ class AutomaticIslandDetector(theory : OstrichStringTheory) {
     val tapeAlphabets = new MHashMap[LinearCombination, MHashSet[Int]]
     for (term <- outputTerms)
       tapeAlphabets.put(term, MHashSet.empty)
-    for (term <- outputTerms)
-      finiteAlphabet(languages(term).automaton, MaxFiniteAlphabet) match {
-        case Some(letters) => tapeAlphabets(term) ++= letters
-        case None =>
-          return reject("an output language has no small finite alphabet")
-      }
     for (connector <- candidate.connectors) {
       tapeAlphabets(connector.left) ++= connector.letters
       tapeAlphabets(connector.right) ++= connector.letters
@@ -580,6 +574,21 @@ class AutomaticIslandDetector(theory : OstrichStringTheory) {
       if (tapeAlphabets(term).size > MaxFiniteAlphabet)
         return reject("an output tape alphabet is too large")
     }
+
+    // Extractor clusters bound every output to the finite productive alphabet
+    // computed above.  A missing unary fact therefore means no additional
+    // restriction, rather than making the exact relational island unusable.
+    for (term <- outputTerms; if !languages.contains(term))
+      languages.put(term, TermLanguage(
+        BricsAutomaton.makeAnyString(), Vector.empty))
+
+    val languageKey = terms.sortBy(_.toString).map { term =>
+      val id = autDatabase.automaton2Id(languages(term).automaton)
+      term.toString + "=" + id
+    }
+    val semanticKey =
+      structuralAssumptions.map(_.toString).sorted.mkString("\n") +
+      "\n-- unary languages --\n" + languageKey.mkString("\n")
 
     val tapes = new MHashMap[LinearCombination, Tape]
     for ((term, index) <- outputTerms.zipWithIndex)

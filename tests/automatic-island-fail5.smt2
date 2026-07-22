@@ -145,36 +145,20 @@
 (declare-fun out2 () String)
 (declare-fun isin () Bool)
 (declare-fun isout () Bool)
-(assert (let ((a!1 (str.in_re out2a (re.* (re.union (str.to_re "a") (str.to_re "b")))))
-      (a!2 (str.in_re out1a (re.* (re.union (str.to_re "a") (str.to_re "b")))))
-      (a!3 (str.in_re rem1 (re.* (re.union (str.to_re "a") (str.to_re "b")))))
-      (a!4 (str.in_re out2 (re.* (re.union (str.to_re "a") (str.to_re "b")))))
-      (a!5 (str.in_re out1 (re.* (re.union (str.to_re "a") (str.to_re "b")))))
-      (a!6 (str.in_re rem (re.* (re.union (str.to_re "a") (str.to_re "b")))))
-      (a!7 (re.++ (re.* (re.union (str.to_re "a") (str.to_re "b")))
-                  (re.* (str.to_re "p")))))
-  (or (and (= rem1 (str.++ "a" rem))
-           true
-           (= out1a (str.++ out1 "a"))
-           (= out2a (str.++ out2 "a"))
-           a!1
-           a!2
-           a!3
-           a!4
-           a!5
-           a!6
-           (extract0 varin rem1)
-           (extract1 varin out1)
-           (extract2 varin out2)
-           (str.in_re out2 a!7)
-           isin
-           (extract0 varout rem)
-           (str.in_re rem a!7)
-           (extract1 varout out1a)
-           (str.in_re out1a a!7)
-           (extract2 varout out2a)
-           (str.in_re out2a a!7)
-           isout))))
+; Output ranges are intentionally absent: the detector has to derive their
+; finite alphabets from the certified extractor clusters.
+(assert (or (and (= rem1 (str.++ "a" rem))
+                 true
+                 (= out1a (str.++ out1 "a"))
+                 (= out2a (str.++ out2 "a"))
+                 (extract0 varin rem1)
+                 (extract1 varin out1)
+                 (extract2 varin out2)
+                 isin
+                 (extract0 varout rem)
+                 (extract1 varout out1a)
+                 (extract2 varout out2a)
+                 isout)))
 (assert (=> isin (str.in_re varin (re.from_automaton "automaton value_124 {
   init q0;
   q0 -> q4 [97,97];
