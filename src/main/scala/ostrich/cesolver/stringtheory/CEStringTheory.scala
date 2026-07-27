@@ -280,7 +280,9 @@ class CEStringTheory(transducers: Seq[(String, Transducer)], flags: OFlags)
     val visitor0 = new OstrichGroundContainsEvaluator(this, signature)
     val visitor1 = new CEPreprocessor(this)
     val visitor2 = new OstrichRegexAliasExpander(this, signature)
-    val visitor3 = new OstrichRegexEqualityEncoder(this)
+    val visitor3 =
+      new OstrichRegexEqualityEncoder(
+        this, OstrichRegexEqualityEncoder.LegacyConcrete)
     (visitor3(visitor2(visitor1(visitor0(f)))), signature)
   }
 

@@ -519,14 +519,25 @@ class OstrichRegexAliasExpander(theory    : OstrichStringTheory,
 }
 
 
+object OstrichRegexEqualityEncoder {
+  sealed trait Mode
+  case object CanonicalizeAsIds extends Mode
+  case object RejectNontrivial extends Mode
+  case object LegacyConcrete extends Mode
+}
+
+
 /**
- * Pre-processor for deciding extensional equality of concrete regular
- * expressions. RegLan equalities that still contain symbolic terms are
- * replaced by an unsupported predicate.
+ * Pre-processor for canonicalising concrete regular expressions in RegLan
+ * equalities. Concrete expressions are replaced by re.from_id applications;
+ * the left inverse re.reglan_to_id then makes re.from_id injective.
  */
-class OstrichRegexEqualityEncoder(theory : OstrichStringTheory)
+class OstrichRegexEqualityEncoder(
+        theory : OstrichStringTheory,
+        mode   : OstrichRegexEqualityEncoder.Mode)
       extends ContextAwareVisitor[Unit, IExpression] {
   import IExpression._
+  import OstrichRegexEqualityEncoder._
   import theory._
 
   def apply(f : IFormula) : IFormula =
@@ -557,17 +568,60 @@ class OstrichRegexEqualityEncoder(theory : OstrichStringTheory)
     autDatabase.emptyIntersection(intersectionLeafIds(t))
   }
 
-  private def concreteEquality(left : ITerm, right : ITerm) : Boolean =
+  private def specialConcreteEquality(left : ITerm,
+                                      right : ITerm) : Option[Boolean] =
     (left, right) match {
       case (IFunApp(`re_none`, Seq()),
             IFunApp(`re_inter`, _)) =>
-        emptyIntersection(right)
+        Some(emptyIntersection(right))
       case (IFunApp(`re_inter`, _),
             IFunApp(`re_none`, Seq())) =>
-        emptyIntersection(left)
+        Some(emptyIntersection(left))
       case _ =>
-        autDatabase.regex2Id(left) == autDatabase.regex2Id(right)
+        None
     }
+
+  private def concreteEquality(left : ITerm, right : ITerm) : Boolean =
+    specialConcreteEquality(left, right).getOrElse(
+      autDatabase.regex2Id(left) == autDatabase.regex2Id(right))
+
+  private def canonicalOperand(t : ITerm) : Option[ITerm] = t match {
+    case fromId@IFunApp(`re_from_id`, Seq(IIntLit(id)))
+        if autDatabase.id2Automaton(id.intValueSafe).isDefined =>
+      Some(fromId)
+    case IFunApp(`re_from_id`, _) =>
+      None
+    case ConcreteRegex(regex) =>
+      Some(re_from_id(autDatabase.regex2Id(regex)))
+    case constant : IConstant =>
+      Some(constant)
+    case variable : IVariable =>
+      Some(variable)
+    case _ =>
+      None
+  }
+
+  private def canonicalEquality(left : ITerm, right : ITerm) : IFormula = {
+    val specialResult = (left, right) match {
+      case (ConcreteRegex(concreteLeft),
+            ConcreteRegex(concreteRight)) =>
+        specialConcreteEquality(concreteLeft, concreteRight)
+      case _ =>
+        None
+    }
+
+    specialResult match {
+      case Some(result) =>
+        IBoolLit(result)
+      case None =>
+        (canonicalOperand(left), canonicalOperand(right)) match {
+          case (Some(canonicalLeft), Some(canonicalRight)) =>
+            canonicalLeft === canonicalRight
+          case _ =>
+            reglan_eq_unsupported(left, right)
+        }
+    }
+  }
 
   def postVisit(t : IExpression,
                 ctxt : Context[Unit],
@@ -577,12 +631,19 @@ class OstrichRegexEqualityEncoder(theory : OstrichStringTheory)
       if (left == right) {
         IBoolLit(true)
       } else {
-        (left, right) match {
-          case (ConcreteRegex(concreteLeft),
-                ConcreteRegex(concreteRight)) =>
-            IBoolLit(concreteEquality(concreteLeft, concreteRight))
-          case _ =>
+        mode match {
+          case CanonicalizeAsIds =>
+            canonicalEquality(left, right)
+          case RejectNontrivial =>
             reglan_eq_unsupported(left, right)
+          case LegacyConcrete =>
+            (left, right) match {
+              case (ConcreteRegex(concreteLeft),
+                    ConcreteRegex(concreteRight)) =>
+                IBoolLit(concreteEquality(concreteLeft, concreteRight))
+              case _ =>
+                reglan_eq_unsupported(left, right)
+            }
         }
       }
     case _ =>

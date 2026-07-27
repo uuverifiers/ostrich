@@ -155,6 +155,10 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     MonoSortedIFunction("re.from_ecma2020_flags", List(SSo, SSo), RSo, true, false)
   val re_from_automaton =
     MonoSortedIFunction("re.from_automaton", List(SSo), RSo, true, false)
+  val re_from_id =
+    MonoSortedIFunction("re.from_id", List(Integer), RSo, true, false)
+  val re_reglan_to_id =
+    MonoSortedIFunction("re.reglan_to_id", List(RSo), Integer, true, false)
   val re_case_insensitive =
     MonoSortedIFunction("re.case_insensitive", List(RSo), RSo, true, false)
   val str_at_right =
@@ -214,7 +218,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   val extraRegexFunctions =
     List(re_begin_anchor, re_end_anchor,
-         re_from_ecma2020, re_from_ecma2020_flags, re_from_automaton,
+         re_from_ecma2020, re_from_ecma2020_flags, re_from_automaton, re_from_id,
          re_case_insensitive,
          str_at_right, str_trim,
          str_replacere_longest, str_replaceallre_longest,
@@ -227,6 +231,21 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
          (str_match, 2),
          (str_extract, 1),
          (re_loop_?, 2))
+
+  private val syntaxSensitiveRegexFunctions : Set[IFunction] =
+    Set(re_begin_anchor, re_end_anchor,
+        re_from_ecma2020, re_from_ecma2020_flags,
+        re_*?, re_+?, re_opt_?, re_loop_?,
+        re_capture, re_reference,
+        str_match, str_extract, str_replacecg, str_replaceallcg)
+
+  private[ostrich] def usesSyntaxSensitiveRegex(e : IExpression) : Boolean =
+    e match {
+      case IFunApp(f, _) if syntaxSensitiveRegexFunctions contains f =>
+        true
+      case _ =>
+        e.iterator exists usesSyntaxSensitiveRegex
+    }
 
   // List of additional functions that can be provided by sub-classes
   protected def extraExtraFunctions : Seq[IFunction] = List()
@@ -278,7 +297,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (extraStringFunctions map (_._2)) ++
     extraRegexFunctions ++
     (extraIndexedFunctions map (_._1)) ++
-    extraExtraFunctions
+    extraExtraFunctions ++
+    List(re_reglan_to_id)
 
   val (funPredicates, _, _, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
@@ -315,6 +335,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val _str_replace    = functionPredicateMap(str_replace)
   val _str_replaceall = functionPredicateMap(str_replaceall)
   val _str_substr     = functionPredicateMap(str_substr)
+  val _re_from_id     = functionPredicateMap(re_from_id)
+  val _re_reglan_to_id = functionPredicateMap(re_reglan_to_id)
 
   val predicateMatchConfig : Signature.PredicateMatchConfig =
     (for (p <- predicates)
@@ -324,7 +346,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     Map(str_contains    -> Signature.PredicateMatchStatus.Negative,
         _str_++         -> Signature.PredicateMatchStatus.Positive,
         _str_replace    -> Signature.PredicateMatchStatus.Positive,
-        _str_replaceall -> Signature.PredicateMatchStatus.Positive)
+        _str_replaceall -> Signature.PredicateMatchStatus.Positive,
+        _re_from_id     -> Signature.PredicateMatchStatus.Positive)
 
   val axioms          = new OstrichAxioms(this).axioms
 
@@ -354,7 +377,8 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
 
   // Set of the predicates that are fully supported at this point
   private val supportedPreds : Set[Predicate] =
-    Set(str_in_re, str_in_re_id, agePred, str_prefixof, str_suffixof, str_<=, str_contains) ++
+    Set(str_in_re, str_in_re_id, agePred, str_prefixof, str_suffixof, str_<=,
+        str_contains, _re_reglan_to_id) ++
     (for (f <- Set(str_empty, str_cons, str_at,
       str_++, str_replace, str_replaceall,
                    str_replacere, str_replaceallre,
@@ -485,14 +509,25 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   override def iPreprocess(f : IFormula, signature : Signature)
                           : (IFormula, Signature) = {
 //    val visitor0 = new OstrichGroundContainsEvaluator(this, signature)
+    val equalityMode =
+      if (usesSyntaxSensitiveRegex(f))
+        OstrichRegexEqualityEncoder.RejectNontrivial
+      else
+        OstrichRegexEqualityEncoder.CanonicalizeAsIds
     val visitor1 = new OstrichFactorizer   (this)
     val visitor2 = new OstrichPreprocessor (this)
-    val visitor3 = new OstrichRegexAliasExpander(this, signature)
-    val visitor4 = new OstrichRegexEqualityEncoder(this)
-    val visitor5 = new OstrichRegexEncoder (this)
-    val visitor6 = new OstrichStringEncoder(this)
+    val visitor3 = new OstrichRegexEqualityEncoder(this, equalityMode)
+    val visitor4 = new OstrichRegexEncoder (this)
+    val visitor5 = new OstrichStringEncoder(this)
 
-    (visitor6(visitor5(visitor4(visitor3(visitor2(visitor1(f)))))),
+    val preprocessed = visitor2(visitor1(f))
+    val aliasesExpanded =
+      if (equalityMode == OstrichRegexEqualityEncoder.RejectNontrivial)
+        new OstrichRegexAliasExpander(this, signature)(preprocessed)
+      else
+        preprocessed
+
+    (visitor5(visitor4(visitor3(aliasesExpanded))),
      signature)
   }
 

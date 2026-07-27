@@ -51,15 +51,58 @@ object RegLanEqualityTests extends Properties("RegLanEqualityTests") {
   }
 
   for {
-    (backend, solver) <- backends
-    file <- Seq("symbolic-safety.smt2", "symbolic-disequality.smt2",
-                "named-alias.smt2")
-  } property(s"$backend: $file never produces a spurious sat") = {
-    val results = resultLines("tests/reglan-equality/" + file, solver)
+    (file, expected) <- Seq(
+      "symbolic-safety.smt2"       -> "unsat",
+      "symbolic-disequality.smt2"  -> "sat",
+      "named-alias.smt2"           -> "unsat",
+      "alias-membership-sat.smt2"  -> "sat",
+      "alias-membership-unsat.smt2" -> "unsat",
+      "alias-composite-membership-unsat.smt2" -> "unsat",
+      "alias-capture-consumer-sat.smt2" -> "sat",
+      "alias-chain-unsat.smt2"     -> "unsat"
+    )
+  } property(s"standard: $file") = {
+    resultLines("tests/reglan-equality/" + file,
+                "ostrich.OstrichStringTheory") contains expected
+  }
+
+  for {
+    (file, expected) <- Seq(
+      "symbolic-safety.smt2"      -> "unsat",
+      "symbolic-disequality.smt2" -> "sat",
+      "named-alias.smt2"          -> "unsat"
+    )
+  } property(s"cea: $file returns the expected result or unknown") = {
+    val results = resultLines("tests/reglan-equality/" + file,
+                              "ostrich.cesolver.stringtheory.CEStringTheory")
+    (results contains "unknown") || (results contains expected)
+  }
+
+  property("standard: symbolic composites remain incomplete") = {
+    val results = resultLines("tests/reglan-equality/symbolic-composite.smt2",
+                              "ostrich.OstrichStringTheory")
     (results contains "unknown") || (results contains "unsat")
   }
 
-  property("explicit existential RegLan aliases are not inlined") = {
+  property("standard: capture-sensitive equality remains incomplete") = {
+    val results =
+      resultLines("tests/reglan-equality/capture-language-equality.smt2",
+                  "ostrich.OstrichStringTheory")
+    (results contains "unknown") || (results contains "unsat")
+  }
+
+  property("syntax-sensitive regexes disable language ids") = {
+    val theory = new OstrichStringTheory(List(), OFlags())
+    import theory._
+    import IExpression._
+
+    !usesSyntaxSensitiveRegex(re_union(str_to_re("a"), str_to_re("b"))) &&
+    usesSyntaxSensitiveRegex(re_from_ecma2020("a")) &&
+    usesSyntaxSensitiveRegex(re_capture(1, str_to_re("a"))) &&
+    usesSyntaxSensitiveRegex(re_*?(str_to_re("a")))
+  }
+
+  property("explicit existential RegLan values remain inconclusive") = {
     val theory = new OstrichStringTheory(List(), OFlags())
     import theory._
     import IExpression._
