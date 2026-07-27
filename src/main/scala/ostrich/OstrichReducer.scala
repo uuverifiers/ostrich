@@ -400,21 +400,39 @@ class OstrichReducer protected[ostrich]
           }
 
         case `str_contains` =>
-          if (isConcrete(a(1))) {
-            assert(a(1).isConstant)
-            val asRE  = {
-              import IExpression._
-              re_++(re_all(), re_++(str_to_re(a(1).constant), re_all()))
+          (isConcrete(a(0)), isConcrete(a(1))) match {
+            case (true, true) => {
+              val str0 = term2Str(a(0)).get
+              val str1 = term2Str(a(1)).get
+              val v =
+                if (str0.contains(str1)) Conjunction.TRUE else Conjunction.FALSE
+              rewriteLogging(a, v)
             }
-            val autId = autDatabase.regex2Id(asRE)
-            rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
-          } else if (isConcrete(a(0))) {
-            val str   = term2Str(a(0)).get
-            val autId = autDatabase.automaton2Id(
-              BricsAutomaton.containsAutomaton(str))
-            rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
-          } else {
-            a
+            case (false, true) if term2ListGet(a(1)).size < 10000 => {
+              // If the smaller string is given and not too large, convert
+              // the atom to a regex constraint. If the string is too long,
+              // it will not be possible to construct an automaton in reasonable
+              // time, then it is better to just keep the str.contains atom.
+              assert(a(1).isConstant)
+              val asRE = {
+                import IExpression._
+                re_++(re_all(), re_++(str_to_re(a(1).constant), re_all()))
+              }
+              val autId = autDatabase.regex2Id(asRE)
+              rewriteLogging(a, str_in_re_id(List(a(0), l(autId))))
+            }
+            case (true, false) => {
+              val str = term2Str(a(0)).get
+              if (str.size < 10000) {
+                val autId = autDatabase.automaton2Id(
+                  BricsAutomaton.containsAutomaton(str))
+                rewriteLogging(a, str_in_re_id(List(a(1), l(autId))))
+              } else {
+                a
+              }
+            }
+            case _ =>
+              a
           }
 
         case `str_prefixof` =>

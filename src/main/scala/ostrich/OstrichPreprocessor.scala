@@ -38,7 +38,162 @@ import ap.theories.strings.StringTheory
 
 import ostrich.automata.Regex2Aut
 
+import java.util.ArrayDeque
+
 import scala.collection.mutable.ArrayBuffer
+
+/**
+ * Shared extraction of unique aliases from unnamed, top-level assertions.
+ */
+private[ostrich] object OstrichTopLevelAliases {
+  import IExpression._
+
+  /** Return the formula parts unless aliases would cross a named partition. */
+  def unnamedParts(f : IFormula) : Option[Seq[INamedPart]] = {
+    val parts = PartExtractor(f)
+    if (parts exists {
+          case INamedPart(name, _) => name != PartName.NO_NAME
+        })
+      None
+    else
+      Some(parts)
+  }
+
+  /**
+   * Collect definitions accepted by `extract`, retaining only constants with
+   * exactly one definition.
+   */
+  def uniqueDefinitions[A](parts : Seq[INamedPart])(
+      extract : IFormula => Option[(ap.terfor.ConstantTerm, A)])
+      : Map[ap.terfor.ConstantTerm, A] = {
+    val definitions =
+      new scala.collection.mutable.HashMap[
+        ap.terfor.ConstantTerm, ArrayBuffer[A]]
+
+    for {
+      INamedPart(_, part) <- parts
+      conjunct            <- LineariseVisitor(Transform2NNF(~part),
+                                              IBinJunctor.And)
+      (constant, value)   <- extract(conjunct)
+    } definitions.getOrElseUpdate(constant, new ArrayBuffer[A]) += value
+
+    (for {
+      (constant, values) <- definitions.iterator
+      if values.size == 1
+    } yield constant -> values.head).toMap
+  }
+}
+
+/**
+ * Evaluate ground substring checks before concrete concatenations are expanded
+ * into large trees of str.cons terms. Concrete top-level aliases are read
+ * without substituting them into the formula.
+ */
+class OstrichGroundContainsEvaluator(theory    : OstrichStringTheory,
+                                     signature : ap.Signature) {
+  import IExpression._
+  import Regex2Aut.SmartConst
+  import theory._
+
+  private def concreteString(
+      root    : ITerm,
+      aliases : Map[ap.terfor.ConstantTerm, String]) : Option[String] = {
+    val pending = new ArrayDeque[ITerm]
+    val result = new java.lang.StringBuilder
+    var steps = 0
+    pending.push(root)
+
+    while (!pending.isEmpty) {
+      if ((steps & 0x3fff) == 0)
+        ap.util.Timeout.check
+      steps += 1
+
+      pending.pop() match {
+        case IFunApp(`str_++`, Seq(left, right)) =>
+          pending.push(right)
+          pending.push(left)
+        case IConstant(c) =>
+          aliases.get(c) match {
+            case Some(str) =>
+              ap.util.Timeout.check
+              result append str
+              ap.util.Timeout.check
+            case None      => return None
+          }
+        case IFunApp(`str_empty`, Seq()) =>
+        case IFunApp(`str_cons`, Seq(SmartConst(head), tail : ITerm)) =>
+          if (head < 0 || head > 0xffff)
+            return None
+          result append head.intValueSafe.toChar
+          pending.push(tail)
+        case _ =>
+          return None
+      }
+    }
+
+    ap.util.Timeout.check
+    val str = result.toString
+    ap.util.Timeout.check
+    Some(str)
+  }
+
+  private def contains(bigStr  : ITerm,
+                       subStr  : ITerm,
+                       aliases : Map[ap.terfor.ConstantTerm, String])
+                     : Option[Boolean] =
+    for {
+      sub <- concreteString(subStr, aliases)
+      big <- concreteString(bigStr, aliases)
+    } yield {
+      ap.util.Timeout.check
+      val result = big.indexOf(sub) >= 0
+      ap.util.Timeout.check
+      result
+    }
+
+  private def aliases(parts : Seq[INamedPart])
+      : Map[ap.terfor.ConstantTerm, String] =
+    OstrichTopLevelAliases.uniqueDefinitions(parts) {
+      case IEquation(constant@IConstant(c), value : ITerm)
+          if Sort.sortOf(constant) == StringSort &&
+             (signature.nullaryFunctions contains c) =>
+        concreteString(value, Map.empty) map (c -> _)
+      case IEquation(value : ITerm, constant@IConstant(c))
+          if Sort.sortOf(constant) == StringSort &&
+             (signature.nullaryFunctions contains c) =>
+        concreteString(value, Map.empty) map (c -> _)
+      case _ =>
+        None
+    }
+
+  private class Evaluator(aliases : Map[ap.terfor.ConstantTerm, String])
+        extends ContextAwareVisitor[Unit, IExpression] {
+    override def preVisit(t : IExpression,
+                          ctxt : Context[Unit]) : PreVisitResult = t match {
+      case IAtom(`str_contains`, Seq(bigStr : ITerm, subStr : ITerm)) =>
+        contains(bigStr, subStr, aliases) match {
+          case Some(result) => ShortCutResult(IBoolLit(result))
+          case None         => super.preVisit(t, ctxt)
+        }
+      case _ =>
+        super.preVisit(t, ctxt)
+    }
+
+    def postVisit(t : IExpression,
+                  ctxt : Context[Unit],
+                  subres : Seq[IExpression]) : IExpression =
+      t update subres
+  }
+
+  def apply(f : IFormula) : IFormula =
+    OstrichTopLevelAliases.unnamedParts(f) match {
+      case None =>
+        f
+      case Some(parts) =>
+        val definitions = aliases(parts)
+        new Evaluator(definitions).visit(f, Context(())).asInstanceOf[IFormula]
+    }
+}
 
 /**
  * Pre-processor for reducing some operators to more basic ones.
@@ -315,6 +470,185 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
     case (t, _) => t update subres
   }
 
+}
+
+
+/**
+ * Inline top-level aliases that bind a RegLan constant to one concrete regular
+ * expression. 
+ */
+class OstrichRegexAliasExpander(theory    : OstrichStringTheory,
+                                signature : ap.Signature) {
+  import IExpression._
+  import theory._
+
+  private def aliases(parts : Seq[INamedPart])
+      : Map[ap.terfor.ConstantTerm, ITerm] =
+    OstrichTopLevelAliases.uniqueDefinitions(parts) {
+      case IEquation(constant@IConstant(c), ConcreteRegex(regex))
+          if Sort.sortOf(constant) == RegexSort &&
+             !(signature.existentialConstants contains c) =>
+        Some(c -> regex)
+      case IEquation(ConcreteRegex(regex), constant@IConstant(c))
+          if Sort.sortOf(constant) == RegexSort &&
+             !(signature.existentialConstants contains c) =>
+        Some(c -> regex)
+      case _ =>
+        None
+    }
+
+  def apply(f : IFormula) : IFormula =
+    OstrichTopLevelAliases.unnamedParts(f) match {
+      case None =>
+        f
+      case Some(initialParts) =>
+        var parts = initialParts
+        var subst = aliases(parts)
+
+        // Substitution can expose another alias (R = S, S = concrete).
+        while (!subst.isEmpty) {
+          parts = for (INamedPart(name, part) <- parts) yield {
+            val expanded = SimplifyingConstantSubstVisitor(part, subst)
+            INamedPart(name, expanded)
+          }
+          subst = aliases(parts)
+        }
+
+        or(parts)
+      }
+}
+
+
+object OstrichRegexEqualityEncoder {
+  sealed trait Mode
+  case object CanonicalizeAsIds extends Mode
+  case object RejectNontrivial extends Mode
+  case object LegacyConcrete extends Mode
+}
+
+
+/**
+ * Pre-processor for canonicalising concrete regular expressions in RegLan
+ * equalities. Concrete expressions are replaced by re.from_id applications;
+ * the left inverse re.reglan_to_id then makes re.from_id injective.
+ */
+class OstrichRegexEqualityEncoder(
+        theory : OstrichStringTheory,
+        mode   : OstrichRegexEqualityEncoder.Mode)
+      extends ContextAwareVisitor[Unit, IExpression] {
+  import IExpression._
+  import OstrichRegexEqualityEncoder._
+  import theory._
+
+  def apply(f : IFormula) : IFormula =
+    this.visit(f, Context(())).asInstanceOf[IFormula]
+
+  private def intersectionLeafIds(t : ITerm) : Set[Int] = {
+    val todo = new ArrayDeque[ITerm]
+    val ids = new scala.collection.mutable.HashSet[Int]
+    todo.push(t)
+
+    while (!todo.isEmpty)
+      todo.pop() match {
+        case IFunApp(`re_inter`, args) =>
+          for (arg <- args.reverseIterator)
+            todo.push(arg)
+        case regex =>
+          ids += autDatabase.regex2Id(regex)
+      }
+
+    ids.toSet
+  }
+
+  /**
+   * Check an equality with re.none without first materialising the complete
+   * intersection automaton. Optimization for regex matching benchmarks.
+   */
+  private def emptyIntersection(t : ITerm) : Boolean = {
+    autDatabase.emptyIntersection(intersectionLeafIds(t))
+  }
+
+  private def specialConcreteEquality(left : ITerm,
+                                      right : ITerm) : Option[Boolean] =
+    (left, right) match {
+      case (IFunApp(`re_none`, Seq()),
+            IFunApp(`re_inter`, _)) =>
+        Some(emptyIntersection(right))
+      case (IFunApp(`re_inter`, _),
+            IFunApp(`re_none`, Seq())) =>
+        Some(emptyIntersection(left))
+      case _ =>
+        None
+    }
+
+  private def concreteEquality(left : ITerm, right : ITerm) : Boolean =
+    specialConcreteEquality(left, right).getOrElse(
+      autDatabase.regex2Id(left) == autDatabase.regex2Id(right))
+
+  private def canonicalOperand(t : ITerm) : Option[ITerm] = t match {
+    case fromId@IFunApp(`re_from_id`, Seq(IIntLit(id)))
+        if autDatabase.id2Automaton(id.intValueSafe).isDefined =>
+      Some(fromId)
+    case IFunApp(`re_from_id`, _) =>
+      None
+    case ConcreteRegex(regex) =>
+      Some(re_from_id(autDatabase.regex2Id(regex)))
+    case constant : IConstant =>
+      Some(constant)
+    case variable : IVariable =>
+      Some(variable)
+    case _ =>
+      None
+  }
+
+  private def canonicalEquality(left : ITerm, right : ITerm) : IFormula = {
+    val specialResult = (left, right) match {
+      case (ConcreteRegex(concreteLeft),
+            ConcreteRegex(concreteRight)) =>
+        specialConcreteEquality(concreteLeft, concreteRight)
+      case _ =>
+        None
+    }
+
+    specialResult match {
+      case Some(result) =>
+        IBoolLit(result)
+      case None =>
+        (canonicalOperand(left), canonicalOperand(right)) match {
+          case (Some(canonicalLeft), Some(canonicalRight)) =>
+            canonicalLeft === canonicalRight
+          case _ =>
+            reglan_eq_unsupported(left, right)
+        }
+    }
+  }
+
+  def postVisit(t : IExpression,
+                ctxt : Context[Unit],
+                subres : Seq[IExpression]) : IExpression = (t, subres) match {
+    case (IEquation(_, _), Seq(left : ITerm, right : ITerm))
+        if Sort.sortOf(left) == RegexSort =>
+      if (left == right) {
+        IBoolLit(true)
+      } else {
+        mode match {
+          case CanonicalizeAsIds =>
+            canonicalEquality(left, right)
+          case RejectNontrivial =>
+            reglan_eq_unsupported(left, right)
+          case LegacyConcrete =>
+            (left, right) match {
+              case (ConcreteRegex(concreteLeft),
+                    ConcreteRegex(concreteRight)) =>
+                IBoolLit(concreteEquality(concreteLeft, concreteRight))
+              case _ =>
+                reglan_eq_unsupported(left, right)
+            }
+        }
+      }
+    case _ =>
+      t update subres
+  }
 }
 
 

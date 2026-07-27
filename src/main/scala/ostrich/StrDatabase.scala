@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2020-2024 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2020-2026 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -83,7 +83,7 @@ class StrDatabase(theory : OstrichStringTheory) {
    * Check whether the given term represents a concrete string, and return
    * the string.
    */
-  def term2List(t : Term) : Option[List[Int]] = t match {
+  def term2List(t : Term) : Option[Seq[Int]] = t match {
     case LinearCombination.Constant(IdealInt(id)) => Some(id2List(id))
     case _ => None
   }
@@ -92,7 +92,7 @@ class StrDatabase(theory : OstrichStringTheory) {
    * Return the concrete string represented by the given term, throw
    * an exception if the term does not represent a concrete string.
    */
-  def term2ListGet(t : Term) : List[Int] = term2List(t).get
+  def term2ListGet(t : Term) : Seq[Int] = term2List(t).get
 
   /**
    * Check whether the given term represents a concrete string, and return
@@ -104,10 +104,34 @@ class StrDatabase(theory : OstrichStringTheory) {
   }
 
   /**
-   * Query the string for an id. If no string belongs to the id, an
-   * exception is thrown.
+   * Query the string for an id, represented as a list.
    */
-  def id2List(id : Int) : List[Int] = StringTheory.term2List(id2ITerm(id))
+  def id2List(id : Int) : Seq[Int] = synchronized {
+    import Regex2Aut.SmartConst
+
+    val result = new ArrayBuffer[Int]
+    var curId = id
+    var cont = true
+
+    while (cont) {
+      id2StrMap.get(curId) match {
+        case Some(IFunApp(`str_cons`,
+                          Seq(SmartConst(IdealInt(head)),
+                              IIntLit(IdealInt(tail))))) => {
+          result += head
+          curId = tail
+        }
+        case Some(IFunApp(`str_empty`, _)) =>
+          cont = false
+        case None =>
+          id2FreshITerm(curId) // then try again
+        case _ =>
+          throw new RuntimeException("Illegal entry in string database!")
+      }
+    }
+
+    result.toSeq
+  }
 
   /**
    * Enumerate prefix-suffix pairs for the given string by splitting
@@ -137,15 +161,37 @@ class StrDatabase(theory : OstrichStringTheory) {
   }
 
   /**
-   * Query the string for an id. If no string belongs to the id, an
-   * exception is thrown.
+   * Query the string for an id.
    */
-  def id2Str(id : Int) : String =
-    StringTheory term2String id2ITerm(id)
+  def id2Str(id : Int) : String = synchronized {
+    import Regex2Aut.SmartConst
+
+    val result = new java.lang.StringBuilder
+    var curId = id
+    var cont = true
+
+    while (cont) {
+      id2StrMap.get(curId) match {
+        case Some(IFunApp(`str_cons`,
+                          Seq(SmartConst(head), IIntLit(IdealInt(tail)))))
+            if head.signum >= 0 && head <= theory.upperBound => {
+          result.append(head.intValueSafe.toChar)
+          curId = tail
+        }
+        case Some(IFunApp(`str_empty`, _)) =>
+          cont = false
+        case None =>
+          id2FreshITerm(curId) // then try again
+        case _ =>
+          throw new RuntimeException("Illegal entry in string database!")
+      }
+    }
+
+    result.toString
+  }
 
   /**
-   * Query the string for an id. If no string belongs to the id, an
-   * exception is thrown.
+   * Query the string for an id, represented as a term.
    */
   def id2ITerm(id : Int) : ITerm = synchronized {
     id2StrMap.get(id) match {
@@ -157,7 +203,7 @@ class StrDatabase(theory : OstrichStringTheory) {
       case None =>
         id2FreshITerm(id)
       case _ =>
-        throw new RuntimeException("Riccardo, this should not happen!")
+        throw new RuntimeException("Illegal entry in string database!")
     }
   }
 

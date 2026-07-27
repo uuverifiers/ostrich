@@ -48,7 +48,9 @@ class OstrichAxioms(theory : OstrichStringTheory) {
   // Ideally, we just would use theory.order here, but that
   // does not seem to be set up correctly (we are too early?)
   implicit val order : TermOrder =
-    TermOrder.EMPTY.extendPred(List(str_contains, _str_++, _str_replace, _str_replaceall))
+    TermOrder.EMPTY.extendPred(
+      List(str_contains, _str_++, _str_replace, _str_replaceall,
+           _re_from_id, _re_reglan_to_id))
 
   private val CSo = CharSort
   private val SSo = StringSort
@@ -84,7 +86,16 @@ class OstrichAxioms(theory : OstrichStringTheory) {
         ==>
         (conj(l(v(3)) === l(v(0))))))))
 
+  /*
+   * re.reglan_to_id(re.from_id(i)) = i
+   */
+  val re_from_id_left_inverse : Conjunction =
+    forall(forall(
+      _re_from_id(List(l(v(0)), l(v(1)))) ==>
+      _re_reglan_to_id(List(l(v(1)), l(v(0))))))
+
   val axioms : Conjunction =
-    conj(not_contains_concat, not_contains_replace, not_contains_replace_all)
+    conj(not_contains_concat, not_contains_replace, not_contains_replace_all,
+         re_from_id_left_inverse)
 
 }

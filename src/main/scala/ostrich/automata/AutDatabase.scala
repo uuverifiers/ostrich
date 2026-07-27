@@ -70,7 +70,7 @@ class AutDatabase(theory : OstrichStringTheory,
 
   import AutDatabase._
   import IExpression.toFunApplier // for e.g. re_* to become applicable
-  import theory.{re_*, re_allchar, str_to_re}
+  import theory.{re_*, re_allchar, re_from_id, str_to_re}
 
   protected val regex2Aut  = new Regex2Aut(theory)
 
@@ -146,9 +146,17 @@ class AutDatabase(theory : OstrichStringTheory,
    */
   def regex2Id(regexTerm : ITerm) : Int =
     synchronized {
-      regexes.get(regexTerm) match {
-        case None     => addRegex(regexTerm)
-        case Some(id) => id
+      regexTerm match {
+        case IFunApp(`re_from_id`, Seq(IIntLit(id)))
+            if id2Aut contains id.intValueSafe =>
+          id.intValueSafe
+        case IFunApp(`re_from_id`, _) =>
+          throw new theory.IllegalRegexException
+        case _ =>
+          regexes.get(regexTerm) match {
+            case None     => addRegex(regexTerm)
+            case Some(id) => id
+          }
       }
     }
 
@@ -157,13 +165,26 @@ class AutDatabase(theory : OstrichStringTheory,
    * This will check whether we already know the language represented by
    * the regex, and in this case assign the same id.
    */
+  private def expandRegexIds(regexTerm : ITerm) : ITerm =
+    regexTerm match {
+      case IFunApp(`re_from_id`, Seq(IIntLit(id))) =>
+        expandRegexIds(
+          id2Regex.getOrElse(id.intValueSafe,
+                             throw new theory.IllegalRegexException))
+      case IFunApp(f, args) =>
+        IFunApp(f, args map expandRegexIds)
+      case _ =>
+        regexTerm
+    }
+
   private def addRegex(regexTerm : ITerm) : Int =
     synchronized {
       require(!regexes.contains(regexTerm))
-      val aut = regex2Aut.buildAut(regexTerm, minimizeAutomata)
+      val expandedRegex = expandRegexIds(regexTerm)
+      val aut = regex2Aut.buildAut(expandedRegex, minimizeAutomata)
       val id = automaton2Id(aut)
       regexes.put(regexTerm, id)
-      id2Regex.getOrElseUpdate(id, regexTerm)
+      id2Regex.getOrElseUpdate(id, expandedRegex)
       id
     }
 
