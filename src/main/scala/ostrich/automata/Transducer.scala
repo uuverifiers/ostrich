@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -174,5 +174,59 @@ trait TransducerBuilder[State, TLabel] {
    * this
    */
   def getTransducer : Transducer
+}
+
+/**
+ * Trait for transducers with atomic/nominal states; i.e., states
+ * don't have any structure and are not composite, there is a unique
+ * initial state, and a set of accepting states.
+ */
+trait AtomicStateTransducer extends Transducer {
+  import Transducer._
+
+  /**
+   * Type of states
+   */
+  type State
+
+  /**
+   * Type of labels
+   */
+  type TLabel
+
+  /**
+   * Transitions over label, with output op, to state
+   */
+  type TTransition = (TLabel, OutputOp, State)
+
+  /**
+   * E-Transitions with output op to state
+   */
+  type TETransition = (OutputOp, State)
+
+  /**
+   * Operations on labels
+   */
+  val LabelOps : TLabelOps[TLabel]
+
+  /**
+   * The unique initial state
+   */
+  val initialState : State
+
+  /**
+   * Given a state, iterate over all outgoing transitions
+   */
+  def outgoingTransitions(from : State) : Iterator[TTransition]
+
+  /**
+   * Given a state, iterate over all outgoing epsilon transitions
+   */
+  def outgoingETransitions(from : State) : Iterator[TETransition]
+
+  /**
+   * Test if state is accepting
+   */
+  def isAccept(s : State) : Boolean
 }
 

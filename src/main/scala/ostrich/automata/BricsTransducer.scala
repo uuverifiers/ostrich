@@ -1,21 +1,21 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
  * Copyright (c) 2018-2022 Matthew Hague, Philipp Ruemmer. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the authors nor the names of their
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -64,7 +64,7 @@ object BricsTransducer {
   def getStrAtTransducer(n : Int) : BricsTransducer =
     synchronized {
       strAtTransducer.getOrElseUpdate(
-        n, 
+        n,
         if (n < 0) {
           SilentTransducer
         } else {
@@ -100,7 +100,7 @@ object BricsTransducer {
   def getStrAtRightTransducer(n : Int) : BricsTransducer =
     synchronized {
       strAtRightTransducer.getOrElseUpdate(
-        n, 
+        n,
         if (n < 0) {
           SilentTransducer
         } else {
@@ -150,7 +150,7 @@ object BricsTransducer {
     assert(trimLeft >= 0 && trimRight >= 0)
 
     import Transducer._
- 
+
     val builder = BricsTransducer.getBuilder
 
     val delStates =
@@ -214,33 +214,39 @@ object BricsTransducer {
  * character from input.  From an output state, all transitions produce
  * a character of output
  */
-class BricsTransducer(val initialState : BricsAutomaton#State,
+class BricsTransducer(override val initialState : BricsAutomaton#State,
                       val lblTrans: Map[BricsAutomaton#State,
                                         Set[BricsTransducer#TTransition]],
                       val eTrans: Map[BricsAutomaton#State,
                                       Set[BricsTransducer#TETransition]],
                       val acceptingStates : Set[BricsAutomaton#State])
-    extends Transducer {
+    extends AtomicStateTransducer {
   import BricsTransducer.TransducerState
   import Transducer._
 
-  val LabelOps : TLabelOps[BricsAutomaton#TLabel] = BricsTLabelOps
+  type State = BricsAutomaton#State
+  type TLabel = BricsAutomaton#TLabel
 
-  type TTransition = (BricsAutomaton#TLabel, OutputOp, BricsAutomaton#State)
-  type TETransition = (OutputOp, BricsAutomaton#State)
+  override val LabelOps : TLabelOps[TLabel] = BricsTLabelOps
 
   private def label(t : TTransition) = t._1
   private def operation(t : TTransition) = t._2
-  private def dest(t : TTransition) : BricsAutomaton#State = t._3
+  private def dest(t : TTransition) : State = t._3
   private def operation(t : TETransition) = t._1
-  private def dest(t : TETransition) : BricsAutomaton#State = t._2
-  private def dest(t : Either[TTransition, TETransition]) : BricsAutomaton#State
+  private def dest(t : TETransition) : State = t._2
+  private def dest(t : Either[TTransition, TETransition]) : State
     = t match {
       case Left(lblTran) => dest(lblTran)
       case Right(eTran) => dest(eTran)
     }
 
-  def isAccept(s : BricsAutomaton#State) = acceptingStates.contains(s)
+  override def outgoingTransitions(from : State)
+    : Iterator[TTransition] = lblTrans.getOrElse(from, Seq()).iterator
+
+  override def outgoingETransitions(from : State)
+    : Iterator[TETransition] = eTrans.getOrElse(from, Seq()).iterator
+
+  override def isAccept(s : State) = acceptingStates.contains(s)
 
   def preImage[A <: AtomicStateAutomaton]
               (aut : A,
@@ -263,8 +269,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
 
     // map states of pre-image aut to state of transducer and state of
     // aut
-    val sMap = new MHashMap[aut.State, (BricsAutomaton#State, aut.State)]
-    val sMapRev = new MHashMap[(BricsAutomaton#State, aut.State), aut.State]
+    val sMap = new MHashMap[aut.State, (State, aut.State)]
+    val sMapRev = new MHashMap[(State, aut.State), aut.State]
 
     val initAutState = aut.initialState
     val newInitState = preBuilder.getNewState
@@ -279,7 +285,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
                             with MMultiMap[aut.State, aut.State]
 
     // transducer state, automaton state
-    def getState(ts : BricsAutomaton#State, as : aut.State) = {
+    def getState(ts : State, as : aut.State) = {
       sMapRev.getOrElse((ts, as), {
         val ps = preBuilder.getNewState
         sMapRev += ((ts, as) -> ps)
@@ -307,18 +313,18 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     // current state of target aut reached
     // mode as above
     val worklist = new MStack[(aut.State,
-                               BricsAutomaton#State,
+                               State,
                                Either[TTransition, TETransition],
                                aut.State,
                                Mode)]
     val seenlist = new MHashSet[(aut.State,
-                                 BricsAutomaton#State,
+                                 State,
                                  Either[TTransition, TETransition],
                                  aut.State,
                                  Mode)]
 
     def addWork(ps : aut.State ,
-                ts : BricsAutomaton#State,
+                ts : State,
                 t : Either[TTransition, TETransition],
                 as : aut.State,
                 m : Mode) {
@@ -361,7 +367,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
       }
     }
 
-    def reachStates(ts : BricsAutomaton#State, as : aut.State) {
+    def reachStates(ts : State, as : aut.State) {
       val ps = getState(ts, as)
       if (isAccept(ts) && aut.isAccept(as))
         preBuilder.setAccept(ps, true)
@@ -492,8 +498,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
 
     // map states of pre-image aut to state of transducer and state of
     // aut
-    val sMap = new MHashMap[aut.State, (BricsAutomaton#State, aut.State)]
-    val sMapRev = new MHashMap[(BricsAutomaton#State, aut.State), aut.State]
+    val sMap = new MHashMap[aut.State, (State, aut.State)]
+    val sMapRev = new MHashMap[(State, aut.State), aut.State]
 
     val internalStateMap : Option[Map[A#State, aut.State]] =
       internalAut.map(_.states.map(s => (s -> builder.getNewState)).toMap)
@@ -519,7 +525,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     worklist.push(newInitState)
 
     // transducer state, automaton state
-    def getState(ts : BricsAutomaton#State, as : aut.State) = {
+    def getState(ts : State, as : aut.State) = {
       sMapRev.getOrElse((ts, as), {
         val ps = builder.getNewState
         if (isAccept(ts) && aut.isAccept(as))
@@ -660,8 +666,8 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
     if (input.size == 0 && isAccept(initialState))
       return Some("")
 
-    val worklist = new MStack[(BricsAutomaton#State, Int, String)]
-    val seenlist = new MHashSet[(BricsAutomaton#State, Int)]
+    val worklist = new MStack[(State, Int, String)]
+    val seenlist = new MHashSet[(State, Int)]
 
     worklist.push((initialState, 0, ""))
 
@@ -728,7 +734,7 @@ class BricsTransducer(val initialState : BricsAutomaton#State,
       case OutputOp(preW, Plus(_), postW) =>
         preW.size + preW.size + 1
     }
-    
+
     def allLblTrans =
       for (transitions <- lblTrans.valuesIterator;
            t <- transitions.iterator)
