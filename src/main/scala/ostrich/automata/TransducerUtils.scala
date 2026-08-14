@@ -36,34 +36,40 @@ import scala.collection.mutable.{HashSet => MHashSet,
                                  Stack => MStack}
 
 object TransducerUtils {
-  def incompleteTransducerEmptyIntersection(
-    t1 : AtomicStateTransducer,
-    t2 : AtomicStateTransducer,
+  /**
+   * Fixed depth search for emptiness of intersection
+   *
+   * Requires/assumes all transducers have same label and state type.
+   *
+   * @return None if could not be determined, else true/false if
+   * non-empty or not
+   */
+  def incompleteTransducerNonEmptyIntersection(
+    ts : Seq[AtomicStateTransducer],
     depth : Int
   ) : Option[Boolean] = {
 
-    // keeps (s1, s2, w1, w2, d1, d2)
-    // s1, s2 = states of t1, t2
-    // w1, w2 = unmatched buffer from t1, t2 (one should always be
-    // empty, assume both have same label type)
-    // d1, d2 = depth explored into t1, t2
+    if (ts.isEmpty)
+      return Some(true)
+
+    val head = ts.head
+
+    // keeps (t, s, w, d) for each transducer
+    // t the transducer, for convenience
+    // s state of transducer
+    // w unmatched buffer (what transducer has output that hasn't been
+    // matched by others -- at least one of these is always empty,
+    // blocking matching for the rest)
+    // d = depth explored into transducer
     type TProductState
-      = (t1.State, t2.State, Seq[t1.TLabel], Seq[t1.TLabel], Int, Int)
+      = Vector[(AtomicStateTransducer, head.State, Seq[head.TLabel], Int)]
 
     val worklist = new MStack[TProductState]
     val seenlist = MHashSet[TProductState]()
 
-    def addWork(
-      s1 : t1.State,
-      s2 : t2.State,
-      w1 : Seq[t1.TLabel],
-      w2 : Seq[t1.TLabel],
-      d1 : Int,
-      d2 : Int
-    ) {
-      val item = (s1, s2, w1, w2, d1, d2)
-      if (!seenlist.contains(item))
-        worklist.push(item)
+    def addWork(work : TProductState) {
+      if (!seenlist.contains(work))
+        worklist.push(work)
     }
 
     /**
@@ -72,91 +78,104 @@ object TransducerUtils {
      * Or None for epsilon
      */
     def getOpSeq(
-      lbl : Option[t1.TLabel],
+      lbl : Option[head.TLabel],
       op : Transducer.OutputOp
-    ) : Seq[t1.TLabel] = {
+    ) : Seq[head.TLabel] = {
       val lblSeq = if (lbl.isEmpty) {
         Seq()
       } else {
         op.op match {
           case Transducer.NOP => Seq()
-          case Transducer.Plus(n) => Seq(t1.LabelOps.shift(lbl.get, n))
+          case Transducer.Plus(n) => Seq(head.LabelOps.shift(lbl.get, n))
           // TODO: handle internal somehow
         }
       }
       return (
-        (op.preW.map(c => t1.LabelOps.singleton(c)))
+        (op.preW.map(c => head.LabelOps.singleton(c)))
         ++ lblSeq
-        ++ (op.postW.map(c => t1.LabelOps.singleton(c)))
+        ++ (op.postW.map(c => head.LabelOps.singleton(c)))
       )
     }
 
     /**
-     * Remove matching items from the front of w1, w2
+     * Remove matching items from the front of w buffers
      *
      * @return None if prefixes have a conflict, else the trimmed
      * buffers, at least one of which has been emptied
      */
-    def trimFrontBuffers(w1 : Seq[t1.TLabel], w2 : Seq[t1.TLabel])
-      : Option[(Seq[t1.TLabel], Seq[t1.TLabel])] = {
-      var u1 = w1
-      var u2 = w2
-      while (u1.size > 0 && u2.size > 0) {
-        if (!t1.LabelOps.labelsOverlap(u1.head, u2.head))
-          return None
+    def trimFrontBuffers(ws : Seq[Seq[head.TLabel]])
+      : Option[Seq[Seq[head.TLabel]]] = {
+      var us = ws
+      while (us.forall(_.nonEmpty)) {
 
-        u1 = u1.tail
-        u2 = u2.tail
+        var intersectionLbl = head.LabelOps.sigmaLabel
+        for (w <- ws) {
+          val tryIntersection
+            = head.LabelOps.intersectLabels(intersectionLbl, w.head)
+          if (tryIntersection.isEmpty)
+            return None
+          intersectionLbl = tryIntersection.get
+        }
+
+        us = us.map(_.tail)
       }
-      return Some((u1, u2))
+      return Some(us)
     }
 
-    val winit = Seq[t1.TLabel]()
-    worklist push ((t1.initialState, t2.initialState, winit, winit, 0, 0))
+    worklist.push(
+      ts.map(
+        t => (
+          t,
+          t.initialState.asInstanceOf[head.State],
+          Seq[head.TLabel](),
+          0
+        )
+      ).toVector
+    )
 
-    // shift t1 and t2 independently, using w1, w2 to buffer
+    // shift each transducer independently, using buffers to sync
     while (!worklist.isEmpty) {
-      val (s1, s2, w1, w2, d1, d2) = worklist.pop()
+      val states = worklist.pop()
 
       // found a match
-      if (t1.isAccept(s1) && t2.isAccept(s2) && w1.isEmpty && w2.isEmpty)
+      val isAccept = states.forall { case (t, s, w, _) =>
+        t.isAccept(s.asInstanceOf[t.State]) && w.isEmpty
+      }
+      if (isAccept)
         return Some(true)
 
-      if (d1 < depth) {
-        for (
-          (lbl, op, s1next) <- (
-            t1.outgoingTransitions(s1).map(t => (Some(t._1), t._2, t._3))
-            ++ t1.outgoingETransitions(s1).map(t => (None, t._1, t._2))
-          )
-        ) {
-          val trimmedBuffers = trimFrontBuffers(w1 ++ getOpSeq(lbl, op), w2)
-          if (trimmedBuffers.nonEmpty) {
-            // explored past depth
-            if (d1 >= depth && d2 >= depth)
+      for (i <- 0 to states.size) {
+        val (t, s, w, d) = states(i)
+        if (d < depth) {
+          // m for "move" instead of t for transition since t for transducer
+          val s4t = s.asInstanceOf[t.State]
+          for (
+            (lbl4t, op, snext4t) <- (
+              t.outgoingTransitions(s4t).map(m => (Some(m._1), m._2, m._3))
+              ++ t.outgoingETransitions(s4t).map(m => (None, m._1, m._2))
+            )
+          ) {
+            val lbl = lbl4t.map(_.asInstanceOf[head.TLabel])
+            val snext = snext4t.asInstanceOf[head.State]
+
+            val outLbls = getOpSeq(lbl, op)
+            val nextTState = (t, snext, w ++ outLbls, d + 1)
+            val nextStates = states.updated(i, nextTState)
+
+            // exploration could continue past depth, give up
+            if (nextStates.forall(_._4 >= depth))
               return None
 
-            val (w1next, w2next) = trimmedBuffers.get
-            addWork(s1next, s2, w1next, w2next, d1 + 1, d2)
-          }
-        }
-      }
-
-      if (d2 < depth) {
-        for (
-          (lbl, op, s2next) <- (
-            t2.outgoingTransitions(s2).map(t =>
-              (Some(t._1.asInstanceOf[t1.TLabel]), t._2, t._3)
-            ) ++ t2.outgoingETransitions(s2).map(t => (None, t._1, t._2))
-          )
-        ) {
-          val trimmedBuffers = trimFrontBuffers(w1, w2 ++ getOpSeq(lbl, op))
-          if (trimmedBuffers.nonEmpty) {
-            // explored past depth
-            if (d1 >= depth && d2 >= depth)
-              return None
-
-            val (w1next, w2next) = trimmedBuffers.get
-            addWork(s1, s2next, w1next, w2next, d1, d2 + 1)
+            val ws = nextStates.map(_._3).toVector
+            val trimmedWs = trimFrontBuffers(ws)
+            if (trimmedWs.nonEmpty) {
+              val trimmedNextStates
+                = nextStates.zipWithIndex.map { case (state, i) =>
+                  val (t1, s1, _, d1) = state
+                  (t1, s1, trimmedWs.get(i), d1)
+                }.toVector
+              addWork(trimmedNextStates)
+            }
           }
         }
       }
