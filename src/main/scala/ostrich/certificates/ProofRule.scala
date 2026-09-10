@@ -50,3 +50,8 @@ case class BwdPropagationRule   (op       : PreOp,
 case class InconsistentRegexRule(regexes  : Seq[Formula],
                                  theory   : OstrichStringTheory)
   extends OstrichProofRule
+
+case class EvalRegexRule        (regex    : Formula,
+                                 result   : Boolean,
+                                 theory   : OstrichStringTheory)
+  extends OstrichProofRule

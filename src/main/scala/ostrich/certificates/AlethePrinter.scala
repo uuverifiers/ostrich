@@ -167,6 +167,12 @@ class OstrichAletheTheoryPrinter(theory : OstrichStringTheory)
         ctxt.hyperResolution(l, assumptions, CertFormula.FALSE)
       }
 
+      case EvalRegexRule(regex, result, _) => {
+        ctxt.introduceFormulaThroughEqualityStep(
+          "str_in_re_eval", List(), Some(inference.axiom), result)
+        ctxt.continuePrinting(nextInferences, childCert)
+      }
+
       case r => {
         // A proof rule we do not understand, let's invoke magic!
 

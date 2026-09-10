@@ -33,7 +33,7 @@
 package ostrich
 
 import ostrich.automata.{AutDatabase, BricsAutomaton}
-import ostrich.certificates.InconsistentRegexRule
+import ostrich.certificates.{InconsistentRegexRule, EvalRegexRule}
 
 import ap.basetypes.IdealInt
 import ap.parser.{IBoolLit, IFunApp, IIntLit, IExpression}
@@ -46,6 +46,7 @@ import ap.terfor.preds.{Atom, PredConj, Predicate}
 import ap.terfor.linearcombination.LinearCombination
 import ap.util.PeekIterator
 import AutDatabase.{ComplementedAut, NamedAutomaton, PositiveAut}
+import ap.proof.certificates.AugmentedTheoryRule
 
 import scala.collection.mutable.{ArrayBuffer, HashMap => MHashMap}
 
@@ -212,6 +213,11 @@ class OstrichReducer protected[ostrich]
       logger.otherComputation(List(a), result, order, theory)
       result
     }
+    def rewriteLoggingRule(a : Atom, result : Formula,
+                           rule : AugmentedTheoryRule) : Formula = {
+      logger.otherComputation(List(a), result, order, theory, rule)
+      result
+    }
 
     ReducerPlugin.rewritePreds(predConj, rewritablePredicates,
                                order, logger) { a =>
@@ -246,8 +252,10 @@ class OstrichReducer protected[ostrich]
           } else if (isConcrete(a(0))) {
             val Some(str) = term2List(a(0))
             val Some(aut) = autDatabase.id2Automaton(autId)
-            rewriteLogging(
-              a, if (aut(str)) Conjunction.TRUE else Conjunction.FALSE)
+            val result    = aut(str)
+            rewriteLoggingRule(
+              a, if (result) Conjunction.TRUE else Conjunction.FALSE,
+              EvalRegexRule(a, result, theory))
           } else if (logging) {
             a
           } else {
