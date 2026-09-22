@@ -8,7 +8,7 @@ object NFATranslationCorrectness extends Properties("AFA2") {
   property("Parallel-NFATranslator tested against Lazy-NFATranslator (1000 random automata)") = {
     val automataCount = 1000L
     var seed = 0L
-    // heap overflow at seed 946
+    // used to cause a heap overflow at seed 946
 
     var counter = 0
     var parallelTime = 0L
