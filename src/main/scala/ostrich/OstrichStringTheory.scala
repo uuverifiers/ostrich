@@ -39,6 +39,7 @@ import ostrich.proofops.{
   CutSaturation,
   ForwardsSaturation,
   LengthAbstraction,
+  LengthEquations,
   OstrichClose,
   OstrichCut,
   OstrichIntersect,
@@ -286,7 +287,7 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     (extraIndexedFunctions map (_._1)) ++
     extraExtraFunctions
 
-  val (funPredicates, _, _, functionPredicateMap) =
+  val (funPredicates, baseAxioms, baseOrder, functionPredicateMap) =
     Theory.genAxioms(theoryFunctions = functions,
                      extraPredicates = List(str_in_re_id, agePred))
   val predicates =
@@ -300,17 +301,18 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
   val totalityAxioms = Conjunction.TRUE
   val triggerRelevantFunctions : Set[IFunction] = Set()
 
-  val IntEnumerator       = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
+  val IntEnumerator               = new IntValueEnumTheory("OstrichIntEnum", 50, 20)
   private val forwardSaturation   = new ForwardsSaturation(this)
   private val backwardsSaturation = new BackwardsSaturation(this)
   private val lengthAbstraction   = new LengthAbstraction(this)
-  private val cutSaturation = new CutSaturation(this)
+  private val lengthEquations     = new LengthEquations(this)
+  private val cutSaturation       = new CutSaturation(this)
 
   override val dependencies : Iterable[Theory] =
     List(ModuloArithmetic, IntEnumerator) ++
     List(forwardSaturation).filter(_ => theoryFlags.forwardPropagation) ++
     List(backwardsSaturation).filter(_ => theoryFlags.backwardPropagation) ++
-    List(lengthAbstraction)  ++ List(cutSaturation)
+    List(lengthAbstraction, cutSaturation) //, lengthEquations)
 
   val _str_empty      = functionPredicateMap(str_empty)
   val _str_cons       = functionPredicateMap(str_cons)
@@ -329,9 +331,22 @@ class OstrichStringTheory(transducers : Seq[(String, Transducer)],
     Map(str_contains    -> Signature.PredicateMatchStatus.Negative,
         _str_++         -> Signature.PredicateMatchStatus.Positive,
         _str_replace    -> Signature.PredicateMatchStatus.Positive,
-        _str_replaceall -> Signature.PredicateMatchStatus.Positive)
+        _str_replaceall -> Signature.PredicateMatchStatus.Positive,
+        _str_len        -> Signature.PredicateMatchStatus.Positive)
 
-  val axioms          = new OstrichAxioms(this).axioms
+  val relevantFunctionalityAxioms =
+    Conjunction.conj(
+      baseAxioms.asInstanceOf[Conjunction].negatedConjs
+                .filter(c => c.predicates.contains(_str_len))
+                .map(Conjunction.negate(_, baseOrder)),
+      baseOrder)
+  val extraAxioms =
+    new OstrichAxioms(this).axioms
+
+  val axioms = extraAxioms
+               //Conjunction.conj(List(
+               //                   relevantFunctionalityAxioms,
+               //                 baseOrder)
 
   private val predFunMap =
     (for ((f, p) <- functionPredicateMap) yield (p, f)).toMap
