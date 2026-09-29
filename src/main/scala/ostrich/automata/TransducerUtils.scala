@@ -144,7 +144,7 @@ object TransducerUtils {
       if (isAccept)
         return Some(true)
 
-      for (i <- 0 to states.size) {
+      for (i <- 0 until states.size) {
         val (t, s, w, d) = states(i)
         if (d < depth) {
           // m for "move" instead of t for transition since t for transducer
