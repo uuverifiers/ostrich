@@ -334,7 +334,8 @@ case class AFA2(initialStates : Seq[Int],
 
   }
 
-  def optimizeUntilFixpoint(): AFA2 = {
+  // run all available optimizations
+  def optimize(): AFA2 = {
 
     def runAndMeasure(name: String, aut: AFA2, optimization: AFA2 => AFA2): AFA2 = {
       val start = System.currentTimeMillis()
@@ -375,6 +376,8 @@ case class AFA2(initialStates : Seq[Int],
       _.localDominatedStateCheck()
     )
 
+    // currently not in use because computing the dominance relation
+    // is expensive and yields little
     /**
     reducedAut = runAndMeasure(
       "dominatedStateCheck()",
@@ -384,14 +387,6 @@ case class AFA2(initialStates : Seq[Int],
     */
 
     reducedAut
-  }
-
-  def getRestAutomaton(q: Int): AFA2 = {
-    AFA2(
-      Seq(q),
-      finalStates,
-      transitions
-    ).restrictToReachableStates
   }
 
   def merge(q: Int, p: Int): AFA2 = {
@@ -437,28 +432,7 @@ case class AFA2(initialStates : Seq[Int],
     ).restrictToReachableStates
   }
 
-  lazy val isOneWay: Boolean = {
-    transitions.values
-      .flatten
-      .forall(_.step == Right)
-  }
-
   type IncomingTransition = (Int, StepTransition)
-
-  lazy val incomingTransitions: Map[Int, Seq[IncomingTransition]] = {
-    val incoming = mutable.HashMap[Int, Seq[IncomingTransition]]()
-
-    for ((source, outgoing) <- transitions) {
-      for (transition <- outgoing) {
-        for (target <- transition.targets.distinct) {
-          val current = incoming.getOrElse(target, Seq.empty)
-          incoming(target) = current :+ (source, transition)
-        }
-      }
-    }
-
-    incoming.toMap
-  }
 
   lazy val normalizedIncomingTransitions: Map[Int, Seq[IncomingTransition]] = {
     val incoming = mutable.HashMap[Int, Seq[IncomingTransition]]()

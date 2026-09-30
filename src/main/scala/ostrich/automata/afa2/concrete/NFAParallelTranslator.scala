@@ -32,9 +32,7 @@
 
 package ostrich.automata.afa2.concrete
 
-import ap.util.Combinatorics
 import ostrich.automata.afa2.StepTransition
-import ostrich.automata.afa2.symbolic.SymbEpsReducer
 import ostrich.automata.{AutomataUtils, BricsAutomaton, BricsAutomatonBuilder}
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
@@ -362,6 +360,30 @@ class ParallelNFATranslator(afa : AFA2) {
           // Different choices can result in the same Q'.
           targetCandidates = nextCandidates.distinct
         }
+
+        // The direct construction initially produces only the individual valid target macro-states.
+        // However, several of these alternatives may also occur together in the same valid successor.
+        // We therefore compute every non-empty subset of the generated candidates and merge each subset
+        // into one macro-state. This gives us all unions of the independently generated valid candidates
+        // without enumerating arbitrary subsets of all possible target states.
+        //
+        // Suppose the direct construction finds two valid target macro-states:
+        // Q'_1 = {1, 2}
+        // Q'_2 = {3}
+        //
+        // Both are valid successors on their own, but they may also occur together.
+        // The combined successor is:
+        // Q'_1 ∪ Q'_2 = {1, 2, 3}
+
+        val combinedCandidates =
+          targetCandidates.toSet.subsets()
+            .filter(_.nonEmpty)
+            .map(_.flatten)
+            .toSeq
+            .distinct
+
+        targetCandidates = combinedCandidates.distinct
+        // (Seed 38 still does not work)
 
         // Avoid adding the same successor more than once for this Q and label
         val consideredToStates = new MHashSet[MacroState]
