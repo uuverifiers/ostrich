@@ -39,7 +39,7 @@ import ap.parser._
 import ap.theories.strings.StringTheory
 import ap.theories.ModuloArithmetic
 import dk.brics.automaton.{BasicAutomata, BasicOperations, RegExp, Automaton => BAutomaton}
-import ostrich.automata.afa2.concrete.{AFA2, AFA2StateDuplicator, NFATranslator}
+import ostrich.automata.afa2.concrete.{AFA2, AFA2StateDuplicator, NFATranslator, NFATranslatorParallel}
 import ostrich.automata.afa2.symbolic.{SymbAFA2Builder, SymbEpsReducer, SymbExtAFA2, SymbMutableAFA2, SymbToConcTranslator}
 import ostrich.automata.afa2.AFA2PrintingUtils
 
@@ -475,19 +475,15 @@ class Regex2Aut(theory : OstrichStringTheory) {
     //println("Time for symbolic to concrete: " + duration2)
     if (debug)
       AFA2PrintingUtils.printAutDotToFile(concAut, "concAut.dot")
-    var duration = (System.currentTimeMillis() - t1) // / 1000d
 
     /*
-    Step 4: Naive minimization of the automata. Essentially states
-    with same outgoing labels going to same states are merged. The
-    procedure is iterative and reaches a fixpoint where no states can
-    be merged anymore. Output: 2AFA (concrete, only accepts at the end
-    of word)
+    Step 4: Size optimization of the automata.
+    Output: 2AFA (concrete, only accepts at the end of word)
      */
-    //println("Eliminating redundant states in progress...")
-    val redConcAut = concAut.minimizeStates()
-    //val redConcAut = concAut
-    //println("Total time for regex -> 2AFA translation: " + duration)
+    println("Eliminating redundant states in progress...")
+    println("States before:" + concAut.states.size)
+    val redConcAut = concAut.optimize()
+    println("States after:" + redConcAut.states.size)
     if (debug)
       AFA2PrintingUtils.printAutDotToFile(redConcAut, "reducedConcAut.dot")
     if (debug)
@@ -496,11 +492,20 @@ class Regex2Aut(theory : OstrichStringTheory) {
     /*
     Step 5: 2AFA -> NFA translation
      */
-    t1 = System.currentTimeMillis()
-    val concNFA = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap)))
-    duration = (System.currentTimeMillis() - t1) // / 1000d
-    //println("Time for 2AFA -> NFA translation: " + duration)
-    //println("BricsAutomaton:\n" + res)
+    val start = System.nanoTime()
+
+    // we use the old translator, until the bug in the parallel translator is found
+    val concNFA = NFATranslator(AFA2StateDuplicator(redConcAut), null)
+    //val concNFA = NFATranslatorParallel(AFA2StateDuplicator(redConcAut))
+
+    if(debug)
+      println("Parallel 2AFA -> NFA: " + (System.nanoTime() - start) / 1e9 + "s")
+
+    if(debug) {
+      val lazyStart = System.nanoTime()
+      val concLazyNFA = NFATranslator(AFA2StateDuplicator(redConcAut), epsRed, Some(transl.rangeMap.map(_.swap)))
+      println("Lazy 2AFA -> NFA: " + (System.nanoTime() - lazyStart) / 1e9 + "s")
+    }
 
     val symbNFA = transl.bricsBack(concNFA, Set(epsRed.beginMarker, epsRed.endMarker))
 

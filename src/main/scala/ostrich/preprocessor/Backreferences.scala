@@ -58,6 +58,10 @@ class Backreferences(theory : OstrichStringTheory) {
     }
   }
 
+  /**
+   * Checks if there is any backreference in a given regex, needed because
+   * capture groups + backreferences make a regex non-regular
+   */
   def containsReference(t : ITerm) : Boolean =
     ContainsSymbol(t, expr => expr match {
       case IFunApp(`re_reference`, _) => true
@@ -67,6 +71,7 @@ class Backreferences(theory : OstrichStringTheory) {
   /**
    * Replace uniquely defined back-references with the regex of the
    * corresponding capture group.
+   * This produces an overapproximation of the underlying regex.
    */
   def stubBackRefs(re     : ITerm,
                    groups : Map[IdealInt, ITerm])

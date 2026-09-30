@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="ecma2020parser [file:/C:/Users/henri/Uni%20Unterlagen/ostrich/]" external.linked.project.path="$MODULE_DIR$/../../ecma2020" external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" external.system.module.type="nestedProject" type="JAVA_MODULE" version="4">
+  <component name="DisplayModuleName">
+    <option name="name" value="OSTRICH-ECMA2020-parser" />
+  </component>
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_23">
+    <output url="file://$MODULE_DIR$/../../ecma2020/target/scala-2.11/classes" />
+    <output-test url="file://$MODULE_DIR$/../../ecma2020/target/scala-2.11/test-classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../ecma2020">
+      <excludeFolder url="file://$MODULE_DIR$/../../ecma2020/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: scala-sdk-2.11.12" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.11.12:jar" level="project" />
+  </component>
+</module>

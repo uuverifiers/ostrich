@@ -10,3 +10,10 @@
 /project/project
 /project/target
 /project/build.properties
+
+# IntelliJ
+*.iml
+/.idea/
+
+# output
+/ecma2020/target/streams/_global/ivyConfiguration/_global/streams

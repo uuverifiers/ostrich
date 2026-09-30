@@ -59,9 +59,11 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
   import afa._
   import ostrich.automata.afa2.{Left, Right, Step}
 
-  val categorisedStates =
+  // union of categorised states
+  private val categorisedStates =
     irStates ++ llStates ++ lrStates ++ rlStates ++ rrStates ++ rfStates
 
+  // state set and union of categorized state sets must be the same
   assert(states.toSet == categorisedStates &&
          states.size == irStates.size + llStates.size + lrStates.size +
            rlStates.size + rrStates.size + rfStates.size,
@@ -69,11 +71,12 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
            "Problem states: " +
            (states filterNot categorisedStates).mkString(", "))
 
+  // only one inital state
   assert(irStates.size == 1)
 
   assert(transitions forall {
            case (_, ts) => ts forall {
-             case StepTransition(_, _, targets) => !targets.isEmpty
+             case StepTransition(_, _, targets) => targets.nonEmpty
          }},
          "Transitions with zero target states are not supported")
 
@@ -353,6 +356,7 @@ class LazyNFATranslator(afa : AFA2, epsRed : SymbEpsReducer, charMap: Option[Map
   AutomataUtils.buildEpsilons(builder, epsilons)
 
   val result = builder.getAutomaton
+  println("Lazy-NFA size: " + result.states.size)
 
   /*println
   println("#states after minimization:      " + result.states.size)

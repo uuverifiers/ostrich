@@ -45,6 +45,10 @@ object AFA2StateDuplicator {
 /**
  * Class to duplicate states in such a way that they can be
  * categorised into ir, ll, lr, rl, rr, rf.
+ *
+ * NOTE: This class can not convert any 2AFA into a S2AFA but only the subclass of automata
+ * produced by the pipeline. All processing steps need to repect that, thus all optimizations
+ * on the 2AFA must produce an automaton that still belongs to the subclass!
  */
 class AFA2StateDuplicator(afa : AFA2) {
 

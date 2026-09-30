@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ScalaCompilerConfiguration">
+    <profile name="sbt 1" modules="ostrich_2427" />
+    <profile name="sbt 2" modules="ostrich,ostrich.OSTRICH-ECMA2020-parser">
+      <option name="deprecationWarnings" value="true" />
+    </profile>
+  </component>
+</project>

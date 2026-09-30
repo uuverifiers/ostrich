@@ -32,10 +32,11 @@
 
 package ostrich.automata.afa2.concrete
 
-import ostrich.automata.afa2.{Left, Right, StepTransition, Transition}
+import ostrich.automata.afa2.{Left, Right, Step, StepTransition}
 
+import java.nio.file.Path
 import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, HashSet => MHashSet}
+import scala.collection.mutable.{HashSet => MHashSet}
 
 /*
  * Existential nondeterminism is implemented by having multiple
@@ -333,9 +334,429 @@ case class AFA2(initialStates : Seq[Int],
 
   }
 
-/*
- * Eliminates non-forward reachable and non-backward reachable states.
- */
+  // run all available optimizations
+  def optimize(): AFA2 = {
+
+    def runAndMeasure(name: String, aut: AFA2, optimization: AFA2 => AFA2): AFA2 = {
+      val start = System.currentTimeMillis()
+      val statesBefore = aut.states.size
+
+      val result = optimization(aut)
+
+      val time = (System.currentTimeMillis() - start).toDouble / 1000
+      val statesAfter = result.states.size
+
+      val reduction =
+        if (statesBefore == 0) 0.0
+        else (statesBefore - statesAfter).toDouble / statesBefore * 100
+
+      println(s"$name: $time s, $statesBefore -> $statesAfter states (-$reduction%)")
+
+      result
+    }
+
+    var reducedAut = this
+
+    reducedAut = runAndMeasure(
+      "minimizeStates()",
+      reducedAut,
+      _.minimizeStates()
+    )
+
+    reducedAut = runAndMeasure(
+      "partitionRefinement()",
+      reducedAut,
+      _.partitionRefinement()
+    )
+
+
+    reducedAut = runAndMeasure(
+      "localDominatedStateCheck()",
+      reducedAut,
+      _.localDominatedStateCheck()
+    )
+
+    // currently not in use because computing the dominance relation
+    // is expensive and yields little
+    /**
+    reducedAut = runAndMeasure(
+      "dominatedStateCheck()",
+      reducedAut,
+      _.dominatedStateCheck()
+    )
+    */
+
+    reducedAut
+  }
+
+  def merge(q: Int, p: Int): AFA2 = {
+    // replace q with p in the initial states
+    val newInitialStates = initialStates
+      .map(state => if (state == q) p else state)
+      .distinct
+
+    // replace a with b in the final states
+    val newFinalStates = finalStates
+      .map(state => if (state == q) p else state)
+      .distinct
+
+    val newTransitions = mutable.HashMap[Int, Seq[StepTransition]]()
+
+    for ((source, outgoingTransitions) <- transitions) {
+      // remove q as a source state.
+      if (source != q) {
+        var mappedTransitions = Seq[StepTransition]()
+
+        for (transition <- outgoingTransitions) {
+          // replace q with p in every target list.
+          val newTargets = transition.targets
+            .map(target => if (target == q) p else target)
+            .distinct
+
+          mappedTransitions = mappedTransitions :+
+            StepTransition(
+              transition.label,
+              transition.step,
+              newTargets
+            )
+        }
+
+        newTransitions += ((source, mappedTransitions.distinct))
+      }
+    }
+
+    AFA2(
+      newInitialStates,
+      newFinalStates,
+      newTransitions.toMap
+    ).restrictToReachableStates
+  }
+
+  type IncomingTransition = (Int, StepTransition)
+
+  lazy val normalizedIncomingTransitions: Map[Int, Seq[IncomingTransition]] = {
+    val incoming = mutable.HashMap[Int, Seq[IncomingTransition]]()
+
+    for ((source, outgoing) <- transitions) {
+      for (transition <- outgoing) {
+        for (target <- transition.targets.distinct) {
+
+          val normalizedTargets =
+            transition.targets.map(t => if (t == target) -1 else t)
+
+          val normalizedTransition = StepTransition(
+            transition.label,
+            transition.step,
+            normalizedTargets
+          )
+
+          val current = incoming.getOrElse(target, Seq())
+          incoming(target) = current :+ (source, normalizedTransition)
+        }
+      }
+    }
+
+    incoming.toMap
+  }
+
+  private def sameIncomingBehavior(q: Int, p: Int, automaton: AFA2): Boolean = {
+    automaton.normalizedIncomingTransitions.getOrElse(q, Seq.empty) ==
+      automaton.normalizedIncomingTransitions.getOrElse(p, Seq.empty)
+  }
+
+  private  def localDominatedStateCheck() : AFA2 = {
+    def outgoingBehaviorSubset(q: Int, p: Int, automaton: AFA2): Boolean = {
+      val transitionsQ = automaton.transitions.getOrElse(q, Seq()).toSet
+      val transitionsP = automaton.transitions.getOrElse(p, Seq()).toSet
+
+      transitionsQ.subsetOf(transitionsP)
+    }
+
+    var newAutomaton = AFA2(initialStates, finalStates, transitions)
+
+    var changed = true
+    while (changed) {
+      changed = false
+      for (q <- newAutomaton.states) {
+        for (p <- newAutomaton.states) {
+          if (q != p && outgoingBehaviorSubset(q, p, newAutomaton) && sameIncomingBehavior(q, p, newAutomaton)) {
+            newAutomaton = newAutomaton.merge(q, p)
+            changed = true
+          }
+        }
+      }
+    }
+
+    newAutomaton.restrictToReachableStates
+  }
+
+  private  def dominatedStateCheck() : AFA2 = {
+
+    /**
+     * Computes the greatest simulation-based dominance relation.
+     *
+     * A pair (p, q) is contained in the returned relation iff p dominates q,
+     * meaning that every behaviour of q can be matched by p.
+     *
+     * This relation is computed as the greatest fixpoint:
+     * initially every compatible pair is assumed to be in the relation,
+     * and pairs are removed until all remaining pairs satisfy the
+     * simulation constraints.
+     */
+    def computeDominanceRelation(automaton: AFA2): Set[(Int, Int)] = {
+      def pairIsLocallyValid(p: Int, q: Int): Boolean = {
+        // a non-final state cannot dominate a final state
+        if (automaton.finalStates.contains(q) && !automaton.finalStates.contains(p))
+          return false
+
+        val pTransitions = automaton.transitions.getOrElse(p, Seq.empty)
+        val qTransitions = automaton.transitions.getOrElse(q, Seq.empty)
+
+        // collect available (label, direction) combinations
+        val pTransitionTypes = pTransitions.map(t => (t.label, t.step)).toSet
+        val qTransitionTypes = qTransitions.map(t => (t.label, t.step)).toSet
+
+        // every transition type of q must also be available at p
+        qTransitionTypes.subsetOf(pTransitionTypes)
+      }
+
+      /*
+       * Every state is assumed to dominate every other state
+       */
+      var relation: Set[(Int, Int)] = {
+        for {
+          p <- automaton.states
+          q <- automaton.states
+          if pairIsLocallyValid(p, q)
+        } yield (p, q)
+      }.toSet
+
+      /**
+       * Checks whether a transition of p can simulate a transition of q.
+       *
+       * The transitions must:
+       *  - consume the same input symbol,
+       *  - move in the same direction,
+       *  - satisfy the universal branching condition.
+       *
+       * Since one StepTransition represents universal branching,
+       * every universal successor of p must dominate some
+       * universal successor of q.
+       */
+      def transitionsMatch(pTransition: StepTransition, qTransition: StepTransition): Boolean = {
+        pTransition.label == qTransition.label &&
+          pTransition.step == qTransition.step &&
+          pTransition.targets.forall { pTarget =>
+            qTransition.targets.exists { qTarget =>
+              relation.contains((pTarget, qTarget))
+            }
+          }
+      }
+
+      /**
+       * Checks whether (p, q) still satisfies the dominance relation.
+       * Every transition of q must be matched by some transition of p.
+       */
+      def pairIsValid(p: Int, q: Int): Boolean = {
+        val pTransitions = automaton.transitions.getOrElse(p, Seq.empty)
+        val qTransitions = automaton.transitions.getOrElse(q, Seq.empty)
+
+        qTransitions.forall { qTransition =>
+          pTransitions.exists { pTransition =>
+            transitionsMatch(pTransition, qTransition)
+          }
+        }
+      }
+
+      /*
+       * Compute the greatest fixpoint.
+       *
+       * In every iteration, remove all pairs that no longer satisfy
+       * the simulation constraints. Since the relation only shrinks,
+       * the algorithm always terminates.
+       */
+      var changed = true
+
+      while (changed) {
+
+        val newRelation = relation.filter {
+          case (p, q) =>
+            pairIsValid(p, q)
+        }
+
+        changed = newRelation.size != relation.size
+        relation = newRelation
+      }
+
+      println(
+        "Relevant elements in dominance relation: " +
+          relation.filter { case (p, q) => p != q }.size
+      )
+
+      relation
+    }
+
+    def computeEquivalenceClasses(states: Seq[Int], dominance: Set[(Int, Int)]): Map[Int, Int] = {
+      var classes = Seq[Set[Int]]()
+      for (p <- states) {
+        val equivalentStates = states.filter { q =>
+          dominance.contains((p, q)) &&
+            dominance.contains((q, p))
+        }.toSet
+
+        classes :+= equivalentStates
+      }
+      classes = classes.toSet.toSeq
+
+      var stateMap = Map[Int, Int]()
+      for (equivalenceClass <- classes) {
+        val representative = equivalenceClass.head
+        for (state <- equivalenceClass) {
+          stateMap += (state -> representative)
+        }
+      }
+
+      stateMap
+    }
+
+    var newAutomaton = AFA2(initialStates, finalStates, transitions)
+
+    var deletion = true
+    while (deletion) {
+      deletion = false
+
+      var dominance = computeDominanceRelation(newAutomaton)
+      val equivalenceClasses = computeEquivalenceClasses(newAutomaton.states, dominance)
+      val relevantClasses = equivalenceClasses.groupBy(_._2).count(_._2.size > 1)
+      println("Relevant equivalence classes: " + relevantClasses)
+
+      val mappedAutomaton = mapToClasses(newAutomaton, equivalenceClasses).restrictToReachableStates
+
+      // recompute if classes were found
+      if(mappedAutomaton.states.size < newAutomaton.states.size) {
+        dominance = computeDominanceRelation(newAutomaton)
+      }
+
+      for ((p, q) <- dominance if !deletion && p != q && sameIncomingBehavior(q, p, newAutomaton)) {
+        newAutomaton = newAutomaton.merge(q, p).restrictToReachableStates
+        deletion = true
+      }
+    }
+
+    newAutomaton.restrictToReachableStates
+  }
+
+  private def mapToClasses(automaton:  AFA2, classes: Map[Int, Int]) : AFA2 = {
+    // finally map the states to their partition
+    val newInitialStates = automaton.initialStates.map(classes).distinct
+    val newFinalStates = automaton.finalStates.map(classes).distinct
+    val newTransitions = mutable.HashMap[Int, Seq[StepTransition]]()
+
+    for ((source, outgoing) <- automaton.transitions) {
+      val newSource = classes(source)
+
+      val mappedTransitions = for (transition <- outgoing) yield {
+        StepTransition(
+          transition.label,
+          transition.step,
+          transition.targets.map(classes)
+        )
+      }
+
+      // add mapped transitions to the ones that were already mapped
+      val buffer = newTransitions.getOrElse(newSource, Seq())
+      newTransitions(newSource) = (buffer ++ mappedTransitions).distinct
+    }
+
+    // return the reduced automaton
+    AFA2(newInitialStates, newFinalStates, newTransitions.toMap)
+  }
+
+  /*
+   * Reduces the size of the automaton using a partition refinement procedure,
+   * that is similar to the hopcroft algorithm for DFAs.
+   * We sort states into equivalence classes based on their outgoing transition behavior.
+   * A formalization and a correctness proof can be found in chapter 5.2 of the bachelor's thesis
+   * "Optimized Methods for Translating Two-Way
+   * Alternating Automata to One-Way
+   * Non-Deterministic Automata" by Henrik Oback, 2442473
+   * available at the "University Library of Regensburg".
+   */
+  private def partitionRefinement() : AFA2 = {
+    // label / left or right / target
+    type TransitionSignature = (Int, Step, Set[Int])
+    // last partition and set of all transition signatures
+    type Signature = (Int, Set[TransitionSignature])
+
+    // map every state to its partition number
+    var partitions = mutable.HashMap[Int, Int]()
+
+    // initial partition final/non-final states
+    for (state <- finalStates) {
+      partitions += ((state, 0))
+    }
+    for (state <- states) {
+      if (!finalStates.contains(state)) {
+        partitions += ((state, 1))
+      }
+    }
+
+    def getSignature(state: Int) : Signature = {
+      val outgoingTransitions = transitions.getOrElse(state, Seq())
+
+      // iterate the outgoing transitions and yield their transition signatures
+      val transitionSignatures = for (transition <- outgoingTransitions) yield {
+        val targetPartitions = transition.targets.iterator.map(partitions).toSet
+
+        // consumed symbol / right or left step / reached partitions
+        // there can be multible partitions reached by one transition due to universal branching
+        (transition.label, transition.step, targetPartitions)
+      }
+
+      // convert to set since duplicate entries should not affect the signature
+      (partitions(state), transitionSignatures.toSet)
+    }
+
+    // iterate until the last refinement is the same as the current one
+    var changed = true
+    while(changed) {
+
+      // get the signature of every state
+      var allSignatures = mutable.HashMap[Int, Signature]()
+      for (state <- states) {
+        allSignatures += ((state, getSignature(state)))
+      }
+
+      // assign a partition number to every unique signature
+      val signatureToPartition = mutable.HashMap[Signature, Int]()
+      var nextPartition = 0
+      for ((_, signature) <- allSignatures) {
+        if (!signatureToPartition.contains(signature)) {
+          signatureToPartition += ((signature, nextPartition))
+          nextPartition += 1
+        }
+      }
+
+      // map every state to the partition number of its signature
+      val newPartitions = mutable.HashMap[Int, Int]()
+      for ((state, signature) <- allSignatures) {
+        newPartitions += ((state, signatureToPartition(signature)))
+      }
+
+      if (newPartitions == partitions) {
+        changed = false
+      } else {
+        partitions = newPartitions
+      }
+    }
+
+    // finally map the states to their partition and return the new automaton
+    mapToClasses(this, partitions.toMap).restrictToReachableStates
+  }
+
+  /*
+   * Eliminates non-forward reachable and non-backward reachable states.
+   */
   def restrictToReachableStates : AFA2 =
     if (reachableStates.size == states.size) {
       this
@@ -411,4 +832,25 @@ case class AFA2(initialStates : Seq[Int],
           StepTransition(l, _, _) <- ts.iterator)
     yield l).toSet.toIndexedSeq.sorted
 
+  def prettyPrint(): String = {
+    val res = new mutable.StringBuilder()
+
+    res.append("Initial: " + initialStates + "\n")
+    res.append("Final:   " + finalStates + "\n")
+
+    for ((source, ts) <- transitions) {
+      for (t <- ts) {
+        res.append(
+          source + " --" +
+            t.label + "," +
+            (if (t.step == Right) "R" else "L") +
+            "--> " +
+            t.targets.mkString("{", ", ", "}") +
+            "\n"
+        )
+      }
+    }
+
+    res.toString()
+  }
 }

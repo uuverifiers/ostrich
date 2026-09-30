@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: dk.brics.automaton:automaton:1.11-8:jar" external-system-id="SBT">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/dk/brics/automaton/automaton/1.11-8/automaton-1.11-8.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/dk/brics/automaton/automaton/1.11-8/automaton-1.11-8-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

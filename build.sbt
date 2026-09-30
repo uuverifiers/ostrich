@@ -100,6 +100,9 @@ lazy val root = (project in file("."))
       "-H:+ReportExceptionStackTraces"
     ),
 
+    // Forces the project to use the ecma2020 jar (TODO: Find out why this was broken)
+    Compile / unmanagedJars += baseDirectory.value / "ecma2020" / "ecma2020-regex-parser.jar",
+
     nativeImageAgentMerge := true
   )
 

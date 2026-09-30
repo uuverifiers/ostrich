@@ -1,0 +1,49 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\henri\\Uni Unterlagen\\ostrich\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\henri\\Uni Unterlagen\\ostrich\\src\\main\\scala\\ostrich\\OstrichStringTheory.scala||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\main\\scala\\ostrich\\OstrichStringTheory.scala||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{e8b06f52-6d01-11d2-aa7d-00c04f990343}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "OstrichStringTheory.scala",
+              "DocumentMoniker": "C:\\Users\\henri\\Uni Unterlagen\\ostrich\\src\\main\\scala\\ostrich\\OstrichStringTheory.scala",
+              "RelativeDocumentMoniker": "src\\main\\scala\\ostrich\\OstrichStringTheory.scala",
+              "ToolTip": "C:\\Users\\henri\\Uni Unterlagen\\ostrich\\src\\main\\scala\\ostrich\\OstrichStringTheory.scala",
+              "RelativeToolTip": "src\\main\\scala\\ostrich\\OstrichStringTheory.scala",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAAAFAAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-05-11T19:11:08.192Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
