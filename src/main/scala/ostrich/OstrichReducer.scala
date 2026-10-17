@@ -1,6 +1,6 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2021-2025 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
+ * Copyright (c) 2021-2026 Riccardo de Masellis, Philipp Ruemmer. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -353,7 +353,7 @@ class OstrichReducer protected[ostrich]
                 str.head >= 0 && str.head < theory.alphabetSize)
               rewriteLogging(a, a.last === str.head)
             else
-              a
+              rewriteLogging(a, a.last === -1)
           } else if (a(1).isConstant) {
             a(1).constant match {
               case IdealInt.MINUS_ONE => {
