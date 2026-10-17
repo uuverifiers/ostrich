@@ -1,6 +1,7 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2024 Matthew Hague, Philipp Ruemmer, Oliver Markgraf. All rights reserved.
+ * Copyright (c) 2018-2026 Matthew Hague, Philipp Ruemmer, Oliver Markgraf.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -204,98 +205,106 @@ object BricsAutomaton {
   /**
    * A new automaton that accepts all strings x <= str (lexicographical ordering)
    */
-
   def smallerEqAutomaton(str : String) : BricsAutomaton = {
     /*
     Initial state is accepting.
     Have one accepting sink state where every letter can be read because we are already smaller.
     Have additional state per char 'c' in the string to check for equality.
-      Each of those additional states have one transition to the sink state reading ['c'+1, 65535]
+      Each of those additional states have one transition to the sink state reading [minchar, 'c'-1]
       Each of those additional states have one transition to the next state reading ['c', 'c']
     The last state has no outgoing transitions.
      */
     val builder = new BricsAutomatonBuilder
-    val initital_state = builder.getNewState
+    val initial_state = builder.getNewState
 
-    builder.setInitialState(initital_state)
-    builder.setAccept(initital_state, isAccepting = true)
-    if (str.isEmpty){
-      return builder.getAutomaton
+    builder.setInitialState(initial_state)
+    builder.setAccept(initial_state, isAccepting = true)
+
+    if (!str.isEmpty) {
+      val sink_state = builder.getNewState
+      builder.setAccept(sink_state, isAccepting = true)
+
+      builder.addTransition(
+        sink_state,
+        builder.LabelOps.sigmaLabel,
+        sink_state)
+
+      val states =
+        (for (n <- 0 until str.length) yield {
+          val s = builder.getNewState
+          builder.setAccept(s, isAccepting = true)
+          s
+        }).toIndexedSeq
+
+      var pre_state = initial_state
+      for ((c,n) <- str.iterator.zipWithIndex) {
+        val next_state = states(n)
+        // we read x = c -> keep parsing
+        builder.addTransition(
+          pre_state,
+          builder.LabelOps.singleton(c),
+          next_state)
+        // we read x < c -> go to sink state
+        if (c > Char.MinValue)
+          builder.addTransition(
+            pre_state,
+            builder.LabelOps.interval(Char.MinValue, (c-1).toChar),
+            sink_state)
+        pre_state = next_state
+      }
     }
 
-    val sink_state = builder.getNewState
-    builder.setAccept(sink_state, isAccepting = true)
-
-
-    val first_letter = str.head
-
-    builder.addTransition(initital_state, builder.LabelOps.interval(Char.MinValue, (first_letter-1).toChar), sink_state)
-    builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
-
-    val states =
-      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
-
-    // add transition to rest of the automaton
-    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states(0))
-    val remaining_str = str.tail
-
-    for ((c,n) <- remaining_str.iterator.zipWithIndex) {
-      // we read x = c -> keep parsing
-      builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
-      // we read x <= c -> go to sink state
-      builder.addTransition(states(n),builder.LabelOps.interval(Char.MinValue, (c-1).toChar), sink_state)
-      builder.setAccept(states(n), isAccepting = true)
-    }
-
-    builder.setAccept(states.last, isAccepting = true)
     builder.getAutomaton
   }
+
   /**
    * A new automaton that accepts all strings str <= x (lexicographical ordering)
    */
   def greaterEqAutomaton(str : String) : BricsAutomaton = {
     /*
-    Initial state is NOT accepting.
-    Have one accepting sink state where every letter can be read because we are already smaller.
-    Have additional state per char 'c' in the string to check for equality.
-      Each of those additional states have one transition to the sink state reading ['c'+1, 65535]
-      Each of those additional states have one transition to the next state reading ['c', 'c']
-    The last state has no outgoing transitions.
+      For word of length n, introduce n+1 states.
+      The last state is an accepting sink state, where every letter can be read.
+      Each other state i has a transition to state i+1 labelled with the i'th 
+      letter c of str, and a transition labelled with >c to the last state.
      */
     val builder = new BricsAutomatonBuilder
-    val initital_state = builder.getNewState
 
-    builder.setInitialState(initital_state)
+    val len = str.length
+    val states = (for (n <- 0 to len) yield builder.getNewState).toIndexedSeq
 
-    if (str.isEmpty){
-      builder.setAccept(initital_state, isAccepting = true)
-      builder.addTransition(initital_state, builder.LabelOps.sigmaLabel, initital_state)
-      return builder.getAutomaton
-    }
+    val initial_state = states.head
+    builder.setInitialState(initial_state)
 
-    val sink_state = builder.getNewState
+    val sink_state = states.last
     builder.setAccept(sink_state, isAccepting = true)
+    builder.addTransition(
+      sink_state,
+      builder.LabelOps.sigmaLabel,
+      sink_state)
 
-    val first_letter = str.head
-
-    builder.addTransition(initital_state, builder.LabelOps.interval((first_letter+1).toChar, Char.MaxValue), sink_state)
-    builder.addTransition(sink_state, builder.LabelOps.sigmaLabel, sink_state)
-
-    val states =
-      (for (n <- 0 until str.length) yield builder.getNewState).toIndexedSeq
-
-    builder.addTransition(initital_state, builder.LabelOps.singleton(first_letter), states.head)
-    val remaining_str = str.tail
-
-    for ((c,n) <- remaining_str.iterator.zipWithIndex) {
-      // we read c = x -> keep parsing
-      builder.addTransition(states(n),builder.LabelOps.singleton(c), states(n+1))
-      // we read c < x -> go to sink state
-      builder.addTransition(states(n),builder.LabelOps.interval((c+1).toChar, Char.MaxValue), sink_state)
-    }
-    // we are equal up to this point -> can read any letter afterwards and be bigger
-    builder.setAccept(states.last, isAccepting = true)
-    builder.addTransition(states.last, builder.LabelOps.sigmaLabel, states.last)
+    var pre_state = initial_state
+    for ((c, n) <- str.iterator.zipWithIndex)
+      if (n == len - 1) {
+        // last transition for c <= x
+        builder.addTransition(
+          pre_state,
+          builder.LabelOps.interval(c, Char.MaxValue),
+          sink_state)
+      } else {
+        val next_state = states(n + 1)
+        // we read c = x -> keep parsing
+        builder.addTransition(
+          pre_state,
+          builder.LabelOps.singleton(c),
+          next_state)
+        // we read c < x -> go to sink state
+        if (c < Char.MaxValue)
+          builder.addTransition(
+            pre_state,
+            builder.LabelOps.interval((c + 1).toChar, Char.MaxValue),
+            sink_state)
+        pre_state = next_state
+      }
 
     builder.getAutomaton
   }
