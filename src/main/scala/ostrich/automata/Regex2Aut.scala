@@ -1,6 +1,7 @@
 /**
  * This file is part of Ostrich, an SMT solver for strings.
- * Copyright (c) 2018-2025 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis. All rights reserved.
+ * Copyright (c) 2018-2026 Matthew Hague, Philipp Ruemmer, Riccardo De Masellis.
+ * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -551,10 +552,16 @@ class Regex2Aut(theory : OstrichStringTheory) {
                  Seq(SmartConst(IdealInt(a)), SmartConst(IdealInt(b)))) =>
       BasicAutomata.makeCharRange(a.toChar, b.toChar)
 
+    case IFunApp(`re_range`,
+                 Seq(EncodedString(lower), EncodedString(upper))) =>
+      if (lower.size == 1 && upper.size == 1)
+        BasicAutomata.makeCharRange(lower.head, upper.head)
+      else
+        BasicAutomata.makeEmpty
+
     case IFunApp(`re_range`, _) =>
       throw new IllegalArgumentException(
-        "re.range can only be applied to singleton strings" +
-          ", cannot handle " + t)
+        "re.range with symbolic arguments is not supported")
 
     case IFunApp(`str_to_re`, Seq(EncodedString(str))) =>
       BasicAutomata.makeString(str)

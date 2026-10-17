@@ -236,6 +236,9 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
   property("concat-regex4.smt2 eager") =
     checkFileOpts("tests/concat-regex4.smt2", "sat", "+eager")
 
+  property("regex_range.smt2") =
+    checkFile("tests/regex_range.smt2", "unsat")
+
   property("priorityTransducer.smt2") =
     checkFile("tests/priorityTransducer.smt2", "unsat")
   property("priorityTransducer2.smt2") =
