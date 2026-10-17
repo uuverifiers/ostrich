@@ -529,4 +529,6 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
     checkFile("tests/str-leq-reflexive.smt2", "sat")
   property("str-leq-reflexive-2") =
     checkFile("tests/str-leq-reflexive-2.smt2", "sat")
+  property("str-leq-antisymm") =
+    checkFileOpts("tests/str-leq-antisymm.smt2", "unknown", "", s"-timeout=$shortTimeout")
 }
