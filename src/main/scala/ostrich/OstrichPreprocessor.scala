@@ -279,6 +279,11 @@ class OstrichPreprocessor(theory : OstrichStringTheory)
               IFunApp(`str_cons`, Seq(upper, IFunApp(`str_empty`, _))))) =>
       re_charrange(lower, upper)
 
+    case (IFunApp(`re_range`, _),
+          Seq(ConcreteString(lower), ConcreteString(upper)))
+        if lower.size != 1 || upper.size != 1 =>
+      re_none()
+
     case (IAtom(`str_is_digit`, _), Seq(str : ITerm)) =>
       str_in_re(str, re_charrange(0x0030, 0x0039))
 
