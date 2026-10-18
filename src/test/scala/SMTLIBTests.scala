@@ -238,6 +238,10 @@ object SMTLIBTests extends Properties("SMTLIBTests") {
 
   property("regex_range.smt2") =
     checkFile("tests/regex_range.smt2", "unsat")
+  property("regex_range_2.smt2") =
+    checkFile("tests/regex_range_2.smt2", "sat")
+  property("regex_range_2b.smt2") =
+    checkFile("tests/regex_range_2b.smt2", "unsat")
 
   property("priorityTransducer.smt2") =
     checkFile("tests/priorityTransducer.smt2", "unsat")
